@@ -1,6 +1,8 @@
 import PhlyGreen as pg
 import sys
 
+ISA = pg.Utilities.Atmosphere()
+
 # Creating subsystem instances
 powertrain = pg.Systems.Powertrain.Powertrain(None)
 structures = pg.Systems.Structures.Structures(None)
@@ -8,7 +10,7 @@ aerodynamics = pg.Systems.Aerodynamics.Aerodynamics(None)
 
 aerodynamics.set_quadratic_polar(10,0.8)
 
-print(pg.Atmosphere.T_sls)
+print(ISA.T_sls)
 
 performance = pg.Performance.Performance(None)
 mission = pg.Mission.Mission(None)
