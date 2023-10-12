@@ -7,6 +7,8 @@ class Atmosphere:
         self.Rair = 287 #J/(Kg k)
         self.gammaair = 1.4
         self.delta = (self.gammaair - 1)/self.gammaair
+        self.T0 = 288.15 #K
+        self.a0 = np.sqrt(self.gammaair * self.Rair * self.T0) #m/s
 
 
     def Tstd(self,h):
@@ -15,14 +17,14 @@ class Atmosphere:
             return r0*h/(r0+h)
         
         def i(z):
-            return np.piecewise(z,[z <= 11000, 11000 < z <= 20000, 20000 < z <= 32000], [1,2,3])
+            return np.piecewise(z,[z <= 11000, 11000 < z <= 20000, 20000 < z <= 32000], [0,1,2])
         
         Lstd = [-6.5, 0 , 1]
-        zstd = [11000, 20000, 32000]
-        T0 = [288.15,216.65,216.65]
-        j=i(z(h))
+        zstd = [0, 11000, 20000]
+        T_0 = [288.15,216.65,216.65]
+        j=int(i(z(h)))
 
-        return T0[j] + Lstd[j] * (z(h)-zstd[j]) / 1000
+        return T_0[j] + Lstd[j] * (z(h)-zstd[j]) / 1000
     
     def Pstd(self,h):
         return 100*((44331.514-h)/11880.516)**(1/0.1902632)
@@ -50,6 +52,7 @@ class Atmosphere:
 
     def RHO0std(self,h,Mach):
         return self.RHOstd(h) * RHOoRHO0**-1
+    
 
 
 
