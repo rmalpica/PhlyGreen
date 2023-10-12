@@ -3,12 +3,11 @@ import numpy as np
 class Atmosphere:
     def __init__(self):
         self.p_sls = 101325  #Pa
-        self.T_sls = 273.15 #K
+        self.T_sls = 288.15 #K
         self.Rair = 287 #J/(Kg k)
         self.gammaair = 1.4
         self.delta = (self.gammaair - 1)/self.gammaair
-        self.T0 = 288.15 #K
-        self.a0 = np.sqrt(self.gammaair * self.Rair * self.T0) #m/s
+        self.a_sls = np.sqrt(self.gammaair * self.Rair * self.T_sls) #m/s
 
 
     def Tstd(self,h):
