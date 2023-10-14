@@ -28,11 +28,11 @@ class Atmosphere:
     def Pstd(self,h):
         return 100*((44331.514-h)/11880.516)**(1/0.1902632)
     
-    def RHOstd(self,h):
-        return self.Pstd(h)/(self.R * self.Tstd(h))
+    def RHOstd(self,h,DISA):
+        return self.Pstd(h)/(self.Rair * (self.Tstd(h)+DISA))
     
-    def RHO(self,T,P):
-        return P/(self.R * T)
+    def RHO(self,T,P,DISA):
+        return P/(self.Rair * (T+DISA))
  
     def ToT0(self,Mach):
         return (1 + self.delta * Mach**2) ** -1
@@ -50,9 +50,10 @@ class Atmosphere:
         return self.Pstd(h) * self.PoP0**-1
 
     def RHO0std(self,h,Mach):
-        return self.RHOstd(h) * RHOoRHO0**-1
+        return self.RHOstd(h) * self.RHOoRHO0**-1
     
 
+atmosphere = Atmosphere()
 
 
    

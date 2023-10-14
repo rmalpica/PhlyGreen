@@ -1,3 +1,3 @@
-from .Atmosphere import Atmosphere
+#from .Atmosphere import Atmosphere
 from .Speed import *
 
