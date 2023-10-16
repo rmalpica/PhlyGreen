@@ -75,6 +75,9 @@ class Aerodynamics:
     
     def ki(self):
         return 1.0/(np.pi * self.AR * self.e_osw)
+    
+    def ClE(self,Mach):
+        return np.sqrt(self.Cd0(Mach)* np.pi * self.AR * self.e_osw)
 
 
         

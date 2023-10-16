@@ -33,7 +33,7 @@ aerodynamics.set_quadratic_polar(10,0.8)
 
 
 
-WTOoS = np.linspace(1, 8000, num=100)
+WTOoS = np.linspace(1, 7000, num=100)
 PW = np.linspace(1, 300, num=100)
 
 
@@ -43,29 +43,21 @@ PW = np.linspace(1, 300, num=100)
 # 2: Take off
 # 3: Climb
 # 4: Turn
+# 5: Ceiling
+# 6: Acceleration -----> Speed: Average speed during acceleration
+# 7: Landing 
 # -----------------------------------------------------------------#
 
-ConstraintsInput = {'speed': np.array([0.41, 70, 59*1.4, 0.3]) ,
-                    'speedtype': ['Mach','TAS','TAS','Mach']   ,
-                    'beta': np.array([0.9,1.,0.95, 0.9])   ,
-                    'altitude': np.array([5450.,100.,2000.,5486.4]) ,
+ConstraintsInput = {'speed': np.array([0.41, 70, 59*1.4, 0.3, 0.41, 0.35, 59.]) ,
+                    'speedtype': ['Mach','TAS','TAS','Mach','Mach','Mach','TAS']   ,
+                    'beta': np.array([0.9,1.,0.95, 0.9, 0.8, 0.9, 0.])   ,
+                    'altitude': np.array([5450.,100.,2000.,5486.4,7600.,5486.4, 500.]) ,
                     }
 
 
+PsAcceleration = 2.28
 
-
-performance.EvaluateConstraints(ConstraintsInput, WTOoS, 0, 1.2, 1000, 0.021)
-
-# CROCIERA = performance.PoWTO(CARICHI, 0.9, 0, 1, 5450, 0, 0.41, 'Mach')
-# CLIMB = performance.PoWTO(CARICHI, 0.95, 0.021*1.4*59, 1, 2000, 0, 1.4*59, 'TAS')
-# VIRATA = performance.PoWTO(CARICHI, 0.9, 0, 1.1, 5486.4, 0, 0.3, 'Mach')
-# DECOLLO_H = performance.TakeOff(CARICHI, 1., 100, 1.2, 1000, 15, 70, 'TAS')
-# DECOLLO_C = performance.TakeOff(CARICHI, 1., 100, 1.2, 1000, -15, 70, 'TAS')
-# LANDING = aerodynamics.ClMax*59**2*pg.Utilities.Atmosphere.atmosphere.RHOstd(500,0)
-# CEILING = performance.PoWTO(CARICHI, 0.8, 0.5, 1, 7600, 0, speed, speedtype)
-# DECOLLO_TORENBEEK = performance.TakeOff_TORENBEEK(PW, 100 , 1000, 1.15, 10.7, 1.25, 0.02, 70, 'TAS', 0)
-#print('PIPPO: ', DECOLLO_TORENBEEK)
-
+performance.FindDesignPoint(ConstraintsInput, WTOoS, 0, 1.2, 1000, 0.021, 0.5, PsAcceleration)
 
 
 # Plotting
@@ -73,9 +65,18 @@ plt.plot(WTOoS,performance.PWCruise, label='Cruise')
 plt.plot(WTOoS,performance.PWTakeOff, label='Take Off')
 plt.plot(WTOoS,performance.PWClimb, label='Climb')
 plt.plot(WTOoS,performance.PWTurn, label='Turn')
+plt.plot(WTOoS,performance.PWCeiling, label='Ceiling')
+plt.plot(WTOoS,performance.PWAcceleration, label='Acceleration')
+plt.plot(performance.WTOoSLanding, performance.PWLanding, label='Landing')
+plt.plot(performance.DesignWTOoS, performance.DesignPW, marker='o', markersize = 10, markerfacecolor = 'red', markeredgecolor = 'black')
+# plt.plot(performance.WTOoSTorenbeek, performance.PWTorenbeek, label='Torenbeek')
 plt.ylim([0, 300])
+plt.xlim([0, 7000])
 plt.legend()
 plt.grid(visible=True)
+plt.xlabel('$W_{TO}/S$')
+plt.ylabel('$P/W_{TO}$')
+# plt.clf()
 
 
 
