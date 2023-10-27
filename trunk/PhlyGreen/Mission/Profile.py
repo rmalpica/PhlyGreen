@@ -43,7 +43,7 @@ class Profile:
         
         return None        
 
-    def DefineMission2(self):
+    def DefineMission(self):
         
         self.ReadInput()
         
@@ -81,7 +81,7 @@ class Profile:
         
         self.Breaks.append(self.CruiseTime)
         self.HTMission.append(0)
-        self.Velocities.append(self.VCruise2)
+        self.Velocities.append(self.VCruise)
             
         for i in range(len(self.BreaksDescent)):  
             self.Breaks.append(self.BreaksDescent[i])
@@ -101,7 +101,7 @@ class Profile:
             
         self.Breaks.append(self.CruiseTimeDiversion)
         self.HTMission.append(0)
-        self.Velocities.append(self.VCruise2Diversion)
+        self.Velocities.append(self.VCruiseDiversion)
         
         for i in range(len(self.BreaksDescentDiversion)):   # L'ultimo tempo non mi interessa
             self.Breaks.append(self.BreaksDescentDiversion[i])
@@ -114,89 +114,161 @@ class Profile:
             self.HTMission.append(self.HTDiversionDescent[i])
             self.Velocities.append(self.VDescentsDiversion[i])
 
-    def Altitude2(self,t):
+    # def Altitude(self,t):
                 
-        def Altitude_Func(t):
-            AltitudeFunctions=[]
+    #     def Altitude_Func(t):
+    #         AltitudeFunctions=[]
+        
+    #      # Climb Mission        
+        
+    #         for i in range(len(self.BreaksClimb)):
+            
+    #             def localFunctionClimb(t):
+                    
+    #                 alt = self.Altitudes[i]
+    #                 htm = self.HTMission[i]
+    #                 brk = self.Breaks[i]
+            
+    #                 return (lambda t : (alt + htm * (t - brk)))
+            
+    #             AltitudeFunctions.append(localFunctionClimb(t))
+            
+            
+    #        # Cruise Mission
+    #         AltitudeFunctions.append( self.Altitudes[len(self.BreaksClimb)]) # ATTENZIONE!!! NON VALE SE L'ALTITUDINE CAMBIA IN CROCIERA
+                    
+    #        # Descent Mission
+    #         for i in range(len(self.BreaksDescent)):
+            
+    #             def localFunctionDescent(t):
+                
+    #                 alt = self.Altitudes[i + len(self.BreaksClimb)]
+    #                 htm = self.HTMission[i + len(self.BreaksClimb) + 1]
+    #                 brk = self.Breaks[i + len(self.BreaksClimb) + 1]
+                            
+    #                 return (lambda t : (alt + htm * (t - brk)))
+                
+    #             AltitudeFunctions.append(localFunctionDescent(t))
+                
+                
+    #     # Climb Diversion       
+               
+    #         for i in range(len(self.BreaksClimbDiversion)):
+                   
+    #             def localFunctionClimb(t):
+                           
+    #                 alt = self.Altitudes[i + len(self.BreaksClimb) + len(self.BreaksDescent)]
+    #                 htm = self.HTMission[i + len(self.BreaksClimb) + len(self.BreaksDescent) + 1]
+    #                 brk = self.Breaks[i + len(self.BreaksClimb) + len(self.BreaksDescent) + 1]
+                   
+    #                 return (lambda t : (alt + htm * (t - brk)))
+                   
+    #             AltitudeFunctions.append(localFunctionClimb(t))
+
+    #        # Cruise Diversion
+    #         AltitudeFunctions.append( self.Altitudes[len(self.BreaksClimb) + len(self.BreaksDescent) + len(self.BreaksClimbDiversion)]) # ATTENZIONE!!! NON VALE SE L'ALTITUDINE CAMBIA IN CROCIERA
+                
+                
+    #        # Descent Diversion
+    #         for i in range(len(self.BreaksDescent)):
+            
+    #             def localFunctionDescent(t):
+                
+    #                 alt = self.Altitudes[i + len(self.BreaksClimb) + len(self.BreaksDescent) + len(self.BreaksClimbDiversion)]
+    #                 htm = self.HTMission[i + len(self.BreaksClimb) + len(self.BreaksDescent) + len(self.BreaksClimbDiversion) + 2]
+    #                 brk = self.Breaks[i + len(self.BreaksClimb) + len(self.BreaksDescent) + len(self.BreaksClimbDiversion) + 2]
+                            
+    #                 return (lambda t : (alt + htm * (t - brk)))
+                
+    #             AltitudeFunctions.append(localFunctionDescent(t))                
+                
+                
+                   
+    #         return AltitudeFunctions
+              
+    #     return np.piecewise(t, [ t >= ti for ti in self.Breaks], Altitude_Func(t))
+
+    def Altitude_Func(self,t):
+        AltitudeFunctions=[]
         
          # Climb Mission        
         
-            for i in range(len(self.BreaksClimb)):
+        for i in range(len(self.BreaksClimb)):
             
-                def localFunctionClimb(t):
+            def localFunctionClimb(t):
                     
-                    alt = self.Altitudes[i]
-                    htm = self.HTMission[i]
-                    brk = self.Breaks[i]
+                alt = self.Altitudes[i]
+                htm = self.HTMission[i]
+                brk = self.Breaks[i]
             
-                    return (lambda t : (alt + htm * (t - brk)))
+                return (lambda t : (alt + htm * (t - brk)))
             
-                AltitudeFunctions.append(localFunctionClimb(t))
+            AltitudeFunctions.append(localFunctionClimb(t))
             
             
            # Cruise Mission
-            AltitudeFunctions.append( self.Altitudes[len(self.BreaksClimb)]) # ATTENZIONE!!! NON VALE SE L'ALTITUDINE CAMBIA IN CROCIERA
+        AltitudeFunctions.append( self.Altitudes[len(self.BreaksClimb)]) # ATTENZIONE!!! NON VALE SE L'ALTITUDINE CAMBIA IN CROCIERA
                     
            # Descent Mission
-            for i in range(len(self.BreaksDescent)):
+        for i in range(len(self.BreaksDescent)):
             
-                def localFunctionDescent(t):
+            def localFunctionDescent(t):
                 
-                    alt = self.Altitudes[i + len(self.BreaksClimb)]
-                    htm = self.HTMission[i + len(self.BreaksClimb) + 1]
-                    brk = self.Breaks[i + len(self.BreaksClimb) + 1]
+                alt = self.Altitudes[i + len(self.BreaksClimb)]
+                htm = self.HTMission[i + len(self.BreaksClimb) + 1]
+                brk = self.Breaks[i + len(self.BreaksClimb) + 1]
                             
-                    return (lambda t : (alt + htm * (t - brk)))
+                return (lambda t : (alt + htm * (t - brk)))
                 
-                AltitudeFunctions.append(localFunctionDescent(t))
+            AltitudeFunctions.append(localFunctionDescent(t))
                 
                 
         # Climb Diversion       
                
-            for i in range(len(self.BreaksClimbDiversion)):
+        for i in range(len(self.BreaksClimbDiversion)):
                    
-                def localFunctionClimb(t):
+            def localFunctionClimb(t):
                            
-                    alt = self.Altitudes[i + len(self.BreaksClimb) + len(self.BreaksDescent)]
-                    htm = self.HTMission[i + len(self.BreaksClimb) + len(self.BreaksDescent) + 1]
-                    brk = self.Breaks[i + len(self.BreaksClimb) + len(self.BreaksDescent) + 1]
+                alt = self.Altitudes[i + len(self.BreaksClimb) + len(self.BreaksDescent)]
+                htm = self.HTMission[i + len(self.BreaksClimb) + len(self.BreaksDescent) + 1]
+                brk = self.Breaks[i + len(self.BreaksClimb) + len(self.BreaksDescent) + 1]
                    
-                    return (lambda t : (alt + htm * (t - brk)))
+                return (lambda t : (alt + htm * (t - brk)))
                    
-                AltitudeFunctions.append(localFunctionClimb(t))
+            AltitudeFunctions.append(localFunctionClimb(t))
 
            # Cruise Diversion
-            AltitudeFunctions.append( self.Altitudes[len(self.BreaksClimb) + len(self.BreaksDescent) + len(self.BreaksClimbDiversion)]) # ATTENZIONE!!! NON VALE SE L'ALTITUDINE CAMBIA IN CROCIERA
+        AltitudeFunctions.append( self.Altitudes[len(self.BreaksClimb) + len(self.BreaksDescent) + len(self.BreaksClimbDiversion)]) # ATTENZIONE!!! NON VALE SE L'ALTITUDINE CAMBIA IN CROCIERA
                 
                 
            # Descent Diversion
-            for i in range(len(self.BreaksDescent)):
+        for i in range(len(self.BreaksDescent)):
             
-                def localFunctionDescent(t):
+            def localFunctionDescent(t):
                 
-                    alt = self.Altitudes[i + len(self.BreaksClimb) + len(self.BreaksDescent) + len(self.BreaksClimbDiversion)]
-                    htm = self.HTMission[i + len(self.BreaksClimb) + len(self.BreaksDescent) + len(self.BreaksClimbDiversion) + 2]
-                    brk = self.Breaks[i + len(self.BreaksClimb) + len(self.BreaksDescent) + len(self.BreaksClimbDiversion) + 2]
+                alt = self.Altitudes[i + len(self.BreaksClimb) + len(self.BreaksDescent) + len(self.BreaksClimbDiversion)]
+                htm = self.HTMission[i + len(self.BreaksClimb) + len(self.BreaksDescent) + len(self.BreaksClimbDiversion) + 2]
+                brk = self.Breaks[i + len(self.BreaksClimb) + len(self.BreaksDescent) + len(self.BreaksClimbDiversion) + 2]
                             
-                    return (lambda t : (alt + htm * (t - brk)))
+                return (lambda t : (alt + htm * (t - brk)))
                 
-                AltitudeFunctions.append(localFunctionDescent(t))                
+            AltitudeFunctions.append(localFunctionDescent(t))                
                 
                 
                    
-            return AltitudeFunctions
-              
-        return np.piecewise(t, [ t >= ti for ti in self.Breaks], Altitude_Func(t))
+        return AltitudeFunctions
+
+
+    def Altitude(self,t):
+                
+        return np.piecewise(t, [ t >= ti for ti in self.Breaks], self.Altitude_Func(t))
 
 
 
-
-
-
-    def PowerExcess2(self,t):
+    def PowerExcess(self,t):
         return np.piecewise(t, [ t >= ti for ti in self.Breaks], self.HTMission)
     
-    def Velocity2(self,t):
+    def Velocity(self,t):
         return np.piecewise(t, [ t >= ti for ti in self.Breaks], self.Velocities)
 
 
@@ -257,19 +329,19 @@ class Profile:
         
         if (phase == 'Mission'):
             
-            self.VCruise2 = Speed.Mach2TAS(Mach, Altitude)
+            self.VCruise = Speed.Mach2TAS(Mach, Altitude)
             
             DRCruise = self.MissionRange - np.sum(self.Distances)
-            DTCruise = np.ceil(DRCruise/self.VCruise2)
+            DTCruise = np.ceil(DRCruise/self.VCruise)
                 
             self.CruiseTime = DTCruise + self.BreaksClimb[-1]
         
         if (phase == 'Diversion'):
             
-            self.VCruise2Diversion = Speed.Mach2TAS(Mach, Altitude)
+            self.VCruiseDiversion = Speed.Mach2TAS(Mach, Altitude)
             
             DRCruise = self.DiversionRange - np.sum(self.DistancesDiversion)
-            DTCruise = np.ceil(DRCruise/self.VCruise2Diversion)
+            DTCruise = np.ceil(DRCruise/self.VCruiseDiversion)
                 
             self.CruiseTimeDiversion = DTCruise + self.BreaksClimbDiversion[-1] 
         

@@ -19,11 +19,11 @@ class Mission:
         
         self.profile.ReadInput()
         # self.profile.DefineMission()
-        self.profile.DefineMission2()
+        self.profile.DefineMission()
         
         def PF(Beta,t):
 
-            PPoWTO = self.aircraft.performance.PoWTO(self.aircraft.constraint.DesignWTOoS,Beta,self.profile.PowerExcess2(t),1,self.profile.Altitude2(t),self.profile.DISA,self.profile.Velocity2(t),'TAS')
+            PPoWTO = self.aircraft.performance.PoWTO(self.aircraft.constraint.DesignWTOoS,Beta,self.profile.PowerExcess(t),1,self.profile.Altitude(t),self.profile.DISA,self.profile.Velocity(t),'TAS')
           
             return PPoWTO * self.aircraft.powertrain.Traditional()[0] * WTO
 

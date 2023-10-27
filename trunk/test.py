@@ -151,7 +151,7 @@ plt.clf()
 
 time = np.linspace(0,mission.profile.MissionTime2,num = 1000)
 
-plt.plot(time/60,mission.profile.Altitude2(time))
+plt.plot(time/60,mission.profile.Altitude(time))
 plt.grid(visible=True)
 plt.xlabel('t [min]')
 plt.ylabel('Altitude [m]')
