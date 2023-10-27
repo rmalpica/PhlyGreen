@@ -31,15 +31,15 @@ class Weight:
         
         while (WDifference > self.tol):
             
-            Ef = self.aircraft.mission.EvaluateMission(WTO[i])
+            Wf = self.aircraft.mission.EvaluateMission(WTO[i])/self.ef
             WPT = self.PtWPT * WTO[i] / self.SPowerPT
-            WTO.append(self.WPayload + self.WCrew + Ef/self.ef + self.aircraft.structures.StructuralWeight(WTO[i]) + WPT) 
-            # WTO[i+1] = self.WPayload + self.WCrew + Ef/self.ef + self.aircraft.structures.StructuralWeight(WTO[i])
+            WStructure = self.aircraft.structures.StructuralWeight(WTO[i])
+            WTO.append(self.WPayload + self.WCrew + Wf + WStructure + WPT) 
             WDifference = np.abs(WTO[i+1] - WTO[i])
             i += 1
             
-            print('Powertrain: ',WPT, 'Fuel: ', Ef/self.ef, 'Structure: ', self.aircraft.structures.StructuralWeight(WTO[i]))
-            print('Empty Weight: ', WPT + self.aircraft.structures.StructuralWeight(WTO[i]) + self.WCrew)
+            # print('Powertrain: ',WPT, 'Fuel: ', Wf, 'Structure: ', WStructure)
+            # print('Empty Weight: ', WPT + WStructure + self.WCrew)
 
         
         

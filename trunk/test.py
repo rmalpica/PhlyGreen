@@ -15,10 +15,11 @@ aerodynamics = pg.Systems.Aerodynamics.Aerodynamics(None)
 performance = pg.Performance.Performance(None)
 mission = pg.Mission.Mission(None)
 weight = pg.Weight.Weight(None)
+constraint = pg.Constraint.Constraint(None)
 
 
 # # Creating mediator and associating with subsystems
-myaircraft = pg.Aircraft(powertrain, structures, aerodynamics, performance, mission, weight)
+myaircraft = pg.Aircraft(powertrain, structures, aerodynamics, performance, mission, weight, constraint)
 
 
 
@@ -29,6 +30,7 @@ structures.aircraft = myaircraft
 mission.aircraft = myaircraft
 performance.aircraft = myaircraft
 weight.aircraft = myaircraft
+constraint.aircraft = myaircraft
 
 aerodynamics.set_quadratic_polar(11,0.8)
 
@@ -62,10 +64,25 @@ ConstraintsInput = {'speed': np.array([0.46, 70, 59*1.4, 0.3, 0.41, 0.35, 59.]) 
 MissionInput = {'Range Mission': 459,
                 'Range Diversion': 100,
                 'Beta start': 0.95,
-                'Diversion altitude': 3100,
-                'Diversion Mach': 0.3,
                 'Payload Weight': (5255),
                 'Crew Weight': (95*3)}
+
+# MissionStages = {'ConstantRateClimb': {'CB': 0.021, 'Speed': 1.4*59, 'StartAltitude': 2000, 'EndAltitude': 5450},
+#                  'ConstantRateDescent': {'CB': -0.021, 'Speed': 1.4*59, 'StartAltitude': 5450, 'EndAltitude': 2000},
+#                  'ConstantMachCruise': {'Mach': 0.41, 'Altitude': 5450}}
+
+MissionStages = {'Climb1': {'type': 'ConstantRateClimb', 'input': {'CB': 0.01, 'Speed': 1.4*59, 'StartAltitude': 2000, 'EndAltitude': 3000}},
+                 'Climb2': {'type': 'ConstantRateClimb', 'input': {'CB': 0.005, 'Speed': 1.4*59, 'StartAltitude': 3000, 'EndAltitude': 3200}},
+                 'Climb3': {'type': 'ConstantRateClimb', 'input': {'CB': 0.04, 'Speed': 1.4*59, 'StartAltitude': 3200, 'EndAltitude': 5450}},
+                 'Descent1': {'type': 'ConstantRateDescent', 'input':{'CB': -0.026, 'Speed': 1.4*59, 'StartAltitude': 5450, 'EndAltitude': 4000}},
+                 'Descent2': {'type': 'ConstantRateDescent', 'input':{'CB': -0.021, 'Speed': 1.4*59, 'StartAltitude': 4000, 'EndAltitude': 2000}},
+                 'Cruise': {'type': 'ConstantMachCruise', 'input':{ 'Mach': 0.41, 'Altitude': 5450}}}
+
+DiversionStages = {'Climb1': {'type': 'ConstantRateClimb', 'input': {'CB': 0.01, 'Speed': 1.4*59, 'StartAltitude': 2000, 'EndAltitude': 2500}},
+                 'Climb2': {'type': 'ConstantRateClimb', 'input': {'CB': 0.04, 'Speed': 1.4*59, 'StartAltitude': 2500, 'EndAltitude': 3100}},
+                 'Descent1': {'type': 'ConstantRateDescent', 'input':{'CB': -0.026, 'Speed': 1.4*59, 'StartAltitude': 3100, 'EndAltitude': 2300}},
+                 'Descent2': {'type': 'ConstantRateDescent', 'input':{'CB': -0.021, 'Speed': 1.4*59, 'StartAltitude': 2300, 'EndAltitude': 2000}},
+                 'Cruise': {'type': 'ConstantMachCruise', 'input':{ 'Mach': 0.3, 'Altitude': 3100}}}
 
 TechnologyInput = {'Ef': 43.5*10**6,
                    'Eta Gas Turbine': 0.3,
@@ -75,16 +92,18 @@ TechnologyInput = {'Ef': 43.5*10**6,
                    'PowertoWeight Powertrain': 177
                    }
 
-myaircraft.ReadInput(ConstraintsInput,MissionInput,TechnologyInput)
+myaircraft.ReadInput(ConstraintsInput,MissionInput,TechnologyInput,MissionStages,DiversionStages)
 
 # powertrain.Traditional()
 
-performance.FindDesignPoint()
+constraint.FindDesignPoint()
 # mission.EvaluateMission(18000)
 
+
+
 WTO = weight.WeightEstimation()[-1]
-print('WTO: ',WTO)
-print('Superficie alare: ', WTO / performance.DesignWTOoS * 9.81)
+print('WTO: ',WTO, ' Kg')
+print('Superficie alare: ', WTO / constraint.DesignWTOoS * 9.81, ' m^2')
              
 #----------------------------------------------- PLOT -------------------------------------------------#                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           
 
@@ -113,27 +132,37 @@ plt.clf()
 
 #------------------------------------------------------------------------------------------------------#
 
-plt.plot(performance.WTOoS,performance.PWCruise, label='Cruise')
-plt.plot(performance.WTOoS,performance.PWTakeOff, label='Take Off')
-plt.plot(performance.WTOoS,performance.PWClimb, label='Climb')
-plt.plot(performance.WTOoS,performance.PWTurn, label='Turn')
-plt.plot(performance.WTOoS,performance.PWCeiling, label='Ceiling')
-plt.plot(performance.WTOoS,performance.PWAcceleration, label='Acceleration')
-plt.plot(performance.WTOoSLanding, performance.PWLanding, label='Landing')
-plt.plot(performance.DesignWTOoS, performance.DesignPW, marker='o', markersize = 10, markerfacecolor = 'red', markeredgecolor = 'black')
-# plt.plot(performance.WTOoSTorenbeek, performance.PWTorenbeek, label='Torenbeek')
-plt.ylim([0, 300])
-plt.xlim([0, 7000])
-plt.legend()
-plt.grid(visible=True)
-plt.xlabel('$W_{TO}/S$')
-plt.ylabel('$P/W_{TO}$')
+# plt.plot(constraint.WTOoS,constraint.PWCruise, label='Cruise')
+# plt.plot(constraint.WTOoS,constraint.PWTakeOff, label='Take Off')
+# plt.plot(constraint.WTOoS,constraint.PWClimb, label='Climb')
+# plt.plot(constraint.WTOoS,constraint.PWTurn, label='Turn')
+# plt.plot(constraint.WTOoS,constraint.PWCeiling, label='Ceiling')
+# plt.plot(constraint.WTOoS,constraint.PWAcceleration, label='Acceleration')
+# plt.plot(constraint.WTOoSLanding, constraint.PWLanding, label='Landing')
+# plt.plot(constraint.DesignWTOoS, constraint.DesignPW, marker='o', markersize = 10, markerfacecolor = 'red', markeredgecolor = 'black')
+# # plt.plot(performance.WTOoSTorenbeek, performance.PWTorenbeek, label='Torenbeek')
+# plt.ylim([0, 300])
+# plt.xlim([0, 7000])
+# plt.legend()
+# plt.grid(visible=True)
+# plt.xlabel('$W_{TO}/S$')
+# plt.ylabel('$P/W_{TO}$')
 # plt.clf()
 
+time = np.linspace(0,mission.profile.MissionTime2,num = 1000)
 
+plt.plot(time/60,mission.profile.Altitude2(time))
+plt.grid(visible=True)
+plt.xlabel('t [min]')
+plt.ylabel('Altitude [m]')
+# plt.clf()
 
-# plt.plot(mission.t/60,mission.Altitude(mission.t))
+# plt.plot(time,mission.profile.PowerExcess2(time))
+# plt.grid(visible=True)
+# plt.clf()
 
+# plt.plot(time,mission.profile.Velocity2(time))
+# plt.grid(visible=True)
 
 # # Using the mediator to perform aircraft design
 # myaircraft.design_aircraft()

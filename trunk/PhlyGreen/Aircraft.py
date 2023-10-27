@@ -1,13 +1,14 @@
 class Aircraft:
-    def __init__(self, powertrain, structures, aerodynamics, performance, mission, weight):
+    def __init__(self, powertrain, structures, aerodynamics, performance, mission, weight, constraint):
         self.powertrain = powertrain
         self.structures = structures
         self.aerodynamics = aerodynamics
         self.performance = performance
         self.mission = mission
         self.weight = weight
+        self.constraint = constraint
 
-    def ReadInput(self,ConstraintsInput,MissionInput,TechnologyInput):
+    def ReadInput(self,ConstraintsInput,MissionInput,TechnologyInput,MissionStages,DiversionStages):
         
         # Contraint analysis inputs
         self.ConstraintsBeta = ConstraintsInput['beta']
@@ -29,8 +30,6 @@ class Aircraft:
         self.MissionRange = MissionInput['Range Mission']
         self.DiversionRange = MissionInput['Range Diversion']
         self.beta0 = MissionInput['Beta start']
-        self.DiversionAltitude = MissionInput['Diversion altitude']
-        self.DiversionMach = MissionInput['Diversion Mach']
         self.WPayload = MissionInput['Payload Weight']
         self.WCrew = MissionInput['Crew Weight']
 
@@ -43,7 +42,8 @@ class Aircraft:
         self.SPowerPT = TechnologyInput['Specific Power Powertrain']
         self.PtWPT = TechnologyInput['PowertoWeight Powertrain']
         
-       
+        self.MissionStages = MissionStages
+        self.DiversionStages = DiversionStages
         return None
 
 
