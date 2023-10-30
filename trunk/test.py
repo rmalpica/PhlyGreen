@@ -3,10 +3,12 @@ import sys
 import PhlyGreen.Utilities.Atmosphere as ISA
 import numpy as np
 import matplotlib.pyplot as plt
+import time
+import cProfile
 
 #ISA = pg.Utilities.Atmosphere()
 
-
+start_time = time.time()
 
 # Creating subsystem instances
 powertrain = pg.Systems.Powertrain.Powertrain(None)
@@ -85,14 +87,28 @@ DiversionStages = {'Climb1': {'type': 'ConstantRateClimb', 'input': {'CB': 0.01,
                  'Cruise': {'type': 'ConstantMachCruise', 'input':{ 'Mach': 0.3, 'Altitude': 3100}}}
 
 TechnologyInput = {'Ef': 43.5*10**6,
+                   'Ebat': 750 * 3600,
+                   'pbat': 1000,
                    'Eta Gas Turbine': 0.3,
                    'Eta Gearbox': 0.96,
                    'Eta Propulsive': 0.9,
+                   'Eta Electric Motor 1': 0.96,
+                   'Eta Electric Motor 2': 0.96,
+                   'Eta Electric Motor': 0.96,
+                   'Eta PMAD': 0.99,
                    'Specific Power Powertrain': 3600,
-                   'PowertoWeight Powertrain': 177
+                   'PowertoWeight Battery': 35, 
+                   'PowertoWeight Powertrain': 177,
+                   # 'Supplied Power Ratio': [[0.4, 0.2],[0.1, 0.05],[0.2, 0.1],[0.4, 0.2],[0.1, 0.05],[0.2, 0.1]]
+                    'Supplied Power Ratio': [[0.2, 0.1],[0.05, 0.01],[0.1, 0.05],[0.2, 0.1],[0.05, 0.01],[0.1, 0.05]]
                    }
 
+myaircraft.Configuration = 'Hybrid'
+myaircraft.HybridType = 'Parallel'
 myaircraft.ReadInput(ConstraintsInput,MissionInput,TechnologyInput,MissionStages,DiversionStages)
+
+# CONFIGURATIONS:   'Traditional'       'Serial Hybrid'        'Parallel Hybrid' 
+
 
 # powertrain.Traditional()
 
@@ -105,6 +121,7 @@ WTO = weight.WeightEstimation()[-1]
 print('WTO: ',WTO, ' Kg')
 print('Superficie alare: ', WTO / constraint.DesignWTOoS * 9.81, ' m^2')
              
+# cProfile.run('weight.WeightEstimation()')
 #----------------------------------------------- PLOT -------------------------------------------------#                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           
 
 fig, ax1 = plt.subplots()
@@ -112,7 +129,8 @@ fig, ax1 = plt.subplots()
 color = 'tab:red'
 ax1.set_xlabel('Time (min)')
 ax1.set_ylabel('E [J]')
-ax1.plot(mission.t/60, mission.Ef, color=color, label='E')
+ax1.plot(mission.t/60, mission.Ef, color=color, label='E Fuel')
+ax1.plot(mission.t/60, mission.EBat, color='tab:green', label='E Battery')
 ax1.tick_params(axis='y')
 plt.legend()
 
@@ -128,7 +146,7 @@ ax1.legend()
 ax2.legend()
 ax1.grid(visible=True)
 plt.show()
-plt.clf()
+# plt.clf()
 
 #------------------------------------------------------------------------------------------------------#
 
@@ -149,19 +167,19 @@ plt.clf()
 # plt.ylabel('$P/W_{TO}$')
 # plt.clf()
 
-time = np.linspace(0,mission.profile.MissionTime2,num = 1000)
+# times = np.linspace(0,mission.profile.MissionTime2,num = 1000)
 
-plt.plot(time/60,mission.profile.Altitude(time))
-plt.grid(visible=True)
-plt.xlabel('t [min]')
-plt.ylabel('Altitude [m]')
+# plt.plot(times/60,mission.profile.SuppliedPowerRatio(times))
+# plt.grid(visible=True)
+# plt.xlabel('t [min]')
+# plt.ylabel('Altitude [m]')
 # plt.clf()
 
-# plt.plot(time,mission.profile.PowerExcess2(time))
+# plt.plot(times,mission.profile.PowerExcess(times))
 # plt.grid(visible=True)
 # plt.clf()
 
-# plt.plot(time,mission.profile.Velocity2(time))
+# plt.plot(times,mission.profile.Velocity2(times))
 # plt.grid(visible=True)
 
 # # Using the mediator to perform aircraft design
@@ -169,3 +187,6 @@ plt.ylabel('Altitude [m]')
 
 # Performing some operations...
 
+end_time = time.time()
+execution_time =  end_time - start_time
+print("Execution time:",execution_time)

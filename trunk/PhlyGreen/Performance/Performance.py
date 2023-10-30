@@ -1,6 +1,8 @@
 import numpy as np
 import PhlyGreen.Utilities.Atmosphere as ISA
 import PhlyGreen.Utilities.Speed as Speed
+import PhlyGreen.Utilities.Units as Units
+
 
 class Performance:
     def __init__(self, aircraft):
@@ -10,42 +12,41 @@ class Performance:
 
     def set_speed(self,altitude,speed,speedtype,DISA):
 
-        mTOkn = 1.94384 #Conversion meter/s -> knots
 
         if speedtype == 'Mach':
             self.Mach = speed
             self.TAS = Speed.Mach2TAS(speed,altitude,DISA)
             self.CAS = Speed.Mach2CAS(speed,altitude,DISA)
-            self.KTAS = self.TAS*mTOkn
-            self.KCAS = self.CAS*mTOkn
+            self.KTAS = Units.MtoKN(self.TAS)
+            self.KCAS = Units.MtoKN(self.CAS)
             
         elif speedtype == 'TAS':
             self.Mach = Speed.TAS2Mach(speed,altitude,DISA)
             self.TAS = speed
             self.CAS = Speed.TAS2CAS(speed,altitude,DISA)
-            self.KTAS = self.TAS*mTOkn
-            self.KCAS = self.CAS*mTOkn
+            self.KTAS = Units.MtoKN(self.TAS)
+            self.KCAS = Units.MtoKN(self.CAS)
 
         elif speedtype == 'CAS':
             self.Mach = Speed.CAS2Mach(speed,altitude,DISA)
             self.TAS = Speed.CAS2TAS(speed,altitude,DISA)
             self.CAS = speed
-            self.KTAS = self.TAS*mTOkn
-            self.KCAS = self.CAS*mTOkn
+            self.KTAS = Units.MtoKN(self.TAS)
+            self.KCAS = Units.MtoKN(self.CAS)
 
         elif speedtype == 'KTAS':
             self.KTAS = speed
-            self.TAS = self.KTAS/mTOkn
+            self.TAS = Units.KNtoM(self.KTAS)
             self.Mach = Speed.TAS2Mach(self.TAS,altitude,DISA)
             self.CAS = Speed.TAS2CAS(self.TAS,altitude,DISA)
-            self.KCAS = self.CAS*mTOkn
+            self.KCAS = Units.MtoKN(self.CAS)
 
         elif speedtype == 'KCAS':
             self.KCAS = speed
-            self.CAS = self.KCAS/mTOkn
+            self.CAS = Units.KNtoM(self.KCAS)
             self.Mach = Speed.CAS2Mach(self.CAS,altitude,DISA)
             self.TAS = Speed.CAS2TAS(self.CAS,altitude,DISA)
-            self.KTAS = self.TAS*mTOkn
+            self.KTAS = Units.MtoKN(self.TAS)
         
         else:
             raise ValueError("Speedtype not supported")

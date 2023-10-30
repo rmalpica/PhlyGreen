@@ -8,46 +8,28 @@ class Aircraft:
         self.weight = weight
         self.constraint = constraint
 
+
     def ReadInput(self,ConstraintsInput,MissionInput,TechnologyInput,MissionStages,DiversionStages):
         
-        # Contraint analysis inputs
-        self.ConstraintsBeta = ConstraintsInput['beta']
-        self.ConstraintsAltitude = ConstraintsInput['altitude']
-        self.ConstraintsSpeed = ConstraintsInput['speed']
-        self.ConstraintsSpeedtype = ConstraintsInput['speedtype']
-        self.ConstraintsN = ConstraintsInput['load factor']
-        self.DISA = ConstraintsInput['DISA']
-        self.kTO = ConstraintsInput['kTO']
-        self.sTO = ConstraintsInput['sTO']
-        self.CB = ConstraintsInput['Climb Gradient']
-        self.ht = ConstraintsInput['ht']
-        self.M1 = ConstraintsInput['M1']
-        self.M2 = ConstraintsInput['M2']
-        self.DTAcceleration = ConstraintsInput['DTAcceleration']
-
-
-        # Mission analysis inputs
-        self.MissionRange = MissionInput['Range Mission']
-        self.DiversionRange = MissionInput['Range Diversion']
-        self.beta0 = MissionInput['Beta start']
-        self.WPayload = MissionInput['Payload Weight']
-        self.WCrew = MissionInput['Crew Weight']
-
-        
-        # Technology parameters
-        self.ef = TechnologyInput['Ef']
-        self.EtaGT = TechnologyInput['Eta Gas Turbine']
-        self.EtaGB = TechnologyInput['Eta Gearbox']
-        self.EtaPP = TechnologyInput['Eta Propulsive']
-        self.SPowerPT = TechnologyInput['Specific Power Powertrain']
-        self.PtWPT = TechnologyInput['PowertoWeight Powertrain']
-        
+        self.ConstraintsInput = ConstraintsInput
+        self.MissionInput = MissionInput
+        self.TechnologyInput = TechnologyInput
         self.MissionStages = MissionStages
         self.DiversionStages = DiversionStages
-        return None
 
 
-
+        # Initialize Constraint Analysis
+        self.constraint.ReadInput()
+        
+        # Initialize Mission profile and Analysis
+        self.mission.InitializeProfile()
+        self.mission.ReadInput()
+        
+        # Initialize Powertrain
+        self.powertrain.ReadInput()
+        
+        # Initialize Weight Estimator
+        self.weight.ReadInput()
 
     def design_aircraft(self):
         print("Initializing aircraft...")

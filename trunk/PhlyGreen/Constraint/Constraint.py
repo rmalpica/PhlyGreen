@@ -8,30 +8,30 @@ class Constraint:
         self.WTOoS = np.linspace(1, 7000, num=100)
 
 
-    def read_input(self):
+    def ReadInput(self):
         
-        self.ConstraintsBeta = self.aircraft.ConstraintsBeta
-        self.ConstraintsAltitude = self.aircraft.ConstraintsAltitude
-        self.ConstraintsSpeed = self.aircraft.ConstraintsSpeed
-        self.ConstraintsSpeedtype = self.aircraft.ConstraintsSpeedtype
-        self.ConstraintsN = self.aircraft.ConstraintsN
-        self.DISA = self.aircraft.DISA
-        self.kTO = self.aircraft.kTO
-        self.sTO = self.aircraft.sTO
-        self.CB = self.aircraft.CB
-        self.ht = self.aircraft.ht
-        self.M1 = self.aircraft.M1
-        self.M2 = self.aircraft.M2
-        self.DTAcceleration = self.aircraft.DTAcceleration
+        self.ConstraintsBeta = self.aircraft.ConstraintsInput['beta']
+        self.ConstraintsAltitude = self.aircraft.ConstraintsInput['altitude']
+        self.ConstraintsSpeed = self.aircraft.ConstraintsInput['speed']
+        self.ConstraintsSpeedtype = self.aircraft.ConstraintsInput['speedtype']
+        self.ConstraintsN = self.aircraft.ConstraintsInput['load factor']
+        self.DISA = self.aircraft.ConstraintsInput['DISA']
+        self.kTO = self.aircraft.ConstraintsInput['kTO']
+        self.sTO = self.aircraft.ConstraintsInput['sTO']
+        self.CB = self.aircraft.ConstraintsInput['Climb Gradient']
+        self.ht = self.aircraft.ConstraintsInput['ht']
+        self.M1 = self.aircraft.ConstraintsInput['M1']
+        self.M2 = self.aircraft.ConstraintsInput['M2']
+        self.DTAcceleration = self.aircraft.ConstraintsInput['DTAcceleration']
         self.Mavg = (self.M1 + self.M2)/2
         self.PsAcceleration = Speed.Mach2TAS(self.Mavg, self.ConstraintsAltitude[5],self.DISA) * (Speed.Mach2TAS(self.M2, self.ConstraintsAltitude[5],self.DISA) - Speed.Mach2TAS(self.M1, self.ConstraintsAltitude[5],self.DISA))/(self.DTAcceleration * 9.81) 
 
-        return None
+        
 
 
     def EvaluateConstraints(self, WTOoS, DISA, kTO, sTO, CB, ht, PsAcceleration):
         
-        # self.read_input()
+        
         
         self.PWCruise = self.aircraft.performance.PoWTO(self.WTOoS, self.ConstraintsBeta[0], 0, self.ConstraintsN[0], self.ConstraintsAltitude[0], DISA, self.ConstraintsSpeed[0], self.ConstraintsSpeedtype[0])
         self.PWTakeOff = self.aircraft.performance.TakeOff(WTOoS,self.ConstraintsBeta[1], self.ConstraintsAltitude[1], kTO, sTO, DISA, self.ConstraintsSpeed[1], self.ConstraintsSpeedtype[1])
@@ -46,7 +46,7 @@ class Constraint:
     
     def FindDesignPoint(self):
 
-        self.read_input()        
+           
         self.EvaluateConstraints(self.WTOoS, self.DISA, self.kTO, self.sTO, self.CB, self.ht, self.PsAcceleration)
         
         PWMatrix = np.matrix([self.PWCruise, self.PWTakeOff, self.PWClimb, self.PWTurn, self.PWCeiling, self.PWAcceleration])

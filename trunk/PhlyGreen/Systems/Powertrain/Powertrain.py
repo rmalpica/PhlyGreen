@@ -15,9 +15,23 @@ class Powertrain:
 
     def ReadInput(self):
         
-        self.EtaGT = self.aircraft.EtaGT
-        self.EtaGB = self.aircraft.EtaGB
-        self.EtaPP = self.aircraft.EtaPP
+        self.EtaGT = self.aircraft.TechnologyInput['Eta Gas Turbine']
+        self.EtaGB = self.aircraft.TechnologyInput['Eta Gearbox']
+        self.EtaPP = self.aircraft.TechnologyInput['Eta Propulsive']
+        
+        if (self.aircraft.Configuration == 'Hybrid'):
+            
+            self.EtaPM = self.aircraft.TechnologyInput['Eta PMAD']
+
+            
+            if (self.aircraft.HybridType == 'Parallel'):
+        
+                self.EtaEM = self.aircraft.TechnologyInput['Eta Electric Motor']
+                
+            if (self.aircraft.HybridType == 'Serial'):
+                
+                self.EtaEM1 = self.aircraft.TechnologyInput['Eta Electric Motor 1']
+                self.EtaEM2 = self.aircraft.TechnologyInput['Eta Electric Motor 2']
 
         
         return None
@@ -27,14 +41,72 @@ class Powertrain:
         
         self.ReadInput()
         
-        A = np.array([[- self.EtaGT, 1, 0, 0],[0, - self.EtaGB, 1, 0],[0, 0, - self.EtaPP, 1],[0, 0, 0, 1]])
+        A = np.array([[- self.EtaGT, 1, 0, 0],
+                      [0, - self.EtaGB, 1, 0],
+                      [0, 0, - self.EtaPP, 1],
+                      [0, 0, 0, 1]])
+       
         b = np.array([0, 0, 0, 1])
         
         PowerRatio = np.linalg.solve(A,b)
 
         return PowerRatio
     
+    
+    def Hybrid(self,t):
+        
+        
+        
+        phi = self.aircraft.mission.profile.SuppliedPowerRatio(t)
+        
+        if (self.aircraft.HybridType == 'Parallel'):
+        
+            A = np.array([[- self.EtaGT, 1, 0, 0, 0, 0, 0],
+                      [0, -self.EtaGB, -self.EtaGB, 1, 0, 0, 0],
+                      [0, 0, 0, 0, 1, -self.EtaPM, 0],
+                      [0, 0, 1, 0, - self.EtaEM, 0, 0],
+                      [0, 0, 0, - self.EtaPP, 0, 0, 1],
+                      [phi, 0, 0, 0, 0, phi - 1, 0],
+                      [0, 0, 0, 0, 0, 0, 1]])
+       
+            b = np.array([0, 0, 0, 0, 0, 0, 1])
+            
+            #Ordine output   Pf/Pp  Pgt/Pp   Pgb/Pp  Ps1/Pp  Pe1/Pp   Pbat/Pp    Pp1/Pp 
 
         
+        elif (self.aircraft.HybridType == 'Serial'):
+                        
+            A = np.array([[- self.EtaGT, 1, 0, 0, 0, 0, 0, 0],
+                      [0, - self.EtaEM1, 0, 1, 0, 0, 0, 0],
+                      [0, 0, 0, -self.EtaPM, 1, -self.EtaPM, 0, 0],
+                      [0, 0, 1, 0,  - self.EtaEM2, 0, 0, 0],
+                      [0, 0, - self.EtaGB, 0, 0, 0, 1, 0],
+                      [0, 0, 0, 0, 0, 0, - self.EtaPP, 1],
+                      [phi, 0, 0, 0, 0, phi - 1, 0, 0],
+                      [0, 0, 0, 0, 0, 0, 0, 1]])
+       
+            b = np.array([0, 0, 0, 0, 0, 0, 0, 1])
+        
+        PowerRatio = np.linalg.solve(A,b)
+        
+    #Ordine output   Pf/Pp  Pgt/Pp   Pgb/Pp    Pe1/Pp  Pe2/Pp   Pbat/Pp   Ps2/Pp   Pp1/Pp 
+        return PowerRatio
         
         
+    def ParallelHybrid2(self,t):
+        
+        self.ReadInput()
+        
+        phi = self.aircraft.mission.profile.SuppliedPowerRatio(t)
+        
+        P1 = self.EtaPP / (self.EtaGB*self.EtaGT - (phi/(phi-1))*self.EtaGB*self.EtaPM*self.EtaEM)
+        P2 = P1 * self.EtaGT
+        P3 = - (phi/(phi-1)) * self.EtaPM * self.EtaEM * P1
+        P4 = self.EtaPP
+        P5 = - (phi/(phi-1)) * self.EtaPM * P1
+        P6 = - (phi/(phi-1)) * P1
+        P7 = 1
+        PowerRatio = [P1, P2, P3, P4, P5, P6, P7]
+        
+    #Ordine output   Pf/Pp  Pgt/Pp   Pgb/Pp  Ps1/Pp  Pe1/Pp   Pbat/Pp    Pp1/Pp 
+        return PowerRatio
