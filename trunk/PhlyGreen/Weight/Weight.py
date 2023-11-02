@@ -20,8 +20,11 @@ class Weight:
         self.ebat = self.aircraft.TechnologyInput['Ebat']
         self.pbat = self.aircraft.TechnologyInput['pbat']
         self.SPowerPT = self.aircraft.TechnologyInput['Specific Power Powertrain']
+        self.SPowerPMAD = self.aircraft.TechnologyInput['Specific Power PMAD']
         self.PtWPT = self.aircraft.TechnologyInput['PowertoWeight Powertrain']
         self.PtWBat = self.aircraft.TechnologyInput['PowertoWeight Battery']
+        self.PtWPMAD = self.aircraft.TechnologyInput['PowertoWeight PMAD']
+
 
         return None
         
@@ -46,43 +49,44 @@ class Weight:
 
     def Traditional(self):
         
-        WTO = [0, 16000]
-        WDifference = WTO[1] - WTO[0]
+        self.WTO = [0, 16000]
+        WDifference = self.WTO[1] - self.WTO[0]
         i = 1
         
         while (WDifference > self.tol):
             
-            Wf = self.aircraft.mission.EvaluateMission(WTO[i])/self.ef
-            WPT = self.PtWPT * WTO[i] / self.SPowerPT
-            WStructure = self.aircraft.structures.StructuralWeight(WTO[i])
-            WTO.append(self.WPayload + self.WCrew + Wf + WStructure + WPT) 
-            WDifference = np.abs(WTO[i+1] - WTO[i])
+            self.Wf = self.aircraft.mission.EvaluateMission(self.WTO[i])/self.ef
+            # self.WPT = self.PtWPT * self.WTO[i] / self.SPowerPT
+            self.WPT =  np.sum(np.divide(self.PtWPT, self.SPowerPT)) * self.WTO[i]
+            self.WStructure = self.aircraft.structures.StructuralWeight(self.WTO[i])
+            self.WTO.append(self.WPayload + self.WCrew + self.Wf + self.WStructure + self.WPT) 
+            WDifference = np.abs(self.WTO[i+1] - self.WTO[i])
             i += 1
             
-        return WTO
+
     
     
     def Hybrid(self):
         
-        WTO = [0, 17500]
-        WDifference = WTO[1] - WTO[0]
+        self.WTO = [0, 17500]
+        WDifference = self.WTO[1] - self.WTO[0]
         i = 1
         
         while (WDifference > self.tol):
             
-            TotalEnergies = self.aircraft.mission.EvaluateMission(WTO[i])
+            TotalEnergies = self.aircraft.mission.EvaluateMission(self.WTO[i])
             
-            Wf = TotalEnergies[0]/self.ef
-            WBat  = np.max([TotalEnergies[1]/self.ebat , self.PtWBat*(1/self.pbat)*WTO[i]])
-            WPT = self.PtWPT * WTO[i] / self.SPowerPT
-            WStructure = self.aircraft.structures.StructuralWeight(WTO[i])
-            WTO.append(self.WPayload + self.WCrew + Wf + WStructure + WPT + WBat) 
-            WDifference = np.abs(WTO[i+1] - WTO[i])
+            self.Wf = TotalEnergies[0]/self.ef
+            self.WBat  = np.max([TotalEnergies[1]/self.ebat , self.PtWBat*(1/self.pbat)*self.WTO[i]])
+            # WPT = self.PtWPT * WTO[i] / self.SPowerPT
+            self.WPT =  (np.sum(np.divide(self.PtWPT, self.SPowerPT)) + np.sum(np.divide(self.PtWPMAD, self.SPowerPMAD))) * self.WTO[i] 
+            self.WStructure = self.aircraft.structures.StructuralWeight(self.WTO[i])
+            self.WTO.append(self.WPayload + self.WCrew + self.Wf + self.WStructure + self.WPT + self.WBat) 
+            WDifference = np.abs(self.WTO[i+1] - self.WTO[i])
             i += 1
             
-            print('---------------------------------------------------------------------------')
-            print('Iteration:', i-1)
-            print('Powertrain: ',WPT, 'Fuel: ', Wf, 'Battery: ',WBat,'Structure: ', WStructure)
-            print('Empty Weight: ', WPT + WStructure + self.WCrew)
+            # print('---------------------------------------------------------------------------')
+            # print('Iteration:', i-1)
+            # print('Powertrain: ',self.WPT, 'Fuel: ', self.Wf, 'Battery: ', self.WBat,'Structure: ', self.WStructure)
+            # print('Empty Weight: ', self.WPT + self.WStructure + self.WCrew)
             
-        return WTO

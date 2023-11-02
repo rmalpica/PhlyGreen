@@ -31,11 +31,26 @@ class Aircraft:
         # Initialize Weight Estimator
         self.weight.ReadInput()
 
-    def design_aircraft(self):
+    def DesignAircraft(self,ConstraintsInput, MissionInput, TechnologyInput, MissionStages, DiversionStages):
         print("Initializing aircraft...")
-        self.powertrain.set()
-        self.structure.set()
-        self.aerodynamics.set()
-        self.performance.set()
-        self.mission.set()
+        self.ReadInput(ConstraintsInput, MissionInput, TechnologyInput, MissionStages, DiversionStages)
 
+        print("Finding Design Point...")
+        self.constraint.FindDesignPoint()
+        print('----------------------------------------')
+        print('Design W/S: ',self.constraint.DesignWTOoS)
+        print('Design P/W: ',self.constraint.DesignPW)
+        print('----------------------------------------')
+
+        print("Evaluating Weights...")
+        self.weight.WeightEstimation()
+        print('----------------------------------------')
+        print('Powertrain mass: ',self.weight.WPT)
+        print('Fuel mass: ', self.weight.Wf)
+        if (self.Configuration == 'Hybrid'):
+            print('Battery mass: ',self.weight.WBat)
+        print('Structure: ', self.weight.WStructure)
+        print('Empty Weight: ', self.weight.WPT + self.weight.WStructure + self.weight.WCrew)
+        print('----------------------------------------')
+        print('Takeoff Weight: ', self.weight.WTO[-1])
+        print('Wing Surface: ', self.weight.WTO[-1] / self.constraint.DesignWTOoS * 9.81, ' m^2')

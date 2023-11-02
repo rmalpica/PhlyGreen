@@ -19,6 +19,9 @@ class Mission:
         self.profile = Profile(self.aircraft)
         
         self.profile.DefineMission()
+        
+        self.t = np.linspace(0,self.profile.MissionTime2,num=1000)
+
 
     def EvaluateMission(self,WTO):
         
@@ -36,9 +39,6 @@ class Mission:
             case _:
                 return "Try a different configuration..."
   
-    def TraditionalConfiguration(self,WTO):
-        
-        self.WTO = WTO
   
     def TraditionalConfiguration(self,WTO):
  
@@ -53,28 +53,26 @@ class Mission:
 
 
         
-        def model(z,t):
-            Beta = z[1]
+        def model(t,y):
+            Beta = y[1]
             dEdt = PF(Beta,t)
             # dbetadt = - PF(Beta,t)/(self.aircraft.ef*self.WTO)
             dbetadt = - dEdt/(self.ef*self.WTO)
 
-            dzdt = [dEdt,dbetadt]
-            return dzdt
+            return [dEdt,dbetadt]
 
         # initial condition
-        z0 = [0,self.profile.beta0]
+        y0 = [0,self.profile.beta0]
 
-        self.t = np.linspace(0,self.profile.MissionTime2,num=1000)
         
 
-        # z = integrate.solve_ivp(model,[0, self.TotalTime],z0)
-        z = integrate.odeint(model,z0,self.t)
+        sol = integrate.solve_ivp(model,[0, self.profile.MissionTime2],y0)
+        # z = integrate.odeint(model,z0,self.t)
         
         # Ef, Beta = integrate.odeint(model,z0,self.TotalTime)
  
-        self.Ef = z[:,0]
-        self.Beta = z[:,1]
+        self.Ef = sol.y[0]
+        self.Beta = sol.y[1]
         
 
         return self.Ef[-1]
@@ -93,38 +91,31 @@ class Mission:
             return PPoWTO * WTO
 
         
-        def model(z,t):
+        def model(t,y):
             
             PRatio = self.aircraft.powertrain.Hybrid(t)
-            Beta = z[2]
+            Beta = y[2]
             Ppropulsive = PP(Beta,t)
             dEFdt = Ppropulsive * PRatio[0]
             dEBatdt = Ppropulsive * PRatio[5]
-            # dbetadt = - PF(Beta,t)/(self.aircraft.ef*self.WTO)
-            dbetadt = - dEFdt/(self.ef*self.WTO)
-            dzdt = [dEFdt,dEBatdt,dbetadt]
-            return dzdt
+            dbetadt = - dEFdt/(self.ef*self.WTO)            
+            return [dEFdt,dEBatdt,dbetadt]
 
         # initial condition
-        z0 = [0,0,self.profile.beta0]
+        y0 = [0,0,self.profile.beta0]
 
-        self.t = np.linspace(0,self.profile.MissionTime2,num=1000)
         
 
-        # z = integrate.solve_ivp(model,[0, self.TotalTime],z0)
-        z = integrate.odeint(model,z0,self.t)
+        sol = integrate.solve_ivp(model,[0, self.profile.MissionTime2],y0)
+        # z = integrate.odeint(model,z0,self.t)
         
         # Ef, Beta = integrate.odeint(model,z0,self.TotalTime)
  
-        self.Ef = z[:,0]
-        self.EBat = z[:,1]
-        self.Beta = z[:,2]
+        self.Ef = sol.y[0]
+        self.EBat = sol.y[1]
+        self.Beta = sol.y[2]
         
 
         return self.Ef[-1], self.EBat[-1]
         
         
-    
-    def SerialHybridConfiguration(self,WTO):
-        
-        return None

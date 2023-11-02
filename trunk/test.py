@@ -1,6 +1,5 @@
 import PhlyGreen as pg
 import sys
-import PhlyGreen.Utilities.Atmosphere as ISA
 import numpy as np
 import matplotlib.pyplot as plt
 import time
@@ -28,7 +27,7 @@ myaircraft = pg.Aircraft(powertrain, structures, aerodynamics, performance, miss
 # # Associating subsystems with the mediator
 powertrain.aircraft = myaircraft
 structures.aircraft = myaircraft
-# aerodynamics.aircraft = myaircraft
+aerodynamics.aircraft = myaircraft
 mission.aircraft = myaircraft
 performance.aircraft = myaircraft
 weight.aircraft = myaircraft
@@ -96,75 +95,65 @@ TechnologyInput = {'Ef': 43.5*10**6,
                    'Eta Electric Motor 2': 0.96,
                    'Eta Electric Motor': 0.96,
                    'Eta PMAD': 0.99,
-                   'Specific Power Powertrain': 3600,
+                   'Specific Power Powertrain': [3600,7700],
+                   'Specific Power PMAD': [2200,2200,2200],
                    'PowertoWeight Battery': 35, 
-                   'PowertoWeight Powertrain': 177,
+                   'PowertoWeight Powertrain': [150,33],
+                   'PowertoWeight PMAD': 0,
                    # 'Supplied Power Ratio': [[0.4, 0.2],[0.1, 0.05],[0.2, 0.1],[0.4, 0.2],[0.1, 0.05],[0.2, 0.1]]
                     'Supplied Power Ratio': [[0.2, 0.1],[0.05, 0.01],[0.1, 0.05],[0.2, 0.1],[0.05, 0.01],[0.1, 0.05]]
                    }
 
-myaircraft.Configuration = 'Hybrid'
+
+myaircraft.Configuration = 'Traditional'
 myaircraft.HybridType = 'Parallel'
-myaircraft.ReadInput(ConstraintsInput,MissionInput,TechnologyInput,MissionStages,DiversionStages)
+myaircraft.DesignAircraft(ConstraintsInput,MissionInput,TechnologyInput,MissionStages,DiversionStages)
 
-# CONFIGURATIONS:   'Traditional'       'Serial Hybrid'        'Parallel Hybrid' 
-
-
-# powertrain.Traditional()
-
-constraint.FindDesignPoint()
-# mission.EvaluateMission(18000)
-
-
-
-WTO = weight.WeightEstimation()[-1]
-print('WTO: ',WTO, ' Kg')
-print('Superficie alare: ', WTO / constraint.DesignWTOoS * 9.81, ' m^2')
              
 # cProfile.run('weight.WeightEstimation()')
 #----------------------------------------------- PLOT -------------------------------------------------#                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           
 
-fig, ax1 = plt.subplots()
+# fig, ax1 = plt.subplots()
 
-color = 'tab:red'
-ax1.set_xlabel('Time (min)')
-ax1.set_ylabel('E [J]')
-ax1.plot(mission.t/60, mission.Ef, color=color, label='E Fuel')
-ax1.plot(mission.t/60, mission.EBat, color='tab:green', label='E Battery')
-ax1.tick_params(axis='y')
-plt.legend()
+# color = 'tab:red'
+# ax1.set_xlabel('Time (min)')
+# ax1.set_ylabel('E [J]')
+# ax1.plot(mission.t/60, mission.Ef, color=color, label='E Fuel')
+# ax1.plot(mission.t/60, mission.EBat, color='tab:green', label='E Battery')
+# ax1.tick_params(axis='y')
+# plt.legend()
 
-ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
+# ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
 
-color = 'tab:blue'
-ax2.set_ylabel('beta')  # we already handled the x-label with ax1
-ax2.plot(mission.t/60, mission.Beta, color=color, label='beta')
-ax2.tick_params(axis='y')
+# color = 'tab:blue'
+# ax2.set_ylabel('beta')  # we already handled the x-label with ax1
+# ax2.plot(mission.t/60, mission.Beta, color=color, label='beta')
+# ax2.tick_params(axis='y')
 
-fig.tight_layout()  # otherwise the right y-label is slightly clipped
-ax1.legend()
-ax2.legend()
-ax1.grid(visible=True)
-plt.show()
+# fig.tight_layout()  # otherwise the right y-label is slightly clipped
+# ax1.legend()
+# ax2.legend()
+# ax1.grid(visible=True)
+# plt.show()
 # plt.clf()
 
 #------------------------------------------------------------------------------------------------------#
 
-# plt.plot(constraint.WTOoS,constraint.PWCruise, label='Cruise')
-# plt.plot(constraint.WTOoS,constraint.PWTakeOff, label='Take Off')
-# plt.plot(constraint.WTOoS,constraint.PWClimb, label='Climb')
-# plt.plot(constraint.WTOoS,constraint.PWTurn, label='Turn')
-# plt.plot(constraint.WTOoS,constraint.PWCeiling, label='Ceiling')
-# plt.plot(constraint.WTOoS,constraint.PWAcceleration, label='Acceleration')
-# plt.plot(constraint.WTOoSLanding, constraint.PWLanding, label='Landing')
-# plt.plot(constraint.DesignWTOoS, constraint.DesignPW, marker='o', markersize = 10, markerfacecolor = 'red', markeredgecolor = 'black')
-# # plt.plot(performance.WTOoSTorenbeek, performance.PWTorenbeek, label='Torenbeek')
-# plt.ylim([0, 300])
-# plt.xlim([0, 7000])
-# plt.legend()
-# plt.grid(visible=True)
-# plt.xlabel('$W_{TO}/S$')
-# plt.ylabel('$P/W_{TO}$')
+plt.plot(constraint.WTOoS,constraint.PWCruise, label='Cruise')
+plt.plot(constraint.WTOoS,constraint.PWTakeOff, label='Take Off')
+plt.plot(constraint.WTOoS,constraint.PWClimb, label='Climb')
+plt.plot(constraint.WTOoS,constraint.PWTurn, label='Turn')
+plt.plot(constraint.WTOoS,constraint.PWCeiling, label='Ceiling')
+plt.plot(constraint.WTOoS,constraint.PWAcceleration, label='Acceleration')
+plt.plot(constraint.WTOoSLanding, constraint.PWLanding, label='Landing')
+plt.plot(constraint.DesignWTOoS, constraint.DesignPW, marker='o', markersize = 10, markerfacecolor = 'red', markeredgecolor = 'black')
+# plt.plot(performance.WTOoSTorenbeek, performance.PWTorenbeek, label='Torenbeek')
+plt.ylim([0, 300])
+plt.xlim([0, 7000])
+plt.legend()
+plt.grid(visible=True)
+plt.xlabel('$W_{TO}/S$')
+plt.ylabel('$P/W_{TO}$')
 # plt.clf()
 
 # times = np.linspace(0,mission.profile.MissionTime2,num = 1000)
