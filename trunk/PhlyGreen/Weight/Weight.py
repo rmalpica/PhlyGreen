@@ -8,7 +8,7 @@ class Weight:
   
     def __init__(self, aircraft):
         self.aircraft = aircraft
-        self.tol = 0.1
+        self.tol = 1
         
             
         
@@ -57,13 +57,18 @@ class Weight:
             
             self.Wf = self.aircraft.mission.EvaluateMission(self.WTO[i])/self.ef
             # self.WPT = self.PtWPT * self.WTO[i] / self.SPowerPT
-            self.WPT =  np.sum(np.divide(self.PtWPT, self.SPowerPT)) * self.WTO[i]
-            self.WStructure = self.aircraft.structures.StructuralWeight(self.WTO[i])
+            # self.WPT =  np.sum(np.divide(self.PtWPT, self.SPowerPT)) * self.WTO[i]
+            self.WPT = self.aircraft.powertrain.WeightPowertrain(self.WTO[i])
+            self.WStructure = self.aircraft.structures.StructuralWeight(self.WTO[i]) + 500
             self.WTO.append(self.WPayload + self.WCrew + self.Wf + self.WStructure + self.WPT) 
             WDifference = np.abs(self.WTO[i+1] - self.WTO[i])
             i += 1
             
-
+            # print('---------------------------------------------------------------------------')
+            # print('Iteration:', i-1)
+            # print('Powertrain: ',self.WPT, 'Fuel: ', self.Wf, 'Structure: ', self.WStructure)
+            # print('Empty Weight: ', self.WPT + self.WStructure + self.WCrew)
+            # print('Total Weight: ', self.WTO[i])
     
     
     def Hybrid(self):
@@ -74,13 +79,20 @@ class Weight:
         
         while (WDifference > self.tol):
             
-            TotalEnergies = self.aircraft.mission.EvaluateMission(self.WTO[i])
+            if (i == 100):
+                
+                self.WTO.append(np.mean(self.WTO))
+                print('Attention! Max number of iteration has been reached')
+                break
             
-            self.Wf = TotalEnergies[0]/self.ef
-            self.WBat  = np.max([TotalEnergies[1]/self.ebat , self.PtWBat*(1/self.pbat)*self.WTO[i]])
+            self.TotalEnergies = self.aircraft.mission.EvaluateMission(self.WTO[i])
+            
+            self.Wf = self.TotalEnergies[0]/self.ef
+            self.WBat  = np.max([self.TotalEnergies[1]/self.ebat , self.PtWBat*(1/self.pbat)*self.WTO[i]])
+            self.WPT = self.aircraft.powertrain.WeightPowertrain(self.WTO[i])
             # WPT = self.PtWPT * WTO[i] / self.SPowerPT
-            self.WPT =  (np.sum(np.divide(self.PtWPT, self.SPowerPT)) + np.sum(np.divide(self.PtWPMAD, self.SPowerPMAD))) * self.WTO[i] 
-            self.WStructure = self.aircraft.structures.StructuralWeight(self.WTO[i])
+            # self.WPT =  (np.sum(np.divide(self.PtWPT, self.SPowerPT)) + np.sum(np.divide(self.PtWPMAD, self.SPowerPMAD))) * self.WTO[i] 
+            self.WStructure = self.aircraft.structures.StructuralWeight(self.WTO[i]) + 500
             self.WTO.append(self.WPayload + self.WCrew + self.Wf + self.WStructure + self.WPT + self.WBat) 
             WDifference = np.abs(self.WTO[i+1] - self.WTO[i])
             i += 1
@@ -89,4 +101,5 @@ class Weight:
             # print('Iteration:', i-1)
             # print('Powertrain: ',self.WPT, 'Fuel: ', self.Wf, 'Battery: ', self.WBat,'Structure: ', self.WStructure)
             # print('Empty Weight: ', self.WPT + self.WStructure + self.WCrew)
+            # print('Total Weight: ', self.WTO[i])
             

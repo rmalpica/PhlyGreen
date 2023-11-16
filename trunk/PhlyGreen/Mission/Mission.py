@@ -93,7 +93,7 @@ class Mission:
         
         def model(t,y):
             
-            PRatio = self.aircraft.powertrain.Hybrid(t)
+            PRatio = self.aircraft.powertrain.Hybrid(self.aircraft.mission.profile.SuppliedPowerRatio(t))
             Beta = y[2]
             Ppropulsive = PP(Beta,t)
             dEFdt = Ppropulsive * PRatio[0]

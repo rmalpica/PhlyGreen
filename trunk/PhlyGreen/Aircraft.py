@@ -1,5 +1,5 @@
 class Aircraft:
-    def __init__(self, powertrain, structures, aerodynamics, performance, mission, weight, constraint):
+    def __init__(self, powertrain, structures, aerodynamics, performance, mission, weight, constraint, welltowake):
         self.powertrain = powertrain
         self.structures = structures
         self.aerodynamics = aerodynamics
@@ -7,9 +7,10 @@ class Aircraft:
         self.mission = mission
         self.weight = weight
         self.constraint = constraint
+        self.welltowake = welltowake
 
 
-    def ReadInput(self,ConstraintsInput,MissionInput,TechnologyInput,MissionStages,DiversionStages):
+    def ReadInput(self,ConstraintsInput,MissionInput,TechnologyInput,MissionStages,DiversionStages, WellToTankInput=None):
         
         self.ConstraintsInput = ConstraintsInput
         self.MissionInput = MissionInput
@@ -17,6 +18,10 @@ class Aircraft:
         self.MissionStages = MissionStages
         self.DiversionStages = DiversionStages
 
+        if WellToTankInput is not None:
+            
+            self.WellToTankInput = WellToTankInput
+            self.welltowake.ReadInput()
 
         # Initialize Constraint Analysis
         self.constraint.ReadInput()
@@ -31,26 +36,36 @@ class Aircraft:
         # Initialize Weight Estimator
         self.weight.ReadInput()
 
-    def DesignAircraft(self,ConstraintsInput, MissionInput, TechnologyInput, MissionStages, DiversionStages):
-        print("Initializing aircraft...")
-        self.ReadInput(ConstraintsInput, MissionInput, TechnologyInput, MissionStages, DiversionStages)
+    def DesignAircraft(self,ConstraintsInput, MissionInput, TechnologyInput, MissionStages, DiversionStages, WellToTankInput=None, PrintOutput = False):
+        # print("Initializing aircraft...")
+        self.ReadInput(ConstraintsInput, MissionInput, TechnologyInput, MissionStages, DiversionStages, WellToTankInput)
 
-        print("Finding Design Point...")
+        # print("Finding Design Point...")
         self.constraint.FindDesignPoint()
-        print('----------------------------------------')
-        print('Design W/S: ',self.constraint.DesignWTOoS)
-        print('Design P/W: ',self.constraint.DesignPW)
-        print('----------------------------------------')
+        
+        if PrintOutput:
+            print('----------------------------------------')
+            print('Design W/S: ',self.constraint.DesignWTOoS)
+            print('Design P/W: ',self.constraint.DesignPW)
+            print('----------------------------------------')
 
-        print("Evaluating Weights...")
+        # print("Evaluating Weights...")
         self.weight.WeightEstimation()
-        print('----------------------------------------')
-        print('Powertrain mass: ',self.weight.WPT)
-        print('Fuel mass: ', self.weight.Wf)
-        if (self.Configuration == 'Hybrid'):
-            print('Battery mass: ',self.weight.WBat)
-        print('Structure: ', self.weight.WStructure)
-        print('Empty Weight: ', self.weight.WPT + self.weight.WStructure + self.weight.WCrew)
-        print('----------------------------------------')
-        print('Takeoff Weight: ', self.weight.WTO[-1])
-        print('Wing Surface: ', self.weight.WTO[-1] / self.constraint.DesignWTOoS * 9.81, ' m^2')
+        self.WingSurface = self.weight.WTO[-1] / self.constraint.DesignWTOoS * 9.81
+        self.welltowake.EvaluateSource()
+        
+        if PrintOutput:
+            print('----------------------------------------')
+            print('Powertrain mass: ',self.weight.WPT)
+            print('Fuel mass: ', self.weight.Wf)
+            if (self.Configuration == 'Hybrid'):
+                print('Battery mass: ',self.weight.WBat)
+                print('Structure: ', self.weight.WStructure)
+                print('Empty Weight: ', self.weight.WPT + self.weight.WStructure + self.weight.WCrew)
+                print('----------------------------------------')
+                print('Takeoff Weight: ', self.weight.WTO[-1])
+                print('Source Energy: ', self.welltowake.SourceEnergy/1.e6,' MJ')
+                print('Psi: ', self.welltowake.Psi)
+                print('Wing Surface: ', self.WingSurface, ' m^2')
+        
+        

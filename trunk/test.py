@@ -17,10 +17,11 @@ performance = pg.Performance.Performance(None)
 mission = pg.Mission.Mission(None)
 weight = pg.Weight.Weight(None)
 constraint = pg.Constraint.Constraint(None)
+welltowake = pg.WellToWake.WellToWake(None)
 
 
 # # Creating mediator and associating with subsystems
-myaircraft = pg.Aircraft(powertrain, structures, aerodynamics, performance, mission, weight, constraint)
+myaircraft = pg.Aircraft(powertrain, structures, aerodynamics, performance, mission, weight, constraint, welltowake)
 
 
 
@@ -32,6 +33,7 @@ mission.aircraft = myaircraft
 performance.aircraft = myaircraft
 weight.aircraft = myaircraft
 constraint.aircraft = myaircraft
+welltowake.aircraft = myaircraft
 
 aerodynamics.set_quadratic_polar(11,0.8)
 
@@ -48,52 +50,47 @@ aerodynamics.set_quadratic_polar(11,0.8)
 # 7: Landing 
 # -----------------------------------------------------------------#
 
-ConstraintsInput = {'speed': np.array([0.46, 70, 59*1.4, 0.3, 0.41, 0.35, 59.]) ,
-                    'speedtype': ['Mach','TAS','TAS','Mach','Mach','Mach','TAS']   ,
-                    'beta': np.array([0.9,1.,0.95, 0.9, 0.8, 0.9, None])   ,
-                    'altitude': np.array([5450., 100., 2000., 5486.4, 7600., 5486.4, 500.]),
+ConstraintsInput = {'speed': np.array([280, 70, 59*1.4, 0.3, 0.41, 0.35, 59.]) ,
+                    'speedtype': ['KTAS','TAS','TAS','Mach','Mach','Mach','TAS']   ,
+                    'beta': np.array([0.97,1.,0.95, 0.9, 0.8, 0.9, None])   ,
+                    'altitude': np.array([6000., 100., 2000., 5000, 7600., 6000, 500.]),
                     'load factor': np.array([1., None, 1., 1.1, 1., 1., None]),
                     'DISA': 0, 
                     'kTO': 1.2,
-                    'sTO': 1000,
-                    'Climb Gradient': 0.021,
+                    'sTO': 1200,
+                    'Climb Gradient': 0.041,
                     'ht': 0.5,
                     'M1': 0.3,
                     'M2': 0.4,
                     'DTAcceleration': 180}
 
-MissionInput = {'Range Mission': 459,
+MissionInput = {'Range Mission': 750,
                 'Range Diversion': 100,
                 'Beta start': 0.95,
-                'Payload Weight': (5255),
+                'Payload Weight': (4560),
                 'Crew Weight': (95*3)}
 
 # MissionStages = {'ConstantRateClimb': {'CB': 0.021, 'Speed': 1.4*59, 'StartAltitude': 2000, 'EndAltitude': 5450},
 #                  'ConstantRateDescent': {'CB': -0.021, 'Speed': 1.4*59, 'StartAltitude': 5450, 'EndAltitude': 2000},
 #                  'ConstantMachCruise': {'Mach': 0.41, 'Altitude': 5450}}
 
-MissionStages = {'Climb1': {'type': 'ConstantRateClimb', 'input': {'CB': 0.01, 'Speed': 1.4*59, 'StartAltitude': 2000, 'EndAltitude': 3000}},
-                 'Climb2': {'type': 'ConstantRateClimb', 'input': {'CB': 0.005, 'Speed': 1.4*59, 'StartAltitude': 3000, 'EndAltitude': 3200}},
-                 'Climb3': {'type': 'ConstantRateClimb', 'input': {'CB': 0.04, 'Speed': 1.4*59, 'StartAltitude': 3200, 'EndAltitude': 5450}},
-                 'Descent1': {'type': 'ConstantRateDescent', 'input':{'CB': -0.026, 'Speed': 1.4*59, 'StartAltitude': 5450, 'EndAltitude': 4000}},
-                 'Descent2': {'type': 'ConstantRateDescent', 'input':{'CB': -0.021, 'Speed': 1.4*59, 'StartAltitude': 4000, 'EndAltitude': 2000}},
-                 'Cruise': {'type': 'ConstantMachCruise', 'input':{ 'Mach': 0.41, 'Altitude': 5450}}}
+MissionStages = {'Climb1': {'type': 'ConstantRateClimb', 'input': {'CB': 0.041, 'Speed': 1.4*59, 'StartAltitude': 2000, 'EndAltitude': 6000}},
+                 'Descent1': {'type': 'ConstantRateDescent', 'input':{'CB': -0.041, 'Speed': 1.4*59, 'StartAltitude': 6000, 'EndAltitude': 2000}},
+                 'Cruise': {'type': 'ConstantMachCruise', 'input':{ 'Mach': 0.41, 'Altitude': 6000}}}
 
-DiversionStages = {'Climb1': {'type': 'ConstantRateClimb', 'input': {'CB': 0.01, 'Speed': 1.4*59, 'StartAltitude': 2000, 'EndAltitude': 2500}},
-                 'Climb2': {'type': 'ConstantRateClimb', 'input': {'CB': 0.04, 'Speed': 1.4*59, 'StartAltitude': 2500, 'EndAltitude': 3100}},
-                 'Descent1': {'type': 'ConstantRateDescent', 'input':{'CB': -0.026, 'Speed': 1.4*59, 'StartAltitude': 3100, 'EndAltitude': 2300}},
-                 'Descent2': {'type': 'ConstantRateDescent', 'input':{'CB': -0.021, 'Speed': 1.4*59, 'StartAltitude': 2300, 'EndAltitude': 2000}},
+DiversionStages = {'Climb1': {'type': 'ConstantRateClimb', 'input': {'CB': 0.01, 'Speed': 1.4*59, 'StartAltitude': 2000, 'EndAltitude': 3100}},
+                 'Descent1': {'type': 'ConstantRateDescent', 'input':{'CB': -0.026, 'Speed': 1.4*59, 'StartAltitude': 3100, 'EndAltitude': 2000}},
                  'Cruise': {'type': 'ConstantMachCruise', 'input':{ 'Mach': 0.3, 'Altitude': 3100}}}
 
 TechnologyInput = {'Ef': 43.5*10**6,
-                   'Ebat': 750 * 3600,
+                   'Ebat': 675 * 3600,
                    'pbat': 1000,
-                   'Eta Gas Turbine': 0.3,
+                   'Eta Gas Turbine': 0.35,
                    'Eta Gearbox': 0.96,
                    'Eta Propulsive': 0.9,
                    'Eta Electric Motor 1': 0.96,
                    'Eta Electric Motor 2': 0.96,
-                   'Eta Electric Motor': 0.96,
+                   'Eta Electric Motor': 0.95,
                    'Eta PMAD': 0.99,
                    'Specific Power Powertrain': [3600,7700],
                    'Specific Power PMAD': [2200,2200,2200],
@@ -101,13 +98,18 @@ TechnologyInput = {'Ef': 43.5*10**6,
                    'PowertoWeight Powertrain': [150,33],
                    'PowertoWeight PMAD': 0,
                    # 'Supplied Power Ratio': [[0.4, 0.2],[0.1, 0.05],[0.2, 0.1],[0.4, 0.2],[0.1, 0.05],[0.2, 0.1]]
-                    'Supplied Power Ratio': [[0.2, 0.1],[0.05, 0.01],[0.1, 0.05],[0.2, 0.1],[0.05, 0.01],[0.1, 0.05]]
+                    'Supplied Power Ratio': [[0.0198, 0.2305],[0.0249, 0.00461],[0., 0.],[0.0198, 0.2305],[0.0249, 0.00461],[0.1, 0.05]]
                    }
 
+WellToTankInput = {'Eta Charge': 0.95,
+                   'Eta Grid': 0.95,
+                   'Eta Extraction': 0.8,
+                   'Eta Production': 0.8,
+                   'Eta Transportation': 0.9}
 
-myaircraft.Configuration = 'Traditional'
+myaircraft.Configuration = 'Hybrid'
 myaircraft.HybridType = 'Parallel'
-myaircraft.DesignAircraft(ConstraintsInput,MissionInput,TechnologyInput,MissionStages,DiversionStages)
+myaircraft.DesignAircraft(ConstraintsInput,MissionInput,TechnologyInput,MissionStages,DiversionStages,WellToTankInput,PrintOutput=True)
 
              
 # cProfile.run('weight.WeightEstimation()')
@@ -117,7 +119,7 @@ myaircraft.DesignAircraft(ConstraintsInput,MissionInput,TechnologyInput,MissionS
 
 # color = 'tab:red'
 # ax1.set_xlabel('Time (min)')
-# ax1.set_ylabel('E [J]')
+# ax1.set_ylabel('E [J]'
 # ax1.plot(mission.t/60, mission.Ef, color=color, label='E Fuel')
 # ax1.plot(mission.t/60, mission.EBat, color='tab:green', label='E Battery')
 # ax1.tick_params(axis='y')
