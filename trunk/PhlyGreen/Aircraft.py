@@ -51,8 +51,10 @@ class Aircraft:
 
         # print("Evaluating Weights...")
         self.weight.WeightEstimation()
-        self.WingSurface = self.weight.WTO[-1] / self.constraint.DesignWTOoS * 9.81
-        self.welltowake.EvaluateSource()
+        self.WingSurface = self.weight.WTO / self.constraint.DesignWTOoS * 9.81
+        
+        if (self.Configuration == 'Hybrid'):
+            self.welltowake.EvaluateSource()
         
         if PrintOutput:
             print('----------------------------------------')
@@ -63,7 +65,7 @@ class Aircraft:
                 print('Structure: ', self.weight.WStructure)
                 print('Empty Weight: ', self.weight.WPT + self.weight.WStructure + self.weight.WCrew)
                 print('----------------------------------------')
-                print('Takeoff Weight: ', self.weight.WTO[-1])
+                print('Takeoff Weight: ', self.weight.WTO)
                 print('Source Energy: ', self.welltowake.SourceEnergy/1.e6,' MJ')
                 print('Psi: ', self.welltowake.Psi)
                 print('Wing Surface: ', self.WingSurface, ' m^2')

@@ -6,21 +6,30 @@ from pymoo.core.problem import ElementwiseProblem
 from pymoo.algorithms.moo.nsga2 import NSGA2
 from pymoo.algorithms.soo.nonconvex.nelder import NelderMead
 from pymoo.algorithms.soo.nonconvex.pattern import PatternSearch
+from pymoo.algorithms.soo.nonconvex.de import DE
+from pymoo.algorithms.soo.nonconvex.ga import GA
+from pymoo.algorithms.soo.nonconvex.isres import ISRES
+from pymoo.operators.sampling.lhs import LHS
 from pymoo.operators.crossover.sbx import SBX
 from pymoo.operators.mutation.pm import PM
 from pymoo.operators.sampling.rnd import FloatRandomSampling
 from pymoo.termination import get_termination
 from pymoo.optimize import minimize
+from pymoo.termination.ftol import SingleObjectiveSpaceTermination
+import multiprocessing
+from pymoo.core.problem import StarmapParallelization
+from multiprocessing.pool import ThreadPool
 
 
 class MyProblem(ElementwiseProblem):
 
-    def __init__(self):
-        super().__init__(n_var=4,
+    def __init__(self, **kwargs):
+        super().__init__(n_var=5,
                          n_obj=1,
                          n_ieq_constr=1,
-                         xl=np.array([0,0,0,0]),
-                         xu=np.array([1,1,1,1]))
+                         xl=np.array([0,0,0,0,0.04]),
+                         xu=np.array([1,1,0.4,0.4,0.08]),
+                         elementwise_evaluation=True)
 
     def _evaluate(self, x, out, *args, **kwargs):
         
@@ -49,7 +58,7 @@ class MyProblem(ElementwiseProblem):
         #                  'ConstantRateDescent': {'CB': -0.021, 'Speed': 1.4*59, 'StartAltitude': 5450, 'EndAltitude': 2000},
         #                  'ConstantMachCruise': {'Mach': 0.41, 'Altitude': 5450}}
 
-        MissionStages = {'Climb1': {'type': 'ConstantRateClimb', 'input': {'CB': 0.041, 'Speed': 1.4*59, 'StartAltitude': 2000, 'EndAltitude': 6000}},
+        MissionStages = {'Climb1': {'type': 'ConstantRateClimb', 'input': {'CB': x[4], 'Speed': 1.4*59, 'StartAltitude': 2000, 'EndAltitude': 6000}},
                          'Descent1': {'type': 'ConstantRateDescent', 'input':{'CB': -0.041, 'Speed': 1.4*59, 'StartAltitude': 6000, 'EndAltitude': 2000}},
                          'Cruise': {'type': 'ConstantMachCruise', 'input':{ 'Mach': 0.41, 'Altitude': 6000}}}
 
@@ -58,14 +67,14 @@ class MyProblem(ElementwiseProblem):
                          'Cruise': {'type': 'ConstantMachCruise', 'input':{ 'Mach': 0.3, 'Altitude': 3100}}}
 
         TechnologyInput = {'Ef': 43.5*10**6,
-                           'Ebat': 675 * 3600,
+                           'Ebat': 620 * 3600,
                            'pbat': 1000,
-                           'Eta Gas Turbine': 0.35,
+                           'Eta Gas Turbine': 0.3,
                            'Eta Gearbox': 0.96,
                            'Eta Propulsive': 0.9,
                            'Eta Electric Motor 1': 0.96,
                            'Eta Electric Motor 2': 0.96,
-                           'Eta Electric Motor': 0.95,
+                           'Eta Electric Motor': 0.98,
                            'Eta PMAD': 0.99,
                            'Specific Power Powertrain': [3600,7700],
                            'Specific Power PMAD': [2200,2200,2200],
@@ -76,21 +85,25 @@ class MyProblem(ElementwiseProblem):
                             'Supplied Power Ratio': [[x[0], x[1]],[x[2], x[3]],[0., 0.],[x[0], x[1]],[x[2], x[3]],[0., 0.]]
                            }
 
-        WellToTankInput = {'Eta Charge': 0.95,
+        WellToTankInput = {'Eta Charge': 1.,
                            'Eta Grid': 0.95,
-                           'Eta Extraction': 0.7,
-                           'Eta Production': 0.7,
-                           'Eta Transportation': 0.8}
+                           'Eta Extraction': 1.,
+                           'Eta Production': 1.,
+                           'Eta Transportation': 0.27}
 
-        print('-----------------------------------------')
-        print('Phi Climb 1: ',x[0])       
-        print('Phi Climb 2: ',x[1])  
-        print('Phi Cruise 1: ',x[2])       
-        print('Phi Cruise 2: ',x[3])     
+        # print('-----------------------------------------')
+        # print('Phi Climb 1: ',x[0])       
+        # print('Phi Climb 2: ',x[1])  
+        # print('Phi Cruise 1: ',x[2])       
+        # print('Phi Cruise 2: ',x[3])   
+        # print('Climb Rate: ',x[4])
 
         myaircraft.Configuration = 'Hybrid'
         myaircraft.HybridType = 'Parallel'
         myaircraft.DesignAircraft(ConstraintsInput,MissionInput,TechnologyInput,MissionStages,DiversionStages,WellToTankInput)
+        
+        # print('MTOM: ', myaircraft.weight.WTO)
+        # print('Source Energy: ', myaircraft.welltowake.SourceEnergy/1.e6, ' MJ')
         
         # f1 = weight.WTO[-1]
         # f2 = weight.Wf
@@ -101,7 +114,7 @@ class MyProblem(ElementwiseProblem):
         # g2 = - 20*(x[0]-0.4) * (x[0]-0.6) / 4.8
         g1 = myaircraft.WingSurface - 80
 
-        out["F"] = [f1]
+        out["F"] = f1
         out["G"] = [g1]
         # out["G"] = [g1, g2]
 
@@ -136,51 +149,37 @@ welltowake.aircraft = myaircraft
 aerodynamics.set_quadratic_polar(11,0.8)
 
 
+n_proccess = 2
+pool = multiprocessing.Pool(n_proccess)
+runner = StarmapParallelization(pool.starmap)
+
+problem = MyProblem(elementwise_runner=runner)
+
+termination = get_termination("n_iter", 20)
+# termination = SingleObjectiveSpaceTermination(tol=1e8, n_skip=2)
+# algorithm = ISRES()
 
 
+# algorithm = DE(
+#     pop_size=50,
+#     sampling=LHS(),
+#     variant="DE/rand/1/bin",
+#     CR=0.9,
+#     dither="vector",
+#     jitter=False
+# )
 
-problem = MyProblem()
-
-# algorithm = PatternSearch()
-# termination = get_termination('soo')
-
-# res = minimize(problem,
-#                algorithm,
-#                termination,
-#                seed=1,
-#                verbose=True)
-
-
-
-# print("Best solution found: \nX = %s\nF = %s" % (res.X, res.F))
-
-algorithm = NSGA2(
-    pop_size=40,
-    n_offsprings=10,
-    sampling=FloatRandomSampling(),
-    crossover=SBX(prob=0.9, eta=15),
-    mutation=PM(eta=20),
-    eliminate_duplicates=True
-)
-
-
-termination = get_termination("n_gen", 40)
+algorithm = GA(
+    pop_size=50,
+    sampling=LHS(),
+    eliminate_duplicates=True)
 
 res = minimize(problem,
-                algorithm,
-                termination,
-                seed=1,
-                save_history=True,
-                verbose=True)
+               algorithm,
+               termination,
+               seed=1,
+               verbose=True)
 
-X = res.X
-F = res.F
+print("Best solution found: \nX = %s\nF = %s" % (res.X, res.F))
 
-plt.figure(figsize=(7, 5))
-plt.scatter(F[:, 0], F[:, 1], s=30, facecolors='none', edgecolors='blue')
-plt.title("Objective Space")
-plt.xlabel('MTOM')
-plt.ylabel('Fuel Weight')
-# plt.xlim([23000, 30000])
-# plt.ylim([1010, 1020])
-plt.show()
+

@@ -144,8 +144,8 @@ class Powertrain:
                 
                 PtWPT = [PtWFuel, PtWBattery]
 
-                WPT =  (np.sum(np.divide(PtWPT, self.SPowerPT)) + PtWPMAD  / self.SPowerPMAD[0]) * WTO  # Pesa un botto
-                # WPT =  np.sum(np.divide(PtWPT, self.SPowerPT)) * WTO
+                # WPT =  (np.sum(np.divide(PtWPT, self.SPowerPT)) + PtWPMAD  / self.SPowerPMAD[0]) * WTO  # Pesa un botto
+                WPT =  np.sum(np.divide(PtWPT, self.SPowerPT)) * WTO
                 
         return WPT
     

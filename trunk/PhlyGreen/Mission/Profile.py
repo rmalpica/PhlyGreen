@@ -36,7 +36,6 @@ class Profile:
                 
         self.DISA = self.aircraft.ConstraintsInput['DISA'] 
         self.beta0 = self.aircraft.MissionInput['Beta start']
-        # NMtoM = 1825 #Da spostare dentro Units.py
         self.MissionRange = Units.NMtoM(self.aircraft.MissionInput['Range Mission'])
         self.DiversionRange = Units.NMtoM(self.aircraft.MissionInput['Range Diversion'])
         self.MissionStages = self.aircraft.MissionStages

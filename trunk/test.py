@@ -58,7 +58,7 @@ ConstraintsInput = {'speed': np.array([280, 70, 59*1.4, 0.3, 0.41, 0.35, 59.]) ,
                     'DISA': 0, 
                     'kTO': 1.2,
                     'sTO': 1200,
-                    'Climb Gradient': 0.041,
+                    'Climb Gradient': 0.081,
                     'ht': 0.5,
                     'M1': 0.3,
                     'M2': 0.4,
@@ -74,7 +74,7 @@ MissionInput = {'Range Mission': 750,
 #                  'ConstantRateDescent': {'CB': -0.021, 'Speed': 1.4*59, 'StartAltitude': 5450, 'EndAltitude': 2000},
 #                  'ConstantMachCruise': {'Mach': 0.41, 'Altitude': 5450}}
 
-MissionStages = {'Climb1': {'type': 'ConstantRateClimb', 'input': {'CB': 0.041, 'Speed': 1.4*59, 'StartAltitude': 2000, 'EndAltitude': 6000}},
+MissionStages = {'Climb1': {'type': 'ConstantRateClimb', 'input': {'CB': 0.0516566, 'Speed': 1.4*59, 'StartAltitude': 2000, 'EndAltitude': 6000}},
                  'Descent1': {'type': 'ConstantRateDescent', 'input':{'CB': -0.041, 'Speed': 1.4*59, 'StartAltitude': 6000, 'EndAltitude': 2000}},
                  'Cruise': {'type': 'ConstantMachCruise', 'input':{ 'Mach': 0.41, 'Altitude': 6000}}}
 
@@ -98,16 +98,16 @@ TechnologyInput = {'Ef': 43.5*10**6,
                    'PowertoWeight Powertrain': [150,33],
                    'PowertoWeight PMAD': 0,
                    # 'Supplied Power Ratio': [[0.4, 0.2],[0.1, 0.05],[0.2, 0.1],[0.4, 0.2],[0.1, 0.05],[0.2, 0.1]]
-                    'Supplied Power Ratio': [[0.0198, 0.2305],[0.0249, 0.00461],[0., 0.],[0.0198, 0.2305],[0.0249, 0.00461],[0.1, 0.05]]
+                    'Supplied Power Ratio': [[0.75244281, 0.58414401],[0.00213834, 0.00349128],[0., 0.],[0.75244281, 0.58414401],[0.00213834, 0.00349128],[0., 0.]]
                    }
 
-WellToTankInput = {'Eta Charge': 0.95,
-                   'Eta Grid': 0.95,
-                   'Eta Extraction': 0.8,
-                   'Eta Production': 0.8,
-                   'Eta Transportation': 0.9}
+WellToTankInput = {'Eta Charge': 0.98,
+                   'Eta Grid': 0.98,
+                   'Eta Extraction': 0.7,
+                   'Eta Production': 0.7,
+                   'Eta Transportation': 0.8}
 
-myaircraft.Configuration = 'Hybrid'
+myaircraft.Configuration = 'Traditional'
 myaircraft.HybridType = 'Parallel'
 myaircraft.DesignAircraft(ConstraintsInput,MissionInput,TechnologyInput,MissionStages,DiversionStages,WellToTankInput,PrintOutput=True)
 
