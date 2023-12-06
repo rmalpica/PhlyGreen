@@ -35,6 +35,7 @@ class Constraint:
         
         self.PWCruise = self.aircraft.performance.PoWTO(self.WTOoS, self.ConstraintsBeta[0], 0, self.ConstraintsN[0], self.ConstraintsAltitude[0], DISA, self.ConstraintsSpeed[0], self.ConstraintsSpeedtype[0])
         self.PWTakeOff = self.aircraft.performance.TakeOff(WTOoS,self.ConstraintsBeta[1], self.ConstraintsAltitude[1], kTO, sTO, DISA, self.ConstraintsSpeed[1], self.ConstraintsSpeedtype[1])
+        self.PWOEI = self.aircraft.performance.OEIClimb(self.WTOoS,self.ConstraintsBeta[2], 1.4*CB*self.ConstraintsSpeed[2], self.ConstraintsN[2], self.ConstraintsAltitude[2], DISA, self.ConstraintsSpeed[2], self.ConstraintsSpeedtype[2])
         self.PWClimb = self.aircraft.performance.PoWTO(self.WTOoS,self.ConstraintsBeta[2], 1.4*CB*self.ConstraintsSpeed[2], self.ConstraintsN[2], self.ConstraintsAltitude[2], DISA, self.ConstraintsSpeed[2], self.ConstraintsSpeedtype[2])
         self.PWTurn = self.aircraft.performance.PoWTO(self.WTOoS, self.ConstraintsBeta[3], 0, self.ConstraintsN[3], self.ConstraintsAltitude[3], DISA, self.ConstraintsSpeed[3], self.ConstraintsSpeedtype[3])
         self.PWCeiling = self.aircraft.performance.Ceiling(WTOoS, self.ConstraintsBeta[4], ht, self.ConstraintsN[4], self.ConstraintsAltitude[4], DISA, self.ConstraintsSpeed[4])
@@ -49,7 +50,7 @@ class Constraint:
            
         self.EvaluateConstraints(self.WTOoS, self.DISA, self.kTO, self.sTO, self.CB, self.ht, self.PsAcceleration)
         
-        PWMatrix = np.matrix([self.PWCruise, self.PWTakeOff, self.PWClimb, self.PWTurn, self.PWCeiling, self.PWAcceleration])
+        PWMatrix = np.matrix([self.PWCruise, self.PWTakeOff, self.PWClimb, self.PWTurn, self.PWCeiling, self.PWAcceleration, self.PWOEI])
         self.MaxPW = np.zeros(len(self.WTOoS))
         for i in range(len(self.WTOoS)):
             self.MaxPW[i] = np.max(PWMatrix[:,i])

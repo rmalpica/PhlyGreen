@@ -19,7 +19,7 @@ from pymoo.termination.ftol import SingleObjectiveSpaceTermination
 import multiprocessing
 from pymoo.core.problem import StarmapParallelization
 from multiprocessing.pool import ThreadPool
-
+import random
 
 class MyProblem(ElementwiseProblem):
 
@@ -67,7 +67,7 @@ class MyProblem(ElementwiseProblem):
                          'Cruise': {'type': 'ConstantMachCruise', 'input':{ 'Mach': 0.3, 'Altitude': 3100}}}
 
         TechnologyInput = {'Ef': 43.5*10**6,
-                           'Ebat': 620 * 3600,
+                           'Ebat': 550 * 3600,
                            'pbat': 1000,
                            'Eta Gas Turbine': 0.3,
                            'Eta Gearbox': 0.96,
@@ -89,7 +89,7 @@ class MyProblem(ElementwiseProblem):
                            'Eta Grid': 0.95,
                            'Eta Extraction': 1.,
                            'Eta Production': 1.,
-                           'Eta Transportation': 0.27}
+                           'Eta Transportation': 0.25}
 
         # print('-----------------------------------------')
         # print('Phi Climb 1: ',x[0])       
@@ -103,7 +103,7 @@ class MyProblem(ElementwiseProblem):
         myaircraft.DesignAircraft(ConstraintsInput,MissionInput,TechnologyInput,MissionStages,DiversionStages,WellToTankInput)
         
         # print('MTOM: ', myaircraft.weight.WTO)
-        # print('Source Energy: ', myaircraft.welltowake.SourceEnergy/1.e6, ' MJ')
+        print('Source Energy: ', myaircraft.welltowake.SourceEnergy/1.e6, ' MJ')
         
         # f1 = weight.WTO[-1]
         # f2 = weight.Wf
@@ -156,7 +156,7 @@ runner = StarmapParallelization(pool.starmap)
 problem = MyProblem(elementwise_runner=runner)
 
 termination = get_termination("n_iter", 20)
-# termination = SingleObjectiveSpaceTermination(tol=1e8, n_skip=2)
+# termination = SingleObjectiveSpaceTermination(tol=1e6, n_skip=3)
 # algorithm = ISRES()
 
 
@@ -177,7 +177,7 @@ algorithm = GA(
 res = minimize(problem,
                algorithm,
                termination,
-               seed=1,
+               seed= random.randint(1, 100),
                verbose=True)
 
 print("Best solution found: \nX = %s\nF = %s" % (res.X, res.F))

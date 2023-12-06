@@ -62,6 +62,13 @@ class Performance:
         Cl = n * beta * WTOoS / q
         PW = 9.81 * 1.0/WTOoS * q * self.TAS * self.aircraft.aerodynamics.Cd(Cl,self.Mach) + beta * Ps
         return PW
+
+    def OEIClimb(self,WTOoS,beta,Ps,n,altitude,DISA,speed,speedtype):       
+        self.set_speed(altitude,speed,speedtype,DISA)
+        q = 0.5 * ISA.atmosphere.RHOstd(altitude,DISA) * self.TAS**2
+        Cl = n * beta * WTOoS / q
+        PW =  2*(9.81 * 1.0/WTOoS * q * self.TAS * self.aircraft.aerodynamics.Cd(Cl,self.Mach) + beta * Ps)
+        return PW
     
     def Ceiling(self,WTOoS,beta,Ps,n,altitude,DISA,MachC):
         TASCeiling = np.sqrt((2*beta*WTOoS)/(ISA.atmosphere.RHOstd(altitude, DISA)* self.aircraft.aerodynamics.ClE(MachC)))

@@ -58,7 +58,7 @@ ConstraintsInput = {'speed': np.array([280, 70, 59*1.4, 0.3, 0.41, 0.35, 59.]) ,
                     'DISA': 0, 
                     'kTO': 1.2,
                     'sTO': 1200,
-                    'Climb Gradient': 0.081,
+                    'Climb Gradient': 0.021,
                     'ht': 0.5,
                     'M1': 0.3,
                     'M2': 0.4,
@@ -74,43 +74,49 @@ MissionInput = {'Range Mission': 750,
 #                  'ConstantRateDescent': {'CB': -0.021, 'Speed': 1.4*59, 'StartAltitude': 5450, 'EndAltitude': 2000},
 #                  'ConstantMachCruise': {'Mach': 0.41, 'Altitude': 5450}}
 
-MissionStages = {'Climb1': {'type': 'ConstantRateClimb', 'input': {'CB': 0.0516566, 'Speed': 1.4*59, 'StartAltitude': 2000, 'EndAltitude': 6000}},
-                 'Descent1': {'type': 'ConstantRateDescent', 'input':{'CB': -0.041, 'Speed': 1.4*59, 'StartAltitude': 6000, 'EndAltitude': 2000}},
+MissionStages = {'Climb1': {'type': 'ConstantRateClimb', 'input': {'CB': 0.08, 'Speed': 1.4*59, 'StartAltitude': 2000, 'EndAltitude': 6000}},
+                 'Descent1': {'type': 'ConstantRateDescent', 'input':{'CB': -0.08, 'Speed': 1.4*59, 'StartAltitude': 6000, 'EndAltitude': 2000}},
                  'Cruise': {'type': 'ConstantMachCruise', 'input':{ 'Mach': 0.41, 'Altitude': 6000}}}
 
-DiversionStages = {'Climb1': {'type': 'ConstantRateClimb', 'input': {'CB': 0.01, 'Speed': 1.4*59, 'StartAltitude': 2000, 'EndAltitude': 3100}},
-                 'Descent1': {'type': 'ConstantRateDescent', 'input':{'CB': -0.026, 'Speed': 1.4*59, 'StartAltitude': 3100, 'EndAltitude': 2000}},
+DiversionStages = {'Climb1': {'type': 'ConstantRateClimb', 'input': {'CB': 0.08, 'Speed': 1.4*59, 'StartAltitude': 2000, 'EndAltitude': 3100}},
+                 'Descent1': {'type': 'ConstantRateDescent', 'input':{'CB': -0.08, 'Speed': 1.4*59, 'StartAltitude': 3100, 'EndAltitude': 2000}},
                  'Cruise': {'type': 'ConstantMachCruise', 'input':{ 'Mach': 0.3, 'Altitude': 3100}}}
 
 TechnologyInput = {'Ef': 43.5*10**6,
-                   'Ebat': 675 * 3600,
+                   'Ebat': 700 * 3600,
                    'pbat': 1000,
-                   'Eta Gas Turbine': 0.35,
+                   'Eta Gas Turbine': 0.3,
                    'Eta Gearbox': 0.96,
                    'Eta Propulsive': 0.9,
                    'Eta Electric Motor 1': 0.96,
                    'Eta Electric Motor 2': 0.96,
-                   'Eta Electric Motor': 0.95,
+                   'Eta Electric Motor': 0.98,
                    'Eta PMAD': 0.99,
                    'Specific Power Powertrain': [3600,7700],
                    'Specific Power PMAD': [2200,2200,2200],
                    'PowertoWeight Battery': 35, 
                    'PowertoWeight Powertrain': [150,33],
                    'PowertoWeight PMAD': 0,
-                   # 'Supplied Power Ratio': [[0.4, 0.2],[0.1, 0.05],[0.2, 0.1],[0.4, 0.2],[0.1, 0.05],[0.2, 0.1]]
-                    'Supplied Power Ratio': [[0.75244281, 0.58414401],[0.00213834, 0.00349128],[0., 0.],[0.75244281, 0.58414401],[0.00213834, 0.00349128],[0., 0.]]
+                   # 'Supplied Power Ratio': [[0.,0.],[0.05, 0.1],[0., 0.],[0.,0.],[0.05, 0.1],[0., 0.]]
+
+                    'Supplied Power Ratio': [[0.,0.],[0.08743, 0.127639],[0., 0.],[0.,0.],[0.08743, 0.127639],[0., 0.]]
+                    # 'Supplied Power Ratio': [[0.,0.],[0.08743, 0.12764],[0., 0.],[0.,0.],[0.08743, 0.12764],[0., 0.]]
                    }
 
-WellToTankInput = {'Eta Charge': 0.98,
-                   'Eta Grid': 0.98,
-                   'Eta Extraction': 0.7,
-                   'Eta Production': 0.7,
-                   'Eta Transportation': 0.8}
+WellToTankInput = {'Eta Charge': 0.95,
+                   'Eta Grid': 1.,
+                   'Eta Extraction': 1.,
+                   'Eta Production': 1.,
+                   'Eta Transportation': 0.25}
 
-myaircraft.Configuration = 'Traditional'
+myaircraft.Configuration = 'Hybrid'
 myaircraft.HybridType = 'Parallel'
 myaircraft.DesignAircraft(ConstraintsInput,MissionInput,TechnologyInput,MissionStages,DiversionStages,WellToTankInput,PrintOutput=True)
 
+
+# plt.plot(myaircraft.weight.WTO_vector,myaircraft.weight.Vector) 
+# plt.grid(visible=True)
+# plt.show()
              
 # cProfile.run('weight.WeightEstimation()')
 #----------------------------------------------- PLOT -------------------------------------------------#                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           
@@ -141,34 +147,36 @@ myaircraft.DesignAircraft(ConstraintsInput,MissionInput,TechnologyInput,MissionS
 
 #------------------------------------------------------------------------------------------------------#
 
-plt.plot(constraint.WTOoS,constraint.PWCruise, label='Cruise')
-plt.plot(constraint.WTOoS,constraint.PWTakeOff, label='Take Off')
-plt.plot(constraint.WTOoS,constraint.PWClimb, label='Climb')
-plt.plot(constraint.WTOoS,constraint.PWTurn, label='Turn')
-plt.plot(constraint.WTOoS,constraint.PWCeiling, label='Ceiling')
-plt.plot(constraint.WTOoS,constraint.PWAcceleration, label='Acceleration')
-plt.plot(constraint.WTOoSLanding, constraint.PWLanding, label='Landing')
-plt.plot(constraint.DesignWTOoS, constraint.DesignPW, marker='o', markersize = 10, markerfacecolor = 'red', markeredgecolor = 'black')
-# plt.plot(performance.WTOoSTorenbeek, performance.PWTorenbeek, label='Torenbeek')
-plt.ylim([0, 300])
-plt.xlim([0, 7000])
-plt.legend()
-plt.grid(visible=True)
-plt.xlabel('$W_{TO}/S$')
-plt.ylabel('$P/W_{TO}$')
-# plt.clf()
+# plt.plot(constraint.WTOoS,constraint.PWCruise, label='Cruise')
+# plt.plot(constraint.WTOoS,constraint.PWTakeOff, label='Take Off')
+# plt.plot(constraint.WTOoS,constraint.PWClimb, label='Climb')
+# plt.plot(constraint.WTOoS,constraint.PWOEI, label='Climb OEI')
+# plt.plot(constraint.WTOoS,constraint.PWTurn, label='Turn')
+# plt.plot(constraint.WTOoS,constraint.PWCeiling, label='Ceiling')
+# plt.plot(constraint.WTOoS,constraint.PWAcceleration, label='Acceleration')
+# plt.plot(constraint.WTOoSLanding, constraint.PWLanding, label='Landing')
+# plt.plot(constraint.DesignWTOoS, constraint.DesignPW, marker='o', markersize = 10, markerfacecolor = 'red', markeredgecolor = 'black')
+# # plt.plot(performance.WTOoSTorenbeek, performance.PWTorenbeek, label='Torenbeek')
+# plt.ylim([0, 300])
+# plt.xlim([0, 7000])
+# plt.legend()
+# plt.grid(visible=True)
+# plt.xlabel('$W_{TO}/S$')
+# plt.ylabel('$P/W_{TO}$')
+# plt.show()
 
-# times = np.linspace(0,mission.profile.MissionTime2,num = 1000)
+times = np.linspace(0,mission.profile.MissionTime2,num = 1000)
 
-# plt.plot(times/60,mission.profile.SuppliedPowerRatio(times))
+# plt.plot(times/60,mission.profile.Altitude(times))
 # plt.grid(visible=True)
 # plt.xlabel('t [min]')
 # plt.ylabel('Altitude [m]')
-# plt.clf()
+# plt.show()
 
-# plt.plot(times,mission.profile.PowerExcess(times))
-# plt.grid(visible=True)
-# plt.clf()
+plt.plot(times,mission.profile.SuppliedPowerRatio(times))
+plt.plot(myaircraft.mission.profile.Breaks,np.ones(6)*0.05, '*')
+plt.grid(visible=True)
+plt.show()
 
 # plt.plot(times,mission.profile.Velocity2(times))
 # plt.grid(visible=True)

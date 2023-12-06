@@ -8,7 +8,7 @@ class Aerodynamics:
         self.polar = 'unset'
         self.kv = 0.01
         self.ClMin = 0.2
-        self.ClMax = 2.8
+        self.ClMax = 1.9
 
     """ Properties """
 

@@ -128,19 +128,21 @@ class Powertrain:
     
     def WeightPowertrain(self,WTO):
         
-        match self.aircraft.Configuration:
-            
-            case 'Traditional':
+        if self.aircraft.Configuration == 'Traditional':
+        
                 
                 PtWFuel = self.aircraft.constraint.DesignPW * self.Traditional()[0]
                 
                 WPT = PtWFuel * WTO / self.SPowerPT[0]
                 
-            case 'Hybrid':  # WORK IN PROGRESS
+        if self.aircraft.Configuration == 'Hybrid':
+   
                 
-                PtWFuel = self.aircraft.constraint.DesignPW * self.Hybrid(0.15)[0]
-                PtWBattery = self.aircraft.constraint.DesignPW * self.Hybrid(0.15)[5]
-                PtWPMAD = self.aircraft.constraint.DesignPW * self.Hybrid(0.15)[3]
+                # PtWFuel = self.aircraft.constraint.DesignPW * self.Hybrid(0.05)[0]
+                # PtWBattery = self.aircraft.constraint.DesignPW * self.Hybrid(0.05)[5]
+                PtWFuel = self.aircraft.mission.Max_PFoW/WTO
+                PtWBattery = self.aircraft.mission.Max_PBatoW/WTO
+                PtWPMAD = self.aircraft.constraint.DesignPW * self.Hybrid(0.05)[3]
                 
                 PtWPT = [PtWFuel, PtWBattery]
 
