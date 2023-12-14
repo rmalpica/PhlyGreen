@@ -140,14 +140,16 @@ class Powertrain:
                 
                 # PtWFuel = self.aircraft.constraint.DesignPW * self.Hybrid(0.05)[0]
                 # PtWBattery = self.aircraft.constraint.DesignPW * self.Hybrid(0.05)[5]
-                PtWFuel = self.aircraft.mission.Max_PFoW/WTO
-                PtWBattery = self.aircraft.mission.Max_PBatoW/WTO
-                PtWPMAD = self.aircraft.constraint.DesignPW * self.Hybrid(0.05)[3]
+                PtWFuel = self.aircraft.mission.Max_PFoW
+                PtWBattery = self.aircraft.mission.Max_PBatoW
+                # PtWPMAD = self.aircraft.constraint.DesignPW * self.Hybrid(0.05)[3]
+                self.WThermal = PtWFuel/self.SPowerPT[0]
+                self.WElectric = PtWBattery/self.SPowerPT[1]
                 
                 PtWPT = [PtWFuel, PtWBattery]
 
                 # WPT =  (np.sum(np.divide(PtWPT, self.SPowerPT)) + PtWPMAD  / self.SPowerPMAD[0]) * WTO  # Pesa un botto
-                WPT =  np.sum(np.divide(PtWPT, self.SPowerPT)) * WTO
+                WPT =  np.sum(np.divide(PtWPT, self.SPowerPT)) 
                 
         return WPT
     

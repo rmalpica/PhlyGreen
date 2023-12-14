@@ -69,5 +69,8 @@ class Aircraft:
                 print('Source Energy: ', self.welltowake.SourceEnergy/1.e6,' MJ')
                 print('Psi: ', self.welltowake.Psi)
                 print('Wing Surface: ', self.WingSurface, ' m^2')
-        
+            else:
+                print('Takeoff Weight: ', self.weight.WTO)
+                print('Wing Surface: ', self.WingSurface, ' m^2')
+
         

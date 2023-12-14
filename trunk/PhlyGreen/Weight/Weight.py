@@ -89,10 +89,10 @@ class Weight:
     def Hybrid(self):
         
         def func(WTO):
-                self.i += 1
+                # self.i += 1
                 # if self.i == 10:
                 #     WTO += 1200
-                print(WTO)
+                # print(WTO)
                 self.TotalEnergies = self.aircraft.mission.EvaluateMission(WTO)
                 self.Wf = self.TotalEnergies[0]/self.ef
                 self.WBat  = np.max([self.TotalEnergies[1]/self.ebat , self.PtWBat*(1/self.pbat)*WTO])
@@ -101,20 +101,20 @@ class Weight:
                 self.WPT = self.aircraft.powertrain.WeightPowertrain(WTO)
                 self.WStructure = self.aircraft.structures.StructuralWeight(WTO) + 500 
             
-                print(self.i)
-                print('energies: ', self.TotalEnergies)
-                print('Powertrain: ',self.WPT, 'Fuel: ', self.Wf, 'Battery: ', self.WBat,'Structure: ', self.WStructure)
-                print('Empty Weight: ', self.WPT + self.WStructure + self.WCrew)
-                print(self.Wf + self.WBat + self.WPT + self.WStructure + self.WPayload + self.WCrew - WTO)
-                print('---------------------------------------------------------------------------')
+                # print(self.i)
+                # print('energies: ', self.TotalEnergies)
+                # print('Powertrain: ',self.WPT, 'Fuel: ', self.Wf, 'Battery: ', self.WBat,'Structure: ', self.WStructure)
+                # print('Empty Weight: ', self.WPT + self.WStructure + self.WCrew)
+                # print(self.Wf + self.WBat + self.WPT + self.WStructure + self.WPayload + self.WCrew - WTO)
+                # print('---------------------------------------------------------------------------')
 
                 return (self.Wf + self.WBat + self.WPT + self.WStructure + self.WPayload + self.WCrew - WTO)
          
-        self.i = 0
+        # self.i = 0
         
-        self.WTO = brenth(func, 10000, 150000, xtol=0.1)
+        self.WTO = brenth(func, 10000, 300000, xtol=0.1)
         
-        print('inizio test')
+        # print('inizio test')
         
 
         # self.WTO_vector= [23505.310344827587,23505.379310344826]

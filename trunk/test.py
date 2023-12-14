@@ -57,7 +57,7 @@ ConstraintsInput = {'speed': np.array([280, 70, 59*1.4, 0.3, 0.41, 0.35, 59.]) ,
                     'load factor': np.array([1., None, 1., 1.1, 1., 1., None]),
                     'DISA': 0, 
                     'kTO': 1.2,
-                    'sTO': 1200,
+                    'sTO': 1300,
                     'Climb Gradient': 0.021,
                     'ht': 0.5,
                     'M1': 0.3,
@@ -99,7 +99,7 @@ TechnologyInput = {'Ef': 43.5*10**6,
                    'PowertoWeight PMAD': 0,
                    # 'Supplied Power Ratio': [[0.,0.],[0.05, 0.1],[0., 0.],[0.,0.],[0.05, 0.1],[0., 0.]]
 
-                    'Supplied Power Ratio': [[0.,0.],[0.08743, 0.127639],[0., 0.],[0.,0.],[0.08743, 0.127639],[0., 0.]]
+                    'Supplied Power Ratio': [[0.,0.],[0.0225104, 0.0148335],[0., 0.],[0.,0.],[0.0225104, 0.0148335],[0., 0.]]
                     # 'Supplied Power Ratio': [[0.,0.],[0.08743, 0.12764],[0., 0.],[0.,0.],[0.08743, 0.12764],[0., 0.]]
                    }
 
@@ -147,23 +147,23 @@ myaircraft.DesignAircraft(ConstraintsInput,MissionInput,TechnologyInput,MissionS
 
 #------------------------------------------------------------------------------------------------------#
 
-# plt.plot(constraint.WTOoS,constraint.PWCruise, label='Cruise')
-# plt.plot(constraint.WTOoS,constraint.PWTakeOff, label='Take Off')
-# plt.plot(constraint.WTOoS,constraint.PWClimb, label='Climb')
-# plt.plot(constraint.WTOoS,constraint.PWOEI, label='Climb OEI')
-# plt.plot(constraint.WTOoS,constraint.PWTurn, label='Turn')
-# plt.plot(constraint.WTOoS,constraint.PWCeiling, label='Ceiling')
-# plt.plot(constraint.WTOoS,constraint.PWAcceleration, label='Acceleration')
-# plt.plot(constraint.WTOoSLanding, constraint.PWLanding, label='Landing')
-# plt.plot(constraint.DesignWTOoS, constraint.DesignPW, marker='o', markersize = 10, markerfacecolor = 'red', markeredgecolor = 'black')
-# # plt.plot(performance.WTOoSTorenbeek, performance.PWTorenbeek, label='Torenbeek')
-# plt.ylim([0, 300])
-# plt.xlim([0, 7000])
-# plt.legend()
-# plt.grid(visible=True)
-# plt.xlabel('$W_{TO}/S$')
-# plt.ylabel('$P/W_{TO}$')
-# plt.show()
+plt.plot(constraint.WTOoS,constraint.PWCruise, label='Cruise')
+plt.plot(constraint.WTOoS,constraint.PWTakeOff, label='Take Off')
+plt.plot(constraint.WTOoS,constraint.PWClimb, label='Climb')
+plt.plot(constraint.WTOoS,constraint.PWOEI, label='Climb OEI')
+plt.plot(constraint.WTOoS,constraint.PWTurn, label='Turn')
+plt.plot(constraint.WTOoS,constraint.PWCeiling, label='Ceiling')
+plt.plot(constraint.WTOoS,constraint.PWAcceleration, label='Acceleration')
+plt.plot(constraint.WTOoSLanding, constraint.PWLanding, label='Landing')
+plt.plot(constraint.DesignWTOoS, constraint.DesignPW, marker='o', markersize = 10, markerfacecolor = 'red', markeredgecolor = 'black')
+# plt.plot(performance.WTOoSTorenbeek, performance.PWTorenbeek, label='Torenbeek')
+plt.ylim([0, 300])
+plt.xlim([0, 7000])
+plt.legend()
+plt.grid(visible=True)
+plt.xlabel('$W_{TO}/S$')
+plt.ylabel('$P/W_{TO}$')
+plt.show()
 
 times = np.linspace(0,mission.profile.MissionTime2,num = 1000)
 
@@ -173,10 +173,10 @@ times = np.linspace(0,mission.profile.MissionTime2,num = 1000)
 # plt.ylabel('Altitude [m]')
 # plt.show()
 
-plt.plot(times,mission.profile.SuppliedPowerRatio(times))
-plt.plot(myaircraft.mission.profile.Breaks,np.ones(6)*0.05, '*')
-plt.grid(visible=True)
-plt.show()
+# plt.plot(times,mission.profile.SuppliedPowerRatio(times))
+# plt.plot(myaircraft.mission.profile.Breaks,np.ones(6)*0.05, '*')
+# plt.grid(visible=True)
+# plt.show()
 
 # plt.plot(times,mission.profile.Velocity2(times))
 # plt.grid(visible=True)
