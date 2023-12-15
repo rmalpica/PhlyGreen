@@ -13,7 +13,7 @@ class Weight:
         
             
         
-    def ReadInput(self):
+    def SetInput(self):
         
         self.WPayload = self.aircraft.MissionInput['Payload Weight']
         self.WCrew = self.aircraft.MissionInput['Crew Weight']
@@ -96,6 +96,7 @@ class Weight:
                 self.TotalEnergies = self.aircraft.mission.EvaluateMission(WTO)
                 self.Wf = self.TotalEnergies[0]/self.ef
                 self.WBat  = np.max([self.TotalEnergies[1]/self.ebat , self.PtWBat*(1/self.pbat)*WTO])
+                #self.WBat  = np.max([self.TotalEnergies[1]/self.ebat , self.aircraft.mission.Max_PBatoW*(1/self.pbat)*WTO])
                 # print(self.TotalEnergies[1]/self.ebat )
                 # print(self.PtWBat*(1/self.pbat)*WTO)
                 self.WPT = self.aircraft.powertrain.WeightPowertrain(WTO)

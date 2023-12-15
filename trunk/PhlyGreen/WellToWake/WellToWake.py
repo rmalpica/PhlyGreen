@@ -9,7 +9,7 @@ class WellToWake:
         self.aircraft = aircraft
         
     
-    def ReadInput(self):
+    def SetInput(self):
         
         
         self.EtaCH = self.aircraft.WellToTankInput['Eta Charge']

@@ -111,7 +111,7 @@ WellToTankInput = {'Eta Charge': 0.95,
 
 myaircraft.Configuration = 'Hybrid'
 myaircraft.HybridType = 'Parallel'
-myaircraft.DesignAircraft(ConstraintsInput,MissionInput,TechnologyInput,MissionStages,DiversionStages,WellToTankInput,PrintOutput=True)
+myaircraft.DesignAircraft(ConstraintsInput,MissionInput,TechnologyInput,MissionStages,DiversionStages,WellToTankInput=WellToTankInput,PrintOutput=True)
 
 
 # plt.plot(myaircraft.weight.WTO_vector,myaircraft.weight.Vector) 
@@ -121,41 +121,41 @@ myaircraft.DesignAircraft(ConstraintsInput,MissionInput,TechnologyInput,MissionS
 # cProfile.run('weight.WeightEstimation()')
 #----------------------------------------------- PLOT -------------------------------------------------#                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           
 
-# fig, ax1 = plt.subplots()
-
-# color = 'tab:red'
-# ax1.set_xlabel('Time (min)')
-# ax1.set_ylabel('E [J]'
-# ax1.plot(mission.t/60, mission.Ef, color=color, label='E Fuel')
-# ax1.plot(mission.t/60, mission.EBat, color='tab:green', label='E Battery')
-# ax1.tick_params(axis='y')
-# plt.legend()
-
-# ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
-
-# color = 'tab:blue'
-# ax2.set_ylabel('beta')  # we already handled the x-label with ax1
-# ax2.plot(mission.t/60, mission.Beta, color=color, label='beta')
-# ax2.tick_params(axis='y')
-
-# fig.tight_layout()  # otherwise the right y-label is slightly clipped
-# ax1.legend()
-# ax2.legend()
-# ax1.grid(visible=True)
-# plt.show()
-# plt.clf()
+#fig, ax1 = plt.subplots()
+#
+#color = 'tab:red'
+#ax1.set_xlabel('Time (min)')
+#ax1.set_ylabel('E [J]')
+#ax1.plot(mission.t/60, mission.Ef, color=color, label='E Fuel')
+#ax1.plot(mission.t/60, mission.EBat, color='tab:green', label='E Battery')
+#ax1.tick_params(axis='y')
+#plt.legend()
+#
+#ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
+#
+#color = 'tab:blue'
+#ax2.set_ylabel('beta')  # we already handled the x-label with ax1
+#ax2.plot(mission.t/60, mission.Beta, color=color, label='beta')
+#ax2.tick_params(axis='y')
+#
+#fig.tight_layout()  # otherwise the right y-label is slightly clipped
+#ax1.legend()
+#ax2.legend()
+#ax1.grid(visible=True)
+#plt.show()
+#plt.clf()
 
 #------------------------------------------------------------------------------------------------------#
 
-plt.plot(constraint.WTOoS,constraint.PWCruise, label='Cruise')
-plt.plot(constraint.WTOoS,constraint.PWTakeOff, label='Take Off')
-plt.plot(constraint.WTOoS,constraint.PWClimb, label='Climb')
-plt.plot(constraint.WTOoS,constraint.PWOEI, label='Climb OEI')
-plt.plot(constraint.WTOoS,constraint.PWTurn, label='Turn')
-plt.plot(constraint.WTOoS,constraint.PWCeiling, label='Ceiling')
-plt.plot(constraint.WTOoS,constraint.PWAcceleration, label='Acceleration')
-plt.plot(constraint.WTOoSLanding, constraint.PWLanding, label='Landing')
-plt.plot(constraint.DesignWTOoS, constraint.DesignPW, marker='o', markersize = 10, markerfacecolor = 'red', markeredgecolor = 'black')
+plt.plot(myaircraft.constraint.WTOoS,myaircraft.constraint.PWCruise, label='Cruise')
+plt.plot(myaircraft.constraint.WTOoS,myaircraft.constraint.PWTakeOff, label='Take Off')
+plt.plot(myaircraft.constraint.WTOoS,myaircraft.constraint.PWClimb, label='Climb')
+plt.plot(myaircraft.constraint.WTOoS,myaircraft.constraint.PWOEI, label='Climb OEI')
+plt.plot(myaircraft.constraint.WTOoS,myaircraft.constraint.PWTurn, label='Turn')
+plt.plot(myaircraft.constraint.WTOoS,myaircraft.constraint.PWCeiling, label='Ceiling')
+plt.plot(myaircraft.constraint.WTOoS,myaircraft.constraint.PWAcceleration, label='Acceleration')
+plt.plot(myaircraft.constraint.WTOoSLanding,myaircraft. constraint.PWLanding, label='Landing')
+plt.plot(myaircraft.DesignWTOoS, myaircraft.DesignPW, marker='o', markersize = 10, markerfacecolor = 'red', markeredgecolor = 'black')
 # plt.plot(performance.WTOoSTorenbeek, performance.PWTorenbeek, label='Torenbeek')
 plt.ylim([0, 300])
 plt.xlim([0, 7000])
@@ -167,24 +167,21 @@ plt.show()
 
 times = np.linspace(0,mission.profile.MissionTime2,num = 1000)
 
-# plt.plot(times/60,mission.profile.Altitude(times))
-# plt.grid(visible=True)
-# plt.xlabel('t [min]')
-# plt.ylabel('Altitude [m]')
-# plt.show()
+plt.plot(times/60,mission.profile.Altitude(times))
+plt.grid(visible=True)
+plt.xlabel('t [min]')
+plt.ylabel('Altitude [m]')
+plt.show()
 
-# plt.plot(times,mission.profile.SuppliedPowerRatio(times))
-# plt.plot(myaircraft.mission.profile.Breaks,np.ones(6)*0.05, '*')
-# plt.grid(visible=True)
-# plt.show()
+plt.plot(times,mission.profile.SuppliedPowerRatio(times))
+plt.plot(myaircraft.mission.profile.Breaks,np.ones(6)*0.05, '*')
+plt.grid(visible=True)
+plt.show()
 
-# plt.plot(times,mission.profile.Velocity2(times))
-# plt.grid(visible=True)
+plt.plot(times,mission.profile.Velocity(times))
+plt.grid(visible=True)
+plt.show()
 
-# # Using the mediator to perform aircraft design
-# myaircraft.design_aircraft()
-
-# Performing some operations...
 
 end_time = time.time()
 execution_time =  end_time - start_time

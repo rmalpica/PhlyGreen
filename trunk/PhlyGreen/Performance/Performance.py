@@ -1,4 +1,5 @@
 import numpy as np
+import numbers
 import PhlyGreen.Utilities.Atmosphere as ISA
 import PhlyGreen.Utilities.Speed as Speed
 import PhlyGreen.Utilities.Units as Units
@@ -7,11 +8,80 @@ import PhlyGreen.Utilities.Units as Units
 class Performance:
     def __init__(self, aircraft):
         self.aircraft = aircraft
+        self.n_engines = 2
+        self.Mach = None
+        self.TAS = None
+        self.CAS = None 
+        self.KTAS = None
+        self.KCAS = None
+
+    """ Properties """
+
+    @property
+    def Mach(self):
+        if self._Mach == None:
+            raise ValueError("Mach unset. Exiting")
+        return self._Mach
+      
+    @Mach.setter
+    def Mach(self,value):
+        self._Mach = value
+        if(isinstance(value, numbers.Number) and (value <= 0 or value > 1.0)):
+            raise ValueError("Error: Illegal Mach number: %e. Exiting" %value)
+
+    @property
+    def TAS(self):
+        if self._TAS == None:
+            raise ValueError("True Air Speed unset. Exiting")
+        return self._TAS
+      
+    @TAS.setter
+    def TAS(self,value):
+        self._TAS = value
+        if(isinstance(value, numbers.Number) and (value <= 0)):
+            raise ValueError("Error: Illegal True Air Speed: %e. Exiting" %value)
+
+    @property
+    def CAS(self):
+        if self._CAS == None:
+            raise ValueError("Calibrated Air Speed unset. Exiting")
+        return self._CAS
+      
+    @CAS.setter
+    def CAS(self,value):
+        self._CAS = value
+        if(isinstance(value, numbers.Number) and (value <= 0)):
+            raise ValueError("Error: Illegal Calibrated Air Speed: %e. Exiting" %value)
+
+    @property
+    def KTAS(self):
+        if self._KTAS == None:
+            raise ValueError("True Air Speed (knots) unset. Exiting")
+        return self._KTAS
+      
+    @KTAS.setter
+    def KTAS(self,value):
+        self._KTAS = value
+        if(isinstance(value, numbers.Number) and (value <= 0)):
+            raise ValueError("Error: Illegal True Air Speed (knots): %e. Exiting" %value)
+
+    @property
+    def KCAS(self):
+        if self._KCAS == None:
+            raise ValueError("Calibrated Air Speed (knots) unset. Exiting")
+        return self._KCAS
+      
+    @KCAS.setter
+    def KCAS(self,value):
+        self._KCAS = value
+        if(isinstance(value, numbers.Number) and (value <= 0)):
+            raise ValueError("Error: Illegal Calibrated Air Speed (knots): %e. Exiting" %value)
 
 
+
+    """ Methods """
 
     def set_speed(self,altitude,speed,speedtype,DISA):
-
 
         if speedtype == 'Mach':
             self.Mach = speed
@@ -53,9 +123,6 @@ class Performance:
 
         return None
 
-
-        
-
     def PoWTO(self,WTOoS,beta,Ps,n,altitude,DISA,speed,speedtype):       
         self.set_speed(altitude,speed,speedtype,DISA)
         q = 0.5 * ISA.atmosphere.RHOstd(altitude,DISA) * self.TAS**2
@@ -67,7 +134,7 @@ class Performance:
         self.set_speed(altitude,speed,speedtype,DISA)
         q = 0.5 * ISA.atmosphere.RHOstd(altitude,DISA) * self.TAS**2
         Cl = n * beta * WTOoS / q
-        PW =  2*(9.81 * 1.0/WTOoS * q * self.TAS * self.aircraft.aerodynamics.Cd(Cl,self.Mach) + beta * Ps)
+        PW =  (self.n_engines/(self.n_engines-1))*(9.81 * 1.0/WTOoS * q * self.TAS * self.aircraft.aerodynamics.Cd(Cl,self.Mach) + beta * Ps)
         return PW
     
     def Ceiling(self,WTOoS,beta,Ps,n,altitude,DISA,MachC):

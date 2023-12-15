@@ -1,4 +1,5 @@
 import numpy as np
+import numbers
 
 class Aerodynamics:
     def __init__(self, aircraft):
@@ -32,7 +33,7 @@ class Aerodynamics:
     @AR.setter
     def AR(self,value):
         self._AR = value
-        if(type(value) == int and value <= 0):
+        if(isinstance(value, numbers.Number) and value <= 0):
             raise ValueError("Error: Illegal Aspect Ratio: %e. Exiting" %value)
         
     @property
@@ -44,7 +45,7 @@ class Aerodynamics:
     @e_osw.setter
     def e_osw(self,value):
         self._e_osw = value
-        if(type(value) == int and value <= 0):
+        if(isinstance(value, numbers.Number) and value <= 0):
             raise ValueError("Error: Illegal Oswald efficiency %e. Exiting" %value)
 
 

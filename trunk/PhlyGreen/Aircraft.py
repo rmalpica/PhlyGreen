@@ -1,5 +1,6 @@
 class Aircraft:
     def __init__(self, powertrain, structures, aerodynamics, performance, mission, weight, constraint, welltowake):
+        #subsystems
         self.powertrain = powertrain
         self.structures = structures
         self.aerodynamics = aerodynamics
@@ -8,7 +9,41 @@ class Aircraft:
         self.weight = weight
         self.constraint = constraint
         self.welltowake = welltowake
+        #input dictionaries
+        self.ConstraintsInput = None 
+        self.MissionInput = None 
+        self.TechnologyInput = None 
+        self.MissionStages = None 
+        self.DiversionStages = None 
+        self.WellToTankInput = None
+        #aircraft design
+        self.DesignPW = None
+        self.DesignWTOoS = None
 
+    """ Properties """
+
+    @property
+    def DesignPW(self):
+        if self._DesignPW == None:
+            raise ValueError("Design P/W unset. Exiting")
+        return self._DesignPW
+      
+    @DesignPW.setter
+    def DesignPW(self,value):
+        self._DesignPW = value
+
+    @property
+    def DesignWTOoS(self):
+        if self._DesignWTOoS == None:
+            raise ValueError("Design W/S unset. Exiting")
+        return self._DesignWTOoS
+      
+    @DesignWTOoS.setter
+    def DesignWTOoS(self,value):
+        self._DesignWTOoS = value
+
+
+    """ Methods """
 
     def ReadInput(self,ConstraintsInput,MissionInput,TechnologyInput,MissionStages,DiversionStages, WellToTankInput=None):
         
@@ -21,22 +56,24 @@ class Aircraft:
         if WellToTankInput is not None:
             
             self.WellToTankInput = WellToTankInput
-            self.welltowake.ReadInput()
+            self.welltowake.SetInput()
 
         # Initialize Constraint Analysis
-        self.constraint.ReadInput()
+        self.constraint.SetInput()
         
         # Initialize Mission profile and Analysis
         self.mission.InitializeProfile()
-        self.mission.ReadInput()
+        self.mission.SetInput()
         
         # Initialize Powertrain
-        self.powertrain.ReadInput()
+        self.powertrain.SetInput()
         
         # Initialize Weight Estimator
-        self.weight.ReadInput()
+        self.weight.SetInput()
 
-    def DesignAircraft(self,ConstraintsInput, MissionInput, TechnologyInput, MissionStages, DiversionStages, WellToTankInput=None, PrintOutput = False):
+    def DesignAircraft(self,ConstraintsInput, MissionInput, TechnologyInput, MissionStages, DiversionStages, **kwargs):
+        WellToTankInput = kwargs.get('WellToTankInput', None)
+        PrintOutput = kwargs.get('PrintOutput', False)
         # print("Initializing aircraft...")
         self.ReadInput(ConstraintsInput, MissionInput, TechnologyInput, MissionStages, DiversionStages, WellToTankInput)
 
@@ -45,15 +82,15 @@ class Aircraft:
         
         if PrintOutput:
             print('----------------------------------------')
-            print('Design W/S: ',self.constraint.DesignWTOoS)
-            print('Design P/W: ',self.constraint.DesignPW)
+            print('Design W/S: ',self.DesignWTOoS)
+            print('Design P/W: ',self.DesignPW)
             print('----------------------------------------')
 
         # print("Evaluating Weights...")
         self.weight.WeightEstimation()
-        self.WingSurface = self.weight.WTO / self.constraint.DesignWTOoS * 9.81
+        self.WingSurface = self.weight.WTO / self.DesignWTOoS * 9.81
         
-        if (self.Configuration == 'Hybrid'):
+        if (self.Configuration == 'Hybrid' and WellToTankInput is not None):
             self.welltowake.EvaluateSource()
         
         if PrintOutput:

@@ -7,8 +7,13 @@ class Profile:
     
     def __init__(self, aircraft):
         self.aircraft = aircraft
-        
-        
+      
+        self.MissionRange = None 
+        self.DiversionRange = None 
+        self.MissionStages = None 
+        self.DiversionStages = None 
+        self.SPW = None
+
         self.Altitudes = []
         self.HTMissionClimb = []
         self.HTMissionDescent = []
@@ -34,8 +39,6 @@ class Profile:
         
     def ReadInput(self):
                 
-        self.DISA = self.aircraft.ConstraintsInput['DISA'] 
-        self.beta0 = self.aircraft.MissionInput['Beta start']
         self.MissionRange = Units.NMtoM(self.aircraft.MissionInput['Range Mission'])
         self.DiversionRange = Units.NMtoM(self.aircraft.MissionInput['Range Diversion'])
         self.MissionStages = self.aircraft.MissionStages
