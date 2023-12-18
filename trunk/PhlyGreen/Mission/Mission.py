@@ -53,7 +53,7 @@ class Mission:
     def SetInput(self):
 
         self.beta0 = self.aircraft.MissionInput['Beta start']
-        self.ef = self.aircraft.TechnologyInput['Ef']
+        self.ef = self.aircraft.EnergyInput['Ef']
 
     def InitializeProfile(self):
         

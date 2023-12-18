@@ -17,14 +17,14 @@ class Weight:
         
         self.WPayload = self.aircraft.MissionInput['Payload Weight']
         self.WCrew = self.aircraft.MissionInput['Crew Weight']
-        self.ef = self.aircraft.TechnologyInput['Ef']
-        self.ebat = self.aircraft.TechnologyInput['Ebat']
-        self.pbat = self.aircraft.TechnologyInput['pbat']
-        self.SPowerPT = self.aircraft.TechnologyInput['Specific Power Powertrain']
-        self.SPowerPMAD = self.aircraft.TechnologyInput['Specific Power PMAD']
-        self.PtWPT = self.aircraft.TechnologyInput['PowertoWeight Powertrain']
-        self.PtWBat = self.aircraft.TechnologyInput['PowertoWeight Battery']
-        self.PtWPMAD = self.aircraft.TechnologyInput['PowertoWeight PMAD']
+        self.ef = self.aircraft.EnergyInput['Ef']
+        self.ebat = self.aircraft.EnergyInput['Ebat']
+        self.pbat = self.aircraft.EnergyInput['pbat']
+        self.SPowerPT = self.aircraft.EnergyInput['Specific Power Powertrain']
+        self.SPowerPMAD = self.aircraft.EnergyInput['Specific Power PMAD']
+        self.PtWPT = self.aircraft.EnergyInput['PowertoWeight Powertrain']
+        self.PtWBat = self.aircraft.EnergyInput['PowertoWeight Battery']
+        self.PtWPMAD = self.aircraft.EnergyInput['PowertoWeight PMAD']
 
 
         return None

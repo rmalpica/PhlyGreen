@@ -10,9 +10,10 @@ class Aircraft:
         self.constraint = constraint
         self.welltowake = welltowake
         #input dictionaries
+        self.AerodynamicsInput = None 
         self.ConstraintsInput = None 
         self.MissionInput = None 
-        self.TechnologyInput = None 
+        self.EnergyInput = None 
         self.MissionStages = None 
         self.DiversionStages = None 
         self.WellToTankInput = None
@@ -45,11 +46,12 @@ class Aircraft:
 
     """ Methods """
 
-    def ReadInput(self,ConstraintsInput,MissionInput,TechnologyInput,MissionStages,DiversionStages, WellToTankInput=None):
+    def ReadInput(self,AerodynamicsInput,ConstraintsInput,MissionInput,EnergyInput,MissionStages,DiversionStages, WellToTankInput=None):
         
+        self.AerodynamicsInput = AerodynamicsInput
         self.ConstraintsInput = ConstraintsInput
         self.MissionInput = MissionInput
-        self.TechnologyInput = TechnologyInput
+        self.EnergyInput = EnergyInput
         self.MissionStages = MissionStages
         self.DiversionStages = DiversionStages
 
@@ -57,6 +59,9 @@ class Aircraft:
             
             self.WellToTankInput = WellToTankInput
             self.welltowake.SetInput()
+
+        # Initialize Aerodynamics subsystem
+        self.aerodynamics.SetInput()
 
         # Initialize Constraint Analysis
         self.constraint.SetInput()
@@ -71,13 +76,13 @@ class Aircraft:
         # Initialize Weight Estimator
         self.weight.SetInput()
 
-    def DesignAircraft(self,ConstraintsInput, MissionInput, TechnologyInput, MissionStages, DiversionStages, **kwargs):
+    def DesignAircraft(self,AerodynamicsInput,ConstraintsInput, MissionInput, EnergyInput, MissionStages, DiversionStages, **kwargs):
         WellToTankInput = kwargs.get('WellToTankInput', None)
         PrintOutput = kwargs.get('PrintOutput', False)
         # print("Initializing aircraft...")
-        self.ReadInput(ConstraintsInput, MissionInput, TechnologyInput, MissionStages, DiversionStages, WellToTankInput)
+        self.ReadInput(AerodynamicsInput,ConstraintsInput, MissionInput, EnergyInput, MissionStages, DiversionStages, WellToTankInput)
 
-        # print("Finding Design Point...")
+        if PrintOutput: print("Finding Design Point...")
         self.constraint.FindDesignPoint()
         
         if PrintOutput:
@@ -86,7 +91,7 @@ class Aircraft:
             print('Design P/W: ',self.DesignPW)
             print('----------------------------------------')
 
-        # print("Evaluating Weights...")
+        if PrintOutput: print("Evaluating Weights...")
         self.weight.WeightEstimation()
         self.WingSurface = self.weight.WTO / self.DesignWTOoS * 9.81
         

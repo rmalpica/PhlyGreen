@@ -35,7 +35,7 @@ weight.aircraft = myaircraft
 constraint.aircraft = myaircraft
 welltowake.aircraft = myaircraft
 
-aerodynamics.set_quadratic_polar(11,0.8)
+#aerodynamics.set_quadratic_polar(11,0.8)
 
 
 
@@ -82,7 +82,9 @@ DiversionStages = {'Climb1': {'type': 'ConstantRateClimb', 'input': {'CB': 0.08,
                  'Descent1': {'type': 'ConstantRateDescent', 'input':{'CB': -0.08, 'Speed': 1.4*59, 'StartAltitude': 3100, 'EndAltitude': 2000}},
                  'Cruise': {'type': 'ConstantMachCruise', 'input':{ 'Mach': 0.3, 'Altitude': 3100}}}
 
-TechnologyInput = {'Ef': 43.5*10**6,
+AerodynamicsInput = {'AnalyticPolar': {'type': 'Quadratic', 'input': {'AR': 11, 'e_osw': 0.8}}}
+
+EnergyInput = {'Ef': 43.5*10**6,
                    'Ebat': 700 * 3600,
                    'pbat': 1000,
                    'Eta Gas Turbine': 0.3,
@@ -109,9 +111,10 @@ WellToTankInput = {'Eta Charge': 0.95,
                    'Eta Production': 1.,
                    'Eta Transportation': 0.25}
 
+#myaircraft.Configuration = 'Traditional'
 myaircraft.Configuration = 'Hybrid'
 myaircraft.HybridType = 'Parallel'
-myaircraft.DesignAircraft(ConstraintsInput,MissionInput,TechnologyInput,MissionStages,DiversionStages,WellToTankInput=WellToTankInput,PrintOutput=True)
+myaircraft.DesignAircraft(AerodynamicsInput,ConstraintsInput,MissionInput,EnergyInput,MissionStages,DiversionStages,WellToTankInput=WellToTankInput,PrintOutput=True)
 
 
 # plt.plot(myaircraft.weight.WTO_vector,myaircraft.weight.Vector) 
@@ -174,12 +177,16 @@ plt.ylabel('Altitude [m]')
 plt.show()
 
 plt.plot(times,mission.profile.SuppliedPowerRatio(times))
-plt.plot(myaircraft.mission.profile.Breaks,np.ones(6)*0.05, '*')
+#plt.plot(myaircraft.mission.profile.Breaks,np.ones(6)*0.05, '*')
 plt.grid(visible=True)
+plt.xlabel('t [min]')
+plt.ylabel('Phi')
 plt.show()
 
 plt.plot(times,mission.profile.Velocity(times))
 plt.grid(visible=True)
+plt.xlabel('t [min]')
+plt.ylabel('TAS [m/s]')
 plt.show()
 
 

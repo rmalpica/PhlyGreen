@@ -255,11 +255,11 @@ class Powertrain:
 
     def SetInput(self):
 
-        self.EtaGT = self.aircraft.TechnologyInput['Eta Gas Turbine']
-        self.EtaGB = self.aircraft.TechnologyInput['Eta Gearbox']
-        self.EtaPP = self.aircraft.TechnologyInput['Eta Propulsive']
-        self.SPowerPT = self.aircraft.TechnologyInput['Specific Power Powertrain']
-        self.SPowerPMAD = self.aircraft.TechnologyInput['Specific Power PMAD']
+        self.EtaGT = self.aircraft.EnergyInput['Eta Gas Turbine']
+        self.EtaGB = self.aircraft.EnergyInput['Eta Gearbox']
+        self.EtaPP = self.aircraft.EnergyInput['Eta Propulsive']
+        self.SPowerPT = self.aircraft.EnergyInput['Specific Power Powertrain']
+        self.SPowerPMAD = self.aircraft.EnergyInput['Specific Power PMAD']
         
         if self.aircraft.WellToTankInput is not None:
             
@@ -276,17 +276,17 @@ class Powertrain:
         
         if (self.aircraft.Configuration == 'Hybrid'):
             
-            self.EtaPM = self.aircraft.TechnologyInput['Eta PMAD']
+            self.EtaPM = self.aircraft.EnergyInput['Eta PMAD']
 
             
             if (self.aircraft.HybridType == 'Parallel'):
         
-                self.EtaEM = self.aircraft.TechnologyInput['Eta Electric Motor']
+                self.EtaEM = self.aircraft.EnergyInput['Eta Electric Motor']
                 
             if (self.aircraft.HybridType == 'Serial'):
                 
-                self.EtaEM1 = self.aircraft.TechnologyInput['Eta Electric Motor 1']
-                self.EtaEM2 = self.aircraft.TechnologyInput['Eta Electric Motor 2']
+                self.EtaEM1 = self.aircraft.EnergyInput['Eta Electric Motor 1']
+                self.EtaEM2 = self.aircraft.EnergyInput['Eta Electric Motor 2']
 
         
         return None
@@ -294,7 +294,7 @@ class Powertrain:
         
     def Traditional(self):
         
-        self.ReadInput()
+        #self.ReadInput()
         
         A = np.array([[- self.EtaGT, 1, 0, 0],
                       [0, - self.EtaGB, 1, 0],
@@ -369,18 +369,18 @@ class Powertrain:
         if self.aircraft.Configuration == 'Traditional':
         
                 
-                PtWFuel = self.aircraft.constraint.DesignPW * self.Traditional()[0]
+                PtWFuel = self.aircraft.DesignPW * self.Traditional()[0]
                 
                 WPT = PtWFuel * WTO / self.SPowerPT[0]
                 
         elif self.aircraft.Configuration == 'Hybrid':
    
                 
-                # PtWFuel = self.aircraft.constraint.DesignPW * self.Hybrid(0.05)[0]
-                # PtWBattery = self.aircraft.constraint.DesignPW * self.Hybrid(0.05)[5]
+                # PtWFuel = self.aircraft.DesignPW * self.Hybrid(0.05)[0]
+                # PtWBattery = self.aircraft.DesignPW * self.Hybrid(0.05)[5]
                 PtWFuel = self.aircraft.mission.Max_PFoW
                 PtWBattery = self.aircraft.mission.Max_PBatoW
-                # PtWPMAD = self.aircraft.constraint.DesignPW * self.Hybrid(0.05)[3]
+                # PtWPMAD = self.aircraft.DesignPW * self.Hybrid(0.05)[3]
                 self.WThermal = PtWFuel/self.SPowerPT[0]
                 self.WElectric = PtWBattery/self.SPowerPT[1]
                 

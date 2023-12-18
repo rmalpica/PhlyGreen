@@ -86,7 +86,9 @@ class Profile:
         self.DiversionStages = self.aircraft.DiversionStages
         
         if (self.aircraft.Configuration == 'Hybrid'):
-            self.SPW = self.aircraft.TechnologyInput['Supplied Power Ratio']
+            self.SPW = self.aircraft.EnergyInput['Supplied Power Ratio']
+        else:
+            self.SPW = [[0.,0.] for i in range(6)]
         
 
     def DefineMission(self):
