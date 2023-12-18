@@ -13,8 +13,9 @@ class Mission:
         self.beta0 = None 
         self.DISA = 0
         self.WTO = None
-        self.Max_PBatoW = -1
-        self.Max_PFoW = -1
+        self.Max_PBatoW = -1  #da inizializzare come phi*P/W_TO
+        self.Max_PFoW = -1  #da inizializzare come (1-phi)*P/W_TO
+
         self.ef = None
         self.profile = None
         self.t = None
