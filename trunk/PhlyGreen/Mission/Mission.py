@@ -1,4 +1,5 @@
 import numpy as np
+import numbers
 import PhlyGreen.Utilities.Atmosphere as ISA
 import PhlyGreen.Utilities.Speed as Speed
 import scipy.integrate as integrate
@@ -20,6 +21,34 @@ class Mission:
         self.Ef = None
         self.EBat = None
         self.Beta = None
+
+    """ Properties """
+
+    @property
+    def beta0(self):
+        if self._beta0 == None:
+            raise ValueError("Initial weight fraction beta0 unset. Exiting")
+        return self._beta0
+      
+    @beta0.setter
+    def beta0(self,value):
+        self._beta0 = value
+        if(isinstance(value, numbers.Number) and (value <= 0 or value > 1.0)):
+            raise ValueError("Error: Illegal weight fraction beta0: %e. Exiting" %value)
+
+    @property
+    def ef(self):
+        if self._ef == None:
+            raise ValueError("Fuel specific energy unset. Exiting")
+        return self._ef
+      
+    @ef.setter
+    def ef(self,value):
+        self._ef = value
+        if(isinstance(value, numbers.Number) and (value <= 0)):
+            raise ValueError("Error: Illegal fuel specific energy: %e. Exiting" %value)
+
+    """Methods """
 
     def SetInput(self):
 

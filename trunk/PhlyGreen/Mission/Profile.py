@@ -1,4 +1,5 @@
 import numpy as np
+import numbers
 import PhlyGreen.Utilities.Speed as Speed
 import PhlyGreen.Utilities.Units as Units
 
@@ -36,8 +37,48 @@ class Profile:
         self.counterClimbDiversion = 0
         self.counterDescentDiversion = 0
         self.DistancesDiversion = []
-        
-    def ReadInput(self):
+
+    """ Properties """
+
+    @property
+    def MissionRange(self):
+        if self._MissionRange == None:
+            raise ValueError("Mission Range unset. Exiting")
+        return self._MissionRange
+      
+    @MissionRange.setter
+    def MissionRange(self,value):
+        self._MissionRange = value
+        if(isinstance(value, numbers.Number) and (value <= 0)):
+            raise ValueError("Error: Illegal mission range: %e. Exiting" %value)
+
+    @property
+    def DiversionRange(self):
+        if self._DiversionRange== None:
+            raise ValueError("Diversion Range unset. Exiting")
+        return self._DiversionRange
+      
+    @DiversionRange.setter
+    def DiversionRange(self,value):
+        self._DiversionRange = value
+        if(isinstance(value, numbers.Number) and (value <= 0)):
+            raise ValueError("Error: Illegal diversion range: %e. Exiting" %value)
+
+    @property
+    def SPW(self):
+        if self._SPW== None:
+            raise ValueError("Supplied power ratio unset. Exiting")
+        return self._SPW
+      
+    @SPW.setter
+    def SPW(self,value):
+        self._SPW = value
+        if(isinstance(value, numbers.Number) and (value < 0 or value > 1)):
+            raise ValueError("Error: Illegal Supplied power ratio: %e. Exiting" %value)
+
+    """ Methods """
+
+    def SetInput(self):
                 
         self.MissionRange = Units.NMtoM(self.aircraft.MissionInput['Range Mission'])
         self.DiversionRange = Units.NMtoM(self.aircraft.MissionInput['Range Diversion'])
@@ -50,7 +91,7 @@ class Profile:
 
     def DefineMission(self):
         
-        self.ReadInput()
+        self.SetInput()
         
         for Stage in self.MissionStages:
     
