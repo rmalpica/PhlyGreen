@@ -96,7 +96,6 @@ class Profile:
         self.SetInput()
         
         for Stage in self.MissionStages:
-    
             getattr(self, self.MissionStages[Stage]['type'])(self.MissionStages[Stage]['input'],'Mission')
             
         self.BreaksClimb.pop(0)
@@ -106,7 +105,6 @@ class Profile:
         self.BreaksClimbDiversion = [self.BreaksDescent[-1]]
 
         for Stage in self.DiversionStages:
-    
             getattr(self, self.DiversionStages[Stage]['type'])(self.DiversionStages[Stage]['input'],'Diversion')
 
         self.BreaksClimbDiversion.pop(0)
@@ -138,7 +136,6 @@ class Profile:
         # self.Breaks.pop(-1)
             
         for i in range(len(self.BreaksDescent)):   
- 
             self.HTMission.append(self.HTMissionDescent[i])
             self.Velocities.append(self.VDescents[i])
 
@@ -158,7 +155,6 @@ class Profile:
         self.Breaks.pop(-1)
             
         for i in range(len(self.BreaksDescentDiversion)):   
- 
             self.HTMission.append(self.HTDiversionDescent[i])
             self.Velocities.append(self.VDescentsDiversion[i])
 
@@ -172,7 +168,6 @@ class Profile:
         for i in range(len(self.BreaksClimb)):
             
             def localFunctionClimb(t):
-                    
                 alt = self.Altitudes[i]
                 htm = self.HTMission[i]
                 brk = self.Breaks[i]
@@ -189,7 +184,6 @@ class Profile:
         for i in range(len(self.BreaksDescent)):
             
             def localFunctionDescent(t):
-                
                 alt = self.Altitudes[i + len(self.BreaksClimb)]
                 htm = self.HTMission[i + len(self.BreaksClimb) + 1]
                 brk = self.Breaks[i + len(self.BreaksClimb) + 1]
@@ -204,7 +198,6 @@ class Profile:
         for i in range(len(self.BreaksClimbDiversion)):
                    
             def localFunctionClimb(t):
-                           
                 alt = self.Altitudes[i + len(self.BreaksClimb) + len(self.BreaksDescent)]
                 htm = self.HTMission[i + len(self.BreaksClimb) + len(self.BreaksDescent) + 1]
                 brk = self.Breaks[i + len(self.BreaksClimb) + len(self.BreaksDescent) + 1]
@@ -221,7 +214,6 @@ class Profile:
         for i in range(len(self.BreaksDescent)):
             
             def localFunctionDescent(t):
-                
                 alt = self.Altitudes[i + len(self.BreaksClimb) + len(self.BreaksDescent) + len(self.BreaksClimbDiversion)]
                 htm = self.HTMission[i + len(self.BreaksClimb) + len(self.BreaksDescent) + len(self.BreaksClimbDiversion) + 2]
                 brk = self.Breaks[i + len(self.BreaksClimb) + len(self.BreaksDescent) + len(self.BreaksClimbDiversion) + 2]
@@ -236,7 +228,6 @@ class Profile:
 
 
     def Altitude(self,t):
-                
         return np.piecewise(t, [ t >= ti for ti in self.Breaks], self.Altitude_Func(t))
 
 
@@ -249,8 +240,6 @@ class Profile:
 
 
     def SuppliedPowerRatio(self,t):
-        
-        
         return np.piecewise(t, [t >= 0, t >= self.BreaksClimb[-1], t >= self.CruiseTime, t >= self.BreaksDescent[-1], t >= self.BreaksClimbDiversion[-1], t >= self.CruiseTimeDiversion], 
                             [lambda t: np.interp(t, [0, self.BreaksClimb[-1]], self.SPW[0]),
                              lambda t: np.interp(t, [self.BreaksClimb[-1], self.CruiseTime], self.SPW[1]),
