@@ -13,7 +13,7 @@ class Profile:
         self.DiversionRange = None 
         self.MissionStages = None 
         self.DiversionStages = None 
-        self.SPW = None
+        self.SPW = [[0,0]] #will be the TakeOff phi
 
         self.Altitudes = []
         self.HTMissionClimb = []
@@ -66,7 +66,7 @@ class Profile:
 
     @property
     def SPW(self):
-        if self._SPW== None:
+        if len(self._SPW) == 0:
             raise ValueError("Supplied power ratio unset. Exiting")
         return self._SPW
       
@@ -85,27 +85,71 @@ class Profile:
         self.MissionStages = self.aircraft.MissionStages
         self.DiversionStages = self.aircraft.DiversionStages
         
-        if (self.aircraft.Configuration == 'Hybrid'):
-            self.SPW = self.aircraft.EnergyInput['Supplied Power Ratio']
-        else:
-            self.SPW = [[0.,0.] for i in range(6)]
+        #if (self.aircraft.Configuration == 'Hybrid'):
+        #    self.SPW = self.aircraft.EnergyInput['Supplied Power Ratio']
+        #else:
+        #    self.SPW = [[0.,0.] for i in range(6)]
         
 
     def DefineMission(self):
         
         self.SetInput()
         
+        #parse all phases except cruise and takeoff
         for Stage in self.MissionStages:
-            getattr(self, self.MissionStages[Stage]['type'])(self.MissionStages[Stage]['input'],'Mission')
-            
+            if ('Cruise' in Stage) or ('Takeoff' in Stage): 
+                continue
+            else:
+                print(Stage)
+                getattr(self, self.MissionStages[Stage]['type'])(self.MissionStages[Stage]['input'],'Mission')
+
+        #parse cruise 
+        for Stage in self.MissionStages:
+            if 'Cruise' not in Stage: 
+                continue
+            else:
+                print(Stage)
+                getattr(self, self.MissionStages[Stage]['type'])(self.MissionStages[Stage]['input'],'Mission')
+        
+        #parse supplied power ratios
+        if self.aircraft.Configuration == 'Hybrid':
+            for Stage in self.MissionStages: 
+                if ('Takeoff') in Stage:
+                    pass
+                else:
+                    phi_start = self.MissionStages[Stage]['Supplied Power Ratio']['phi_start'] 
+                    phi_end = self.MissionStages[Stage]['Supplied Power Ratio']['phi_end'] 
+                    self.SPW = np.vstack([self.SPW,[phi_start,phi_end]])
+        
         self.BreaksClimb.pop(0)
         self.BreaksDescent.pop(0)
         self.BreaksDescent += self.CruiseTime
 
         self.BreaksClimbDiversion = [self.BreaksDescent[-1]]
 
+        #parse all phases except cruise and takeoff
         for Stage in self.DiversionStages:
-            getattr(self, self.DiversionStages[Stage]['type'])(self.DiversionStages[Stage]['input'],'Diversion')
+            if ('Cruise' in Stage) or ('Takeoff' in Stage): 
+                continue
+            else:
+                getattr(self, self.DiversionStages[Stage]['type'])(self.DiversionStages[Stage]['input'],'Diversion')
+
+        #parse cruise 
+        for Stage in self.DiversionStages:
+            if 'Cruise' not in Stage: 
+                continue
+            else:
+                getattr(self, self.DiversionStages[Stage]['type'])(self.DiversionStages[Stage]['input'],'Diversion')
+        
+        #parse supplied power ratios
+        if self.aircraft.Configuration == 'Hybrid':
+            for Stage in self.DiversionStages: 
+                if ('Takeoff') in Stage:
+                    pass
+                else:
+                    phi_start = self.DiversionStages[Stage]['Supplied Power Ratio']['phi_start'] 
+                    phi_end = self.DiversionStages[Stage]['Supplied Power Ratio']['phi_end'] 
+                    self.SPW = np.vstack([self.SPW,[phi_start,phi_end]])
 
         self.BreaksClimbDiversion.pop(0)
         self.BreaksDescentDiversion.pop(0)
@@ -241,12 +285,12 @@ class Profile:
 
     def SuppliedPowerRatio(self,t):
         return np.piecewise(t, [t >= 0, t >= self.BreaksClimb[-1], t >= self.CruiseTime, t >= self.BreaksDescent[-1], t >= self.BreaksClimbDiversion[-1], t >= self.CruiseTimeDiversion], 
-                            [lambda t: np.interp(t, [0, self.BreaksClimb[-1]], self.SPW[0]),
-                             lambda t: np.interp(t, [self.BreaksClimb[-1], self.CruiseTime], self.SPW[1]),
-                             lambda t: np.interp(t, [self.CruiseTime, self.BreaksDescent[-1]], self.SPW[2]),
-                             lambda t: np.interp(t, [self.BreaksDescent[-1], self.BreaksClimbDiversion[-1]], self.SPW[3]),
-                             lambda t: np.interp(t, [self.BreaksClimbDiversion[-1], self.CruiseTimeDiversion], self.SPW[4]),
-                             lambda t: np.interp(t, [self.CruiseTimeDiversion, self.BreaksDescentDiversion[-1]], self.SPW[5])])
+                            [lambda t: np.interp(t, [0, self.BreaksClimb[-1]], self.SPW[1]),
+                             lambda t: np.interp(t, [self.BreaksClimb[-1], self.CruiseTime], self.SPW[2]),
+                             lambda t: np.interp(t, [self.CruiseTime, self.BreaksDescent[-1]], self.SPW[3]),
+                             lambda t: np.interp(t, [self.BreaksDescent[-1], self.BreaksClimbDiversion[-1]], self.SPW[4]),
+                             lambda t: np.interp(t, [self.BreaksClimbDiversion[-1], self.CruiseTimeDiversion], self.SPW[5]),
+                             lambda t: np.interp(t, [self.CruiseTimeDiversion, self.BreaksDescentDiversion[-1]], self.SPW[6])])
 
 
 
@@ -299,7 +343,7 @@ class Profile:
         
         Altitude = StageInput['Altitude']
         Mach = StageInput['Mach']
-        
+
         if (phase == 'Mission'):
             
             self.VCruise = Speed.Mach2TAS(Mach, Altitude)

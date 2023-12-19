@@ -70,17 +70,13 @@ MissionInput = {'Range Mission': 750,
                 'Payload Weight': (4560),
                 'Crew Weight': (95*3)}
 
-# MissionStages = {'ConstantRateClimb': {'CB': 0.021, 'Speed': 1.4*59, 'StartAltitude': 2000, 'EndAltitude': 5450},
-#                  'ConstantRateDescent': {'CB': -0.021, 'Speed': 1.4*59, 'StartAltitude': 5450, 'EndAltitude': 2000},
-#                  'ConstantMachCruise': {'Mach': 0.41, 'Altitude': 5450}}
+MissionStages = {'Climb1': {'type': 'ConstantRateClimb', 'input': {'CB': 0.08, 'Speed': 1.4*59, 'StartAltitude': 2000, 'EndAltitude': 6000}, 'Supplied Power Ratio':{'phi_start': 0.0, 'phi_end':0.0 }},
+                 'Cruise': {'type': 'ConstantMachCruise', 'input':{ 'Mach': 0.41, 'Altitude': 6000}, 'Supplied Power Ratio':{'phi_start': 0.0225104, 'phi_end':0.0148335 }},
+                 'Descent1': {'type': 'ConstantRateDescent', 'input':{'CB': -0.08, 'Speed': 1.4*59, 'StartAltitude': 6000, 'EndAltitude': 2000}, 'Supplied Power Ratio':{'phi_start': 0.0, 'phi_end':0.0 }}}
 
-MissionStages = {'Climb1': {'type': 'ConstantRateClimb', 'input': {'CB': 0.08, 'Speed': 1.4*59, 'StartAltitude': 2000, 'EndAltitude': 6000}},
-                 'Descent1': {'type': 'ConstantRateDescent', 'input':{'CB': -0.08, 'Speed': 1.4*59, 'StartAltitude': 6000, 'EndAltitude': 2000}},
-                 'Cruise': {'type': 'ConstantMachCruise', 'input':{ 'Mach': 0.41, 'Altitude': 6000}}}
-
-DiversionStages = {'Climb1': {'type': 'ConstantRateClimb', 'input': {'CB': 0.08, 'Speed': 1.4*59, 'StartAltitude': 2000, 'EndAltitude': 3100}},
-                 'Descent1': {'type': 'ConstantRateDescent', 'input':{'CB': -0.08, 'Speed': 1.4*59, 'StartAltitude': 3100, 'EndAltitude': 2000}},
-                 'Cruise': {'type': 'ConstantMachCruise', 'input':{ 'Mach': 0.3, 'Altitude': 3100}}}
+DiversionStages = {'Climb1': {'type': 'ConstantRateClimb', 'input': {'CB': 0.08, 'Speed': 1.4*59, 'StartAltitude': 2000, 'EndAltitude': 3100}, 'Supplied Power Ratio':{'phi_start': 0.0, 'phi_end':0.0 }},
+                 'Cruise': {'type': 'ConstantMachCruise', 'input':{ 'Mach': 0.3, 'Altitude': 3100}, 'Supplied Power Ratio':{'phi_start': 0.0225104, 'phi_end':0.0148335}},
+                 'Descent1': {'type': 'ConstantRateDescent', 'input':{'CB': -0.08, 'Speed': 1.4*59, 'StartAltitude': 3100, 'EndAltitude': 2000}, 'Supplied Power Ratio':{'phi_start': 0.0, 'phi_end':0.0 }}}
 
 AerodynamicsInput = {'AnalyticPolar': {'type': 'Quadratic', 'input': {'AR': 11, 'e_osw': 0.8}}}
 
@@ -98,10 +94,10 @@ EnergyInput = {'Ef': 43.5*10**6,
                    'Specific Power PMAD': [2200,2200,2200],
                    'PowertoWeight Battery': 35, 
                    'PowertoWeight Powertrain': [150,33],
-                   'PowertoWeight PMAD': 0,
+                   'PowertoWeight PMAD': 0
                    # 'Supplied Power Ratio': [[0.,0.],[0.05, 0.1],[0., 0.],[0.,0.],[0.05, 0.1],[0., 0.]]
 
-                    'Supplied Power Ratio': [[0.,0.],[0.0225104, 0.0148335],[0., 0.],[0.,0.],[0.0225104, 0.0148335],[0., 0.]]
+                    #'Supplied Power Ratio': [[0.,0.],[0.0225104, 0.0148335],[0., 0.],[0.,0.],[0.0225104, 0.0148335],[0., 0.]]
                     # 'Supplied Power Ratio': [[0.,0.],[0.08743, 0.12764],[0., 0.],[0.,0.],[0.08743, 0.12764],[0., 0.]]
                    }
 

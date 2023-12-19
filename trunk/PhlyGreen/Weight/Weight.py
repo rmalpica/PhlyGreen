@@ -10,6 +10,7 @@ class Weight:
     def __init__(self, aircraft):
         self.aircraft = aircraft
         self.tol = 0.1
+        self.final_reserve = 500.0  #Kg fuel
         
             
         
@@ -58,7 +59,7 @@ class Weight:
             
                 self.Wf = self.aircraft.mission.EvaluateMission(WTO)/self.ef
                 self.WPT = self.aircraft.powertrain.WeightPowertrain(WTO)
-                self.WStructure = self.aircraft.structures.StructuralWeight(WTO) + 500 
+                self.WStructure = self.aircraft.structures.StructuralWeight(WTO) + self.final_reserve 
             
                 return (self.Wf + self.WPT + self.WStructure + self.WPayload + self.WCrew - WTO)
         
@@ -100,7 +101,7 @@ class Weight:
                 # print(self.TotalEnergies[1]/self.ebat )
                 # print(self.PtWBat*(1/self.pbat)*WTO)
                 self.WPT = self.aircraft.powertrain.WeightPowertrain(WTO)
-                self.WStructure = self.aircraft.structures.StructuralWeight(WTO) + 500 
+                self.WStructure = self.aircraft.structures.StructuralWeight(WTO) + self.final_reserve
             
                 # print(self.i)
                 # print('energies: ', self.TotalEnergies)
