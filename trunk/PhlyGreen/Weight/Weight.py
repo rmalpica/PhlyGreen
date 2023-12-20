@@ -90,14 +90,12 @@ class Weight:
     def Hybrid(self):
         
         def func(WTO):
-                # self.i += 1
-                # if self.i == 10:
-                #     WTO += 1200
-                # print(WTO)
                 self.TotalEnergies = self.aircraft.mission.EvaluateMission(WTO)
                 self.Wf = self.TotalEnergies[0]/self.ef
                 #self.WBat  = np.max([self.TotalEnergies[1]/self.ebat , self.PtWBat*(1/self.pbat)*WTO])
-                self.WBat  = np.max([self.TotalEnergies[1]/self.ebat , self.aircraft.mission.Max_PBatoW*(1/self.pbat)])
+                WBat  = [self.TotalEnergies[1]/self.ebat , self.aircraft.mission.Max_PBatoW*(1/self.pbat), self.aircraft.mission.TO_PBatoW*(1/self.pbat)]
+                self.WBatidx = np.argmax(WBat)
+                self.WBat = WBat[self.WBatidx] 
                 # print(self.TotalEnergies[1]/self.ebat )
                 # print(self.PtWBat*(1/self.pbat)*WTO)
                 self.WPT = self.aircraft.powertrain.WeightPowertrain(WTO)

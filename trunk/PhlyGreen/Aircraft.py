@@ -111,6 +111,7 @@ class Aircraft:
                 print('Source Energy: ', self.welltowake.SourceEnergy/1.e6,' MJ')
                 print('Psi: ', self.welltowake.Psi)
                 print('Wing Surface: ', self.WingSurface, ' m^2')
+                print('Sizing phase for battery: ', 'Cruise energy' if self.weight.WBatidx == 0 else 'Cruise peak power' if self.weight.WBatidx == 1 else 'Takeoff peak power'  )
             else:
                 print('Takeoff Weight: ', self.weight.WTO)
                 print('Wing Surface: ', self.WingSurface, ' m^2')

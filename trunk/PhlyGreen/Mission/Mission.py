@@ -13,8 +13,10 @@ class Mission:
         self.beta0 = None 
         self.DISA = 0
         self.WTO = None
-        self.Max_PBatoW = -1  #da inizializzare come phi*P/W_TO
-        self.Max_PFoW = -1  #da inizializzare come (1-phi)*P/W_TO
+        self.Max_PBatoW = -1  
+        self.Max_PFoW = -1  
+        self.TO_PBatoW = 0  
+        self.TO_PFoW = 0 
 
         self.ef = None
         self.profile = None
@@ -143,10 +145,15 @@ class Mission:
             dbetadt = - dEFdt/(self.ef*self.WTO)            
             return [dEFdt,dEBatdt,dbetadt]
 
-        # initial condition
+        # Takeoff condition
+        PRatio = self.aircraft.powertrain.Hybrid(self.aircraft.mission.profile.SPW[0][0])
+        Ppropulsive = self.WTO * self.aircraft.performance.TakeOff(self.aircraft.DesignWTOoS,self.aircraft.constraint.ConstraintsBeta[1], self.aircraft.constraint.ConstraintsAltitude[1], self.aircraft.constraint.kTO, self.aircraft.constraint.sTO, self.aircraft.constraint.DISA, self.aircraft.constraint.ConstraintsSpeed[1], self.aircraft.constraint.ConstraintsSpeedtype[1])
+        self.TO_PBatoW = Ppropulsive * PRatio[5]
+        self.TO_PFoW = Ppropulsive * PRatio[0]
+
+        #set/reset max values
         self.Max_PBatoW = -1
         self.Max_PFoW = -1
-
 
         y0 = [0,0,self.beta0]
         

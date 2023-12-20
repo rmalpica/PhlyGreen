@@ -50,8 +50,8 @@ welltowake.aircraft = myaircraft
 # 7: Landing 
 # -----------------------------------------------------------------#
 
-ConstraintsInput = {'speed': np.array([280, 70, 59*1.4, 0.3, 0.41, 0.35, 59.]) ,
-                    'speedtype': ['KTAS','TAS','TAS','Mach','Mach','Mach','TAS']   ,
+ConstraintsInput = {'speed': np.array([0.41, 70, 59*1.4, 0.3, 0.41, 0.35, 59.]) ,
+                    'speedtype': ['Mach','TAS','TAS','Mach','Mach','Mach','TAS']   ,
                     'beta': np.array([0.97,1.,0.95, 0.9, 0.8, 0.9, None])   ,
                     'altitude': np.array([6000., 100., 2000., 5000, 7600., 6000, 500.]),
                     'load factor': np.array([1., None, 1., 1.1, 1., 1., None]),
@@ -70,7 +70,8 @@ MissionInput = {'Range Mission': 750,
                 'Payload Weight': (4560),
                 'Crew Weight': (95*3)}
 
-MissionStages = {'Climb1': {'type': 'ConstantRateClimb', 'input': {'CB': 0.08, 'Speed': 1.4*59, 'StartAltitude': 2000, 'EndAltitude': 6000}, 'Supplied Power Ratio':{'phi_start': 0.0, 'phi_end':0.0 }},
+MissionStages = {'Takeoff': {'Supplied Power Ratio':{'phi': 0.0}},
+                'Climb1': {'type': 'ConstantRateClimb', 'input': {'CB': 0.08, 'Speed': 1.4*59, 'StartAltitude': 2000, 'EndAltitude': 6000}, 'Supplied Power Ratio':{'phi_start': 0.0, 'phi_end':0.0 }},
                  'Cruise': {'type': 'ConstantMachCruise', 'input':{ 'Mach': 0.41, 'Altitude': 6000}, 'Supplied Power Ratio':{'phi_start': 0.0225104, 'phi_end':0.0148335 }},
                  'Descent1': {'type': 'ConstantRateDescent', 'input':{'CB': -0.08, 'Speed': 1.4*59, 'StartAltitude': 6000, 'EndAltitude': 2000}, 'Supplied Power Ratio':{'phi_start': 0.0, 'phi_end':0.0 }}}
 
@@ -172,7 +173,8 @@ plt.xlabel('t [min]')
 plt.ylabel('Altitude [m]')
 plt.show()
 
-plt.plot(times/60,mission.profile.SuppliedPowerRatio(times))
+#plt.plot(times/60,mission.profile.SuppliedPowerRatio(times))
+plt.plot(times/60,[mission.profile.SuppliedPowerRatio(t) for t in times], 'b')
 #plt.plot(myaircraft.mission.profile.Breaks,np.ones(6)*0.05, '*')
 plt.grid(visible=True)
 plt.xlabel('t [min]')

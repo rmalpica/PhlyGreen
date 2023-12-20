@@ -13,7 +13,9 @@ class Profile:
         self.DiversionRange = None 
         self.MissionStages = None 
         self.DiversionStages = None 
-        self.SPW = [[0,0]] #will be the TakeOff phi
+        self.SPW = None 
+        self.SPWinterp = None
+        self.times = None
 
         self.Altitudes = []
         self.HTMissionClimb = []
@@ -85,16 +87,11 @@ class Profile:
         self.MissionStages = self.aircraft.MissionStages
         self.DiversionStages = self.aircraft.DiversionStages
         
-        #if (self.aircraft.Configuration == 'Hybrid'):
-        #    self.SPW = self.aircraft.EnergyInput['Supplied Power Ratio']
-        #else:
-        #    self.SPW = [[0.,0.] for i in range(6)]
-        
 
     def DefineMission(self):
         
         self.SetInput()
-        
+
         #parse all phases except cruise and takeoff
         for Stage in self.MissionStages:
             if ('Cruise' in Stage) or ('Takeoff' in Stage): 
@@ -115,7 +112,8 @@ class Profile:
         if self.aircraft.Configuration == 'Hybrid':
             for Stage in self.MissionStages: 
                 if ('Takeoff') in Stage:
-                    pass
+                    phiTO = self.MissionStages[Stage]['Supplied Power Ratio']['phi']
+                    self.SPW = [[phiTO,phiTO]]
                 else:
                     phi_start = self.MissionStages[Stage]['Supplied Power Ratio']['phi_start'] 
                     phi_end = self.MissionStages[Stage]['Supplied Power Ratio']['phi_end'] 
@@ -158,6 +156,9 @@ class Profile:
 
         self.MergeMission()
 
+
+        self.times = np.append(self.Breaks,self.MissionTime2)
+        self.SPWinterp = [lambda t,coef=i: np.interp(t, [self.times[coef], self.times[coef+1]], self.SPW[coef+1])  for i in range(len(self.times)-1)]
 
         return None
 
@@ -266,15 +267,11 @@ class Profile:
                 
             AltitudeFunctions.append(localFunctionDescent(t))                
                 
-                
-                   
         return AltitudeFunctions
 
 
     def Altitude(self,t):
         return np.piecewise(t, [ t >= ti for ti in self.Breaks], self.Altitude_Func(t))
-
-
 
     def PowerExcess(self,t):
         return np.piecewise(t, [ t >= ti for ti in self.Breaks], self.HTMission)
@@ -282,28 +279,12 @@ class Profile:
     def Velocity(self,t):
         return np.piecewise(t, [ t >= ti for ti in self.Breaks], self.Velocities)
 
-
     def SuppliedPowerRatio(self,t):
-        return np.piecewise(t, [t >= 0, t >= self.BreaksClimb[-1], t >= self.CruiseTime, t >= self.BreaksDescent[-1], t >= self.BreaksClimbDiversion[-1], t >= self.CruiseTimeDiversion], 
-                            [lambda t: np.interp(t, [0, self.BreaksClimb[-1]], self.SPW[1]),
-                             lambda t: np.interp(t, [self.BreaksClimb[-1], self.CruiseTime], self.SPW[2]),
-                             lambda t: np.interp(t, [self.CruiseTime, self.BreaksDescent[-1]], self.SPW[3]),
-                             lambda t: np.interp(t, [self.BreaksDescent[-1], self.BreaksClimbDiversion[-1]], self.SPW[4]),
-                             lambda t: np.interp(t, [self.BreaksClimbDiversion[-1], self.CruiseTimeDiversion], self.SPW[5]),
-                             lambda t: np.interp(t, [self.CruiseTimeDiversion, self.BreaksDescentDiversion[-1]], self.SPW[6])])
+        idx=np.piecewise(t, [ self.times[i] <= t < self.times[i+1] for i in range(len(self.times)-1)], [i for i in range(len(self.times)-1)])
+        return self.SPWinterp[idx.astype(int)](t) 
 
 
-
-
-
-
-
-
-
-
-
-
-
+# Flight segments
 
     def ConstantRateClimb(self,StageInput,phase):
         
@@ -400,72 +381,3 @@ class Profile:
             self.counterDescentDiversion += 1
         
         
-        
-        
-        
-        
-        
-        
-        
-        
-# --------------------------------------- OLD VERSION -----------------------------------------#        
-        
-    # def DefineMission(self):
-             
-    
-    #     # Climb     
-    #     self.HTClimb = self.CB * self.VClimb
-    #     DHClimb = self.H2 - self.H1
-    #     self.DTClimb = np.ceil(DHClimb/self.HTClimb)
-    #     DRClimb = self.VClimb * self.DTClimb
-
-    #     # Descent (Same of Climb, with negative PS)
-    #     self.HTDescent = - self.CB * self.VDescent
-    #     DHDescent = DHClimb
-    #     self.DTDescent = np.ceil(np.abs(DHDescent/self.HTDescent))
-    #     DRDescent = self.VDescent * self.DTDescent
-
-    #     # Cruise
-    #     DRCruise = self.MissionRange - DRClimb - DRDescent
-    #     self.DTCruise = np.ceil(DRCruise/self.VCruise)
-        
-    #     # Diversion Climb
-    #     DiversionDHClimb = self.H3 - self.H1
-    #     self.DiversionDTClimb = np.ceil(DiversionDHClimb/self.HTClimb)
-    #     DiversionDRClimb = self.VClimb * self.DiversionDTClimb
-        
-    #     # Diversion Descent
-    #     DiversionDHDescent = DiversionDHClimb
-    #     self.DiversionDTDescent = np.ceil(np.abs(DiversionDHDescent/self.HTDescent))
-    #     DiversionDRDescent = self.VDescent * self.DiversionDTDescent
-        
-    #     # Diversion Cruise
-    #     DiversionDRCruise = self.DiversionRange - DiversionDRClimb - DiversionDRDescent
-    #     self.DiversionDTCruise = np.ceil(DiversionDRCruise/self.DiversionVCruise)
-        
-        
-    #     self.T1 = self.DTClimb + self.DTCruise
-    #     self.T2 = self.T1 + self.DTDescent
-    #     self.T3 = self.T2 + self.DiversionDTClimb
-    #     self.T4 = self.T3 + self.DiversionDTCruise
-    #     self.TotalTime = self.T4 + self.DiversionDTDescent
-        
-    #     return None
-    
-    # def Altitude(self,t):
-
-    #     return np.piecewise(t, [t < self.DTClimb, ((t >= self.DTClimb) & (t < self.T1)), ((t >= self.T1) & (t < self.T2)), 
-    #                             ((t >= self.T2) & (t < self.T3)), ((t >= self.T3) & (t < self.T4)), t >= self.T4], 
-    #                         [lambda t : (self.H1+self.HTClimb*t), self.H2, lambda t : (self.H2+self.HTDescent*(t-self.T1)), 
-    #                           lambda t : (self.H1+self.HTClimb*(t-self.T2)), self.H3, lambda t : (self.H3+self.HTDescent*(t-self.T4))])
-
-    
-    # def PowerExcess(self,t):
-    #     return np.piecewise(t, [t < self.DTClimb, ((t >= self.DTClimb) & (t < self.T1)), ((t >= self.T1) & (t < self.T2)), 
-    #                             ((t >= self.T2) & (t < self.T3)), ((t >= self.T3) & (t < self.T4)), t >= self.T4], 
-    #                         [self.HTClimb, 0, self.HTDescent, self.HTClimb, 0, self.HTDescent])
-
-    # def Velocity(self,t):
-    #     return np.piecewise(t, [t < self.DTClimb, ((t >= self.DTClimb) & (t < self.T1)), ((t >= self.T1) & (t < self.T2)), 
-    #                             ((t >= self.T2) & (t < self.T3)), ((t >= self.T3) & (t < self.T4)), t >= self.T4], 
-    #                         [self.VClimb, self.VCruise, self.VDescent, self.VClimb, self.DiversionVCruise, self.VDescent])

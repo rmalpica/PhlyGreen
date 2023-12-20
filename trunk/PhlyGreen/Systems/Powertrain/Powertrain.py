@@ -376,10 +376,10 @@ class Powertrain:
         elif self.aircraft.Configuration == 'Hybrid':
    
                 
-                # PtWFuel = self.aircraft.DesignPW * self.Hybrid(0.05)[0]
-                # PtWBattery = self.aircraft.DesignPW * self.Hybrid(0.05)[5]
-                PtWFuel = self.aircraft.mission.Max_PFoW
-                PtWBattery = self.aircraft.mission.Max_PBatoW
+                PtWFuel = np.max([self.aircraft.mission.Max_PFoW,self.aircraft.mission.TO_PFoW])
+                PtWBattery = np.max([self.aircraft.mission.Max_PBatoW, self.aircraft.mission.TO_PBatoW])
+                #PtWFuel = self.aircraft.mission.Max_PFoW
+                #PtWBattery = self.aircraft.mission.Max_PBatoW
                 # PtWPMAD = self.aircraft.DesignPW * self.Hybrid(0.05)[3]
                 self.WThermal = PtWFuel/self.SPowerPT[0]
                 self.WElectric = PtWBattery/self.SPowerPT[1]
@@ -392,8 +392,3 @@ class Powertrain:
              raise Exception("Unknown aircraft configuration: %s" %self.aircraft.Configuration)
                 
         return WPT
-
-
-        
-
-        
