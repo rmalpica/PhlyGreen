@@ -97,7 +97,6 @@ class Profile:
             if ('Cruise' in Stage) or ('Takeoff' in Stage): 
                 continue
             else:
-                print(Stage)
                 getattr(self, self.MissionStages[Stage]['type'])(self.MissionStages[Stage]['input'],'Mission')
 
         #parse cruise 
@@ -105,7 +104,6 @@ class Profile:
             if 'Cruise' not in Stage: 
                 continue
             else:
-                print(Stage)
                 getattr(self, self.MissionStages[Stage]['type'])(self.MissionStages[Stage]['input'],'Mission')
         
         #parse supplied power ratios

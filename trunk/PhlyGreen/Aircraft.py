@@ -108,10 +108,13 @@ class Aircraft:
                 print('Empty Weight: ', self.weight.WPT + self.weight.WStructure + self.weight.WCrew)
                 print('----------------------------------------')
                 print('Takeoff Weight: ', self.weight.WTO)
-                print('Source Energy: ', self.welltowake.SourceEnergy/1.e6,' MJ')
-                print('Psi: ', self.welltowake.Psi)
+                if WellToTankInput is not None:
+                    print('Source Energy: ', self.welltowake.SourceEnergy/1.e6,' MJ')
+                    print('Psi: ', self.welltowake.Psi)
                 print('Wing Surface: ', self.WingSurface, ' m^2')
                 print('Sizing phase for battery: ', 'Cruise energy' if self.weight.WBatidx == 0 else 'Cruise peak power' if self.weight.WBatidx == 1 else 'Takeoff peak power'  )
+                print('Sizing phase for thermal powertrain ', 'Cruise peak power' if self.mission.Max_PFoW > self.mission.TO_PFoW else 'Takeoff peak power'  )
+                print('Sizing phase for electric powertrain ', 'Cruise peak power' if self.mission.Max_PBatoW > self.mission.TO_PBatoW else 'Takeoff peak power'  )
             else:
                 print('Takeoff Weight: ', self.weight.WTO)
                 print('Wing Surface: ', self.WingSurface, ' m^2')
