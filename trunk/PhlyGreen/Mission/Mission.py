@@ -165,9 +165,11 @@ class Mission:
         # sol = integrate.solve_ivp(model,[0, self.profile.MissionTime2],y0,method='BDF',rtol=1e-6)
         
         # integrate sequentially
+        self.integral_solution = []
         times = np.append(self.profile.Breaks,self.profile.MissionTime2)
         for i in range(len(times)-1):
             sol = integrate.solve_ivp(model,[times[i], times[i+1]],y0,method=method,rtol=rtol) 
+            self.integral_solution.append(sol) 
             y0 = [sol.y[0][-1],sol.y[1][-1],sol.y[2][-1]]
    
         # old tests

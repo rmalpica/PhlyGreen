@@ -19,10 +19,10 @@ class Powertrain:
         self.EtaSourceToBattery = None 
         self.EtaSourceToFuel = None 
         #electric powerplant efficiencies 
-        self.etaPM = None
-        self.etaEM = None
-        self.etaEM1 = None
-        self.etaEM2 = None
+        self.EtaPM = None
+        self.EtaEM = None
+        self.EtaEM1 = None
+        self.EtaEM2 = None
         #specific powers
         self.SPowerPT = None 
         self.SPowerPMAD = None  
@@ -376,18 +376,21 @@ class Powertrain:
         elif self.aircraft.Configuration == 'Hybrid':
    
                 
-                PtWFuel = np.max([self.aircraft.mission.Max_PFoW,self.aircraft.mission.TO_PFoW])
+                PtWFuel = np.max([self.aircraft.mission.Max_PFoW ,self.aircraft.mission.TO_PFoW]) 
                 PtWBattery = np.max([self.aircraft.mission.Max_PBatoW, self.aircraft.mission.TO_PBatoW])
                 #PtWFuel = self.aircraft.mission.Max_PFoW
                 #PtWBattery = self.aircraft.mission.Max_PBatoW
                 # PtWPMAD = self.aircraft.DesignPW * self.Hybrid(0.05)[3]
-                self.WThermal = PtWFuel/self.SPowerPT[0]
-                self.WElectric = PtWBattery/self.SPowerPT[1]
-                
-                PtWPT = [PtWFuel, PtWBattery]
+                self.WThermal = PtWFuel * self.EtaGT /self.SPowerPT[0]
+                self.WElectric = PtWBattery/self.SPowerPT[1] * self.EtaEM * self.EtaPM
 
-                # WPT =  (np.sum(np.divide(PtWPT, self.SPowerPT)) + PtWPMAD  / self.SPowerPMAD[0]) * WTO  # Pesa un botto
-                WPT =  np.sum(np.divide(PtWPT, self.SPowerPT)) 
+                WPT = self.WThermal + self.WElectric 
+
+                #versione general purpose (mancano i rendimenti)
+                #PtWPT = [PtWFuel, PtWBattery]
+
+                ## WPT =  (np.sum(np.divide(PtWPT, self.SPowerPT)) + PtWPMAD  / self.SPowerPMAD[0]) * WTO  # Pesa un botto
+                #WPT =  np.sum(np.divide(PtWPT, self.SPowerPT)) 
         else:
              raise Exception("Unknown aircraft configuration: %s" %self.aircraft.Configuration)
                 

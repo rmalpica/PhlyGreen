@@ -128,7 +128,7 @@ class Performance:
         self.set_speed(altitude,speed,speedtype,DISA)
         q = 0.5 * ISA.atmosphere.RHOstd(altitude,DISA) * self.TAS**2
         Cl = n * beta * WTOoS / q
-        PW = self.g_acc * ( 1.0/WTOoS * q * self.TAS * self.aircraft.aerodynamics.Cd(Cl,self.Mach) + beta * Ps )
+        PW = self.g_acc * ( 1.0/WTOoS * q * self.TAS * self.aircraft.aerodynamics.Cd(Cl,self.Mach)  + beta * Ps )
         return PW
 
     def OEIClimb(self,WTOoS,beta,Ps,n,altitude,DISA,speed,speedtype):       
