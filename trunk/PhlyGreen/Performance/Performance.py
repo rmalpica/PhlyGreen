@@ -8,6 +8,7 @@ import PhlyGreen.Utilities.Units as Units
 class Performance:
     def __init__(self, aircraft):
         self.aircraft = aircraft
+        self.g_acc = 9.81 
         self.n_engines = 2
         self.Mach = None
         self.TAS = None
@@ -127,26 +128,26 @@ class Performance:
         self.set_speed(altitude,speed,speedtype,DISA)
         q = 0.5 * ISA.atmosphere.RHOstd(altitude,DISA) * self.TAS**2
         Cl = n * beta * WTOoS / q
-        PW = 9.81 * 1.0/WTOoS * q * self.TAS * self.aircraft.aerodynamics.Cd(Cl,self.Mach) + beta * Ps
+        PW = self.g_acc * ( 1.0/WTOoS * q * self.TAS * self.aircraft.aerodynamics.Cd(Cl,self.Mach) + beta * Ps )
         return PW
 
     def OEIClimb(self,WTOoS,beta,Ps,n,altitude,DISA,speed,speedtype):       
         self.set_speed(altitude,speed,speedtype,DISA)
         q = 0.5 * ISA.atmosphere.RHOstd(altitude,DISA) * self.TAS**2
         Cl = n * beta * WTOoS / q
-        PW =  (self.n_engines/(self.n_engines-1))*(9.81 * 1.0/WTOoS * q * self.TAS * self.aircraft.aerodynamics.Cd(Cl,self.Mach) + beta * Ps)
+        PW =  (self.n_engines/(self.n_engines-1))*(self.g_acc * (1.0/WTOoS * q * self.TAS * self.aircraft.aerodynamics.Cd(Cl,self.Mach) + beta * Ps))
         return PW
     
     def Ceiling(self,WTOoS,beta,Ps,n,altitude,DISA,MachC):
         TASCeiling = np.sqrt((2*beta*WTOoS)/(ISA.atmosphere.RHOstd(altitude, DISA)* self.aircraft.aerodynamics.ClE(MachC)))
         q = 0.5 * ISA.atmosphere.gammaair * ISA.atmosphere.Pstd(altitude) * MachC**2
         Cl = n * beta * WTOoS / q
-        PW = 9.81 * 1.0/WTOoS * q * TASCeiling * self.aircraft.aerodynamics.Cd(Cl,MachC) + beta * Ps
+        PW = self.g_acc * ( 1.0/WTOoS * q * TASCeiling * self.aircraft.aerodynamics.Cd(Cl,MachC) + beta * Ps )
         return PW
     
     def TakeOff(self,WTOoS,beta,altitudeTO,kTO,sTO,DISA,speed,speedtype):
         self.set_speed(altitudeTO, speed, speedtype, DISA)
-        PW = 9.81 * self.TAS * beta**2 * WTOoS * (kTO**2) / (sTO * ISA.atmosphere.RHOstd(altitudeTO,DISA) * 9.81 * self.aircraft.aerodynamics.ClMax)
+        PW = self.TAS * beta**2 * WTOoS * (kTO**2) / (sTO * ISA.atmosphere.RHOstd(altitudeTO,DISA) * self.aircraft.aerodynamics.ClMax)
         return PW
         
     def Landing(self,WTOoS,altitude,speed,speedtype,DISA):

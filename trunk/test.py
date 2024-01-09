@@ -113,6 +113,11 @@ myaircraft.Configuration = 'Hybrid'
 myaircraft.HybridType = 'Parallel'
 myaircraft.DesignAircraft(AerodynamicsInput,ConstraintsInput,MissionInput,EnergyInput,MissionStages,DiversionStages,WellToTankInput=WellToTankInput,PrintOutput=True)
 
+end_time = time.time()
+execution_time =  end_time - start_time
+print("Execution time:",execution_time)
+
+#sys.exit()
 
 # plt.plot(myaircraft.weight.WTO_vector,myaircraft.weight.Vector) 
 # plt.grid(visible=True)
@@ -188,6 +193,3 @@ plt.ylabel('TAS [m/s]')
 plt.show()
 
 
-end_time = time.time()
-execution_time =  end_time - start_time
-print("Execution time:",execution_time)
