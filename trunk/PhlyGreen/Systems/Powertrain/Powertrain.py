@@ -259,7 +259,6 @@ class Powertrain:
         self.EtaGB = self.aircraft.EnergyInput['Eta Gearbox']
         self.EtaPP = self.aircraft.EnergyInput['Eta Propulsive']
         self.SPowerPT = self.aircraft.EnergyInput['Specific Power Powertrain']
-        self.SPowerPMAD = self.aircraft.EnergyInput['Specific Power PMAD']
         
         if self.aircraft.WellToTankInput is not None:
             
@@ -277,6 +276,7 @@ class Powertrain:
         if (self.aircraft.Configuration == 'Hybrid'):
             
             self.EtaPM = self.aircraft.EnergyInput['Eta PMAD']
+            self.SPowerPMAD = self.aircraft.EnergyInput['Specific Power PMAD']
 
             
             if (self.aircraft.HybridType == 'Parallel'):
@@ -368,10 +368,11 @@ class Powertrain:
         
         if self.aircraft.Configuration == 'Traditional':
         
-                
-                PtWFuel = self.aircraft.DesignPW * self.Traditional()[0]
-                
-                WPT = PtWFuel * WTO / self.SPowerPT[0]
+                PtWFuel = np.max([self.aircraft.mission.Max_PFoW ,self.aircraft.mission.TO_PFoW]) 
+                #PtWFuel = self.aircraft.DesignPW * self.Traditional()[0]
+                #WPT = PtWFuel * WTO / self.SPowerPT[0]
+                self.WThermal = PtWFuel * self.EtaGT /self.SPowerPT[0]
+                WPT = self.WThermal
                 
         elif self.aircraft.Configuration == 'Hybrid':
    

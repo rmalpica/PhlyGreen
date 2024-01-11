@@ -101,17 +101,36 @@ class Mission:
             dEdt = PF(Beta,t)
             # dbetadt = - PF(Beta,t)/(self.aircraft.ef*self.WTO)
             dbetadt = - dEdt/(self.ef*self.WTO)
+            self.Max_PFoW = np.max([self.Max_PFoW,dEdt])
 
             return [dEdt,dbetadt]
+
+        # Takeoff condition
+        Ppropulsive = self.WTO * self.aircraft.performance.TakeOff(self.aircraft.DesignWTOoS,self.aircraft.constraint.ConstraintsBeta[1], self.aircraft.constraint.ConstraintsAltitude[1], self.aircraft.constraint.kTO, self.aircraft.constraint.sTO, self.aircraft.constraint.DISA, self.aircraft.constraint.ConstraintsSpeed[1], self.aircraft.constraint.ConstraintsSpeedtype[1])
+        self.TO_PFoW = Ppropulsive * self.aircraft.powertrain.Traditional()[0] 
+
+        #set/reset max values
+        self.Max_PBatoW = -1
+        self.Max_PFoW = -1
+   
 
         # initial condition
         y0 = [0,self.beta0]
 
-        sol = integrate.solve_ivp(model,[0, self.profile.MissionTime2],y0)
-        # z = integrate.odeint(model,z0,self.t)
+        rtol = 1e-5
+        method= 'BDF'
+
+        # integrate all phases together
+        # sol = integrate.solve_ivp(model,[0, self.profile.MissionTime2],y0,method='BDF',rtol=1e-6)
         
-        # Ef, Beta = integrate.odeint(model,z0,self.TotalTime)
- 
+        # integrate sequentially
+        self.integral_solution = []
+        times = np.append(self.profile.Breaks,self.profile.MissionTime2)
+        for i in range(len(times)-1):
+            sol = integrate.solve_ivp(model,[times[i], times[i+1]],y0,method=method,rtol=rtol) 
+            self.integral_solution.append(sol) 
+            y0 = [sol.y[0][-1],sol.y[1][-1]]
+        
         self.Ef = sol.y[0]
         self.Beta = sol.y[1]
         
