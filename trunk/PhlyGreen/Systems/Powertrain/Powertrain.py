@@ -7,6 +7,7 @@ class Powertrain:
     def __init__(self, aircraft):
         self.aircraft = aircraft
         #thermal powerplant efficiencies
+        self.EtaGTmodelType = 'constant'
         self.EtaGT = None
         self.EtaGB = None 
         self.EtaPP = None 
@@ -29,6 +30,7 @@ class Powertrain:
         #components mass
         self.WThermal = None
         self.WElectric = None
+
 
     """ Properties """
 
@@ -290,13 +292,36 @@ class Powertrain:
 
         
         return None
+
+
+    def EtaGTconstModel(self,altitude,velocity,powerOutput):
         
+        const = self.EtaGT
+
+        return const
         
-    def Traditional(self):
+    def EtaGTpw127Model(self,altitude,velocity,powerOutput):
+
+        eta = self.EtaGT
+
+        return eta
+    
+    def EtaGTmodel(self,alt,vel,pwr):
+
+        if self.EtaGTmodelType == 'constant':
+            return self.EtaGTconstModel(alt,vel,pwr)
+        elif self.EtaGTmodelType == 'PW127':
+            return self.EtaGTpw127Model(alt,vel,pwr) 
+        else:
+            raise Exception("Unknown EtaGTmodelType: %s" %self.EtaGTmodelType)
+
+
+        
+    def Traditional(self,alt,vel,pwr):
         
         #self.ReadInput()
         
-        A = np.array([[- self.EtaGT, 1, 0, 0],
+        A = np.array([[- self.EtaGTmodel(alt,vel,pwr), 1, 0, 0],
                       [0, - self.EtaGB, 1, 0],
                       [0, 0, - self.EtaPP, 1],
                       [0, 0, 0, 1]])
@@ -308,13 +333,13 @@ class Powertrain:
         return PowerRatio
     
     
-    def Hybrid(self,phi):
+    def Hybrid(self,phi,alt,vel,pwr):
         
         # phi = self.aircraft.mission.profile.SuppliedPowerRatio(t)
         
         if (self.aircraft.HybridType == 'Parallel'):
         
-            A = np.array([[- self.EtaGT, 1, 0, 0, 0, 0, 0],
+            A = np.array([[- self.EtaGTmodel(alt,vel,pwr*(1-phi)), 1, 0, 0, 0, 0, 0],
                       [0, -self.EtaGB, -self.EtaGB, 1, 0, 0, 0],
                       [0, 0, 0, 0, 1, -self.EtaPM, 0],
                       [0, 0, 1, 0, - self.EtaEM, 0, 0],
@@ -368,7 +393,7 @@ class Powertrain:
         
         if self.aircraft.Configuration == 'Traditional':
         
-                PtWFuel = np.max([self.aircraft.mission.Max_PFoW ,self.aircraft.mission.TO_PFoW]) 
+                PtWFuel = np.max([self.aircraft.mission.Max_PF ,self.aircraft.mission.TO_PF]) 
                 #PtWFuel = self.aircraft.DesignPW * self.Traditional()[0]
                 #WPT = PtWFuel * WTO / self.SPowerPT[0]
                 self.WThermal = PtWFuel * self.EtaGT /self.SPowerPT[0]
@@ -377,8 +402,8 @@ class Powertrain:
         elif self.aircraft.Configuration == 'Hybrid':
    
                 
-                PtWFuel = np.max([self.aircraft.mission.Max_PFoW ,self.aircraft.mission.TO_PFoW]) 
-                PtWBattery = np.max([self.aircraft.mission.Max_PBatoW, self.aircraft.mission.TO_PBatoW])
+                PtWFuel = np.max([self.aircraft.mission.Max_PF ,self.aircraft.mission.TO_PF]) 
+                PtWBattery = np.max([self.aircraft.mission.Max_PBat, self.aircraft.mission.TO_PBat])
                 #PtWFuel = self.aircraft.mission.Max_PFoW
                 #PtWBattery = self.aircraft.mission.Max_PBatoW
                 # PtWPMAD = self.aircraft.DesignPW * self.Hybrid(0.05)[3]

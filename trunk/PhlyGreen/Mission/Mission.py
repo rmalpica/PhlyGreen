@@ -13,10 +13,10 @@ class Mission:
         self.beta0 = None 
         self.DISA = 0
         self.WTO = None
-        self.Max_PBatoW = -1  
-        self.Max_PFoW = -1  
-        self.TO_PBatoW = 0  
-        self.TO_PFoW = 0 
+        self.Max_PBat = -1  
+        self.Max_PF = -1  
+        self.TO_PBat = 0  
+        self.TO_PF = 0 
 
         self.ef = None
         self.profile = None
@@ -70,17 +70,14 @@ class Mission:
     def EvaluateMission(self,WTO):
         
         if self.aircraft.Configuration == 'Traditional':     
-            
-                
-                return self.TraditionalConfiguration(WTO)
-            
+            return self.TraditionalConfiguration(WTO)
             
         elif self.aircraft.Configuration == 'Hybrid':     
-                
-                return self.HybridConfiguration(WTO)
+            return self.HybridConfiguration(WTO)
 
         else:
-                return "Try a different configuration..."
+            raise Exception("Unknown aircraft configuration: %s" %self.aircraft.Configuration)
+        
   
   
     def TraditionalConfiguration(self,WTO):
@@ -91,8 +88,10 @@ class Mission:
         def PF(Beta,t):
 
             PPoWTO = self.aircraft.performance.PoWTO(self.aircraft.DesignWTOoS,Beta,self.profile.PowerExcess(t),1,self.profile.Altitude(t),self.DISA,self.profile.Velocity(t),'TAS')
-          
-            return PPoWTO * self.aircraft.powertrain.Traditional()[0] * WTO
+            
+            PFoPP = self.aircraft.powertrain.Traditional(self.profile.Altitude(t),self.profile.Velocity(t),PPoWTO*WTO)[0]
+
+            return PPoWTO * PFoPP * WTO
 
 
         
@@ -101,21 +100,21 @@ class Mission:
             dEdt = PF(Beta,t)
             # dbetadt = - PF(Beta,t)/(self.aircraft.ef*self.WTO)
             dbetadt = - dEdt/(self.ef*self.WTO)
-            self.Max_PFoW = np.max([self.Max_PFoW,dEdt])
+            self.Max_PF = np.max([self.Max_PF,dEdt])
 
             return [dEdt,dbetadt]
 
         # Takeoff condition
         Ppropulsive = self.WTO * self.aircraft.performance.TakeOff(self.aircraft.DesignWTOoS,self.aircraft.constraint.ConstraintsBeta[1], self.aircraft.constraint.ConstraintsAltitude[1], self.aircraft.constraint.kTO, self.aircraft.constraint.sTO, self.aircraft.constraint.DISA, self.aircraft.constraint.ConstraintsSpeed[1], self.aircraft.constraint.ConstraintsSpeedtype[1])
-        self.TO_PFoW = Ppropulsive * self.aircraft.powertrain.Traditional()[0] 
+        self.TO_PFoW = Ppropulsive * self.aircraft.powertrain.Traditional(self.aircraft.constraint.ConstraintsAltitude[1],self.aircraft.constraint.ConstraintsSpeed[1],Ppropulsive)[0] 
 
         #set/reset max values
-        self.Max_PBatoW = -1
-        self.Max_PFoW = -1
+        self.Max_PBat = -1
+        self.Max_PF = -1
    
 
         # initial condition
-        y0 = [0,self.beta0]
+        y0 = [0,self.beta0]  #here y0[0] should be the TakeOff energy consumed: WTO * self.TO_PFoW * deltat 
 
         rtol = 1e-5
         method= 'BDF'
@@ -153,26 +152,26 @@ class Mission:
         
         def model(t,y):
             
-            PRatio = self.aircraft.powertrain.Hybrid(self.aircraft.mission.profile.SuppliedPowerRatio(t))
             Beta = y[2]
             Ppropulsive = PP(Beta,t)
+            PRatio = self.aircraft.powertrain.Hybrid(self.aircraft.mission.profile.SuppliedPowerRatio(t),self.profile.Altitude(t),self.profile.Velocity(t),Ppropulsive)
             # print(self.aircraft.mission.profile.SuppliedPowerRatio(t), t)
             dEFdt = Ppropulsive * PRatio[0]
             dEBatdt = Ppropulsive * PRatio[5]
-            self.Max_PBatoW = np.max([self.Max_PBatoW,dEBatdt])
-            self.Max_PFoW = np.max([self.Max_PFoW,dEFdt])
+            self.Max_PBat = np.max([self.Max_PBat,dEBatdt])
+            self.Max_PF = np.max([self.Max_PF,dEFdt])
             dbetadt = - dEFdt/(self.ef*self.WTO)            
             return [dEFdt,dEBatdt,dbetadt]
 
         # Takeoff condition
-        PRatio = self.aircraft.powertrain.Hybrid(self.aircraft.mission.profile.SPW[0][0])
         Ppropulsive = self.WTO * self.aircraft.performance.TakeOff(self.aircraft.DesignWTOoS,self.aircraft.constraint.ConstraintsBeta[1], self.aircraft.constraint.ConstraintsAltitude[1], self.aircraft.constraint.kTO, self.aircraft.constraint.sTO, self.aircraft.constraint.DISA, self.aircraft.constraint.ConstraintsSpeed[1], self.aircraft.constraint.ConstraintsSpeedtype[1])
+        PRatio = self.aircraft.powertrain.Hybrid(self.aircraft.mission.profile.SPW[0][0],self.aircraft.constraint.ConstraintsAltitude[1],self.aircraft.constraint.ConstraintsSpeed[1],Ppropulsive)
         self.TO_PBatoW = Ppropulsive * PRatio[5]
         self.TO_PFoW = Ppropulsive * PRatio[0]
 
         #set/reset max values
-        self.Max_PBatoW = -1
-        self.Max_PFoW = -1
+        self.Max_PBat = -1
+        self.Max_PF = -1
 
         y0 = [0,0,self.beta0]
         

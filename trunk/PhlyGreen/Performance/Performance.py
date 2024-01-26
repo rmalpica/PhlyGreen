@@ -124,7 +124,7 @@ class Performance:
 
         return None
 
-    def PoWTO(self,WTOoS,beta,Ps,n,altitude,DISA,speed,speedtype):       
+    def PoWTO(self,WTOoS,beta,Ps,n,altitude,DISA,speed,speedtype):      # W/Kg 
         self.set_speed(altitude,speed,speedtype,DISA)
         q = 0.5 * ISA.atmosphere.RHOstd(altitude,DISA) * self.TAS**2
         Cl = n * beta * WTOoS / q

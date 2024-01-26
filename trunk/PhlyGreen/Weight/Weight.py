@@ -94,7 +94,7 @@ class Weight:
                 self.TotalEnergies = self.aircraft.mission.EvaluateMission(WTO)
                 self.Wf = self.TotalEnergies[0]/self.ef
                 #self.WBat  = np.max([self.TotalEnergies[1]/self.ebat , self.PtWBat*(1/self.pbat)*WTO])
-                WBat  = [self.TotalEnergies[1]/self.ebat , self.aircraft.mission.Max_PBatoW*(1/self.pbat), self.aircraft.mission.TO_PBatoW*(1/self.pbat)]
+                WBat  = [self.TotalEnergies[1]/self.ebat , self.aircraft.mission.Max_PBat*(1/self.pbat), self.aircraft.mission.TO_PBat*(1/self.pbat)]
                 self.WBatidx = np.argmax(WBat)
                 self.WBat = WBat[self.WBatidx] 
                 # print(self.TotalEnergies[1]/self.ebat )
