@@ -32,17 +32,27 @@ class Constraint:
 
     def EvaluateConstraints(self, WTOoS, DISA, kTO, sTO, CB, ROC, ht, PsAcceleration):
         
+        """ 
+        Legend:
+        [0] : cruise
+        [1] : take-off
+        [2] : climb
+        [3] : turn
+        [4] : ceiling
+        [5] : acceleration
+        [6] : landing 
         
-        
-        self.PWCruise = self.aircraft.performance.PoWTO(self.WTOoS, self.ConstraintsBeta[0], 0, self.ConstraintsN[0], self.ConstraintsAltitude[0], DISA, self.ConstraintsSpeed[0], self.ConstraintsSpeedtype[0])
+        """
+
+        self.PWCruise = (1.0/self.aircraft.powertrain.PowerLapse(self.ConstraintsAltitude[0],DISA)) * self.aircraft.performance.PoWTO(self.WTOoS, self.ConstraintsBeta[0], 0, self.ConstraintsN[0], self.ConstraintsAltitude[0], DISA, self.ConstraintsSpeed[0], self.ConstraintsSpeedtype[0])
         self.PWTakeOff = self.aircraft.performance.TakeOff(WTOoS,self.ConstraintsBeta[1], self.ConstraintsAltitude[1], kTO, sTO, DISA, self.ConstraintsSpeed[1], self.ConstraintsSpeedtype[1])
         #self.PWOEI = self.aircraft.performance.PoWTO(self.WTOoS,self.ConstraintsBeta[2], CB*self.ConstraintsSpeed[2], self.ConstraintsN[2], self.ConstraintsAltitude[2], DISA, self.ConstraintsSpeed[2], self.ConstraintsSpeedtype[2])
-        self.PWOEI = self.aircraft.performance.OEIClimb(self.WTOoS,self.ConstraintsBeta[2], 0.8*CB*self.ConstraintsSpeed[1], self.ConstraintsN[2], self.ConstraintsAltitude[2], DISA, 0.8*self.ConstraintsSpeed[2], self.ConstraintsSpeedtype[2])
-        self.PWClimb = self.aircraft.performance.PoWTO(self.WTOoS,self.ConstraintsBeta[2], ROC, self.ConstraintsN[2], self.ConstraintsAltitude[2], DISA, self.ConstraintsSpeed[2], self.ConstraintsSpeedtype[2])
+        self.PWOEI = self.aircraft.performance.OEIClimb(self.WTOoS,self.ConstraintsBeta[2], CB*self.ConstraintsSpeed[1], self.ConstraintsN[2], self.ConstraintsAltitude[2], DISA, self.ConstraintsSpeed[2], self.ConstraintsSpeedtype[2])
+        self.PWClimb = (1.0/self.aircraft.powertrain.PowerLapse(self.ConstraintsAltitude[2],DISA)) * self.aircraft.performance.PoWTO(self.WTOoS,self.ConstraintsBeta[2], ROC, self.ConstraintsN[2], self.ConstraintsAltitude[2], DISA, self.ConstraintsSpeed[2], self.ConstraintsSpeedtype[2])
         #self.PWOEI = self.aircraft.performance.PoWTO(self.WTOoS,self.ConstraintsBeta[2], ROC, self.ConstraintsN[2], self.ConstraintsAltitude[2], DISA, self.ConstraintsSpeed[2], self.ConstraintsSpeedtype[2])
-        self.PWTurn = self.aircraft.performance.PoWTO(self.WTOoS, self.ConstraintsBeta[3], 0, self.ConstraintsN[3], self.ConstraintsAltitude[3], DISA, self.ConstraintsSpeed[3], self.ConstraintsSpeedtype[3])
-        self.PWCeiling = self.aircraft.performance.Ceiling(WTOoS, self.ConstraintsBeta[4], ht, self.ConstraintsN[4], self.ConstraintsAltitude[4], DISA, self.ConstraintsSpeed[4])
-        self.PWAcceleration = self.aircraft.performance.PoWTO(self.WTOoS,self.ConstraintsBeta[5], PsAcceleration, self.ConstraintsN[5], self.ConstraintsAltitude[5], DISA, self.Mavg, self.ConstraintsSpeedtype[5])
+        self.PWTurn = (1.0/self.aircraft.powertrain.PowerLapse(self.ConstraintsAltitude[3],DISA)) * self.aircraft.performance.PoWTO(self.WTOoS, self.ConstraintsBeta[3], 0, self.ConstraintsN[3], self.ConstraintsAltitude[3], DISA, self.ConstraintsSpeed[3], self.ConstraintsSpeedtype[3])
+        self.PWCeiling = (1.0/self.aircraft.powertrain.PowerLapse(self.ConstraintsAltitude[4],DISA)) * self.aircraft.performance.Ceiling(WTOoS, self.ConstraintsBeta[4], ht, self.ConstraintsN[4], self.ConstraintsAltitude[4], DISA, self.ConstraintsSpeed[4])
+        self.PWAcceleration = (1.0/self.aircraft.powertrain.PowerLapse(self.ConstraintsAltitude[5],DISA)) * self.aircraft.performance.PoWTO(self.WTOoS,self.ConstraintsBeta[5], PsAcceleration, self.ConstraintsN[5], self.ConstraintsAltitude[5], DISA, self.Mavg, self.ConstraintsSpeedtype[5])
         self.PWLanding, self.WTOoSLanding = self.aircraft.performance.Landing(WTOoS, self.ConstraintsAltitude[6], self.ConstraintsSpeed[6], self.ConstraintsSpeedtype[6], DISA)
         # self.PWTorenbeek, self.aircraft.performance.WTOoSTorenbeek = self.TakeOff_TORENBEEK(self.ConstraintsAltitude[1], sTO, 1.15, 10.7, 1.25 , 0.02, self.ConstraintsSpeed[1], self.ConstraintsSpeedtype[1], DISA)
 

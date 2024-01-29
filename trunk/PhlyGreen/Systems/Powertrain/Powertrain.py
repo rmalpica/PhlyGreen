@@ -293,6 +293,11 @@ class Powertrain:
         
         return None
 
+    def PowerLapse(self,altitude,DISA):
+        """ Full throttle power lapse, to be used in constraint analysis. Source: Ruijgrok, Elements of airplane performance, Eq.(6.7-11)"""
+        n = 0.75
+        lapse = (ISA.atmosphere.RHOstd(altitude,DISA)/ISA.atmosphere.RHOstd(0.0,DISA))**n
+        return lapse
 
     def EtaGTconstModel(self,altitude,velocity,powerOutput):
         
