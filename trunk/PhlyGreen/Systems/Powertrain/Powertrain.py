@@ -35,6 +35,17 @@ class Powertrain:
     """ Properties """
 
     @property
+    def EtaGTmodelType(self):
+        return self._EtaGTmodelType
+      
+    @EtaGTmodelType.setter
+    def EtaGTmodelType(self,value):
+        if value == 'PW127' or value == 'constant':
+            self._EtaGTmodelType = value
+        else:
+            raise ValueError("Error: %s Eta GT model not implemented. Exiting" %value)
+
+    @property
     def EtaGT(self):
         if self._EtaGT == None:
             raise ValueError("Eta Gas Turbine unset. Exiting")
@@ -257,11 +268,24 @@ class Powertrain:
 
     def SetInput(self):
 
-        self.EtaGT = self.aircraft.EnergyInput['Eta Gas Turbine']
+        try:
+            self.aircraft.EnergyInput['Eta Gas Turbine']
+        except:
+            print('Warning: Eta Gas Turbine value unset. OK if Eta Gas Turbine Model is provided.')
+        else:
+            self.EtaGT = self.aircraft.EnergyInput['Eta Gas Turbine']
+
+        try:
+            self.aircraft.EnergyInput['Eta Gas Turbine Model'] 
+        except:
+            print('Warning: Eta Gas Turbine model unset. Using constant model')
+        else: 
+            self.EtaGTmodelType = self.aircraft.EnergyInput['Eta Gas Turbine Model'] 
+
         self.EtaGB = self.aircraft.EnergyInput['Eta Gearbox']
         self.EtaPP = self.aircraft.EnergyInput['Eta Propulsive']
         self.SPowerPT = self.aircraft.EnergyInput['Specific Power Powertrain']
-        
+                
         if self.aircraft.WellToTankInput is not None:
             
             self.EtaCH = self.aircraft.WellToTankInput['Eta Charge']
