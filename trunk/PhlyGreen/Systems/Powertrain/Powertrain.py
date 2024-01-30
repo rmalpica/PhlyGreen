@@ -8,6 +8,7 @@ class Powertrain:
         self.aircraft = aircraft
         #thermal powerplant efficiencies
         self.EtaGTmodelType = 'constant'
+        self.EtaPPmodelType = 'constant'
         self.EtaGT = None
         self.EtaGB = None 
         self.EtaPP = None 
@@ -44,6 +45,18 @@ class Powertrain:
             self._EtaGTmodelType = value
         else:
             raise ValueError("Error: %s Eta GT model not implemented. Exiting" %value)
+    
+    @property
+    def EtaPPmodelType(self):
+        return self._EtaPPmodelType
+      
+    @EtaPPmodelType.setter
+    def EtaPPmodelType(self,value):
+        if value == 'PW127' or value == 'constant':
+            self._EtaPPmodelType = value
+        else:
+            raise ValueError("Error: %s Eta PP model not implemented. Exiting" %value)
+
 
     @property
     def EtaGT(self):
@@ -271,7 +284,7 @@ class Powertrain:
         try:
             self.aircraft.EnergyInput['Eta Gas Turbine']
         except:
-            print('Warning: Eta Gas Turbine value unset. OK if Eta Gas Turbine Model is provided.')
+            print('Warning: Eta Gas Turbine value unset. Using Eta Gas Turbine Model.')
         else:
             self.EtaGT = self.aircraft.EnergyInput['Eta Gas Turbine']
 
@@ -282,8 +295,22 @@ class Powertrain:
         else: 
             self.EtaGTmodelType = self.aircraft.EnergyInput['Eta Gas Turbine Model'] 
 
+        try:
+            self.aircraft.EnergyInput['Eta Eta Propulsive']
+        except:
+            print('Warning: Eta Propulsive value unset. Using Eta Eta Propulsive Model.')
+        else:
+            self.EtaPP = self.aircraft.EnergyInput['Eta Eta Propulsive']
+
+        try:
+            self.aircraft.EnergyInput['Eta Propulsive Model'] 
+        except:
+            print('Warning: Eta Propulsive model unset. Using constant model')
+        else: 
+            self.EtaGTmodelType = self.aircraft.EnergyInput['Eta Propulsive Model'] 
+
+
         self.EtaGB = self.aircraft.EnergyInput['Eta Gearbox']
-        self.EtaPP = self.aircraft.EnergyInput['Eta Propulsive']
         self.SPowerPT = self.aircraft.EnergyInput['Specific Power Powertrain']
                 
         if self.aircraft.WellToTankInput is not None:
@@ -323,6 +350,7 @@ class Powertrain:
         lapse = (ISA.atmosphere.RHOstd(altitude,DISA)/ISA.atmosphere.RHOstd(0.0,DISA))**n
         return lapse
 
+
     def EtaGTconstModel(self,altitude,velocity,powerOutput):
         
         const = self.EtaGT
@@ -345,14 +373,35 @@ class Powertrain:
             raise Exception("Unknown EtaGTmodelType: %s" %self.EtaGTmodelType)
 
 
+    def EtaPPconstModel(self,altitude,velocity,powerOutput):
         
+        const = self.EtaPP
+
+        return const
+        
+    def EtaPPpw127Model(self,altitude,velocity,powerOutput):
+
+        eta = self.EtaPP
+
+        return eta
+    
+    def EtaPPmodel(self,alt,vel,pwr):
+
+        if self.EtaPPmodelType == 'constant':
+            return self.EtaPPconstModel(alt,vel,pwr)
+        elif self.EtaGTmodelType == 'PW127':
+            return self.EtaPPpw127Model(alt,vel,pwr) 
+        else:
+            raise Exception("Unknown EtaPPmodelType: %s" %self.EtaPPmodelType)
+
+       
     def Traditional(self,alt,vel,pwr):
         
         #self.ReadInput()
         
         A = np.array([[- self.EtaGTmodel(alt,vel,pwr), 1, 0, 0],
                       [0, - self.EtaGB, 1, 0],
-                      [0, 0, - self.EtaPP, 1],
+                      [0, 0, - self.EtaPPmodel(alt,vel,pwr), 1],
                       [0, 0, 0, 1]])
        
         b = np.array([0, 0, 0, 1])
@@ -372,7 +421,7 @@ class Powertrain:
                       [0, -self.EtaGB, -self.EtaGB, 1, 0, 0, 0],
                       [0, 0, 0, 0, 1, -self.EtaPM, 0],
                       [0, 0, 1, 0, - self.EtaEM, 0, 0],
-                      [0, 0, 0, - self.EtaPP, 0, 0, 1],
+                      [0, 0, 0, - self.EtaPPmodel(alt,vel,pwr), 0, 0, 1],
                       [phi, 0, 0, 0, 0, phi - 1, 0],
                       [0, 0, 0, 0, 0, 0, 1]])
        
