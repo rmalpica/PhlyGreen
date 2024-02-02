@@ -50,56 +50,55 @@ welltowake.aircraft = myaircraft
 # 7: Landing 
 # -----------------------------------------------------------------#
 
-ConstraintsInput = {'speed': np.array([0.41, 70, 59*1.4, 0.3, 0.41, 0.35, 59.]) ,
-                    'speedtype': ['Mach','TAS','TAS','Mach','Mach','Mach','TAS']   ,
-                    'beta': np.array([0.97,1.,0.95, 0.9, 0.8, 0.9, None])   ,
-                    'altitude': np.array([6000., 100., 2000., 5000, 7600., 6000, 500.]),
+ConstraintsInput = {'speed': np.array([0.5, 90, 210, 210, 0.5, 0.35, 59.]) ,
+                    'speedtype': ['Mach','TAS','KCAS','KCAS','Mach','Mach','TAS']   ,
+                    'beta': np.array([0.95,1.,0.97, 0.9, 0.8, 0.9, None])   ,
+                    'altitude': np.array([8000., 100., 6000., 5000, 9500., 6000, 500.]),
                     'load factor': np.array([1., None, 1., 1.1, 1., 1., None]),
                     'DISA': 0, 
                     'kTO': 1.2,
-                    'sTO': 1300,
-                    'Climb Gradient': 0.021,
+                    'sTO': 950,
+                    'OEI Climb Gradient': 0.021,
+                    'Rate of Climb': 5,  #5m/s ~= 1000 ft/min, 7.6 ~= 1500 ft/min
                     'ht': 0.5,
                     'M1': 0.3,
                     'M2': 0.4,
                     'DTAcceleration': 180}
 
-MissionInput = {'Range Mission': 750,
-                'Range Diversion': 100,
-                'Beta start': 0.95,
-                'Payload Weight': (4560),
-                'Crew Weight': (95*3)}
+MissionInput = {'Range Mission': 750,  #nautical miles
+                'Range Diversion': 220,  #nautical miles
+                'Beta start': 0.97,
+                'Payload Weight': 4560,  #Kg
+                'Crew Weight': 500}  #Kg
 
-MissionStages = {'Takeoff': {'Supplied Power Ratio':{'phi': 0.0}},
-                'Climb1': {'type': 'ConstantRateClimb', 'input': {'CB': 0.08, 'Speed': 1.4*59, 'StartAltitude': 2000, 'EndAltitude': 6000}, 'Supplied Power Ratio':{'phi_start': 0.0, 'phi_end':0.0 }},
-                 'Cruise': {'type': 'ConstantMachCruise', 'input':{ 'Mach': 0.41, 'Altitude': 6000}, 'Supplied Power Ratio':{'phi_start': 0.0225104, 'phi_end':0.0148335 }},
-                 'Descent1': {'type': 'ConstantRateDescent', 'input':{'CB': -0.08, 'Speed': 1.4*59, 'StartAltitude': 6000, 'EndAltitude': 2000}, 'Supplied Power Ratio':{'phi_start': 0.0, 'phi_end':0.0 }}}
+MissionStages = {'Takeoff': {'Supplied Power Ratio':{'phi': 0.05}},
+                'Climb1': {'type': 'ConstantRateClimb', 'input': {'CB': 0.16, 'Speed': 77, 'StartAltitude': 100, 'EndAltitude': 1500}, 'Supplied Power Ratio':{'phi_start': 0.0, 'phi_end':0.0 }},
+                 'Climb2': {'type': 'ConstantRateClimb', 'input': {'CB': 0.08, 'Speed': 120, 'StartAltitude': 1500, 'EndAltitude': 4500}, 'Supplied Power Ratio':{'phi_start': 0.0, 'phi_end':0.0 }},
+                 'Climb3': {'type': 'ConstantRateClimb', 'input': {'CB': 0.07, 'Speed': 125, 'StartAltitude': 4500, 'EndAltitude': 8000}, 'Supplied Power Ratio':{'phi_start': 0.0, 'phi_end':0.0 }},
+                 'Cruise': {'type': 'ConstantMachCruise', 'input':{ 'Mach': 0.4, 'Altitude': 8000}, 'Supplied Power Ratio':{'phi_start': 0.0, 'phi_end':0.0 }},
+                 'Descent1': {'type': 'ConstantRateDescent', 'input':{'CB': -0.04, 'Speed': 90, 'StartAltitude': 8000, 'EndAltitude': 200}, 'Supplied Power Ratio':{'phi_start': 0.0, 'phi_end':0.0 }}}
 
-DiversionStages = {'Climb1': {'type': 'ConstantRateClimb', 'input': {'CB': 0.08, 'Speed': 1.4*59, 'StartAltitude': 2000, 'EndAltitude': 3100}, 'Supplied Power Ratio':{'phi_start': 0.0, 'phi_end':0.0 }},
-                 'Cruise': {'type': 'ConstantMachCruise', 'input':{ 'Mach': 0.3, 'Altitude': 3100}, 'Supplied Power Ratio':{'phi_start': 0.0225104, 'phi_end':0.0148335}},
-                 'Descent1': {'type': 'ConstantRateDescent', 'input':{'CB': -0.08, 'Speed': 1.4*59, 'StartAltitude': 3100, 'EndAltitude': 2000}, 'Supplied Power Ratio':{'phi_start': 0.0, 'phi_end':0.0 }}}
+DiversionStages = {'Climb1': {'type': 'ConstantRateClimb', 'input': {'CB': 0.08, 'Speed': 110, 'StartAltitude': 200, 'EndAltitude': 3100}, 'Supplied Power Ratio':{'phi_start': 0.0, 'phi_end':0.0 }},
+                 'Cruise': {'type': 'ConstantMachCruise', 'input':{ 'Mach': 0.35, 'Altitude': 3100}, 'Supplied Power Ratio':{'phi_start': 0.0, 'phi_end':0.0}},
+                 'Descent1': {'type': 'ConstantRateDescent', 'input':{'CB': -0.04, 'Speed': 90, 'StartAltitude': 3100, 'EndAltitude': 200}, 'Supplied Power Ratio':{'phi_start': 0.0, 'phi_end':0.0 }}} 
 
 AerodynamicsInput = {'AnalyticPolar': {'type': 'Quadratic', 'input': {'AR': 11, 'e_osw': 0.8}}}
 
 EnergyInput = {'Ef': 43.5*10**6,
                    'Ebat': 700 * 3600,
                    'pbat': 1000,
-                   'Eta Gas Turbine': 0.3,
+                   'Eta Gas Turbine': 0.22,
                    'Eta Gearbox': 0.96,
                    'Eta Propulsive': 0.9,
-                   'Eta Electric Motor 1': 0.96,
-                   'Eta Electric Motor 2': 0.96,
-                   'Eta Electric Motor': 0.98,
+                   'Eta Electric Motor 1': 0.96,    #for serial config
+                   'Eta Electric Motor 2': 0.96,    #for serial config
+                   'Eta Electric Motor': 0.98,      #for parallel config
                    'Eta PMAD': 0.99,
-                   'Specific Power Powertrain': [3600,7700],
+                   'Specific Power Powertrain': [3900,7700],
                    'Specific Power PMAD': [2200,2200,2200],
                    'PowertoWeight Battery': 35, 
                    'PowertoWeight Powertrain': [150,33],
                    'PowertoWeight PMAD': 0
-                   # 'Supplied Power Ratio': [[0.,0.],[0.05, 0.1],[0., 0.],[0.,0.],[0.05, 0.1],[0., 0.]]
-
-                    #'Supplied Power Ratio': [[0.,0.],[0.0225104, 0.0148335],[0., 0.],[0.,0.],[0.0225104, 0.0148335],[0., 0.]]
-                    # 'Supplied Power Ratio': [[0.,0.],[0.08743, 0.12764],[0., 0.],[0.,0.],[0.08743, 0.12764],[0., 0.]]
                    }
 
 WellToTankInput = {'Eta Charge': 0.95,

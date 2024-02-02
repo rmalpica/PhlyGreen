@@ -99,24 +99,28 @@ class Aircraft:
             self.welltowake.EvaluateSource()
         
         if PrintOutput:
-            print('----------------------------------------')
-            print('Powertrain mass: ',self.weight.WPT)
-            print('Fuel mass: ', self.weight.Wf)
+            print('Fuel mass (trip + altn) [Kg]: ', self.weight.Wf)
+            print('Block Fuel mass [Kg]:         ', self.weight.Wf + self.weight.final_reserve)
             if (self.Configuration == 'Hybrid'):
-                print('Battery mass: ',self.weight.WBat)
-                print('Structure: ', self.weight.WStructure)
-                print('Empty Weight: ', self.weight.WPT + self.weight.WStructure + self.weight.WCrew)
-                print('----------------------------------------')
-                print('Takeoff Weight: ', self.weight.WTO)
-                if WellToTankInput is not None:
-                    print('Source Energy: ', self.welltowake.SourceEnergy/1.e6,' MJ')
-                    print('Psi: ', self.welltowake.Psi)
-                print('Wing Surface: ', self.WingSurface, ' m^2')
+                print('Battery mass [Kg]:            ', self.weight.WBat)
+            print('Structure [Kg]:               ', self.weight.WStructure)
+            print('Powertrain mass [Kg]:         ',self.weight.WPT)
+            print('Empty Weight [Kg]:            ', self.weight.WPT + self.weight.WStructure + self.weight.WCrew + self.weight.WBat)
+            print('Zero Fuel Weight [Kg]:        ', self.weight.WPT + self.weight.WStructure + self.weight.WCrew + self.weight.WBat + self.weight.WPayload)
+            print('----------------------------------------')
+            print('Takeoff Weight: ', self.weight.WTO)
+            if self.WellToTankInput is not None:
+                print('Source Energy: ', self.welltowake.SourceEnergy/1.e6,' MJ')
+                print('Psi: ', self.welltowake.Psi)
+            print('Wing Surface: ', self.WingSurface, ' m^2')
+            print('TakeOff engine shaft peak power [kW]:      ', self.mission.TO_PP/1000.)
+            print('Climb/cruise engine shaft peak power [kW]: ', self.mission.Max_PEng/1000.)
+            if (self.Configuration == 'Hybrid'):
+                print('TakeOff battery peak power [kW]:           ', self.mission.TO_PBat/1000.)
+                print('Climb/cruise battery peak power [kW]:      ', self.mission.Max_PBat/1000.)
                 print('Sizing phase for battery: ', 'Cruise energy' if self.weight.WBatidx == 0 else 'Cruise peak power' if self.weight.WBatidx == 1 else 'Takeoff peak power'  )
-                print('Sizing phase for thermal powertrain ', 'Cruise peak power' if self.mission.Max_PFoW > self.mission.TO_PFoW else 'Takeoff peak power'  )
-                print('Sizing phase for electric powertrain ', 'Cruise peak power' if self.mission.Max_PBatoW > self.mission.TO_PBatoW else 'Takeoff peak power'  )
-            else:
-                print('Takeoff Weight: ', self.weight.WTO)
-                print('Wing Surface: ', self.WingSurface, ' m^2')
+                print('Sizing phase for electric powertrain ', 'Climb/Cruise peak power' if self.mission.Max_PBat > self.mission.TO_PBat else 'Takeoff peak power'  )
+            print('Sizing phase for thermal powertrain ', 'Climb/Cruise peak power' if self.mission.Max_PEng > self.mission.TO_PP else 'Takeoff peak power'  )
+
 
         
