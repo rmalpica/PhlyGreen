@@ -408,6 +408,7 @@ class Powertrain:
         
         PowerRatio = np.linalg.solve(A,b)
 
+        #Ordine output   Pf/Pp  Pgt/Pp   Pgb/Pp  Pp/Pp 
         return PowerRatio
     
     
@@ -417,7 +418,7 @@ class Powertrain:
         
         if (self.aircraft.HybridType == 'Parallel'):
         
-            A = np.array([[- self.EtaGTmodel(alt,vel,pwr*(1-phi)), 1, 0, 0, 0, 0, 0],
+            A = np.array([[- self.EtaGTmodel(alt,vel,pwr), 1, 0, 0, 0, 0, 0],
                       [0, -self.EtaGB, -self.EtaGB, 1, 0, 0, 0],
                       [0, 0, 0, 0, 1, -self.EtaPM, 0],
                       [0, 0, 1, 0, - self.EtaEM, 0, 0],
@@ -442,6 +443,7 @@ class Powertrain:
                       [0, 0, 0, 0, 0, 0, 0, 1]])
        
             b = np.array([0, 0, 0, 0, 0, 0, 0, 1])
+
         
         PowerRatio = np.linalg.solve(A,b)
         
@@ -471,22 +473,18 @@ class Powertrain:
         
         if self.aircraft.Configuration == 'Traditional':
         
-                PtWFuel = np.max([self.aircraft.mission.Max_PF ,self.aircraft.mission.TO_PF]) 
-                #PtWFuel = self.aircraft.DesignPW * self.Traditional()[0]
-                #WPT = PtWFuel * WTO / self.SPowerPT[0]
-                self.WThermal = PtWFuel * self.EtaGT /self.SPowerPT[0]
+                PeakPwr = np.max([self.aircraft.mission.Max_PEng, self.aircraft.mission.TO_PP]) 
+                self.WThermal = PeakPwr /self.SPowerPT[0]
                 WPT = self.WThermal
                 
         elif self.aircraft.Configuration == 'Hybrid':
    
                 
-                PtWFuel = np.max([self.aircraft.mission.Max_PF ,self.aircraft.mission.TO_PF]) 
-                PtWBattery = np.max([self.aircraft.mission.Max_PBat, self.aircraft.mission.TO_PBat])
-                #PtWFuel = self.aircraft.mission.Max_PFoW
-                #PtWBattery = self.aircraft.mission.Max_PBatoW
-                # PtWPMAD = self.aircraft.DesignPW * self.Hybrid(0.05)[3]
-                self.WThermal = PtWFuel * self.EtaGT /self.SPowerPT[0]
-                self.WElectric = PtWBattery/self.SPowerPT[1] * self.EtaEM * self.EtaPM
+                PeakPwrEng = np.max([self.aircraft.mission.Max_PEng, self.aircraft.mission.TO_PP]) 
+                PeakPwrBat = np.max([self.aircraft.mission.Max_PBat, self.aircraft.mission.TO_PBat])
+
+                self.WThermal = PeakPwrEng /self.SPowerPT[0]
+                self.WElectric = PeakPwrBat /self.SPowerPT[1] 
 
                 WPT = self.WThermal + self.WElectric 
 
