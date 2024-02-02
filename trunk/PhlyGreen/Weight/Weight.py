@@ -10,7 +10,7 @@ class Weight:
     def __init__(self, aircraft):
         self.aircraft = aircraft
         self.tol = 0.1
-        self.final_reserve = 0.0  #Kg fuel
+        self.final_reserve = 500.0  #Kg fuel
         
             
         
@@ -60,9 +60,9 @@ class Weight:
             
                 self.Wf = self.aircraft.mission.EvaluateMission(WTO)/self.ef
                 self.WPT = self.aircraft.powertrain.WeightPowertrain(WTO)
-                self.WStructure = self.aircraft.structures.StructuralWeight(WTO) + self.final_reserve 
+                self.WStructure = self.aircraft.structures.StructuralWeight(WTO)  
             
-                return (self.Wf + self.WPT + self.WStructure + self.WPayload + self.WCrew - WTO)
+                return (self.Wf + self.final_reserve + self.WPT + self.WStructure + self.WPayload + self.WCrew - WTO)
         
         self.WTO = brenth(func, 10000, 50000, xtol=0.1)
 
@@ -100,7 +100,7 @@ class Weight:
                 # print(self.TotalEnergies[1]/self.ebat )
                 # print(self.PtWBat*(1/self.pbat)*WTO)
                 self.WPT = self.aircraft.powertrain.WeightPowertrain(WTO)
-                self.WStructure = self.aircraft.structures.StructuralWeight(WTO) + self.final_reserve
+                self.WStructure = self.aircraft.structures.StructuralWeight(WTO) 
             
                 # print(self.i)
                 # print('energies: ', self.TotalEnergies)
@@ -109,7 +109,7 @@ class Weight:
                 # print(self.Wf + self.WBat + self.WPT + self.WStructure + self.WPayload + self.WCrew - WTO)
                 # print('---------------------------------------------------------------------------')
 
-                return (self.Wf + self.WBat + self.WPT + self.WStructure + self.WPayload + self.WCrew - WTO)
+                return (self.Wf + self.final_reserve + self.WBat + self.WPT + self.WStructure + self.WPayload + self.WCrew - WTO)
          
         # self.i = 0
         
