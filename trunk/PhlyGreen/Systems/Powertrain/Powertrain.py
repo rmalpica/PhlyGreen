@@ -296,11 +296,11 @@ class Powertrain:
             self.EtaGTmodelType = self.aircraft.EnergyInput['Eta Gas Turbine Model'] 
 
         try:
-            self.aircraft.EnergyInput['Eta Eta Propulsive']
+            self.aircraft.EnergyInput['Eta Propulsive']
         except:
             print('Warning: Eta Propulsive value unset. Using Eta Eta Propulsive Model.')
         else:
-            self.EtaPP = self.aircraft.EnergyInput['Eta Eta Propulsive']
+            self.EtaPP = self.aircraft.EnergyInput['Eta Propulsive']
 
         try:
             self.aircraft.EnergyInput['Eta Propulsive Model'] 
