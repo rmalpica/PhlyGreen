@@ -1,7 +1,12 @@
+import sys
+sys.path.append('c:\\Users\\falcone\\OneDrive\\TESI\\GitHub\\PhlyGreen\\trunk')
 import numpy as np
 import numbers
 import PhlyGreen.Utilities.Atmosphere as ISA
 import PhlyGreen.Utilities.Speed as Speed
+import joblib
+import os
+from sklearn.preprocessing import PolynomialFeatures
 
 class Powertrain:
     def __init__(self, aircraft):
@@ -286,6 +291,9 @@ class Powertrain:
         except:
             print('Warning: Eta Gas Turbine value unset. Using Eta Gas Turbine Model.')
         else:
+            self.model_etath_0 = joblib.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'PW127', 'model_eta_th_0.joblib'))
+            self.model_etath_1 = joblib.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'PW127', 'model_eta_th_1.joblib'))
+            self.model_etath_2 = joblib.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'PW127', 'model_eta_th_2.joblib'))
             self.EtaGT = self.aircraft.EnergyInput['Eta Gas Turbine']
 
         try:
@@ -349,7 +357,27 @@ class Powertrain:
         n = 0.75
         lapse = (ISA.atmosphere.RHOstd(altitude,DISA)/ISA.atmosphere.RHOstd(0.0,DISA))**n
         return lapse
+    
+    def EtaPPconstModel(self,altitude,velocity,powerOutput):
+        
+        const = self.EtaPP
 
+        return const
+        
+    def EtaPPpw127Model(self):
+
+        eta = 0.89
+
+        return eta
+    
+    def EtaPPmodel(self,alt,vel,pwr):
+
+        if self.EtaPPmodelType == 'constant':
+            return self.EtaPPconstModel(alt,vel,pwr)
+        elif self.EtaGTmodelType == 'PW127':
+            return self.EtaPPpw127Model(alt,vel,pwr) 
+        else:
+            raise Exception("Unknown EtaPPmodelType: %s" %self.EtaPPmodelType)
 
     def EtaGTconstModel(self,altitude,velocity,powerOutput):
         
@@ -358,8 +386,25 @@ class Powertrain:
         return const
         
     def EtaGTpw127Model(self,altitude,velocity,powerOutput):
+        # potenza erogata all'albero dal singolo motore:
+        pwsd = 0.5*self.EtaPPpw127Model()*powerOutput
+        # il fattore 0.5 serve a tenere conto che la potenza powerOutput è complessivamente erogata dai due motori 
+        # 0.89 è il rendimento propulsivo
 
-        eta = self.EtaGT
+        if 0 <= pwsd <= 400 and 0 <= altitude <= 7600:
+            model = self.model_etath_1
+        elif 2000 <= pwsd <= 2280 and 0 <= altitude <= 1000:
+            model = self.model_etath_2
+        else:
+            model = self.model_etath_0
+
+        data_for_prediction = np.array([[pwsd, velocity, altitude]])
+        poly_features = PolynomialFeatures(degree=4)
+        data_for_prediction_poly = poly_features.fit_transform(data_for_prediction)
+
+        eta_th = model.predict(data_for_prediction_poly)[0]
+
+        eta = max(0, eta_th)
 
         return eta
     
@@ -372,27 +417,6 @@ class Powertrain:
         else:
             raise Exception("Unknown EtaGTmodelType: %s" %self.EtaGTmodelType)
 
-
-    def EtaPPconstModel(self,altitude,velocity,powerOutput):
-        
-        const = self.EtaPP
-
-        return const
-        
-    def EtaPPpw127Model(self,altitude,velocity,powerOutput):
-
-        eta = self.EtaPP
-
-        return eta
-    
-    def EtaPPmodel(self,alt,vel,pwr):
-
-        if self.EtaPPmodelType == 'constant':
-            return self.EtaPPconstModel(alt,vel,pwr)
-        elif self.EtaGTmodelType == 'PW127':
-            return self.EtaPPpw127Model(alt,vel,pwr) 
-        else:
-            raise Exception("Unknown EtaPPmodelType: %s" %self.EtaPPmodelType)
 
        
     def Traditional(self,alt,vel,pwr):
