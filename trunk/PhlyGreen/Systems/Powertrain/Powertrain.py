@@ -291,9 +291,6 @@ class Powertrain:
         except:
             print('Warning: Eta Gas Turbine value unset. Using Eta Gas Turbine Model.')
         else:
-            self.model_etath_0 = joblib.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'PW127', 'model_eta_th_0.joblib'))
-            self.model_etath_1 = joblib.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'PW127', 'model_eta_th_1.joblib'))
-            self.model_etath_2 = joblib.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'PW127', 'model_eta_th_2.joblib'))
             self.EtaGT = self.aircraft.EnergyInput['Eta Gas Turbine']
 
         try:
@@ -302,6 +299,11 @@ class Powertrain:
             print('Warning: Eta Gas Turbine model unset. Using constant model')
         else: 
             self.EtaGTmodelType = self.aircraft.EnergyInput['Eta Gas Turbine Model'] 
+            if self.EtaGTmodelType == 'PW127': 
+                self.model_etath_0 = joblib.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'PW127', 'model_eta_th_0.joblib'))
+                self.model_etath_1 = joblib.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'PW127', 'model_eta_th_1.joblib'))
+                self.model_etath_2 = joblib.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'PW127', 'model_eta_th_2.joblib'))
+
 
         try:
             self.aircraft.EnergyInput['Eta Propulsive']
@@ -315,7 +317,7 @@ class Powertrain:
         except:
             print('Warning: Eta Propulsive model unset. Using constant model')
         else: 
-            self.EtaGTmodelType = self.aircraft.EnergyInput['Eta Propulsive Model'] 
+            self.EtaPPmodelType = self.aircraft.EnergyInput['Eta Propulsive Model'] 
 
 
         self.EtaGB = self.aircraft.EnergyInput['Eta Gearbox']
@@ -364,7 +366,7 @@ class Powertrain:
 
         return const
         
-    def EtaPPpw127Model(self):
+    def EtaPPpw127Model(self,altitude,velocity,powerOutput):
 
         eta = 0.89
 
@@ -374,7 +376,7 @@ class Powertrain:
 
         if self.EtaPPmodelType == 'constant':
             return self.EtaPPconstModel(alt,vel,pwr)
-        elif self.EtaGTmodelType == 'PW127':
+        elif self.EtaPPmodelType == 'PW127':
             return self.EtaPPpw127Model(alt,vel,pwr) 
         else:
             raise Exception("Unknown EtaPPmodelType: %s" %self.EtaPPmodelType)
@@ -387,7 +389,7 @@ class Powertrain:
         
     def EtaGTpw127Model(self,altitude,velocity,powerOutput):
         # potenza erogata all'albero dal singolo motore:
-        pwsd = 0.5*self.EtaPPpw127Model()*powerOutput
+        pwsd = 1e-3*0.5*self.EtaPPpw127Model(altitude,velocity,powerOutput)*powerOutput
         # il fattore 0.5 serve a tenere conto che la potenza powerOutput è complessivamente erogata dai due motori 
         # 0.89 è il rendimento propulsivo
 
@@ -405,6 +407,11 @@ class Powertrain:
         eta_th = model.predict(data_for_prediction_poly)[0]
 
         eta = max(0, eta_th)
+        print('-----')
+        print(altitude,velocity,powerOutput)
+        print('pwsd :', pwsd)
+        print('eta_model :', eta_th)
+        print(eta)
 
         return eta
     

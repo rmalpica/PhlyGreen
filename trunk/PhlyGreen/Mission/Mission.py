@@ -95,6 +95,7 @@ class Mission:
         def model(t,y):
             Beta = y[1]
             PP = PowerPropulsive(Beta,t) 
+            print('pp in model ', PP*1e-3)
             PRatio = self.aircraft.powertrain.Traditional(self.profile.Altitude(t),self.profile.Velocity(t),PP)
             dEdt = PP * PRatio[0]
             dbetadt = - dEdt/(self.ef*self.WTO)
