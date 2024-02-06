@@ -408,11 +408,6 @@ class Powertrain:
         eta_th = model.predict(data_for_prediction_poly)[0]
 
         eta = max(0.001, eta_th)
-        print('-----')
-        print(altitude,velocity,powerOutput)
-        print('pwsd :', pwsd)
-        print('eta_model :', eta_th)
-        print(eta)
 
         return eta
     
