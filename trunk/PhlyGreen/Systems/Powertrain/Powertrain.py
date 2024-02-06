@@ -389,9 +389,10 @@ class Powertrain:
         
     def EtaGTpw127Model(self,altitude,velocity,powerOutput):
         # potenza erogata all'albero dal singolo motore:
-        pwsd = 1e-3*0.5*self.EtaPPpw127Model(altitude,velocity,powerOutput)*powerOutput
+        pwsd_c = 1e-3*0.5*self.EtaPPpw127Model(altitude,velocity,powerOutput)*powerOutput
         # il fattore 0.5 serve a tenere conto che la potenza powerOutput è complessivamente erogata dai due motori 
-        # 0.89 è il rendimento propulsivo
+
+        pwsd = min(2280, pwsd_c)
 
         if 0 <= pwsd <= 400 and 0 <= altitude <= 7600:
             model = self.model_etath_1
@@ -406,7 +407,7 @@ class Powertrain:
 
         eta_th = model.predict(data_for_prediction_poly)[0]
 
-        eta = max(0, eta_th)
+        eta = max(0.001, eta_th)
         print('-----')
         print(altitude,velocity,powerOutput)
         print('pwsd :', pwsd)
@@ -528,3 +529,5 @@ class Powertrain:
              raise Exception("Unknown aircraft configuration: %s" %self.aircraft.Configuration)
                 
         return WPT
+    
+
