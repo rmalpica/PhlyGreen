@@ -10,7 +10,7 @@ class Weight:
     def __init__(self, aircraft):
         self.aircraft = aircraft
         self.tol = 0.1
-        self.final_reserve = 300.0  #Kg fuel
+        self.final_reserve = 500.0  #Kg fuel
         
             
         

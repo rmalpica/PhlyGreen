@@ -1,5 +1,3 @@
-import sys
-sys.path.append('c:\\Users\\falcone\\OneDrive\\TESI\\GitHub\\PhlyGreen\\trunk')
 import numpy as np
 import numbers
 import PhlyGreen.Utilities.Atmosphere as ISA
@@ -389,7 +387,7 @@ class Powertrain:
         
     def EtaGTpw127Model(self,altitude,velocity,powerOutput):
         # potenza erogata all'albero dal singolo motore:
-        pwsd_c = 1e-3*0.5*self.EtaPPpw127Model(altitude,velocity,powerOutput)*powerOutput
+        pwsd_c = 1e-3*0.5*self.EtaPPmodel(altitude,velocity,powerOutput)*powerOutput
         # il fattore 0.5 serve a tenere conto che la potenza powerOutput è complessivamente erogata dai due motori 
 
         pwsd = min(2280, pwsd_c)
