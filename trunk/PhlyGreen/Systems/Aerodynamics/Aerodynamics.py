@@ -19,7 +19,7 @@ class Aerodynamics:
           
     @polar.setter
     def polar(self,value):
-        if value == 'quadratic' or value == 'unset':
+        if value == 'quadratic' or value == 'ATR42' or value == 'unset':
             self._polar = value
         else:
             raise ValueError("Error: %s polar model not implemented. Exiting" %value)
@@ -59,6 +59,8 @@ class Aerodynamics:
             AR = polar['input'].get("AR")
             e_osw = polar['input'].get("e_osw")
             self.set_quadratic_polar(AR,e_osw)
+        elif 'NumericalPolar' in self.aircraft.AerodynamicsInput: 
+            self.polar = self.aircraft.AerodynamicsInput.get("NumericalPolar")['type']
         else:
             raise ValueError("Error: aerodynamic model unknown")
 
@@ -72,6 +74,8 @@ class Aerodynamics:
         if self.polar == 'quadratic':
             Cd = self.Cd0(Mach) + self.k1() * Cl**2 + self.k2() * Cl
             return Cd
+        elif self.polar == 'ATR42':
+            return 0.021476 + 0.03037383 * Cl**2
         else:
             raise ValueError("Polar model unset")
         
@@ -88,7 +92,9 @@ class Aerodynamics:
         return 1.0/(np.pi * self.AR * self.e_osw)
     
     def ClE(self,Mach):
-        return np.sqrt(self.Cd0(Mach)* np.pi * self.AR * self.e_osw)
-
-
-        
+        if self.polar == 'quadratic':
+            return np.sqrt(self.Cd0(Mach)* np.pi * self.AR * self.e_osw)
+        elif self.polar == 'ATR42':
+            return 0.82
+        else:
+            raise ValueError("Polar model unset")
