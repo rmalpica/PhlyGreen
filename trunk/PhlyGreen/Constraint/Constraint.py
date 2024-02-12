@@ -5,7 +5,7 @@ import PhlyGreen.Utilities.Speed as Speed
 class Constraint:
     def __init__(self, aircraft):
         self.aircraft = aircraft
-        self.WTOoS = np.linspace(1, 7000, num=100)
+        self.WTOoS = np.linspace(1, 7000, num=1000)
 
 
     def SetInput(self):
@@ -64,8 +64,9 @@ class Constraint:
         self.EvaluateConstraints(self.WTOoS, self.DISA, self.kTO, self.sTO, self.CB, self.ROC, self.ht, self.PsAcceleration)
         
         PWMatrix = np.matrix([self.PWCruise, self.PWTakeOff, self.PWClimb, self.PWTurn, self.PWCeiling, self.PWAcceleration, self.PWOEI])
-        self.MaxPW = np.zeros(len(self.WTOoS))
-        for i in range(len(self.WTOoS)):
+        WTOoSrange = self.WTOoS[self.WTOoS <= self.WTOoSLanding]
+        self.MaxPW = np.zeros(len(WTOoSrange))
+        for i in range(len(WTOoSrange)):
             self.MaxPW[i] = np.max(PWMatrix[:,i])
 
         self.aircraft.DesignPW = np.min(self.MaxPW)
