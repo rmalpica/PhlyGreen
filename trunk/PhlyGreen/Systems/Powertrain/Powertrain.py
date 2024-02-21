@@ -274,7 +274,7 @@ class Powertrain:
     @WElectric.setter
     def WElectric(self,value):
         self._WElectric = value
-        if(isinstance(value, numbers.Number) and (value <= 0)):
+        if(isinstance(value, numbers.Number) and (value < 0)):
             raise ValueError("Error: Illegal Electric powertrain Weight: %e. Exiting" %value)
 
 
@@ -473,7 +473,7 @@ class Powertrain:
         PowerRatio = np.linalg.solve(A,b)
         
     #Ordine output   Pf/Pp  Pgt/Pp   Pgb/Pp    Pe1/Pp  Pe2/Pp   Pbat/Pp   Ps2/Pp   Pp1/Pp 
-        return PowerRatio
+        return np.abs(PowerRatio)  #here abs is used to avoid that Pbat/Pp = -0 when phi=0
         
         
     # def ParallelHybrid2(self,t):
