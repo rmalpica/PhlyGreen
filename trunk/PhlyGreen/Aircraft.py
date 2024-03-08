@@ -1,5 +1,5 @@
 class Aircraft:
-    def __init__(self, powertrain, structures, aerodynamics, performance, mission, weight, constraint, welltowake):
+    def __init__(self, powertrain, structures, aerodynamics, performance, mission, weight, constraint, welltowake,climateimpact):
         #subsystems
         self.powertrain = powertrain
         self.structures = structures
@@ -9,6 +9,7 @@ class Aircraft:
         self.weight = weight
         self.constraint = constraint
         self.welltowake = welltowake
+        self.climateimpact = climateimpact
         #input dictionaries
         self.AerodynamicsInput = None 
         self.ConstraintsInput = None 
@@ -17,6 +18,7 @@ class Aircraft:
         self.MissionStages = None 
         self.DiversionStages = None 
         self.WellToTankInput = None
+        self.ClimateImpactInput = None
         #aircraft design
         self.DesignPW = None
         self.DesignWTOoS = None
@@ -46,7 +48,7 @@ class Aircraft:
 
     """ Methods """
 
-    def ReadInput(self,AerodynamicsInput,ConstraintsInput,MissionInput,EnergyInput,MissionStages,DiversionStages, WellToTankInput=None):
+    def ReadInput(self,AerodynamicsInput,ConstraintsInput,MissionInput,EnergyInput,MissionStages,DiversionStages, WellToTankInput=None, ClimateImpactInput =None):
         
         self.AerodynamicsInput = AerodynamicsInput
         self.ConstraintsInput = ConstraintsInput
@@ -59,6 +61,11 @@ class Aircraft:
             
             self.WellToTankInput = WellToTankInput
             self.welltowake.SetInput()
+
+        if ClimateImpactInput is not None:
+            
+            self.ClimateImpactInput = ClimateImpactInput
+            self.climateimpact.SetInput()
 
         # Initialize Aerodynamics subsystem
         self.aerodynamics.SetInput()
@@ -78,9 +85,10 @@ class Aircraft:
 
     def DesignAircraft(self,AerodynamicsInput,ConstraintsInput, MissionInput, EnergyInput, MissionStages, DiversionStages, **kwargs):
         WellToTankInput = kwargs.get('WellToTankInput', None)
+        ClimateImpactInput = kwargs.get('ClimateImpactInput', None)
         PrintOutput = kwargs.get('PrintOutput', False)
         # print("Initializing aircraft...")
-        self.ReadInput(AerodynamicsInput,ConstraintsInput, MissionInput, EnergyInput, MissionStages, DiversionStages, WellToTankInput)
+        self.ReadInput(AerodynamicsInput,ConstraintsInput, MissionInput, EnergyInput, MissionStages, DiversionStages, WellToTankInput, ClimateImpactInput)
 
         if PrintOutput: print("Finding Design Point...")
         self.constraint.FindDesignPoint()
@@ -115,6 +123,8 @@ class Aircraft:
             print('Wing Surface: ', self.WingSurface, ' m^2')
             print('TakeOff engine shaft peak power [kW]:      ', self.mission.TO_PP/1000.)
             print('Climb/cruise engine shaft peak power [kW]: ', self.mission.Max_PEng/1000.)
+            if self.ClimateImpactInput is not None:
+                print('Average Temperature Response: [K]: ', self.climateimpact.ATR)
             if (self.Configuration == 'Hybrid'):
                 print('TakeOff battery peak power [kW]:           ', self.mission.TO_PBat/1000.)
                 print('Climb/cruise battery peak power [kW]:      ', self.mission.Max_PBat/1000.)
