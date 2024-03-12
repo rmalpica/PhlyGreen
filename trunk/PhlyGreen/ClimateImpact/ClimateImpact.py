@@ -5,8 +5,7 @@ import scipy.integrate as integrate
 import joblib
 from sklearn.preprocessing import PolynomialFeatures
 
-#  NB: alla riga 127 di Aircraft.py ho messo un pass; al posto di quello devo stampare i risultati di questa
-# classe
+
 
 class ClimateImpact:
     def __init__(self, aircraft):
@@ -15,12 +14,24 @@ class ClimateImpact:
         self.N = None   # numero di voli all'anno (durante gli anni di attività)
         self.Y = None   # numero di anni di attività
         self.EINOx_model = 'unset'
+
         self.RF_2CO2 = 3.7  # [W/m^2]
+
         self.step = 100
         self.mission_data = None
         self.r_ch4_o3l_o3s = None
         self.frazioni_di_missione = None
         self.media_pesata_quote = None
+
+        self.mission_emissions_calculated = False  # Flag per indicare se le emissioni della missione sono state calcolate
+        self.mission_emissions = {
+            'co2': None,
+            'h2o': None,
+            'so4': None,
+            'soot': None,
+            'nox': None
+        }
+    
 
     """ Properties """
 
@@ -117,87 +128,105 @@ class ClimateImpact:
 
 
     # EMISSIONI ANNUALI
+
+    def calculate_mission_emissions(self):
+        Wf = self.aircraft.weight.Wf  # [kg]
+        
+        # CO2
+        EI_co2 = 3.16 # [kg/kg]
+        self.mission_emissions['co2'] = EI_co2*Wf
+
+        # H2O
+        EI_h2o = 1.26 # [kg/kg]
+        self.mission_emissions['h2o'] = EI_h2o*Wf
+
+        # SO4
+        EI_so4 = 2e-4 # [kg/kg]
+        self.mission_emissions['so4'] = EI_so4*Wf
+
+        # SOOT
+        EI_soot = 4e-5 # [kg/kg]
+        self.mission_emissions['soot'] = EI_soot*Wf
+
+        # NOX
+        def E_nox_1m():  # emissione di NOx in kg della singola missione
+                if self.EINOx_model == 'Filippone':
+                    return 0  # da completare
+                if self.EINOx_model == 'GasTurb':
+                    times = np.array([])
+                    beta = np.array([])
+                    for array in self.aircraft.mission.integral_solution:
+                        times = np.concatenate([times, array.t])
+                        beta = np.concatenate([beta, array.y[1]])
+                    
+                    v0 = self.aircraft.mission.profile.Velocity(times)  # [m/s]
+                    alt = self.aircraft.mission.profile.Altitude(times)  # [m]
+                    pwsd = np.zeros(len(times))  # [kW]
+                    EI_NOx = np.zeros(len(times))  # [g/kg(fuel)]
+                    portata = np.zeros(len(times))  # [kg(fuel)/s]
+
+                    for t in range(len(times)):
+                        power = (self.aircraft.weight.WTO) * self.aircraft.performance.PoWTO(self.aircraft.DesignWTOoS,beta[t],self.aircraft.mission.profile.PowerExcess(times[t]),1,alt[t],self.aircraft.mission.DISA,v0[t],'TAS')
+                        pwsd[t]= 1e-3*0.5*self.aircraft.powertrain.EtaPPmodel(alt[t],v0[t],power)*power
+
+                        data_for_prediction = np.array([[pwsd[t], v0[t], alt[t]]])
+                        poly_features = PolynomialFeatures(degree=4)
+                        data_for_prediction_poly = poly_features.fit_transform(data_for_prediction)
+                        EI_NOx[t] = self.model.predict(data_for_prediction_poly)[0]
+
+                        PRatio = self.aircraft.powertrain.Traditional(alt[t],v0[t],power)
+                        portata[t] = power * PRatio[0]/self.aircraft.weight.ef
+
+                    E_nox_1m = 0
+                    for t in range(len(times)-1):
+                        E_nox_1m = E_nox_1m + EI_NOx[t]*portata[t]*(times[t+1]-times[t])
+                    return E_nox_1m* 10**(-3)
+                
+        self.mission_emissions['nox'] = E_nox_1m()
+
+
+        self.mission_emissions_calculated = True
+
+
         
     def E_co2(self,year):
-        if self.U(year) == 0:
-            return 0
-        else:
-            EI_co2 = 3.16 # [kg/kg]
-            Wf = self.aircraft.weight.Wf  # [kg]
-            Eco2 = EI_co2*Wf*self.U(year)
-            return Eco2
+        if not self.mission_emissions_calculated:
+            self.calculate_mission_emissions()
+
+        Eco2 = self.mission_emissions['co2']*self.U(year)
+        return Eco2
     
 
     def E_h2o(self,year):
-        if self.U(year) == 0:
-            return 0
-        else:
-            EI_h2o = 1.26 # [kg/kg]
-            Wf = self.aircraft.weight.Wf  # [kg]
-            Eh2o = EI_h2o*Wf*self.U(year)
-            return Eh2o
+        if not self.mission_emissions_calculated:
+            self.calculate_mission_emissions()
+
+        Eh2o = self.mission_emissions['h2o']*self.U(year)
+        return Eh2o
     
 
     def E_so4(self,year):
-        if self.U(year) == 0:
-            return 0
-        else:
-            EI_so4 = 2e-4 # [kg/kg]
-            Wf = self.aircraft.weight.Wf  # [kg]
-            Eso4 = EI_so4*Wf*self.U(year)
-            return Eso4
+        if not self.mission_emissions_calculated:
+            self.calculate_mission_emissions()
+
+        Eso4 = self.mission_emissions['so4']*self.U(year)
+        return Eso4
     
 
     def E_soot(self,year):
-        if self.U(year) == 0:
-            return 0
-        else:
-            EI_soot = 4e-5 # [kg/kg]
-            Wf = self.aircraft.weight.Wf  # [kg]
-            Esoot = EI_soot*Wf*self.U(year)
-            return Esoot
+        if not self.mission_emissions_calculated:
+            self.calculate_mission_emissions()
+
+        Esoot = self.mission_emissions['soot']*self.U(year)
+        return Esoot
     
-    def E_nox_1m(self):  # emissione di NOx in kg della singola missione
-        if self.EINOx_model == 'Filippone':
-            return 0  # da completare
-        if self.EINOx_model == 'GasTurb':
-            times = np.array([])
-            beta = np.array([])
-            for array in self.aircraft.mission.integral_solution:
-                times = np.concatenate([times, array.t])
-                beta = np.concatenate([beta, array.y[1]])
             
-            v0 = self.aircraft.mission.profile.Velocity(times)  # [m/s]
-            alt = self.aircraft.mission.profile.Altitude(times)  # [m]
-            pwsd = np.zeros(len(times))  # [kW]
-            EI_NOx = np.zeros(len(times))  # [g/kg(fuel)]
-            portata = np.zeros(len(times))  # [kg(fuel)/s]
-
-            for t in range(len(times)):
-                power = (self.aircraft.weight.WTO) * self.aircraft.performance.PoWTO(self.aircraft.DesignWTOoS,beta[t],self.aircraft.mission.profile.PowerExcess(times[t]),1,alt[t],self.aircraft.mission.DISA,v0[t],'TAS')
-                pwsd[t]= 1e-3*0.5*self.aircraft.powertrain.EtaPPmodel(alt[t],v0[t],power)*power
-
-                data_for_prediction = np.array([[pwsd[t], v0[t], alt[t]]])
-                poly_features = PolynomialFeatures(degree=4)
-                data_for_prediction_poly = poly_features.fit_transform(data_for_prediction)
-                EI_NOx[t] = self.model.predict(data_for_prediction_poly)[0]
-
-                PRatio = self.aircraft.powertrain.Traditional(alt[t],v0[t],power)
-                portata[t] = power * PRatio[0]/self.aircraft.weight.ef
-
-            E_nox_1m = 0
-            for t in range(len(times)-1):
-                E_nox_1m = E_nox_1m + EI_NOx[t]*portata[t]*(times[t+1]-times[t])
-            return E_nox_1m* 10**(-3)
-            
-
     def E_nox(self,year):
-   
-        if self.U(year) == 0:
-            return 0
-        else:
-            E_nox = self.E_nox_1m()*self.U(year)
-            return E_nox
+        if not self.mission_emissions_calculated:
+            self.calculate_mission_emissions()
+
+        Enox = self.mission_emissions['nox']*self.U(year)
+        return Enox
         
 
 
@@ -359,7 +388,7 @@ class ClimateImpact:
             media_pesata_quote = media_pesata_quote + self.frazioni_di_missione[0][i]*self.frazioni_di_missione[1][i]
         media_pesata_quote = media_pesata_quote/sum(self.frazioni_di_missione[1])
 
-        media_pesata_quote = self.media_pesata_quote
+        self.media_pesata_quote = media_pesata_quote
 
         
 
@@ -456,7 +485,7 @@ class ClimateImpact:
         
         def DeltaXCO2(year):
             integrand = lambda k: G_xco2(year - k) * self.E_co2(k)
-            result, _ = integrate.quad(integrand, 0, year)
+            result, _ = integrate.quad(integrand, 0, year, epsabs=1e-4, epsrel=1e-3)
             return result
         
         XCO2_0 = 380 # concentrazione di background [ppmv]
@@ -497,14 +526,17 @@ class ClimateImpact:
 
     def rf_ch4(self, year):
 
+        if self.media_pesata_quote is None:
+            self.calculate_media_pesata_quote()
+
         def G_ch4(year):
-            A = -5.16e13  # [(W/m^2)/kg(NOx)]
+            A = -5.16e-13  # [(W/m^2)/kg(NOx)]
             tau = 12  # [anni]
             G_ch4 = A*np.exp(-year/tau)
             return G_ch4
         
         integrand = lambda k: G_ch4(year - k) * self.E_nox(k)
-        result, _ = integrate.quad(integrand, 0, year)
+        result, _ = integrate.quad(integrand, 0, year, epsabs=1e-4, epsrel=1e-3)
         RF_ch4 = result * self.s_ch4(self.media_pesata_quote)
         eff_ch4 = 1.18
         rf_ch4 = RF_ch4 * eff_ch4/self.RF_2CO2
@@ -513,14 +545,17 @@ class ClimateImpact:
 
     def rf_o3l(self, year):
 
+        if self.media_pesata_quote is None:
+            self.calculate_media_pesata_quote()
+
         def G_o3l(year):
-            A = -1.21e13  # [(W/m^2)/kg(NOx)]
+            A = -1.21e-13  # [(W/m^2)/kg(NOx)]
             tau = 12  # [anni]
             G_o3l = A*np.exp(-year/tau)
             return G_o3l
         
         integrand = lambda k: G_o3l(year - k) * self.E_nox(k)
-        result, _ = integrate.quad(integrand, 0, year)
+        result, _ = integrate.quad(integrand, 0, year, epsabs=1e-4, epsrel=1e-3)
         RF_o3l = result * self.s_o3l(self.media_pesata_quote)
         eff_o3 = 1.37
         rf_o3l = RF_o3l * eff_o3/self.RF_2CO2
@@ -528,6 +563,9 @@ class ClimateImpact:
     
 
     def rf_o3s(self,year):
+
+        if self.media_pesata_quote is None:
+            self.calculate_media_pesata_quote()
 
         c_o3s = 1.01e-11 # [(w/m^2)/kg(NOx)]
         RF_o3s = c_o3s * self.E_nox(year) * self.s_o3s(self.media_pesata_quote)
@@ -553,7 +591,7 @@ class ClimateImpact:
             return G_T
         
         integrand = lambda k, year=year: G_T(year - k) * self.rf(k)
-        DeltaT, _ = integrate.quad(integrand, 0, year)   # [K]
+        DeltaT, _ = integrate.quad(integrand, 0, year, epsabs=1e-4, epsrel=1e-3)   # [K]
         return DeltaT
 
     
@@ -561,8 +599,9 @@ class ClimateImpact:
     # ATR
 
     def ATR(self):   # [K]
-        integrand = lambda year: self.DeltaT(year)
-        integrale, _ = integrate.quad(integrand, 0, self.H)
-        ATR = integrale/self.H
+        somma = 0
+        for i in range(self.H):
+            somma = somma + self.DeltaT(i)
+        ATR = somma/self.H
 
         return ATR
