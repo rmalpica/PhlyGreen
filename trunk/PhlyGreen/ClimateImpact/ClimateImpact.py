@@ -4,6 +4,7 @@ import numbers
 import scipy.integrate as integrate
 import joblib
 from sklearn.preprocessing import PolynomialFeatures
+import matplotlib.pyplot as plt
 
 
 
@@ -164,10 +165,19 @@ class ClimateImpact:
                     pwsd = np.zeros(len(times))  # [kW]
                     EI_NOx = np.zeros(len(times))  # [g/kg(fuel)]
                     portata = np.zeros(len(times))  # [kg(fuel)/s]
+                    
+                    # power = np.zeros(len(times))
+                    # rend = np.zeros(len(times))
+                    # PowerExcess = np.zeros(len(times))
 
                     for t in range(len(times)):
                         power = (self.aircraft.weight.WTO) * self.aircraft.performance.PoWTO(self.aircraft.DesignWTOoS,beta[t],self.aircraft.mission.profile.PowerExcess(times[t]),1,alt[t],self.aircraft.mission.DISA,v0[t],'TAS')
                         pwsd[t]= 1e-3*0.5*self.aircraft.powertrain.EtaPPmodel(alt[t],v0[t],power)*power
+
+                        # power[t] = (self.aircraft.weight.WTO) * self.aircraft.performance.PoWTO(self.aircraft.DesignWTOoS,beta[t],self.aircraft.mission.profile.PowerExcess(times[t]),1,alt[t],self.aircraft.mission.DISA,v0[t],'TAS')
+                        # pwsd[t]= 1e-3*0.5*self.aircraft.powertrain.EtaPPmodel(alt[t],v0[t],power[t])*power[t]
+                        # rend[t] = self.aircraft.powertrain.EtaPPmodel(alt[t],v0[t],power[t])
+                        # PowerExcess[t] = self.aircraft.mission.profile.PowerExcess(times[t])
 
                         data_for_prediction = np.array([[pwsd[t], v0[t], alt[t]]])
                         poly_features = PolynomialFeatures(degree=4)
@@ -176,14 +186,38 @@ class ClimateImpact:
 
                         PRatio = self.aircraft.powertrain.Traditional(alt[t],v0[t],power)
                         portata[t] = power * PRatio[0]/self.aircraft.weight.ef
+                        
+                        # PRatio = self.aircraft.powertrain.Traditional(alt[t],v0[t],power[t])
+                        # portata[t] = power[t] * PRatio[0]/self.aircraft.weight.ef
 
-                    E_nox_1m = 0
-                    for t in range(len(times)-1):
-                        E_nox_1m = E_nox_1m + EI_NOx[t]*portata[t]*(times[t+1]-times[t])
+                    # plt.figure(1)
+                    # plt.plot(times/60, power, 'b')
+                    # plt.grid(visible=True)
+                    # plt.xlabel('t [min]')
+                    # plt.ylabel('power')
+                    # plt.show()
+
+                    # plt.figure(2)
+                    # plt.plot(times/60, PowerExcess, 'b')
+                    # plt.grid(visible=True)
+                    # plt.xlabel('t [min]')
+                    # plt.ylabel('Power Excess')
+                    # plt.show()
+
+
+                    # print(self.aircraft.weight.WTO)
+                    # print(self.aircraft.DesignWTOoS)
+                    # print(self.aircraft.mission.DISA)
+
+                    integranda = portata*EI_NOx
+                    massa_di_NOx = integrate.cumtrapz(integranda, times, initial=0.0)
+                    # l'elemento n-esimo del vettore massa_di_NOx è l'integrale definito dell'integranda tra t = 0 e t = times[n]
+                    E_nox_1m = massa_di_NOx[-1]
+
+                
                     return E_nox_1m* 10**(-3)
                 
         self.mission_emissions['nox'] = E_nox_1m()
-
 
         self.mission_emissions_calculated = True
 
@@ -476,17 +510,20 @@ class ClimateImpact:
     def rf_co2(self,year):
 
         def G_xco2(year):
-            alpha = np.array([0.1135, 0.152, 0.0970, 0.041])*10**(-6)  # [ppmv/kg(CO2)]
+            # qui G_xco2 non ha le dimensioni corrette perchè manca un fattore 10^-12, che aggiungerò a valle
+            # della convoluzione per diminuire il tempo d'esecuzione dell'integrale
+            alpha = np.array([0.1135, 0.152, 0.0970, 0.041])  # [moltiplicato per 10^-12 sarebbe ppmv/kg(CO2)]
             tau = np.array([313.8, 79.8, 18.8, 1.7])  # [anni]
-            G_xco2 = 0.067e-6  # [ppmv/kg(CO2)]
+            G_xco2 = 0.067e-12  # [moltiplicato per 10^-12 sarebbe ppmv/kg(CO2)]
             for i in range(len(alpha)):
                 G_xco2 = G_xco2 + alpha[i]*np.exp(-year/tau[i])
             return G_xco2
         
         def DeltaXCO2(year):
+            
             integrand = lambda k: G_xco2(year - k) * self.E_co2(k)
             result, _ = integrate.quad(integrand, 0, year, epsabs=1e-4, epsrel=1e-3)
-            return result
+            return result*10**(-12)
         
         XCO2_0 = 380 # concentrazione di background [ppmv]
         rf_co2 = np.log((XCO2_0 + DeltaXCO2(year))/XCO2_0)/np.log(2)
@@ -530,14 +567,16 @@ class ClimateImpact:
             self.calculate_media_pesata_quote()
 
         def G_ch4(year):
-            A = -5.16e-13  # [(W/m^2)/kg(NOx)]
+            # qui G_ch4 non ha le dimensioni corrette perchè manca un fattore 10^-13, che aggiungerò a valle
+            # della convoluzione per diminuire il tempo d'esecuzione dell'integrale
+            A = -5.16  # [moltiplicato per 10^-13 sarebbe (W/m^2)/kg(NOx)]
             tau = 12  # [anni]
             G_ch4 = A*np.exp(-year/tau)
             return G_ch4
         
         integrand = lambda k: G_ch4(year - k) * self.E_nox(k)
         result, _ = integrate.quad(integrand, 0, year, epsabs=1e-4, epsrel=1e-3)
-        RF_ch4 = result * self.s_ch4(self.media_pesata_quote)
+        RF_ch4 = result * 10**(-13) * self.s_ch4(self.media_pesata_quote)
         eff_ch4 = 1.18
         rf_ch4 = RF_ch4 * eff_ch4/self.RF_2CO2
         return rf_ch4
@@ -549,14 +588,16 @@ class ClimateImpact:
             self.calculate_media_pesata_quote()
 
         def G_o3l(year):
-            A = -1.21e-13  # [(W/m^2)/kg(NOx)]
+            # qui G_o3l non ha le dimensioni corrette perchè manca un fattore 10^-13, che aggiungerò a valle
+            # della convoluzione per diminuire il tempo d'esecuzione dell'integrale
+            A = -1.21  # [moltiplicato per 10^-13 sarebbe (W/m^2)/kg(NOx)]
             tau = 12  # [anni]
             G_o3l = A*np.exp(-year/tau)
             return G_o3l
         
         integrand = lambda k: G_o3l(year - k) * self.E_nox(k)
         result, _ = integrate.quad(integrand, 0, year, epsabs=1e-4, epsrel=1e-3)
-        RF_o3l = result * self.s_o3l(self.media_pesata_quote)
+        RF_o3l = result * 10**(-13) * self.s_o3l(self.media_pesata_quote)
         eff_o3 = 1.37
         rf_o3l = RF_o3l * eff_o3/self.RF_2CO2
         return rf_o3l
@@ -585,13 +626,15 @@ class ClimateImpact:
 
     def DeltaT(self,year):
         def G_T(year):
+            
             alpha = 2.246/36.8  # [K/yr]
             tau = 36.8  # [anni]
             G_T = alpha*np.exp(-year/tau)
             return G_T
         
-        integrand = lambda k, year=year: G_T(year - k) * self.rf(k)
-        DeltaT, _ = integrate.quad(integrand, 0, year, epsabs=1e-4, epsrel=1e-3)   # [K]
+        integrand = lambda k, year=year: G_T(year - k) * self.rf(k) 
+        
+        DeltaT, _ = integrate.quad(integrand, 0, year, epsabs=1e-8, epsrel=1e-3)   # [K]
         return DeltaT
 
     
@@ -599,9 +642,7 @@ class ClimateImpact:
     # ATR
 
     def ATR(self):   # [K]
-        somma = 0
-        for i in range(self.H):
-            somma = somma + self.DeltaT(i)
-        ATR = somma/self.H
-
-        return ATR
+        integrand = lambda k: self.DeltaT(k)
+        ATR, _ = integrate.quad(integrand, 0, self.H, epsabs=1e-4, epsrel=1e-3)   
+        
+        return ATR/self.H
