@@ -99,6 +99,9 @@ class ClimateImpact:
             if self.EINOx_model == 'GasTurb':
                 file_path = os.path.join(os.path.dirname(__file__), 'EINOx_gasturb.joblib')
                 self.model = joblib.load(file_path)
+            if self.EINOx_model == 'Filippone':
+                file_path = os.path.join(os.path.dirname(__file__), 'OPR_gasturb.joblib')
+                self.model = joblib.load(file_path)
         else:
             raise ValueError("Error: Missing required climate impact input keys")
 
@@ -151,8 +154,97 @@ class ClimateImpact:
 
         # NOX
         def E_nox_1m():  # emissione di NOx in kg della singola missione
+                
                 if self.EINOx_model == 'Filippone':
-                    return 0  # da completare
+                    times = np.array([])
+                    beta = np.array([])
+                    for array in self.aircraft.mission.integral_solution:
+                        times = np.concatenate([times, array.t])
+                        beta = np.concatenate([beta, array.y[1]])
+                    
+                    v0 = self.aircraft.mission.profile.Velocity(times)  # [m/s]
+                    alt = self.aircraft.mission.profile.Altitude(times)  # [m]
+
+                    # calculate breakpoint times
+                    breakpoint_times = np.zeros(5)
+                    alt_cruise = self.aircraft.MissionStages['Cruise']['input']['Altitude']
+                    alt_start_diversion = self.aircraft.DiversionStages['Climb1']['input']['StartAltitude']
+                    alt_diversion_cruise = self.aircraft.DiversionStages['Cruise']['input']['Altitude']
+                    indices_alt_cruise = np.where(alt == alt_cruise)
+                    breakpoint_times[0] = times[indices_alt_cruise[0][0]]
+                    breakpoint_times[1] = times[indices_alt_cruise[0][-1]]
+                    indices_alt_start_diversion = np.where(alt == alt_start_diversion)
+                    for index in indices_alt_start_diversion[0]:
+                        if times[index] > breakpoint_times[1]:
+                            breakpoint_times[2] = times[index]
+                            break
+                    indices_alt_diversion_cruise = np.where(alt == alt_diversion_cruise)
+                    for index in indices_alt_diversion_cruise[0]:
+                        if times[index] > breakpoint_times[2]:
+                            breakpoint_times[3] = times[index]
+                            break
+                    breakpoint_times[4] = times[indices_alt_diversion_cruise[0][-1]]
+
+
+
+                    pwsd = np.zeros(len(times))  # [kW]
+                    opr = np.zeros(len(times))
+                    portata = np.zeros(len(times))  # [kg(fuel)/s]
+                    coeff = np.array([
+                        [0.7194e+1, 0.5609e+0, -0.1059e-1, -0.3223e+1, 0.2889e+0, 0.2591e+0],
+                        [0.1605e+0, 0.2412e+0, -0.1650e-2, -0.8818e+1, 0.3714e+2, -0.2268e+0],
+                        [ 0.3699e+0, 0.5470e+0, -0.7445e-2, -0.6914e+1, 0.6782e+1, 0.1138e+0]
+                    ])
+                    # coeff sono i coefficienti del metodo di Filippone per climbout, idle e approach
+
+                    EI_NOx = np.zeros(len(times))  # [g/kg(fuel)]
+                    
+                
+                    for t in range(len(times)):
+                        power = (self.aircraft.weight.WTO) * self.aircraft.performance.PoWTO(self.aircraft.DesignWTOoS,beta[t],self.aircraft.mission.profile.PowerExcess(times[t]),1,alt[t],self.aircraft.mission.DISA,v0[t],'TAS')
+                        pwsd[t]= 1e-3*0.5*self.aircraft.powertrain.EtaPPmodel(alt[t],v0[t],power)*power
+
+                        data_for_prediction = np.array([[pwsd[t], v0[t], alt[t]]])
+                        poly_features = PolynomialFeatures(degree=4)
+                        data_for_prediction_poly = poly_features.fit_transform(data_for_prediction)
+                        opr[t] = self.model.predict(data_for_prediction_poly)[0]
+
+                        PRatio = self.aircraft.powertrain.Traditional(alt[t],v0[t],power)
+                        portata[t] = power * PRatio[0]/self.aircraft.weight.ef
+
+                        if times[t] <= breakpoint_times[0] or (times[t] <= breakpoint_times[3] and times[t] >= breakpoint_times[2]):
+                            c = coeff[0]
+                        elif (times[t] > breakpoint_times[0] and times[t] < breakpoint_times[1]) or (times[t] > breakpoint_times[3] and times[t] < breakpoint_times[4]):
+                            c = coeff[1]
+                        else:
+                            tc = coeff[2]
+
+                        EI_NOx[t] =  c[0] + c[1]*opr[t] + c[2]*(opr[t])**2 + c[3]*portata[t] + c[4]*(portata[t])**2 + c[5]*opr[t]*portata[t]  
+
+                    plt.figure(1)
+                    plt.plot(times/60, opr, 'b')
+                    plt.grid(visible=True)
+                    plt.xlabel('t [min]')
+                    plt.ylabel('OPR')
+                    plt.show()
+
+                    plt.figure(2)
+                    plt.plot(times/60, EI_NOx, 'b')
+                    plt.grid(visible=True)
+                    plt.xlabel('t [min]')
+                    plt.ylabel('EI_NOx [g/kg(fuel)]')
+                    plt.show()    
+
+                    integranda = portata*EI_NOx
+                    massa_di_NOx = integrate.cumtrapz(integranda, times, initial=0.0)
+                    # l'elemento n-esimo del vettore massa_di_NOx è l'integrale definito dell'integranda tra t = 0 e t = times[n]
+                    E_nox_1m = massa_di_NOx[-1]
+
+                
+                    return E_nox_1m* 10**(-3)
+                    
+                
+                
                 if self.EINOx_model == 'GasTurb':
                     times = np.array([])
                     beta = np.array([])
