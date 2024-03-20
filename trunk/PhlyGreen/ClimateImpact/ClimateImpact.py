@@ -99,9 +99,6 @@ class ClimateImpact:
             if self.EINOx_model == 'GasTurb':
                 file_path = os.path.join(os.path.dirname(__file__), 'EINOx_gasturb.joblib')
                 self.model = joblib.load(file_path)
-            if self.EINOx_model == 'Filippone':
-                file_path = os.path.join(os.path.dirname(__file__), 'OPR_gasturb.joblib')
-                self.model = joblib.load(file_path)
         else:
             raise ValueError("Error: Missing required climate impact input keys")
 
@@ -186,9 +183,6 @@ class ClimateImpact:
                     breakpoint_times[4] = times[indices_alt_diversion_cruise[0][-1]]
 
 
-
-                    pwsd = np.zeros(len(times))  # [kW]
-                    opr = np.zeros(len(times))
                     portata = np.zeros(len(times))  # [kg(fuel)/s]
                     coeff = np.array([
                         [0.7194e+1, 0.5609e+0, -0.1059e-1, -0.3223e+1, 0.2889e+0, 0.2591e+0],
@@ -198,17 +192,10 @@ class ClimateImpact:
                     # coeff sono i coefficienti del metodo di Filippone per climbout, idle e approach
 
                     EI_NOx = np.zeros(len(times))  # [g/kg(fuel)]
-                    
+                    OPR = 15.77
                 
                     for t in range(len(times)):
                         power = (self.aircraft.weight.WTO) * self.aircraft.performance.PoWTO(self.aircraft.DesignWTOoS,beta[t],self.aircraft.mission.profile.PowerExcess(times[t]),1,alt[t],self.aircraft.mission.DISA,v0[t],'TAS')
-                        pwsd[t]= 1e-3*0.5*self.aircraft.powertrain.EtaPPmodel(alt[t],v0[t],power)*power
-
-                        data_for_prediction = np.array([[pwsd[t], v0[t], alt[t]]])
-                        poly_features = PolynomialFeatures(degree=4)
-                        data_for_prediction_poly = poly_features.fit_transform(data_for_prediction)
-                        opr[t] = self.model.predict(data_for_prediction_poly)[0]
-
                         PRatio = self.aircraft.powertrain.Traditional(alt[t],v0[t],power)
                         portata[t] = power * PRatio[0]/self.aircraft.weight.ef
 
@@ -217,17 +204,12 @@ class ClimateImpact:
                         elif (times[t] > breakpoint_times[0] and times[t] < breakpoint_times[1]) or (times[t] > breakpoint_times[3] and times[t] < breakpoint_times[4]):
                             c = coeff[1]
                         else:
-                            tc = coeff[2]
+                            c = coeff[2]
 
-                        EI_NOx[t] =  c[0] + c[1]*opr[t] + c[2]*(opr[t])**2 + c[3]*portata[t] + c[4]*(portata[t])**2 + c[5]*opr[t]*portata[t]  
-                        # EI_NOx[t] =  c[0] + c[1]*15.77 + c[2]*(15.77)**2 + c[3]*portata[t] + c[4]*(portata[t])**2 + c[5]*15.77*portata[t]  
+                        mfuel = 0.5*portata[t]  # portata di combustibile del singolo motore
+                        
+                        EI_NOx[t] =  2*(c[0] + c[1]*OPR + c[2]*(OPR)**2 + c[3]*mfuel + c[4]*(mfuel)**2 + c[5]*OPR*mfuel)
 
-                    plt.figure(1)
-                    plt.plot(times/60, opr, 'b')
-                    plt.grid(visible=True)
-                    plt.xlabel('t [min]')
-                    plt.ylabel('OPR')
-                    plt.show()
 
                     plt.figure(2)
                     plt.plot(times/60, EI_NOx, 'b')
@@ -259,18 +241,10 @@ class ClimateImpact:
                     EI_NOx = np.zeros(len(times))  # [g/kg(fuel)]
                     portata = np.zeros(len(times))  # [kg(fuel)/s]
                     
-                    # power = np.zeros(len(times))
-                    # rend = np.zeros(len(times))
-                    # PowerExcess = np.zeros(len(times))
 
                     for t in range(len(times)):
                         power = (self.aircraft.weight.WTO) * self.aircraft.performance.PoWTO(self.aircraft.DesignWTOoS,beta[t],self.aircraft.mission.profile.PowerExcess(times[t]),1,alt[t],self.aircraft.mission.DISA,v0[t],'TAS')
                         pwsd[t]= 1e-3*0.5*self.aircraft.powertrain.EtaPPmodel(alt[t],v0[t],power)*power
-
-                        # power[t] = (self.aircraft.weight.WTO) * self.aircraft.performance.PoWTO(self.aircraft.DesignWTOoS,beta[t],self.aircraft.mission.profile.PowerExcess(times[t]),1,alt[t],self.aircraft.mission.DISA,v0[t],'TAS')
-                        # pwsd[t]= 1e-3*0.5*self.aircraft.powertrain.EtaPPmodel(alt[t],v0[t],power[t])*power[t]
-                        # rend[t] = self.aircraft.powertrain.EtaPPmodel(alt[t],v0[t],power[t])
-                        # PowerExcess[t] = self.aircraft.mission.profile.PowerExcess(times[t])
 
                         data_for_prediction = np.array([[pwsd[t], v0[t], alt[t]]])
                         poly_features = PolynomialFeatures(degree=4)
@@ -279,28 +253,6 @@ class ClimateImpact:
 
                         PRatio = self.aircraft.powertrain.Traditional(alt[t],v0[t],power)
                         portata[t] = power * PRatio[0]/self.aircraft.weight.ef
-                        
-                        # PRatio = self.aircraft.powertrain.Traditional(alt[t],v0[t],power[t])
-                        # portata[t] = power[t] * PRatio[0]/self.aircraft.weight.ef
-
-                    # plt.figure(1)
-                    # plt.plot(times/60, power, 'b')
-                    # plt.grid(visible=True)
-                    # plt.xlabel('t [min]')
-                    # plt.ylabel('power')
-                    # plt.show()
-
-                    # plt.figure(2)
-                    # plt.plot(times/60, PowerExcess, 'b')
-                    # plt.grid(visible=True)
-                    # plt.xlabel('t [min]')
-                    # plt.ylabel('Power Excess')
-                    # plt.show()
-
-
-                    # print(self.aircraft.weight.WTO)
-                    # print(self.aircraft.DesignWTOoS)
-                    # print(self.aircraft.mission.DISA)
 
                     integranda = portata*EI_NOx
                     massa_di_NOx = integrate.cumtrapz(integranda, times, initial=0.0)
