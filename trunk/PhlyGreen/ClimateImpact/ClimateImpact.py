@@ -677,9 +677,23 @@ class ClimateImpact:
             G_T = alpha*np.exp(-year/tau)
             return G_T
         
-        integrand = lambda k, year=year: G_T(year - k) * self.rf(k) 
+        # integrand = lambda k, year=year: G_T(year - k) * self.rf(k) 
         
-        DeltaT, _ = integrate.quad(integrand, 0, year, epsabs=1e-8, epsrel=1e-3)   # [K]
+        # DeltaT, _ = integrate.quad(integrand, 0, year, epsabs=1e-8, epsrel=1e-3)   # [K]
+
+        def integrand_1(k, year=year):
+            return G_T(year - k) * self.rf(k)
+
+        def integrand_2(k, year=year):
+            return G_T(year - k) * self.rf(k)
+
+        Y =  self.Y
+
+        DeltaT_1, _ = integrate.quad(integrand_1, 0, Y, epsabs=1e-8, epsrel=1e-3)
+
+        DeltaT_2, _ = integrate.quad(integrand_2, Y, year, epsabs=1e-8, epsrel=1e-3)
+        
+        DeltaT = DeltaT_1 + DeltaT_2
         return DeltaT
 
     
