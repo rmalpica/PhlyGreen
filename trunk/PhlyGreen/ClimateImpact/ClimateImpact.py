@@ -220,6 +220,7 @@ class ClimateImpact:
                             tc = coeff[2]
 
                         EI_NOx[t] =  c[0] + c[1]*opr[t] + c[2]*(opr[t])**2 + c[3]*portata[t] + c[4]*(portata[t])**2 + c[5]*opr[t]*portata[t]  
+                        # EI_NOx[t] =  c[0] + c[1]*15.77 + c[2]*(15.77)**2 + c[3]*portata[t] + c[4]*(portata[t])**2 + c[5]*15.77*portata[t]  
 
                     plt.figure(1)
                     plt.plot(times/60, opr, 'b')
