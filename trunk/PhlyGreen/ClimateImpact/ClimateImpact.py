@@ -211,12 +211,12 @@ class ClimateImpact:
                         EI_NOx[t] =  2*(c[0] + c[1]*OPR + c[2]*(OPR)**2 + c[3]*mfuel + c[4]*(mfuel)**2 + c[5]*OPR*mfuel)
 
 
-                    plt.figure(2)
-                    plt.plot(times/60, EI_NOx, 'b')
-                    plt.grid(visible=True)
-                    plt.xlabel('t [min]')
-                    plt.ylabel('EI_NOx [g/kg(fuel)]')
-                    plt.show()    
+                    # plt.figure(2)
+                    # plt.plot(times/60, EI_NOx, 'b')
+                    # plt.grid(visible=True)
+                    # plt.xlabel('t [min]')
+                    # plt.ylabel('EI_NOx [g/kg(fuel)]')
+                    # plt.show()    
 
                     integranda = portata*EI_NOx
                     massa_di_NOx = integrate.cumtrapz(integranda, times, initial=0.0)
