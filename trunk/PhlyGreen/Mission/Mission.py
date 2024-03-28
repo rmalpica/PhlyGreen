@@ -83,6 +83,7 @@ class Mission:
     def TraditionalConfiguration(self,WTO):
  
         self.WTO = WTO
+        self.portata = []
         
         
         def PowerPropulsive(Beta,t):
@@ -98,6 +99,7 @@ class Mission:
             PRatio = self.aircraft.powertrain.Traditional(self.profile.Altitude(t),self.profile.Velocity(t),PP)
             dEdt = PP * PRatio[0]
             dbetadt = - dEdt/(self.ef*self.WTO)
+            
 
             return [dEdt,dbetadt]
 
@@ -140,6 +142,7 @@ class Mission:
         PP = [WTO * self.aircraft.performance.PoWTO(self.aircraft.DesignWTOoS,beta[i],self.profile.PowerExcess(times[i]),1,self.profile.Altitude(times[i]),self.DISA,self.profile.Velocity(times[i]),'TAS') for i in range(len(times))]
         PRatio = np.array([self.aircraft.powertrain.Traditional(self.profile.Altitude(times[i]),self.profile.Velocity(times[i]),PP[i]) for i in range(len(times))] )
         self.Max_PEng = np.max(np.multiply(PP,PRatio[:,1])) #shaft power
+
 
         return self.Ef[-1]
     
