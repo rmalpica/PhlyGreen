@@ -147,7 +147,7 @@ class Performance:
     
     def TakeOff(self,WTOoS,beta,altitudeTO,kTO,sTO,DISA,speed,speedtype):
         self.set_speed(altitudeTO, speed, speedtype, DISA)
-        PW = self.TAS * beta**2 * WTOoS * (kTO**2) / (sTO * ISA.atmosphere.RHOstd(altitudeTO,DISA) * self.aircraft.aerodynamics.ClMax)
+        PW = self.TAS * beta**2 * WTOoS * (kTO**2) / (sTO * ISA.atmosphere.RHOstd(altitudeTO,DISA) * self.aircraft.aerodynamics.Cl_TO)
         return PW
         
     def Landing(self,WTOoS,altitude,speed,speedtype,DISA):

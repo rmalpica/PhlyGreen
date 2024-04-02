@@ -50,20 +50,15 @@ welltowake.aircraft = myaircraft
 # 7: Landing 
 # -----------------------------------------------------------------#
 
-ConstraintsInput = {'speed': np.array([0.5, 90, 210, 210, 0.5, 0.35, 59.]) ,
-                    'speedtype': ['Mach','TAS','KCAS','KCAS','Mach','Mach','TAS']   ,
-                    'beta': np.array([0.95,1.,0.97, 0.9, 0.8, 0.9, None])   ,
-                    'altitude': np.array([8000., 100., 6000., 5000, 9500., 6000, 500.]),
-                    'load factor': np.array([1., None, 1., 1.1, 1., 1., None]),
-                    'DISA': 0, 
-                    'kTO': 1.2,
-                    'sTO': 950,
-                    'OEI Climb Gradient': 0.021,
-                    'Rate of Climb': 5,  #5m/s ~= 1000 ft/min, 7.6 ~= 1500 ft/min
-                    'ht': 0.5,
-                    'M1': 0.3,
-                    'M2': 0.4,
-                    'DTAcceleration': 180}
+ConstraintsInput = {'DISA': 0.,
+                    'Cruise': {'Speed': 0.5, 'Speed Type':'Mach', 'Beta': 0.95, 'Altitude': 8000.},
+                    'AEO Climb': {'Speed': 210, 'Speed Type':'KCAS', 'Beta': 0.97, 'Altitude': 6000., 'ROC': 5},
+                    'OEI Climb': {'Speed': 1.2*34.5, 'Speed Type': 'TAS', 'Beta': 1., 'Altitude': 0., 'Climb Gradient': 0.021},
+                    'Take Off': {'Speed': 90, 'Speed Type': 'TAS', 'Beta': 1., 'Altitude': 100., 'kTO': 1.2, 'sTO': 950},
+                    'Landing':{'Speed': 59., 'Speed Type': 'TAS', 'Altitude': 500.},
+                    'Turn':{'Speed': 210, 'Speed Type': 'KCAS', 'Beta': 0.9, 'Altitude': 5000, 'Load Factor': 1.1},
+                    'Ceiling':{'Speed': 0.5, 'Beta': 0.8, 'Altitude': 9500, 'HT': 0.5},
+                    'Acceleration':{'Mach 1': 0.3, 'Mach 2':0.4, 'DT': 180, 'Altitude': 6000, 'Beta': 0.9}}
 
 MissionInput = {'Range Mission': 750,  #nautical miles
                 'Range Diversion': 220,  #nautical miles
@@ -82,7 +77,11 @@ DiversionStages = {'Climb1': {'type': 'ConstantRateClimb', 'input': {'CB': 0.08,
                  'Cruise': {'type': 'ConstantMachCruise', 'input':{ 'Mach': 0.35, 'Altitude': 3100}, 'Supplied Power Ratio':{'phi_start': 0.0, 'phi_end':0.0}},
                  'Descent1': {'type': 'ConstantRateDescent', 'input':{'CB': -0.04, 'Speed': 90, 'StartAltitude': 3100, 'EndAltitude': 200}, 'Supplied Power Ratio':{'phi_start': 0.0, 'phi_end':0.0 }}} 
 
-AerodynamicsInput = {'AnalyticPolar': {'type': 'Quadratic', 'input': {'AR': 11, 'e_osw': 0.8}}}
+AerodynamicsInput = {'AnalyticPolar': {'type': 'Quadratic', 'input': {'AR': 11, 'e_osw': 0.8}},
+                    'Take Off Cl': 1.9,
+                     'Landing Cl': 1.9,
+                     'Minimum Cl': 0.20,
+                     'Cd0': 0.017}
 
 EnergyInput = {'Ef': 43.5*10**6,
                    'Ebat': 700 * 3600,
@@ -153,8 +152,8 @@ print("Execution time:",execution_time)
 
 plt.plot(myaircraft.constraint.WTOoS,myaircraft.constraint.PWCruise, label='Cruise')
 plt.plot(myaircraft.constraint.WTOoS,myaircraft.constraint.PWTakeOff, label='Take Off')
-plt.plot(myaircraft.constraint.WTOoS,myaircraft.constraint.PWClimb, label='Climb')
-plt.plot(myaircraft.constraint.WTOoS,myaircraft.constraint.PWOEI, label='Climb OEI')
+plt.plot(myaircraft.constraint.WTOoS,myaircraft.constraint.PWAEOClimb, label='Climb')
+plt.plot(myaircraft.constraint.WTOoS,myaircraft.constraint.PWOEIClimb, label='Climb OEI')
 plt.plot(myaircraft.constraint.WTOoS,myaircraft.constraint.PWTurn, label='Turn')
 plt.plot(myaircraft.constraint.WTOoS,myaircraft.constraint.PWCeiling, label='Ceiling')
 plt.plot(myaircraft.constraint.WTOoS,myaircraft.constraint.PWAcceleration, label='Acceleration')

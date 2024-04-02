@@ -22,20 +22,15 @@ def model_solver(parameters):
                        'Eta Production': 1.,
                        'Eta Transportation': etaFuel}
 
-    ConstraintsInput = {'speed': np.array([0.4, 140, 170, 210, 0.5, 0.35, 104.]) ,
-                        'speedtype': ['Mach','KCAS','KCAS','KCAS','Mach','Mach','KCAS']   ,
-                        'beta': np.array([0.95,0.985,0.97, 0.9, 0.8, 0.9, None])   ,
-                        'altitude': np.array([8000., 100., 6000., 5000, 9500., 6000, 500.]),
-                        'load factor': np.array([1., None, 1., 1.1, 1., 1., None]),
-                        'DISA': 0, 
-                        'kTO': 1.2,
-                        'sTO': 950,
-                        'OEI Climb Gradient': 0.021,
-                        'Rate of Climb': 5,  #5m/s ~= 1000 ft/min, 7.6 ~= 1500 ft/min
-                        'ht': 0.5,
-                        'M1': 0.3,
-                        'M2': 0.4,
-                        'DTAcceleration': 180}                    
+    ConstraintsInput = {'Cruise': {'Speed': 0.4, 'Speed Type':'Mach', 'Beta': 0.95, 'Altitude': 8000.},
+         'AEO Climb': {'Speed': 170, 'Speed Type':'KCAS', 'Beta': 0.97, 'Altitude': 6000., 'ROC': 5},
+         'OEI Climb': {'Speed': 104*1.2, 'Speed Type': 'KCAS', 'Beta': 1., 'Altitude': 0., 'Climb Gradient': 0.021},
+         'Take Off': {'Speed': 140, 'Speed Type': 'KCAS', 'Beta': 0.985, 'Altitude': 100., 'kTO': 1.2, 'sTO': 950},
+         'Landing':{'Speed': 104., 'Speed Type': 'KCAS', 'Altitude': 0.},
+         'Turn':{'Speed': 210, 'Speed Type': 'KCAS', 'Beta': 0.9, 'Altitude': 5000, 'Load Factor': 1.1},
+         'Ceiling':{'Speed': 0.5, 'Beta': 0.8, 'Altitude': 9500, 'HT': 0.5},
+         'Acceleration':{'Mach 1': 0.3, 'Mach 2':0.4, 'DT': 180, 'Altitude': 6000, 'Beta': 0.9},
+         'DISA': 0}                  
 
     MissionInput = {'Range Mission': 750,  #nautical miles
                     'Range Diversion': 220,  #nautical miles
@@ -53,7 +48,11 @@ def model_solver(parameters):
                      'Cruise': {'type': 'ConstantMachCruise', 'input':{ 'Mach': 0.2, 'Altitude': 3100}, 'Supplied Power Ratio':{'phi_start': 0.0, 'phi_end':0.0}},
                      'Descent1': {'type': 'ConstantRateDescent', 'input':{'CB': -0.04, 'Speed': 90, 'StartAltitude': 3100, 'EndAltitude': 200}, 'Supplied Power Ratio':{'phi_start': 0.0, 'phi_end':0.0 }}}
 
-    AerodynamicsInput = {'NumericalPolar': {'type': 'ATR42'}} 
+    AerodynamicsInput = {'NumericalPolar': {'type': 'ATR42'},
+                    'Take Off Cl': 1.9,
+                     'Landing Cl': 1.9,
+                     'Minimum Cl': 0.20,
+                     'Cd0': 0.017}
 
     EnergyInput = {'Ef': 43.5*10**6,
                    'Ebat': ebat * 3600,

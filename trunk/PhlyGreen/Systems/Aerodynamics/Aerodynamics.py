@@ -8,8 +8,10 @@ class Aerodynamics:
         self.e_osw = None
         self.polar = 'unset'
         self.kv = 0.01
-        self.ClMin = 0.2
-        self.ClMax = 1.9
+        self.ClMin = None
+        self.ClMax = None
+        self.Cd_0 = None
+        self.Cl_TO = None
 
     """ Properties """
 
@@ -63,6 +65,11 @@ class Aerodynamics:
             self.polar = self.aircraft.AerodynamicsInput.get("NumericalPolar")['type']
         else:
             raise ValueError("Error: aerodynamic model unknown")
+        
+        self.ClMax = self.aircraft.AerodynamicsInput['Landing Cl']
+        self.Cl_TO = self.aircraft.AerodynamicsInput['Take Off Cl']
+        self.ClMin = self.aircraft.AerodynamicsInput['Minimum Cl']
+        self.Cd_0 = self.aircraft.AerodynamicsInput['Cd0']
 
 
     def set_quadratic_polar(self,AR,e_osw):
@@ -80,7 +87,7 @@ class Aerodynamics:
             raise ValueError("Polar model unset")
         
     def Cd0(self,Mach):
-        return np.piecewise(Mach,[Mach <= 0.8, Mach > 0.8],[0.017,0.035*Mach-0.011])
+        return np.piecewise(Mach,[Mach <= 0.8, Mach > 0.8],[self.Cd_0,0.035*Mach-0.011])
     
     def k1(self):
         return self.kv + self.ki()
