@@ -13,9 +13,9 @@ if __name__ == '__main__':
 
 	grid_n = 4  #set number of grid points
 	phi_min = 0.0
-	phi_max = 0.6
+	phi_max = 0.7
 	ebat_min = 500
-	ebat_max = 1000
+	ebat_max = 1200
 
 	parameters = []
 	samples = []

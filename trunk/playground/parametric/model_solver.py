@@ -9,16 +9,18 @@ def model_solver(parameters):
     
     print('Starting with aircraft design ...')
     # ebat, phi_start, phi_end = parameters
-    ebat= parameters[0]
-    phi_start= parameters[1]
-    phi_end= parameters[2]
-    print('ebat: %f, phi_start(CRZ): %f, phi_end(CRZ): %f' %(ebat, phi_start, phi_end))
+    phi_start = phi_end = parameters[0]
+    etaFuel = parameters[1]
+    wttCO2 = parameters[2]
+    gridCO2 = parameters[3] 
+    ebat = 1000
+    print('ebat: %f, phi(CRZ): %f, etaFuel: %f, wttCO2: %f, gridCO2: %f' %(ebat, phi_start, etaFuel, wttCO2, gridCO2))
 
     WellToTankInput = {'Eta Charge': 0.95,
                        'Eta Grid': 1.,
                        'Eta Extraction': 1.,
                        'Eta Production': 1.,
-                       'Eta Transportation': 0.25}
+                       'Eta Transportation': etaFuel}
 
     ConstraintsInput = {'speed': np.array([0.4, 140, 170, 210, 0.5, 0.35, 104.]) ,
                         'speedtype': ['Mach','KCAS','KCAS','KCAS','Mach','Mach','KCAS']   ,
@@ -103,9 +105,12 @@ def model_solver(parameters):
     myaircraft.HybridType = 'Parallel'
     myaircraft.DesignAircraft(AerodynamicsInput,ConstraintsInput,MissionInput,EnergyInput,MissionStages,DiversionStages,WellToTankInput=WellToTankInput,PrintOutput=False)
 
+    SourceBattery = myaircraft.weight.TotalEnergies[1] * 1e-6 / myaircraft.welltowake.EtaSourceToBattery
+    wtwCO2 = (wttCO2*43.5*myaircraft.weight.Wf) + SourceBattery*gridCO2 + myaircraft.weight.Wf*3.14  #WtW CO2
+
 
     print('Done ...')
-    output = np.append(parameters,[myaircraft.weight.WTO,myaircraft.welltowake.SourceEnergy,myaircraft.welltowake.Psi,myaircraft.WingSurface,myaircraft.weight.WBat,myaircraft.weight.Wf+myaircraft.weight.final_reserve,myaircraft.weight.WPT,myaircraft.powertrain.WThermal, myaircraft.powertrain.WElectric]).flatten()
+    output = np.append(parameters,[myaircraft.weight.WTO,myaircraft.welltowake.SourceEnergy,myaircraft.welltowake.Psi,myaircraft.WingSurface,myaircraft.weight.WBat,myaircraft.weight.Wf+myaircraft.weight.final_reserve,myaircraft.weight.WPT,myaircraft.powertrain.WThermal, myaircraft.powertrain.WElectric, wtwCO2]).flatten()
 
     return output 
 
