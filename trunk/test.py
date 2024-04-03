@@ -62,6 +62,7 @@ ConstraintsInput = {'DISA': 0.,
 
 MissionInput = {'Range Mission': 750,  #nautical miles
                 'Range Diversion': 220,  #nautical miles
+                'Time Loiter': 30, #Minutes
                 'Beta start': 0.97,
                 'Payload Weight': 4560,  #Kg
                 'Crew Weight': 500}  #Kg
@@ -76,6 +77,8 @@ MissionStages = {'Takeoff': {'Supplied Power Ratio':{'phi': 0.05}},
 DiversionStages = {'Climb1': {'type': 'ConstantRateClimb', 'input': {'CB': 0.08, 'Speed': 110, 'StartAltitude': 200, 'EndAltitude': 3100}, 'Supplied Power Ratio':{'phi_start': 0.0, 'phi_end':0.0 }},
                  'Cruise': {'type': 'ConstantMachCruise', 'input':{ 'Mach': 0.35, 'Altitude': 3100}, 'Supplied Power Ratio':{'phi_start': 0.0, 'phi_end':0.0}},
                  'Descent1': {'type': 'ConstantRateDescent', 'input':{'CB': -0.04, 'Speed': 90, 'StartAltitude': 3100, 'EndAltitude': 200}, 'Supplied Power Ratio':{'phi_start': 0.0, 'phi_end':0.0 }}} 
+
+LoiterStages = {'Cruise': {'type': 'ConstantMachCruise', 'input': {'Mach': 0.16, 'Altitude': 500}, 'Supplied Power Ratio':{'phi_start': 0.0, 'phi_end':0.0 }}}  
 
 AerodynamicsInput = {'AnalyticPolar': {'type': 'Quadratic', 'input': {'AR': 11, 'e_osw': 0.8}},
                     'Take Off Cl': 1.9,
@@ -109,7 +112,7 @@ WellToTankInput = {'Eta Charge': 0.95,
 #myaircraft.Configuration = 'Traditional'
 myaircraft.Configuration = 'Hybrid'
 myaircraft.HybridType = 'Parallel'
-myaircraft.DesignAircraft(AerodynamicsInput,ConstraintsInput,MissionInput,EnergyInput,MissionStages,DiversionStages,WellToTankInput=WellToTankInput,PrintOutput=True)
+myaircraft.DesignAircraft(AerodynamicsInput,ConstraintsInput,MissionInput,EnergyInput,MissionStages,DiversionStages, LoiterStages=LoiterStages, WellToTankInput=WellToTankInput,PrintOutput=True)
 
 end_time = time.time()
 execution_time =  end_time - start_time

@@ -16,6 +16,7 @@ class Aircraft:
         self.EnergyInput = None 
         self.MissionStages = None 
         self.DiversionStages = None 
+        self.LoiterStages = None
         self.WellToTankInput = None
         #aircraft design
         self.DesignPW = None
@@ -46,7 +47,7 @@ class Aircraft:
 
     """ Methods """
 
-    def ReadInput(self,AerodynamicsInput,ConstraintsInput,MissionInput,EnergyInput,MissionStages,DiversionStages, WellToTankInput=None):
+    def ReadInput(self,AerodynamicsInput,ConstraintsInput,MissionInput,EnergyInput,MissionStages,DiversionStages, LoiterStages=None, WellToTankInput=None):
         
         self.AerodynamicsInput = AerodynamicsInput
         self.ConstraintsInput = ConstraintsInput
@@ -54,6 +55,9 @@ class Aircraft:
         self.EnergyInput = EnergyInput
         self.MissionStages = MissionStages
         self.DiversionStages = DiversionStages
+        
+        if LoiterStages is not None:
+            self.LoiterStages = LoiterStages
 
         if WellToTankInput is not None:
             
@@ -78,9 +82,10 @@ class Aircraft:
 
     def DesignAircraft(self,AerodynamicsInput,ConstraintsInput, MissionInput, EnergyInput, MissionStages, DiversionStages, **kwargs):
         WellToTankInput = kwargs.get('WellToTankInput', None)
+        LoiterStages = kwargs.get('LoiterStages', None)
         PrintOutput = kwargs.get('PrintOutput', False)
         # print("Initializing aircraft...")
-        self.ReadInput(AerodynamicsInput,ConstraintsInput, MissionInput, EnergyInput, MissionStages, DiversionStages, WellToTankInput)
+        self.ReadInput(AerodynamicsInput,ConstraintsInput, MissionInput, EnergyInput, MissionStages, DiversionStages,LoiterStages, WellToTankInput)
 
         if PrintOutput: print("Finding Design Point...")
         self.constraint.FindDesignPoint()

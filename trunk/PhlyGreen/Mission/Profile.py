@@ -12,7 +12,10 @@ class Profile:
         self.MissionRange = None 
         self.DiversionRange = None 
         self.MissionStages = None 
-        self.DiversionStages = None 
+        self.DiversionStages = None
+        self.LoiterStages = None
+        self.TLoiter = None
+        self.AltitudeLoiter = None  
         self.SPW = None 
         self.SPWinterp = None
         self.times = None
@@ -86,6 +89,16 @@ class Profile:
         self.DiversionRange = Units.NMtoM(self.aircraft.MissionInput['Range Diversion'])
         self.MissionStages = self.aircraft.MissionStages
         self.DiversionStages = self.aircraft.DiversionStages
+        if self.aircraft.LoiterStages is not None:
+            self.LoiterStages = self.aircraft.LoiterStages 
+            self.AltitudeLoiter = self.aircraft.LoiterStages['Cruise']['input']['Altitude'] 
+            print(self.AltitudeLoiter)
+            if 'Range Loiter' in self.aircraft.MissionInput:
+                self.LoiterRange = Units.NMtoM(self.aircraft.MissionInput['Range Loiter'])
+            elif 'Time Loiter' in self.aircraft.MissionInput:
+                self.TLoiter = self.aircraft.MissionInput['Time Loiter']
+            else:
+                raise ValueError("Insert loiter range or duration ")
         
 
     def DefineMission(self):
@@ -151,6 +164,17 @@ class Profile:
         self.BreaksDescentDiversion.pop(0)
         self.BreaksDescentDiversion += self.CruiseTimeDiversion
 
+        if self.LoiterStages is not None:
+            getattr(self, self.LoiterStages['Cruise']['type'])(self.LoiterStages['Cruise']['input'],'Loiter')
+
+        #parse supplied power ratio for loiter phase
+        
+            if self.aircraft.Configuration == 'Hybrid':
+
+                phi_start = self.LoiterStages['Cruise']['Supplied Power Ratio']['phi_start'] 
+                phi_end = self.LoiterStages['Cruise']['Supplied Power Ratio']['phi_end'] 
+                self.SPW = np.vstack([self.SPW,[phi_start,phi_end]])
+
 
         self.MergeMission()
 
@@ -193,14 +217,20 @@ class Profile:
         
         for i in range(len(self.BreaksDescentDiversion)):   # L'ultimo tempo non mi interessa
             self.Breaks.append(self.BreaksDescentDiversion[i])
-            
-        self.MissionTime2 = self.Breaks[-1]
-        self.Breaks.pop(-1)
-            
-        for i in range(len(self.BreaksDescentDiversion)):   
             self.HTMission.append(self.HTDiversionDescent[i])
             self.Velocities.append(self.VDescentsDiversion[i])
 
+        if self.LoiterStages is not None:
+
+            self.Breaks.append(self.Breaks[-1] + self.DTLoiter)
+            self.HTMission.append(0)
+            self.Velocities.append(self.VCruiseLoiter)
+
+
+
+
+        self.MissionTime2 = self.Breaks[-1]
+        self.Breaks.pop(-1)
 
 
     def Altitude_Func(self,t):
@@ -264,7 +294,13 @@ class Profile:
                 return (lambda t : (alt + htm * (t - brk)))
                 
             AltitudeFunctions.append(localFunctionDescent(t))                
-                
+
+        if self.LoiterStages is not None:
+            
+            AltitudeFunctions.append(self.AltitudeLoiter) 
+ 
+
+
         return AltitudeFunctions
 
 
@@ -341,6 +377,17 @@ class Profile:
                 
             self.CruiseTimeDiversion = DTCruise + self.BreaksClimbDiversion[-1] 
         
+        if (phase == 'Loiter'):
+
+            self.VCruiseLoiter = Speed.Mach2TAS(Mach, Altitude)
+
+            if self.TLoiter is not None:
+                self.DTLoiter = self.TLoiter*60. #From minutes to seconds
+
+            elif self.LoiterRange is not None:
+                self.DTLoiter = np.ceil(self.LoiterRange/self.VCruiseLoiter)
+    
+
             
         
         

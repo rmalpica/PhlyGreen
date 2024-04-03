@@ -137,6 +137,8 @@ class Mission:
             times = np.concatenate([times, array.t])
             beta = np.concatenate([beta, array.y[1]])
 
+    
+
         PP = [WTO * self.aircraft.performance.PoWTO(self.aircraft.DesignWTOoS,beta[i],self.profile.PowerExcess(times[i]),1,self.profile.Altitude(times[i]),self.DISA,self.profile.Velocity(times[i]),'TAS') for i in range(len(times))]
         PRatio = np.array([self.aircraft.powertrain.Traditional(self.profile.Altitude(times[i]),self.profile.Velocity(times[i]),PP[i]) for i in range(len(times))] )
         self.Max_PEng = np.max(np.multiply(PP,PRatio[:,1])) #shaft power
