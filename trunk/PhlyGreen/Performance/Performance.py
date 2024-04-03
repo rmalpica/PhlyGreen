@@ -165,8 +165,41 @@ class Performance:
         gammaLOF = 0.9 * ToWTO - 0.3/np.sqrt(self.aircraft.aerodynamics.AR)
         mu1 = mu + 0.01*self.aircraft.aerodynamics.ClMax 
         WTOoS = (sTO/fTO - hTO/gammaLOF) * (ISA.atmosphere.RHOstd(altitudeTO,DISA)  * self.aircraft.aerodynamics.ClMax * (1 + gammaLOF*np.sqrt(2))) / ((V3oVS)**2 * ((ToWTO - mu1)**(-1) + np.sqrt(2) ))
-        
+ 
         return PW, WTOoS
+
+    def ClimbFinger(self,WTOoS,beta,Ps,n,altitude,DISA,speed,speedtype):
+
+        self.set_speed(altitude,speed,speedtype,DISA)
+        k = self.aircraft.aerodynamics.ki()
+        LD = 15.
+        V_LD = ((2.0*WTOoS/ISA.atmosphere.RHOstd(altitude,DISA))**2 * k/(self.aircraft.aerodynamics.Cd0(self.Mach) + k*self.aircraft.aerodynamics.ClMin**2))**(1/4)
+        H = WTOoS/ISA.atmosphere.RHOstd(altitude,DISA)*(2.0*k*self.aircraft.aerodynamics.ClMin + 1./LD)/(self.aircraft.aerodynamics.Cd0(self.Mach) + k*self.aircraft.aerodynamics.ClMin**2)
+        V = np.sqrt(H - np.sqrt(H**2 - V_LD**4))    
+        q = 0.5 * ISA.atmosphere.RHOstd(altitude,DISA) * V**2
+        PW = self.g_acc  *(V* 1.0/WTOoS * q * (self.aircraft.aerodynamics.Cd0(self.Mach) + self.aircraft.aerodynamics.ki()*(WTOoS/q - self.aircraft.aerodynamics.ClMin)**2)  + beta * Ps )
+
+        return PW
+    
+    def OEIClimbFinger(self,WTOoS,beta,Ps,n,altitude,DISA,speed,speedtype):
+
+        self.set_speed(altitude,speed,speedtype,DISA)
+        k = self.aircraft.aerodynamics.ki()
+        LD = 15.
+        V_LD = ((2.0*WTOoS/ISA.atmosphere.RHOstd(altitude,DISA))**2 * k/(self.aircraft.aerodynamics.Cd0(self.Mach) + k*self.aircraft.aerodynamics.ClMin**2))**(1/4)
+        H = WTOoS/ISA.atmosphere.RHOstd(altitude,DISA)*(2.0*k*self.aircraft.aerodynamics.ClMin + 1./LD)/(self.aircraft.aerodynamics.Cd0(self.Mach) + k*self.aircraft.aerodynamics.ClMin**2)
+        V = np.sqrt(H - np.sqrt(H**2 - V_LD**4))    
+        q = 0.5 * ISA.atmosphere.RHOstd(altitude,DISA) * V**2
+        PW = (self.n_engines/(self.n_engines-1)) * self.g_acc  *(V* 1.0/WTOoS * q * (self.aircraft.aerodynamics.Cd0(self.Mach) + self.aircraft.aerodynamics.ki()*(WTOoS/q - self.aircraft.aerodynamics.ClMin)**2)  + beta * Ps )
+
+        return PW
+
+    def TakeOff_Finger(self,WTOoS,beta,altitudeTO,kTO,sTO,DISA,speed,speedtype):
+        self.set_speed(altitudeTO, speed, speedtype, DISA)
+        PW = self.TAS  * (1.21 * WTOoS / (sTO * ISA.atmosphere.RHOstd(altitudeTO,DISA * self.aircraft.aerodynamics.ClTO * self.g_acc)) + 
+                         1.21*self.aircraft.aerodynamics.Cd(self.aircraft.aerodynamics.ClTO,self.Mach)/self.aircraft.aerodynamics.ClTO + 
+                         0.21 * 0.04)
+        return PW
 
             #----------------------------------------------------------------------------#  
 

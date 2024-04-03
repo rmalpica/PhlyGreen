@@ -69,6 +69,7 @@ class MyProblem(ElementwiseProblem):
                      'Descent1': {'type': 'ConstantRateDescent', 'input':{'CB': -0.04, 'Speed': 90, 'StartAltitude': 3100, 'EndAltitude': 200}, 'Supplied Power Ratio':{'phi_start': 0.0, 'phi_end':0.0 }}}
         
         EnergyInput = {'Ef': 43.5*10**6,
+                   'Contingency Fuel': 130,
                    'Ebat': x[1] * 3600,
                    'pbat': 1000,
                    'Eta Gas Turbine Model': 'constant',
@@ -100,6 +101,7 @@ class MyProblem(ElementwiseProblem):
 
         myaircraft.Configuration = 'Hybrid'
         myaircraft.HybridType = 'Parallel'
+        myaircraft.AircraftType = 'ATR'
         myaircraft.DesignAircraft(AerodynamicsInput,ConstraintsInput,MissionInput,EnergyInput,MissionStages,DiversionStages,WellToTankInput=WellToTankInput,PrintOutput=False)
         
         # print('MTOM: ', myaircraft.weight.WTO)

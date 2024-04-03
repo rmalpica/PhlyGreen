@@ -87,6 +87,7 @@ AerodynamicsInput = {'AnalyticPolar': {'type': 'Quadratic', 'input': {'AR': 11, 
                      'Cd0': 0.017}
 
 EnergyInput = {'Ef': 43.5*10**6,
+                   'Contingency Fuel': 130,
                    'Ebat': 700 * 3600,
                    'pbat': 1000,
                    'Eta Gas Turbine': 0.22,
@@ -112,6 +113,8 @@ WellToTankInput = {'Eta Charge': 0.95,
 #myaircraft.Configuration = 'Traditional'
 myaircraft.Configuration = 'Hybrid'
 myaircraft.HybridType = 'Parallel'
+myaircraft.AircraftType = 'ATR'
+
 myaircraft.DesignAircraft(AerodynamicsInput,ConstraintsInput,MissionInput,EnergyInput,MissionStages,DiversionStages, LoiterStages=LoiterStages, WellToTankInput=WellToTankInput,PrintOutput=True)
 
 end_time = time.time()

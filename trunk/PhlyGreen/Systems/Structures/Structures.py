@@ -5,4 +5,11 @@ class Structures:
 
     def StructuralWeight(self,WTO):
         
-        return (WTO**(-0.06) * WTO)
+        if self.aircraft.AircraftType == 'ATR':
+
+            return (WTO**(-0.06) * WTO)
+        
+        if self.aircraft.AircraftType == 'DO228':
+
+            return WTO*0.545
+    

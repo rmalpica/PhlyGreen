@@ -10,7 +10,7 @@ class Weight:
     def __init__(self, aircraft):
         self.aircraft = aircraft
         self.tol = 0.1
-        self.final_reserve = 130.0  #Kg fuel
+        self.final_reserve = None  
         
             
         
@@ -19,6 +19,7 @@ class Weight:
         self.WPayload = self.aircraft.MissionInput['Payload Weight']
         self.WCrew = self.aircraft.MissionInput['Crew Weight']
         self.ef = self.aircraft.EnergyInput['Ef']
+        self.final_reserve = self.aircraft.EnergyInput['Contingency Fuel']
         if (self.aircraft.Configuration == 'Hybrid'):
             self.ebat = self.aircraft.EnergyInput['Ebat']
             self.pbat = self.aircraft.EnergyInput['pbat']
@@ -61,7 +62,9 @@ class Weight:
                 self.Wf = self.aircraft.mission.EvaluateMission(WTO)/self.ef
                 self.WPT = self.aircraft.powertrain.WeightPowertrain(WTO)
                 self.WStructure = self.aircraft.structures.StructuralWeight(WTO)  
-            
+                if self.final_reserve == 0:
+                    self.final_reserve = 0.05*self.Wf
+                
                 return (self.Wf + self.final_reserve + self.WPT + self.WStructure + self.WPayload + self.WCrew - WTO)
         
         self.WTO = brenth(func, 5000, 50000, xtol=0.1)
@@ -81,7 +84,9 @@ class Weight:
                 # print(self.PtWBat*(1/self.pbat)*WTO)
                 self.WPT = self.aircraft.powertrain.WeightPowertrain(WTO)
                 self.WStructure = self.aircraft.structures.StructuralWeight(WTO) 
-            
+                if self.final_reserve == 0:
+                    self.final_reserve = 0.05*self.Wf
+                 
                 #print('energies: ', self.TotalEnergies)
                 #print('Powertrain: ',self.WPT, 'Fuel: ', self.Wf, 'Battery: ', self.WBat,'Structure: ', self.WStructure)
                 #print('Empty Weight: ', self.WPT + self.WStructure + self.WCrew)

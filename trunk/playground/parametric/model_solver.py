@@ -55,6 +55,7 @@ def model_solver(parameters):
                      'Cd0': 0.017}
 
     EnergyInput = {'Ef': 43.5*10**6,
+                   'Contingency Fuel': 130,
                    'Ebat': ebat * 3600,
                    'pbat': 1000,
                    'Eta Gas Turbine Model': 'constant',
@@ -102,6 +103,7 @@ def model_solver(parameters):
     #myaircraft.Configuration = 'Traditional'
     myaircraft.Configuration = 'Hybrid'
     myaircraft.HybridType = 'Parallel'
+    myaircraft.AircraftType = 'ATR'
     myaircraft.DesignAircraft(AerodynamicsInput,ConstraintsInput,MissionInput,EnergyInput,MissionStages,DiversionStages,WellToTankInput=WellToTankInput,PrintOutput=False)
 
     SourceBattery = myaircraft.weight.TotalEnergies[1] * 1e-6 / myaircraft.welltowake.EtaSourceToBattery
