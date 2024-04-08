@@ -22,6 +22,8 @@ class Aircraft:
         self.DesignPW = None
         self.DesignWTOoS = None
 
+        self.MissionType = 'Continue'
+
     """ Properties """
 
     @property

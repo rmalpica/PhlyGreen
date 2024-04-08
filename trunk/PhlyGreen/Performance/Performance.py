@@ -172,7 +172,7 @@ class Performance:
 
         self.set_speed(altitude,speed,speedtype,DISA)
         k = self.aircraft.aerodynamics.ki()
-        LD = 15.
+        LD = 0.5*np.sqrt(k/self.aircraft.aerodynamics.Cd0(self.Mach))
         V_LD = ((2.0*WTOoS/ISA.atmosphere.RHOstd(altitude,DISA))**2 * k/(self.aircraft.aerodynamics.Cd0(self.Mach) + k*self.aircraft.aerodynamics.ClMin**2))**(1/4)
         H = WTOoS/ISA.atmosphere.RHOstd(altitude,DISA)*(2.0*k*self.aircraft.aerodynamics.ClMin + 1./LD)/(self.aircraft.aerodynamics.Cd0(self.Mach) + k*self.aircraft.aerodynamics.ClMin**2)
         V = np.sqrt(H - np.sqrt(H**2 - V_LD**4))    
@@ -185,7 +185,7 @@ class Performance:
 
         self.set_speed(altitude,speed,speedtype,DISA)
         k = self.aircraft.aerodynamics.ki()
-        LD = 15.
+        LD = 0.5*np.sqrt(k/self.aircraft.aerodynamics.Cd0(self.Mach))
         V_LD = ((2.0*WTOoS/ISA.atmosphere.RHOstd(altitude,DISA))**2 * k/(self.aircraft.aerodynamics.Cd0(self.Mach) + k*self.aircraft.aerodynamics.ClMin**2))**(1/4)
         H = WTOoS/ISA.atmosphere.RHOstd(altitude,DISA)*(2.0*k*self.aircraft.aerodynamics.ClMin + 1./LD)/(self.aircraft.aerodynamics.Cd0(self.Mach) + k*self.aircraft.aerodynamics.ClMin**2)
         V = np.sqrt(H - np.sqrt(H**2 - V_LD**4))    
@@ -196,7 +196,7 @@ class Performance:
 
     def TakeOff_Finger(self,WTOoS,beta,altitudeTO,kTO,sTO,DISA,speed,speedtype):
         self.set_speed(altitudeTO, speed, speedtype, DISA)
-        PW = self.TAS  * (1.21 * WTOoS / (sTO * ISA.atmosphere.RHOstd(altitudeTO,DISA * self.aircraft.aerodynamics.ClTO * self.g_acc)) + 
+        PW = self.TAS  * (1.21 * WTOoS / (sTO * ISA.atmosphere.RHOstd(altitudeTO,DISA) * self.aircraft.aerodynamics.ClTO * self.g_acc) + 
                          1.21*self.aircraft.aerodynamics.Cd(self.aircraft.aerodynamics.ClTO,self.Mach)/self.aircraft.aerodynamics.ClTO + 
                          0.21 * 0.04)
         return PW

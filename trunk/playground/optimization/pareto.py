@@ -1,3 +1,5 @@
+import sys
+sys.path.insert(0,'../..')
 import PhlyGreen as pg
 import sys
 import os
@@ -51,7 +53,7 @@ class MyProblem(ElementwiseProblem):
                 'Payload Weight': 4560,  #Kg
                 'Crew Weight': 500}  #Kg
 
-        AerodynamicsInput = {'NumericalPolar': {'type': 'ATR42'},
+        AerodynamicsInput = {'NumericalPolar': {'type': 'ATR42','input': {'AR': 11, 'e_osw': 0.8}},
                     'Take Off Cl': 1.9,
                      'Landing Cl': 1.9,
                      'Minimum Cl': 0.20,

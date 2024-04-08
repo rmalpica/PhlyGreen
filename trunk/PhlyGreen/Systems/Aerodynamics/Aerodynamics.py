@@ -62,7 +62,11 @@ class Aerodynamics:
             e_osw = polar['input'].get("e_osw")
             self.set_quadratic_polar(AR,e_osw)
         elif 'NumericalPolar' in self.aircraft.AerodynamicsInput: 
-            self.polar = self.aircraft.AerodynamicsInput.get("NumericalPolar")['type']
+            polar = self.aircraft.AerodynamicsInput.get("NumericalPolar") 
+            # self.polar = self.aircraft.AerodynamicsInput.get("NumericalPolar")['type']
+            self.polar = polar.get('type')
+            self.AR = polar['input']["AR"]
+            self.e_osw = polar['input']["e_osw"]
         else:
             raise ValueError("Error: aerodynamic model unknown")
         

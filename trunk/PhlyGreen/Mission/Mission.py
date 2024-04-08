@@ -62,18 +62,27 @@ class Mission:
         
         self.profile = Profile(self.aircraft)
         
-        self.profile.DefineMission()
+        if self.aircraft.MissionType == 'Continue':
+            self.profile.DefineMission()
+        elif self.aircraft.MissionType == 'Discrete':
+            self.profile.DefineDiscreteMission()
         
-        self.t = np.linspace(0,self.profile.MissionTime2,num=1000)
+        # self.t = np.linspace(0,self.profile.MissionTime2,num=1000)
 
 
     def EvaluateMission(self,WTO):
         
         if self.aircraft.Configuration == 'Traditional':     
-            return self.TraditionalConfiguration(WTO)
+            if self.aircraft.MissionType == 'Continue':
+                return self.TraditionalConfiguration(WTO)
+            if self.aircraft.MissionType == 'Discrete':
+                return self.DiscreteTraditional(WTO)
             
         elif self.aircraft.Configuration == 'Hybrid':     
-            return self.HybridConfiguration(WTO)
+            if self.aircraft.MissionType == 'Continue':
+                return self.HybridConfiguration(WTO)
+            if self.aircraft.MissionType == 'Discrete':
+                return self.DiscreteHybrid(WTO)
 
         else:
             raise Exception("Unknown aircraft configuration: %s" %self.aircraft.Configuration)
@@ -214,4 +223,166 @@ class Mission:
 
         return self.Ef[-1], self.EBat[-1]
         
+        
+
+
+    def DiscreteTraditional(self,WTO):
+        
+        self.WTO = WTO
+
+        def PowerPropulsive(Beta,i):
+
+            PPoWTO = self.aircraft.performance.PoWTO(self.aircraft.DesignWTOoS,Beta,self.profile.DiscretizedPowerExcess[i],1,self.profile.DiscretizedAltitudes[i],self.DISA,self.profile.DiscretizedVelocities[i],'TAS')
+
+            return PPoWTO * WTO
+                    
+
+        def model(i,Beta):
+            
+            PP = PowerPropulsive(Beta,i) 
+            #self.PP_values = np.append(self.PP_values,PP)
+            PRatio = self.aircraft.powertrain.Traditional(self.profile.DiscretizedAltitudes[i],self.profile.DiscretizedVelocities[i],PP)
+            #self.P_Ratio = np.append(self.P_Ratio,PRatio)
+            dEdt = PP * PRatio[0]
+            dbetadt = - dEdt/(self.ef*self.WTO)
+
+            return [dEdt,dbetadt] 
+        
+        y0 = [0,self.beta0]
+        
+
+    
+        self.E_values = np.array([0])
+        self.beta_values = np.array([self.beta0])
+        # self.PP_values = np.array([PowerPropulsive(self.beta0,0)])
+        # self.P_Ratio = np.array([self.aircraft.powertrain.Traditional(self.profile.DiscretizedAltitudes[0],self.profile.DiscretizedVelocities[0],self.PP_values[0])])
+        
+        E = 0
+        beta = self.beta0
+
+        for i in range(1,len(self.profile.DiscretizedTime)):
+            dEdt, dbetadt = model(i,self.beta_values[-1])
+            
+
+            dt = self.profile.DiscretizedTime[i] - self.profile.DiscretizedTime[i-1] 
+
+            E += dt * dEdt
+            beta += dt * dbetadt 
+
+            self.E_values = np.append(self.E_values,E)
+            self.beta_values = np.append(self.beta_values,beta)
+
+
+        # Takeoff condition
+        Ppropulsive = self.WTO * self.aircraft.performance.TakeOff(self.aircraft.DesignWTOoS,self.aircraft.constraint.TakeOffConstraints['Beta'], self.aircraft.constraint.TakeOffConstraints['Altitude'], self.aircraft.constraint.TakeOffConstraints['kTO'], self.aircraft.constraint.TakeOffConstraints['sTO'], self.aircraft.constraint.DISA, self.aircraft.constraint.TakeOffConstraints['Speed'], self.aircraft.constraint.TakeOffConstraints['Speed Type'])
+        PRatio = self.aircraft.powertrain.Traditional(self.aircraft.constraint.TakeOffConstraints['Altitude'],self.aircraft.constraint.TakeOffConstraints['Speed'],Ppropulsive)
+        self.TO_PP = Ppropulsive * PRatio[1] #shaft power 
+
+        #set/reset max values
+        self.Max_Peng = -1
+
+
+        # compute peak Propulsive power along mission
+
+        self.PP_values = []
+        self.P_Ratio = []
+
+        for i in range(len(self.profile.DiscretizedTime)):
+            self.PP_values = np.append(self.PP_values,PowerPropulsive(self.beta_values[i],i))
+            self.P_Ratio.append(self.aircraft.powertrain.Traditional(self.profile.DiscretizedAltitudes[i],self.profile.DiscretizedVelocities[i],self.PP_values[i])[1])
+
+
+        self.Max_PEng = np.max(np.multiply(self.PP_values,self.P_Ratio)) #shaft power
+
+        # sol = integrate.solve_ivp(model, [0., self.profile.DiscretizedTime[-1]], y0, t_eval=self.profile.DiscretizedTime)
+
+        # self.Ef = sol.y[0] 
+        
+        return self.E_values[-1]
+    
+
+
+
+    def DiscreteHybrid(self,WTO):
+        
+        self.WTO = WTO
+        
+        
+        def PowerPropulsive(Beta,i):
+
+            PPoWTO = self.aircraft.performance.PoWTO(self.aircraft.DesignWTOoS,Beta,self.profile.DiscretizedPowerExcess[i],1,self.profile.DiscretizedAltitudes[i],self.DISA,self.profile.DiscretizedVelocities[i],'TAS')
+
+            return PPoWTO * WTO
+
+
+        def model(i,Beta):
+            
+            PP = PowerPropulsive(Beta,i) 
+            #self.PP_values = np.append(self.PP_values,PP)
+            PRatio = self.aircraft.powertrain.Hybrid(self.aircraft.mission.profile.SuppliedPowerRatio(self.profile.DiscretizedTime[i]),self.profile.DiscretizedAltitudes[i],self.profile.DiscretizedVelocities[i],PP)
+            #self.P_Ratio = np.append(self.P_Ratio,PRatio)
+            dEFdt = PP * PRatio[0]
+            dEBatdt = Ppropulsive * PRatio[5]
+            dbetadt = - dEFdt/(self.ef*self.WTO) 
+
+            return [dEFdt,dEBatdt,dbetadt] 
+               
+              
+
+        # Takeoff condition
+        Ppropulsive = self.WTO * self.aircraft.performance.TakeOff(self.aircraft.DesignWTOoS,self.aircraft.constraint.TakeOffConstraints['Beta'], self.aircraft.constraint.TakeOffConstraints['Altitude'], self.aircraft.constraint.TakeOffConstraints['kTO'], self.aircraft.constraint.TakeOffConstraints['sTO'], self.aircraft.constraint.DISA, self.aircraft.constraint.TakeOffConstraints['Speed'], self.aircraft.constraint.TakeOffConstraints['Speed Type'])
+        PRatio = self.aircraft.powertrain.Hybrid(self.aircraft.mission.profile.SPW[0][0],self.aircraft.constraint.TakeOffConstraints['Altitude'],self.aircraft.constraint.TakeOffConstraints['Speed'],Ppropulsive)
+        self.TO_PBat = Ppropulsive * PRatio[5]
+        self.TO_PP = Ppropulsive * PRatio[1]  
+
+        #set/reset max values
+        self.Max_PBat = -1
+        self.Max_PEng = -1
+
+        y0 = [0,0,self.beta0]
+        
+        rtol = 1e-5
+        method= 'BDF'
+
+        self.EF_values = np.array([0])
+        self.EBat_values = np.array([0])
+        self.beta_values = np.array([self.beta0])
+        # self.PP_values = np.array([PowerPropulsive(self.beta0,0)])
+        # self.P_Ratio = np.array([self.aircraft.powertrain.Traditional(self.profile.DiscretizedAltitudes[0],self.profile.DiscretizedVelocities[0],self.PP_values[0])])
+        
+        EF = 0
+        EBat = 0
+        beta = self.beta0
+
+        for i in range(1,len(self.profile.DiscretizedTime)):
+            dEFdt, dEBat, dbetadt = model(i,self.beta_values[-1])
+            
+
+            dt = self.profile.DiscretizedTime[i] - self.profile.DiscretizedTime[i-1] 
+
+            EF += dt * dEFdt
+            EBat += dt * dEBat
+            beta += dt * dbetadt 
+
+            self.EF_values = np.append(self.EF_values,EF)
+            self.EBat_values = np.append(self.EBat_values,EBat)
+            self.beta_values = np.append(self.beta_values,beta)
+
+
+
+
+        self.PP_values = []
+        self.P_RatioFuel = []
+        self.P_RatioBattery = []
+
+        for i in range(len(self.profile.DiscretizedTime)):
+            self.PP_values = np.append(self.PP_values,PowerPropulsive(self.beta_values[i],i))
+            self.P_RatioFuel.append(self.aircraft.powertrain.Hybrid(self.aircraft.mission.profile.SuppliedPowerRatio(self.profile.DiscretizedTime[i]),self.profile.DiscretizedAltitudes[i],self.profile.DiscretizedVelocities[i],self.PP_values[i])[1])
+            self.P_RatioBattery.append(self.aircraft.powertrain.Hybrid(self.aircraft.mission.profile.SuppliedPowerRatio(self.profile.DiscretizedTime[i]),self.profile.DiscretizedAltitudes[i],self.profile.DiscretizedVelocities[i],self.PP_values[i])[5])
+
+
+        self.Max_PEng = np.max(np.multiply(self.PP_values,self.P_RatioFuel)) 
+        self.Max_PBat = np.max(np.multiply(self.PP_values,self.P_RatioBattery)) 
+
+        return self.EF_values[-1], self.EBat_values[-1]
         

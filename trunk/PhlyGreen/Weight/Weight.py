@@ -96,6 +96,6 @@ class Weight:
                 return (self.Wf + self.final_reserve + self.WBat + self.WPT + self.WStructure + self.WPayload + self.WCrew - WTO)
          
         
-        self.WTO = brenth(func, 10000, 300000, xtol=0.1)
+        self.WTO = brenth(func, 5000, 300000, xtol=0.1)
         
         
