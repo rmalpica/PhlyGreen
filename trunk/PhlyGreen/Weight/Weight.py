@@ -23,6 +23,13 @@ class Weight:
         if (self.aircraft.Configuration == 'Hybrid'):
             self.ebat = self.aircraft.EnergyInput['Ebat']
             self.pbat = self.aircraft.EnergyInput['pbat']
+            self.cellCap = self.aircraft.EnergyInput['Cell Capacity']
+            self.cellRate = self.aircraft.EnergyInput['Cell C rating']
+            self.cellVmin = self.aircraft.EnergyInput['Cell Voltage Min']
+            self.cellVmax = self.aircraft.EnergyInput['Cell Voltage Max']
+            self.cellVnom = self.aircraft.EnergyInput['Cell Voltage Nominal']
+            self.cellMass = self.aircraft.EnergyInput['Cell Mass']
+            self.cellVolume = self.aircraft.EnergyInput['Cell Volume']
         #self.SPowerPT = self.aircraft.EnergyInput['Specific Power Powertrain']
         #self.SPowerPMAD = self.aircraft.EnergyInput['Specific Power PMAD']
         #self.PtWPT = self.aircraft.EnergyInput['PowertoWeight Powertrain']
@@ -76,8 +83,7 @@ class Weight:
         def func(WTO):
                 self.TotalEnergies = self.aircraft.mission.EvaluateMission(WTO)
                 self.Wf = self.TotalEnergies[0]/self.ef
-                #self.WBat  = np.max([self.TotalEnergies[1]/self.ebat , self.PtWBat*(1/self.pbat)*WTO])
-                WBat  = [self.TotalEnergies[1]/self.ebat , self.aircraft.mission.Max_PBat*(1/self.pbat), self.aircraft.mission.TO_PBat*(1/self.pbat)]
+                #WBat  = [self.TotalEnergies[1]/self.ebat , self.aircraft.mission.Max_PBat*(1/self.pbat), self.aircraft.mission.TO_PBat*(1/self.pbat)]
                 self.WBatidx = np.argmax(WBat)
                 self.WBat = WBat[self.WBatidx] 
                 # print(self.TotalEnergies[1]/self.ebat )
