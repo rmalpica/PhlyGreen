@@ -1,6 +1,7 @@
 import numpy as np
 import PhlyGreen.Utilities.Atmosphere as ISA
 import PhlyGreen.Utilities.Speed as Speed
+import PhlyGreen.BatteryDemo.BatteryConfigurator as BattConfig
 from scipy.optimize import brentq, brenth, ridder, newton
 
 
@@ -21,15 +22,18 @@ class Weight:
         self.ef = self.aircraft.EnergyInput['Ef']
         self.final_reserve = self.aircraft.EnergyInput['Contingency Fuel']
         if (self.aircraft.Configuration == 'Hybrid'):
-            self.ebat = self.aircraft.EnergyInput['Ebat']
-            self.pbat = self.aircraft.EnergyInput['pbat']
-            self.cellCap = self.aircraft.EnergyInput['Cell Capacity']
-            self.cellRate = self.aircraft.EnergyInput['Cell C rating']
-            self.cellVmin = self.aircraft.EnergyInput['Cell Voltage Min']
-            self.cellVmax = self.aircraft.EnergyInput['Cell Voltage Max']
-            self.cellVnom = self.aircraft.EnergyInput['Cell Voltage Nominal']
-            self.cellMass = self.aircraft.EnergyInput['Cell Mass']
-            self.cellVolume = self.aircraft.EnergyInput['Cell Volume']
+            #self.ebat = self.aircraft.EnergyInput['Ebat']
+            #self.pbat = self.aircraft.EnergyInput['pbat']
+            self.cell={
+                'Capacity': self.aircraft.EnergyInput['Cell Capacity'],
+                'Rate': self.aircraft.EnergyInput['Cell C rating'],
+                'Vmin': self.aircraft.EnergyInput['Cell Voltage Min'],
+                'Vmax': self.aircraft.EnergyInput['Cell Voltage Max'],
+                'Vnom': self.aircraft.EnergyInput['Cell Voltage Nominal'],
+                'Mass': self.aircraft.EnergyInput['Cell Mass'],
+                'Volume': self.aircraft.EnergyInput['Cell Volume']
+            }
+            
         #self.SPowerPT = self.aircraft.EnergyInput['Specific Power Powertrain']
         #self.SPowerPMAD = self.aircraft.EnergyInput['Specific Power PMAD']
         #self.PtWPT = self.aircraft.EnergyInput['PowertoWeight Powertrain']
@@ -83,11 +87,8 @@ class Weight:
         def func(WTO):
                 self.TotalEnergies = self.aircraft.mission.EvaluateMission(WTO)
                 self.Wf = self.TotalEnergies[0]/self.ef
-                #WBat  = [self.TotalEnergies[1]/self.ebat , self.aircraft.mission.Max_PBat*(1/self.pbat), self.aircraft.mission.TO_PBat*(1/self.pbat)]
-                self.WBatidx = np.argmax(WBat)
-                self.WBat = WBat[self.WBatidx] 
-                # print(self.TotalEnergies[1]/self.ebat )
-                # print(self.PtWBat*(1/self.pbat)*WTO)
+                self.BatCfg = BattConfig.configure(self.cell,)
+                self.WBat = self.BatCfg.cells_total * self.cell['Mass']
                 self.WPT = self.aircraft.powertrain.WeightPowertrain(WTO)
                 self.WStructure = self.aircraft.structures.StructuralWeight(WTO) 
                 if self.final_reserve == 0:
