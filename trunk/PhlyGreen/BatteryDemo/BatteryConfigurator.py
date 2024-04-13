@@ -10,17 +10,17 @@ class Configuration:
 #determine battery configuration
 def configure(cell,requirements):
     #minimum nr of cells in series to meet voltage requirements
-    series_stack_size = np.ceil(requirements.voltage/cell.Vmin) 
+    series_stack_size = np.ceil(requirements['Voltage']/cell['Vmin']) 
 
     #minimum nr of cells to meet energy demand
-    cell_count = np.ceil(requirements.energy/(cell.capacity*cell.Vnom))
+    cell_count = np.ceil(requirements['Energy']/(cell['Capacity']*cell['Vnom']))
     #nr of stacks needed to meet energy demand and voltage requirements
     stack_count_energy=np.ceil(cell_count/series_stack_size)
 
     #current capacity of a single stack of cells in series
-    stackCurrent = cell.rate*cell.capacity
+    stackCurrent = cell['Rate']*cell['Capacity']
     #minimum number of cell stacks needed in parallel to meet power demand
-    stack_count_power = np.ceil(requirements.power/(stackCurrent*requirements.voltage)) 
+    stack_count_power = np.ceil(requirements['Peak Power']/(stackCurrent*requirements['Voltage'])) 
 
     #determine number of stacks in parallel needed overall by picking the largest one
     stack_count=[stack_count_power,stack_count_energy]
@@ -30,4 +30,7 @@ def configure(cell,requirements):
     #update number of cells
     cell_count= stack_count * series_stack_size
     configuration = Configuration(series_stack_size,stack_count,cell_count)
+    print("debug config start")
+    print(configuration)
+    print("debug config end")
     return configuration

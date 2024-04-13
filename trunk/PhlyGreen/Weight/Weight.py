@@ -1,7 +1,7 @@
 import numpy as np
 import PhlyGreen.Utilities.Atmosphere as ISA
 import PhlyGreen.Utilities.Speed as Speed
-import PhlyGreen.BatteryDemo.BatteryConfigurator as BattConfig
+import PhlyGreen.BatteryDemo.BatteryConfigurator as BatConfig
 from scipy.optimize import brentq, brenth, ridder, newton
 
 
@@ -33,6 +33,8 @@ class Weight:
                 'Mass': self.aircraft.EnergyInput['Cell Mass'],
                 'Volume': self.aircraft.EnergyInput['Cell Volume']
             }
+
+            #todo make cell into a sub class and fill it with those attributes instead of using a dictionary cause thats a bit silly
             
         #self.SPowerPT = self.aircraft.EnergyInput['Specific Power Powertrain']
         #self.SPowerPMAD = self.aircraft.EnergyInput['Specific Power PMAD']
@@ -87,7 +89,13 @@ class Weight:
         def func(WTO):
                 self.TotalEnergies = self.aircraft.mission.EvaluateMission(WTO)
                 self.Wf = self.TotalEnergies[0]/self.ef
-                self.BatCfg = BattConfig.configure(self.cell,)
+
+                self.BatRequirements = {
+                    'Peak Power': self.aircraft.mission.Max_PBat,
+                    'Energy': self.TotalEnergies[1],
+                    'Voltage': 800
+                } # make bat requirements into a sub class cause this is silly
+                self.BatCfg = BatConfig.configure(self.cell,self.BatRequirements)
                 self.WBat = self.BatCfg.cells_total * self.cell['Mass']
                 self.WPT = self.aircraft.powertrain.WeightPowertrain(WTO)
                 self.WStructure = self.aircraft.structures.StructuralWeight(WTO) 
