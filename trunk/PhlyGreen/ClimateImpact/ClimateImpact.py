@@ -18,6 +18,9 @@ class ClimateImpact:
 
         self.RF_2CO2 = 3.7  # [W/m^2]
 
+        self.portata = None  # andamento della portata di combustibile in kg/s durante la missione
+        self.EINOx = None  # andamento di EINOx in g/kg durante la missione
+
         self.step = 100
         self.mission_data = None
         self.r_ch4_o3l_o3s = None
@@ -153,11 +156,13 @@ class ClimateImpact:
         def E_nox_1m():  # emissione di NOx in kg della singola missione
                 
                 if self.EINOx_model == 'Filippone':
-                    times = np.array([])
-                    beta = np.array([])
-                    for array in self.aircraft.mission.integral_solution:
-                        times = np.concatenate([times, array.t])
-                        beta = np.concatenate([beta, array.y[1]])
+                    times = self.aircraft.mission.Times_Output
+                    beta = self.aircraft.mission.Beta_Output
+                    # times = np.array([])
+                    # beta = np.array([])
+                    # for array in self.aircraft.mission.integral_solution:
+                    #     times = np.concatenate([times, array.t])
+                    #     beta = np.concatenate([beta, array.y[1]])
                     
                     v0 = self.aircraft.mission.profile.Velocity(times)  # [m/s]
                     alt = self.aircraft.mission.profile.Altitude(times)  # [m]
@@ -209,7 +214,8 @@ class ClimateImpact:
                         mfuel = 0.5*portata[t]  # portata di combustibile del singolo motore
                         
                         EI_NOx[t] =  2*(c[0] + c[1]*OPR + c[2]*(OPR)**2 + c[3]*mfuel + c[4]*(mfuel)**2 + c[5]*OPR*mfuel)
-
+                    self.portata = portata
+                    self.EINOx = EI_NOx
 
                     # plt.figure(2)
                     # plt.plot(times/60, EI_NOx, 'b')
@@ -229,11 +235,13 @@ class ClimateImpact:
                 
                 
                 if self.EINOx_model == 'GasTurb':
-                    times = np.array([])
-                    beta = np.array([])
-                    for array in self.aircraft.mission.integral_solution:
-                        times = np.concatenate([times, array.t])
-                        beta = np.concatenate([beta, array.y[1]])
+                    times = self.aircraft.mission.Times_Output
+                    beta = self.aircraft.mission.Beta_Output
+                    # times = np.array([])
+                    # beta = np.array([])
+                    # for array in self.aircraft.mission.integral_solution:
+                    #     times = np.concatenate([times, array.t])
+                    #     beta = np.concatenate([beta, array.y[1]])
                     
                     v0 = self.aircraft.mission.profile.Velocity(times)  # [m/s]
                     alt = self.aircraft.mission.profile.Altitude(times)  # [m]
