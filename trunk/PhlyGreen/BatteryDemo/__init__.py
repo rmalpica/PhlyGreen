@@ -1,2 +1,0 @@
-from .BatteryDemo import BatteryDemo
-

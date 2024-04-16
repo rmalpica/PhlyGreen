@@ -1,7 +1,6 @@
 import numpy as np
 import PhlyGreen.Utilities.Atmosphere as ISA
 import PhlyGreen.Utilities.Speed as Speed
-import PhlyGreen.BatteryDemo.BatteryConfigurator as BatConfig
 from scipy.optimize import brentq, brenth, ridder, newton
 
 
@@ -22,26 +21,8 @@ class Weight:
         self.ef = self.aircraft.EnergyInput['Ef']
         self.final_reserve = self.aircraft.EnergyInput['Contingency Fuel']
         if (self.aircraft.Configuration == 'Hybrid'):
-            #self.ebat = self.aircraft.EnergyInput['Ebat']
-            #self.pbat = self.aircraft.EnergyInput['pbat']
-            self.cell={
-                'Capacity': self.aircraft.EnergyInput['Cell Capacity'],
-                'Rate': self.aircraft.EnergyInput['Cell C rating'],
-                'Vmin': self.aircraft.EnergyInput['Cell Voltage Min'],
-                'Vmax': self.aircraft.EnergyInput['Cell Voltage Max'],
-                'Vnom': self.aircraft.EnergyInput['Cell Voltage Nominal'],
-                'Mass': self.aircraft.EnergyInput['Cell Mass'],
-                'Volume': self.aircraft.EnergyInput['Cell Volume']
-            }
-
-            #todo make cell into a sub class and fill it with those attributes instead of using a dictionary cause thats a bit silly
-            
-        #self.SPowerPT = self.aircraft.EnergyInput['Specific Power Powertrain']
-        #self.SPowerPMAD = self.aircraft.EnergyInput['Specific Power PMAD']
-        #self.PtWPT = self.aircraft.EnergyInput['PowertoWeight Powertrain']
-        #self.PtWBat = self.aircraft.EnergyInput['PowertoWeight Battery']
-        #self.PtWPMAD = self.aircraft.EnergyInput['PowertoWeight PMAD']
-
+            pass
+        #  put something here that activates the battery class?
 
         return None
         
@@ -90,13 +71,14 @@ class Weight:
                 self.TotalEnergies = self.aircraft.mission.EvaluateMission(WTO)
                 self.Wf = self.TotalEnergies[0]/self.ef
 
-                self.BatRequirements = {
-                    'Peak Power': self.aircraft.mission.Max_PBat,
-                    'Energy': self.TotalEnergies[1],
-                    'Voltage': 800
-                } # make bat requirements into a sub class cause this is silly
-                self.BatCfg = BatConfig.configure(self.cell,self.BatRequirements)
-                self.WBat = self.BatCfg.cells_total * self.cell['Mass']
+                WBat  = [self.TotalEnergies[1]/self.ebat , self.aircraft.mission.Max_PBat*(1/self.pbat), self.aircraft.mission.TO_PBat*(1/self.pbat)]
+
+                self.MaxBatPwr=np.max([self.aircraft.mission.Max_PBat,self.aircraft.mission.TO_PBat])#maximum power for the battery, Max_PBat does not include takeoff power
+                self.ConfigBat  = self.aircraft.Battery.Configuration(self.TotalEnergies[1],self.MaxBatPwr) #passes the battery requirements to the configurator
+                self.WBat=self.ConfigBat.pack_weight
+
+                # print(self.TotalEnergies[1]/self.ebat )
+                # print(self.PtWBat*(1/self.pbat)*WTO)
                 self.WPT = self.aircraft.powertrain.WeightPowertrain(WTO)
                 self.WStructure = self.aircraft.structures.StructuralWeight(WTO) 
                 if self.final_reserve == 0:
