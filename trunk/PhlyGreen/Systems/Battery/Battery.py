@@ -16,13 +16,13 @@ class Battery:
         self.cell_volume = None
         self.required_energy = None
         self.required_power = None
-        #self.required_voltage = None does this even makes sense to exist?
+        self.controller_Vmax = 740 
+        self.controller_Vmin = 420 #this range of voltages should be defined in the model of the motor controller, but ill do that later, for now its hardcoded
 
 #should define a bunch of property setters and getters that make sure that all values are positive, and that Vmax ≥ Vnom ≥ Vmin
 
     def SetInput(self):
-        self.controller_Vmax = 740 
-        self.controller_Vmin = 420 #this range of voltages should be defined in the model of the motor controller, but ill do that later, for now its hardcoded
+        
         self.cell_capacity = self.aircraft.CellInput['Cell Capacity']
         self.cell_rate = self.aircraft.CellInput['Cell C rating']
         self.cell_current = self.cell_rate * self.cell_capacity
@@ -43,7 +43,7 @@ class Battery:
 
         self.parallel_nr_energy = np.ceil(self.total_cells_energy/self.series_stack_size)
         self.parallel_nr_power = np.ceil(required_power/(self.controller_Vmin*self.cell_current)) #maybe change later to be able to use power at different SOCs, but for now it assumes max power at minimum SOC, worst case scenario
-        self.parallel_stack_number = np.max[self.parallel_nr_energy, self.parallel_nr_power] #number of cell stacks in parallel required
+        self.parallel_stack_number = np.max([self.parallel_nr_energy, self.parallel_nr_power]) #number of cell stacks in parallel required
         #add some mechanism to be able to find which constraint is driving the design at each point?
 
         #find the total number of cells in the whole pack
@@ -57,7 +57,7 @@ class Battery:
         self.pack_weight = self.cell_mass*self.cells_total
         self.pack_volume = self.cell_volume*self.cells_total
     
-        self.pack_type='S'+str(self.series_stack_size)+'P'+str(parallel_stack_number)
+        self.pack_type='S'+str(self.series_stack_size)+'P'+str(self.parallel_stack_number)
         return ()
         
 

@@ -1,5 +1,5 @@
 class Aircraft:
-    def __init__(self, powertrain, structures, aerodynamics, performance, mission, weight, constraint, welltowake):
+    def __init__(self, powertrain, structures, aerodynamics, performance, mission, weight, constraint, welltowake, battery):
         #subsystems
         self.powertrain = powertrain
         self.structures = structures
@@ -9,11 +9,13 @@ class Aircraft:
         self.weight = weight
         self.constraint = constraint
         self.welltowake = welltowake
+        self.battery = battery
         #input dictionaries
         self.AerodynamicsInput = None 
         self.ConstraintsInput = None 
         self.MissionInput = None 
         self.EnergyInput = None 
+        self.CellInput = None
         self.MissionStages = None 
         self.DiversionStages = None 
         self.LoiterStages = None

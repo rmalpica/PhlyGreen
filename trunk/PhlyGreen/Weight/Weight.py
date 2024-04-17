@@ -2,7 +2,7 @@ import numpy as np
 import PhlyGreen.Utilities.Atmosphere as ISA
 import PhlyGreen.Utilities.Speed as Speed
 from scipy.optimize import brentq, brenth, ridder, newton
-
+from pprint import pprint
 
 
 class Weight:
@@ -71,14 +71,16 @@ class Weight:
                 self.TotalEnergies = self.aircraft.mission.EvaluateMission(WTO)
                 self.Wf = self.TotalEnergies[0]/self.ef
 
-                WBat  = [self.TotalEnergies[1]/self.ebat , self.aircraft.mission.Max_PBat*(1/self.pbat), self.aircraft.mission.TO_PBat*(1/self.pbat)]
+                #WBat  = [self.TotalEnergies[1]/self.ebat , self.aircraft.mission.Max_PBat*(1/self.pbat), self.aircraft.mission.TO_PBat*(1/self.pbat)]
 
                 self.MaxBatPwr=np.max([self.aircraft.mission.Max_PBat,self.aircraft.mission.TO_PBat])#maximum power for the battery, Max_PBat does not include takeoff power
-                self.ConfigBat  = self.aircraft.Battery.Configuration(self.TotalEnergies[1],self.MaxBatPwr) #passes the battery requirements to the configurator
-                self.WBat=self.ConfigBat.pack_weight
-
-                # print(self.TotalEnergies[1]/self.ebat )
-                # print(self.PtWBat*(1/self.pbat)*WTO)
+                 
+            #probably just me misunderstanding python but this does not work:
+                #self.ConfigBat  = self.aircraft.battery.Configuration(self.TotalEnergies[1],self.MaxBatPwr)
+                #self.WBat=self.ConfigBat.pack_weight
+            #instead i have to do this:
+                self.ConfigBat  = self.aircraft.battery.Configuration(self.TotalEnergies[1],self.MaxBatPwr)
+                self.WBat=self.aircraft.battery.pack_weight
                 self.WPT = self.aircraft.powertrain.WeightPowertrain(WTO)
                 self.WStructure = self.aircraft.structures.StructuralWeight(WTO) 
                 if self.final_reserve == 0:
