@@ -146,7 +146,7 @@ class Mission:
             times = np.concatenate([times, array.t])
             beta = np.concatenate([beta, array.y[1]])
 
-    
+        self.MissionTimes = times 
 
         PP = [WTO * self.aircraft.performance.PoWTO(self.aircraft.DesignWTOoS,beta[i],self.profile.PowerExcess(times[i]),1,self.profile.Altitude(times[i]),self.DISA,self.profile.Velocity(times[i]),'TAS') for i in range(len(times))]
         PRatio = np.array([self.aircraft.powertrain.Traditional(self.profile.Altitude(times[i]),self.profile.Velocity(times[i]),PP[i]) for i in range(len(times))] )
@@ -216,6 +216,8 @@ class Mission:
             times = np.concatenate([times, array.t])
             beta = np.concatenate([beta, array.y[2]])
 
+        self.MissionTimes = times 
+        
         PP = np.array([WTO * self.aircraft.performance.PoWTO(self.aircraft.DesignWTOoS,beta[i],self.profile.PowerExcess(times[i]),1,self.profile.Altitude(times[i]),self.DISA,self.profile.Velocity(times[i]),'TAS') for i in range(len(times))])
         PRatio = np.array([self.aircraft.powertrain.Hybrid(self.aircraft.mission.profile.SuppliedPowerRatio(times[i]),self.profile.Altitude(times[i]),self.profile.Velocity(times[i]),PP[i]) for i in range(len(times))] )
         self.Max_PEng = np.max(np.multiply(PP,PRatio[:,1]))
@@ -322,7 +324,7 @@ class Mission:
             PRatio = self.aircraft.powertrain.Hybrid(self.aircraft.mission.profile.SuppliedPowerRatio(self.profile.DiscretizedTime[i]),self.profile.DiscretizedAltitudes[i],self.profile.DiscretizedVelocities[i],PP)
             #self.P_Ratio = np.append(self.P_Ratio,PRatio)
             dEFdt = PP * PRatio[0]
-            dEBatdt = Ppropulsive * PRatio[5]
+            dEBatdt = PP * PRatio[5]
             dbetadt = - dEFdt/(self.ef*self.WTO) 
 
             return [dEFdt,dEBatdt,dbetadt] 
@@ -355,13 +357,13 @@ class Mission:
         beta = self.beta0
 
         for i in range(1,len(self.profile.DiscretizedTime)):
-            dEFdt, dEBat, dbetadt = model(i,self.beta_values[-1])
-            
+            dEFdt, dEBatdt, dbetadt = model(i,self.beta_values[-1])
+
 
             dt = self.profile.DiscretizedTime[i] - self.profile.DiscretizedTime[i-1] 
 
             EF += dt * dEFdt
-            EBat += dt * dEBat
+            EBat += dt * dEBatdt
             beta += dt * dbetadt 
 
             self.EF_values = np.append(self.EF_values,EF)

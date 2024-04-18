@@ -42,6 +42,7 @@ class Profile:
         self.DiscretizedVelocities = []
         self.DiscretizedPowerExcess = []
         self.DiscretizedTime = []
+        self.DiscretizedSPR = []
 
         self.TimesClimb = [0]
         self.TimesCruise = []
@@ -55,6 +56,13 @@ class Profile:
         self.DiversionClimbAltitudes = []
         self.DiversionCruiseAltitudes = []
         self.DiversionDescentAltitudes = []
+
+        self.SPRClimb = []
+        self.SPRCruise = []
+        self.SPRDescent = []
+        self.SPRClimbDiversion = []
+        self.SPRCruiseDiversion = []
+        self.SPRDescentDiversion = [] 
     
 
         
@@ -68,7 +76,7 @@ class Profile:
         self.DistancesDiversion = []
 
 
-        self.n_steps = 50
+        self.n_steps = 100
 
     """ Properties """
 
@@ -119,7 +127,7 @@ class Profile:
         if self.aircraft.LoiterStages is not None:
             self.LoiterStages = self.aircraft.LoiterStages 
             self.AltitudeLoiter = self.aircraft.LoiterStages['Cruise']['input']['Altitude'] 
-            print(self.AltitudeLoiter)
+
             if 'Range Loiter' in self.aircraft.MissionInput:
                 self.LoiterRange = Units.NMtoM(self.aircraft.MissionInput['Range Loiter'])
             elif 'Time Loiter' in self.aircraft.MissionInput:
@@ -292,7 +300,7 @@ class Profile:
                 phi_end = self.LoiterStages['Cruise']['Supplied Power Ratio']['phi_end'] 
                 self.SPW = np.vstack([self.SPW,[phi_start,phi_end]])
 
-
+        
         self.MergeDiscreteMission()
 
 
@@ -431,7 +439,7 @@ class Profile:
         return np.piecewise(t, [ t >= ti for ti in self.Breaks], self.Velocities)
 
     def SuppliedPowerRatio(self,t):
-        idx=np.piecewise(t, [ self.times[i] <= t < self.times[i+1] for i in range(len(self.times)-1)], [i for i in range(len(self.times)-1)])
+        idx=np.piecewise(t, [ self.times[i] < t <= self.times[i+1] for i in range(len(self.times)-1)], [i for i in range(len(self.times)-1)])
         return self.SPWinterp[idx.astype(int)](t) 
 
 
@@ -556,7 +564,8 @@ class Profile:
         StartAltitude = StageInput['StartAltitude']
         self.Altitudes.append(StartAltitude)
         EndAltitude = StageInput['EndAltitude'] 
-        CB = StageInput['CB'] 
+        CB = StageInput['CB']
+ 
 
         # The initial value problem is T = f(H), hereafter t symbolizes the altitude         
         
@@ -610,6 +619,7 @@ class Profile:
             self.TimesClimbDiversion = np.append(self.TimesClimbDiversion,sol.y[0][1::])
             self.DistancesDiversion.append(Range)
 
+
             if self.counterClimbDiversion > 0:
                 DiscretizedVelocities.pop(0)
                 DiscretizedPowerExcess.pop(0)
@@ -661,7 +671,7 @@ class Profile:
             DiscretizedPowerExcess.append(OptimalVelocity(DiscretizedAltitudes[i])*CB)
 
         Range = integrate.simpson(DiscretizedVelocities,x=sol.y[0])
-        
+
         if (phase == 'Mission'):    
 
             self.BreaksDescent = np.append(self.BreaksDescent, sol.y[0][-1])
@@ -685,6 +695,7 @@ class Profile:
             self.TimesDescentDiversion = np.append(self.TimesDescentDiversion,sol.y[0][1::])
             self.DistancesDiversion.append(Range)
 
+
             if self.counterDescentDiversion > 0:
                 DiscretizedVelocities.pop(0)
                 DiscretizedPowerExcess.pop(0)
@@ -703,26 +714,30 @@ class Profile:
         Altitude = StageInput['Altitude']
         Mach = StageInput['Mach']
 
-        steps = np.ones(self.n_steps)
-
+        steps = np.ones(self.n_steps*3 - 2)
+        
 
         if (phase == 'Mission'):
             
-            self.VCruise = Speed.Mach2TAS(Mach, Altitude)*steps
-            self.CruiseAltitudes = Altitude*steps 
+            self.VCruise = Speed.Mach2TAS(Mach, Altitude)*(steps)
+            self.CruiseAltitudes = Altitude*(steps) 
           
             DRCruise = self.MissionRange - np.sum(self.Distances)
                 
-            self.TimesCruise = np.linspace(self.TimesClimb[-1], np.ceil(DRCruise/self.VCruise[0]) + self.TimesClimb[-1], self.n_steps)
-        
+            self.TimesCruise = np.linspace(self.TimesClimb[-1], np.ceil(DRCruise/self.VCruise[0]) + self.TimesClimb[-1], self.n_steps*3)
+            self.TimesCruise = np.delete(self.TimesCruise,0)
+            self.TimesCruise = np.delete(self.TimesCruise,-1)
+
         if (phase == 'Diversion'):
             
-            self.VCruiseDiversion = Speed.Mach2TAS(Mach, Altitude)*steps
-            self.DiversionCruiseAltitudes = Altitude*steps
+            self.VCruiseDiversion = Speed.Mach2TAS(Mach, Altitude)*np.ones(self.n_steps - 2)
+            self.DiversionCruiseAltitudes = Altitude*np.ones(self.n_steps - 2)
 
             DRCruise = self.DiversionRange - np.sum(self.DistancesDiversion)
                 
-            self.TimesCruiseDiversion = np.linspace(0, np.ceil(DRCruise/self.VCruise[0]), self.n_steps)
+            self.TimesCruiseDiversion = np.linspace(0, np.ceil(DRCruise/self.VCruiseDiversion[0]), self.n_steps)
+            self.TimesCruiseDiversion = np.delete(self.TimesCruiseDiversion,0)
+            self.TimesCruiseDiversion = np.delete(self.TimesCruiseDiversion,-1)
         
         if (phase == 'Loiter'): 
 
@@ -730,14 +745,17 @@ class Profile:
                 return np.sqrt((2.*self.aircraft.DesignWTOoS/ISA.atmosphere.RHOstd(H,self.aircraft.constraint.DISA))*np.sqrt(self.aircraft.aerodynamics.ki()/(3.*self.aircraft.aerodynamics.Cd_0))) 
 
 
-            self.VCruiseLoiter = OptimalVelocity(Altitude)*steps
-            self.LoiterAltitudes = Altitude*steps
+            self.VCruiseLoiter = OptimalVelocity(Altitude)*np.ones(self.n_steps - 2)
+            self.LoiterAltitudes = Altitude*np.ones(self.n_steps - 2)
 
             if self.TLoiter is not None:
                 self.TimeLoiter = np.linspace(0,self.TLoiter*60.,self.n_steps) #From minutes to seconds
 
             elif self.LoiterRange is not None:
                 self.TimeLoiter = np.linspace(0.,np.ceil(self.LoiterRange/self.VCruiseLoiter,self.n_steps))
+            
+            self.TimeLoiter = np.delete(self.TimeLoiter,0)
+            self.TimeLoiter = np.delete(self.TimeLoiter,-1)
 
 
 
@@ -751,23 +769,33 @@ class Profile:
         self.DiscretizedVelocities = np.append(self.DiscretizedVelocities, self.VClimbs)
         self.DiscretizedPowerExcess = np.append(self.DiscretizedPowerExcess, self.HTMissionClimb)
         self.DiscretizedTime = np.append(self.DiscretizedTime, self.TimesClimb)
-        
+
+
+
+    
         # CRUISE
 
         self.DiscretizedAltitudes = np.append(self.DiscretizedAltitudes, self.CruiseAltitudes)
         self.DiscretizedVelocities = np.append(self.DiscretizedVelocities, self.VCruise)
         self.DiscretizedPowerExcess = np.append(self.DiscretizedPowerExcess, np.zeros(len(self.VCruise)))
-        self.DiscretizedTime = np.append(self.DiscretizedTime, self.TimesCruise) 
+        self.DiscretizedTime = np.append(self.DiscretizedTime, self.TimesCruise)        
+
+        # print(self.DiscretizedTime[-1])
+        # print(self.DiscretizedVelocities[-1])
+            
 
         # DESCENT
 
         self.TimesDescent += self.TimesCruise[-1]
 
+        # print(self.TimesDescent)
+        # print(self.VDescents)
         self.DiscretizedAltitudes = np.append(self.DiscretizedAltitudes, self.DescentAltitudes)
         self.DiscretizedVelocities = np.append(self.DiscretizedVelocities, self.VDescents)
         self.DiscretizedPowerExcess = np.append(self.DiscretizedPowerExcess, self.HTMissionDescent)
         self.DiscretizedTime = np.append(self.DiscretizedTime, self.TimesDescent) 
-        
+
+
         # CLIMB DIVERSION
 
         self.TimesClimbDiversion += self.TimesDescent[-1]
@@ -776,6 +804,8 @@ class Profile:
         self.DiscretizedVelocities = np.append(self.DiscretizedVelocities, self.VClimbsDiversion)
         self.DiscretizedPowerExcess = np.append(self.DiscretizedPowerExcess, self.HTDiversionClimb)
         self.DiscretizedTime = np.append(self.DiscretizedTime, self.TimesClimbDiversion) 
+
+   
 
         # CRUISE DIVERSION 
 
@@ -786,14 +816,30 @@ class Profile:
         self.DiscretizedPowerExcess = np.append(self.DiscretizedPowerExcess, np.zeros(len(self.VCruiseDiversion)))
         self.DiscretizedTime = np.append(self.DiscretizedTime, self.TimesCruiseDiversion) 
 
+        # print(self.DiscretizedTime[-1])
+        # print(self.DiscretizedVelocities[-1])
+      
+
         # DESCENT DIVERSION
 
         self.TimesDescentDiversion += self.TimesCruiseDiversion[-1]
+        # print(self.TimesDescentDiversion)
+        # print(self.VDescentsDiversion)
 
         self.DiscretizedAltitudes = np.append(self.DiscretizedAltitudes, self.DiversionDescentAltitudes)
         self.DiscretizedVelocities = np.append(self.DiscretizedVelocities, self.VDescentsDiversion)
         self.DiscretizedPowerExcess = np.append(self.DiscretizedPowerExcess, self.HTDiversionDescent)
         self.DiscretizedTime = np.append(self.DiscretizedTime, self.TimesDescentDiversion) 
+
+
+        self.Breaks = np.append(self.Breaks, self.BreaksClimb)
+        self.Breaks = np.append(self.Breaks, self.TimesCruise[-1])
+        self.Breaks = np.append(self.Breaks, self.BreaksDescent)
+        self.Breaks = np.append(self.Breaks, self.BreaksClimbDiversion)
+        self.Breaks = np.append(self.Breaks, self.TimesCruiseDiversion[-1])
+        self.Breaks = np.append(self.Breaks, self.BreaksDescentDiversion)
+
+
 
         if self.LoiterStages is not None:
 
@@ -803,19 +849,12 @@ class Profile:
             self.DiscretizedVelocities = np.append(self.DiscretizedVelocities, self.VCruiseLoiter)
             self.DiscretizedPowerExcess = np.append(self.DiscretizedPowerExcess, np.zeros(len(self.VCruiseLoiter)))
             self.DiscretizedTime = np.append(self.DiscretizedTime, self.TimeLoiter)  
-
-        self.Breaks = np.append(self.Breaks, self.BreaksClimb)
-        self.Breaks = np.append(self.Breaks, self.TimesCruise[-1])
-        self.Breaks = np.append(self.Breaks, self.BreaksDescent)
-        self.Breaks = np.append(self.Breaks, self.BreaksClimbDiversion)
-        self.Breaks = np.append(self.Breaks, self.TimesCruiseDiversion[-1])
-        self.Breaks = np.append(self.Breaks, self.BreaksDescentDiversion)
-
-        if self.LoiterStages is not None:
-
-
             self.Breaks = np.append(self.Breaks, self.TimeLoiter[-1])
 
+
+        # if self.aircraft.Configuration == 'Hybrid':
+        #     self.DiscretizedSPR = np.append(self.DiscretizedSPR, [np.linspace(self.SPW[i][0], self.SPW[i][1], self.n_steps) for i in range(1,len(self.SPW))])
+        
         self.MissionTime2 = self.Breaks[-1]
         self.Breaks = np.delete(self.Breaks, -1)
 

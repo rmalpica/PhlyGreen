@@ -85,7 +85,7 @@ def model_solver(parameters):
 
 
     # # Creating mediator and associating with subsystems
-    myaircraft = pg.Aircraft(powertrain, structures, aerodynamics, performance, mission, weight, constraint, welltowake)
+    myaircraft = pg.Aircraft(powertrain, structures, aerodynamics, performance, mission, weight, constraint, welltowake=welltowake)
 
 
 

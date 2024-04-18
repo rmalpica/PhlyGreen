@@ -3,10 +3,9 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 import time
-import cProfile
+import cProfile, pstats
 
 #ISA = pg.Utilities.Atmosphere()
-
 start_time = time.time()
 
 # Creating subsystem instances
@@ -18,10 +17,10 @@ mission = pg.Mission.Mission(None)
 weight = pg.Weight.Weight(None)
 constraint = pg.Constraint.Constraint(None)
 welltowake = pg.WellToWake.WellToWake(None)
-
+climateimpact = pg.ClimateImpact.ClimateImpact(None)
 
 # # Creating mediator and associating with subsystems
-myaircraft = pg.Aircraft(powertrain, structures, aerodynamics, performance, mission, weight, constraint, welltowake)
+myaircraft = pg.Aircraft(powertrain, structures, aerodynamics, performance, mission, weight, constraint, welltowake=welltowake, climateimpact = climateimpact)
 
 
 
@@ -34,6 +33,7 @@ performance.aircraft = myaircraft
 weight.aircraft = myaircraft
 constraint.aircraft = myaircraft
 welltowake.aircraft = myaircraft
+climateimpact.aircraft = myaircraft
 
 #aerodynamics.set_quadratic_polar(11,0.8)
 
@@ -110,12 +110,32 @@ WellToTankInput = {'Eta Charge': 0.95,
                    'Eta Production': 1.,
                    'Eta Transportation': 0.25}
 
+
+ClimateImpactInput = {'H': 100, 'N':1.6e7, 'Y':30, 'EINOx_model':'Filippone'}
+
 #myaircraft.Configuration = 'Traditional'
 myaircraft.Configuration = 'Hybrid'
 myaircraft.HybridType = 'Parallel'
 myaircraft.AircraftType = 'ATR'
 
-myaircraft.DesignAircraft(AerodynamicsInput,ConstraintsInput,MissionInput,EnergyInput,MissionStages,DiversionStages, LoiterStages=LoiterStages, WellToTankInput=WellToTankInput,PrintOutput=True)
+myaircraft.DesignAircraft(AerodynamicsInput,ConstraintsInput,MissionInput,EnergyInput,MissionStages,DiversionStages, LoiterStages=LoiterStages, WellToTankInput=WellToTankInput,PrintOutput=True, ClimateImpactInput = ClimateImpactInput)
+
+
+
+myaircraft.climateimpact.calculate_mission_emissions()
+print(myaircraft.climateimpact.mission_emissions)
+
+
+
+# profiler = cProfile.Profile()
+# profiler.enable()
+myaircraft.climateimpact.ATR()
+
+# cProfile.run('myaircraft.climateimpact.ATR()')
+# profiler.disable()
+# stats = pstats.Stats(profiler).sort_stats('ncalls')
+
+# stats.print_stats()
 
 end_time = time.time()
 execution_time =  end_time - start_time
@@ -172,7 +192,8 @@ plt.legend()
 plt.grid(visible=True)
 plt.xlabel('$W_{TO}/S$')
 plt.ylabel('$P/W_{TO}$')
-plt.show()
+# plt.show()
+plt.close()
 
 times = np.linspace(0,mission.profile.MissionTime2,num = 1000)
 
@@ -180,7 +201,8 @@ plt.plot(times/60,mission.profile.Altitude(times))
 plt.grid(visible=True)
 plt.xlabel('t [min]')
 plt.ylabel('Altitude [m]')
-plt.show()
+# plt.show()
+plt.close()
 
 #plt.plot(times/60,mission.profile.SuppliedPowerRatio(times))
 plt.plot(times/60,[mission.profile.SuppliedPowerRatio(t) for t in times], 'b')
@@ -188,12 +210,14 @@ plt.plot(times/60,[mission.profile.SuppliedPowerRatio(t) for t in times], 'b')
 plt.grid(visible=True)
 plt.xlabel('t [min]')
 plt.ylabel('Phi')
-plt.show()
+# plt.show()
+plt.close()
 
 plt.plot(times/60,mission.profile.Velocity(times))
 plt.grid(visible=True)
 plt.xlabel('t [min]')
 plt.ylabel('TAS [m/s]')
-plt.show()
+# plt.show()
+plt.close()
 
 
