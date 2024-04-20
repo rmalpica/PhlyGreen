@@ -38,7 +38,7 @@ class Battery:
         self.series_stack_size = np.max([np.floor(self.controller_Vmax/self.cell_Vmax), np.ceil(self.controller_Vmin/self.cell_Vmin) ]) 
         
         #is this even true? investigate if this is actually how you calculate energy per cell, or if its just an approximation
-        self.total_cells_energy = np.ceil(required_energy/(self.cell_capacity*self.cell_Vnom)) 
+        self.total_cells_energy = np.ceil(required_energy/(3600*self.cell_capacity*self.cell_Vnom)) 
 
         self.parallel_nr_energy = np.ceil(self.total_cells_energy/self.series_stack_size)
         #maybe change later to be able to use power at different SOCs, but for now it assumes max power at minimum SOC, worst case scenario
@@ -62,10 +62,10 @@ class Battery:
 
         self.pack_weight = self.cell_mass*self.cells_total
         self.pack_volume = self.cell_volume*self.cells_total
-    
+
         self.pack_type='S'+str(self.series_stack_size)+'P'+str(self.parallel_stack_number)
         return ()
-        
+
 
         """ ###########################################################
         #minimum nr of cells in series to meet voltage requirements
