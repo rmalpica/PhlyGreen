@@ -3,10 +3,6 @@ import numpy as np
 class Battery:
     def __init__(self, aircraft):
         self.aircraft = aircraft
-        #self.series_stack_size = None     #number of cells in series per stack
-        #self.parallel_stack_number = None   #nr of stacks in parallel
-        #self.cells_total = None     #total nr of cells in the battery
-        #^do these make sense to be here?^
         self.cell_capacity = None 
         self.cell_rate = None
         self.cell_Vmax = None
@@ -19,6 +15,7 @@ class Battery:
         self.controller_Vmax = 740 
         self.controller_Vmin = 420 #this range of voltages should be defined in the model of the motor controller, but ill do that later, for now its hardcoded
 
+    
 #should define a bunch of property setters and getters that make sure that all values are positive, and that Vmax ≥ Vnom ≥ Vmin
 
     def SetInput(self):
@@ -37,14 +34,23 @@ class Battery:
     def Configuration(self,required_energy, required_power):
         
         #number of cells in series per stack, imposed by whatever motor controller we are using, as those have a fixed operational voltage range that cant be exceeded
-        self.series_stack_size = np.max([np.floor(self.controller_Vmax/self.cell_Vmax), np.ceil(self.controller_Vmin/self.cell_Vmin) ]) #is this the best way of doing it? or should the optimizer be able to tweak this? - find if there is an optimal way of choosing
+        #is this the best way of doing it? or should the optimizer be able to tweak this? - find if there is an optimal way of choosing
+        self.series_stack_size = np.max([np.floor(self.controller_Vmax/self.cell_Vmax), np.ceil(self.controller_Vmin/self.cell_Vmin) ]) 
         
-        self.total_cells_energy = np.ceil(required_energy/(self.cell_capacity*self.cell_Vnom)) #is this even true? investigate if this is actually how you calculate energy per cell, or if its just an approximation
+        #is this even true? investigate if this is actually how you calculate energy per cell, or if its just an approximation
+        self.total_cells_energy = np.ceil(required_energy/(self.cell_capacity*self.cell_Vnom)) 
 
         self.parallel_nr_energy = np.ceil(self.total_cells_energy/self.series_stack_size)
-        self.parallel_nr_power = np.ceil(required_power/(self.controller_Vmin*self.cell_current)) #maybe change later to be able to use power at different SOCs, but for now it assumes max power at minimum SOC, worst case scenario
-        self.parallel_stack_number = np.max([self.parallel_nr_energy, self.parallel_nr_power]) #number of cell stacks in parallel required
-        #add some mechanism to be able to find which constraint is driving the design at each point?
+        #maybe change later to be able to use power at different SOCs, but for now it assumes max power at minimum SOC, worst case scenario
+        self.parallel_nr_power = np.ceil(required_power/(self.controller_Vmin*self.cell_current)) 
+
+        #number of cell stacks in parallel required while tracking which constraint is the driver
+        if self.parallel_nr_energy > self.parallel_nr_power:
+            self.parallel_stack_number = self.parallel_nr_energy
+            self.energy_or_power = 'energy'
+        else:
+            self.parallel_stack_number = self.parallel_nr_power
+            self.energy_or_power = 'power'
 
         #find the total number of cells in the whole pack
         self.cells_total = self.parallel_stack_number * self.series_stack_size

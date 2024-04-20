@@ -20,9 +20,6 @@ class Weight:
         self.WCrew = self.aircraft.MissionInput['Crew Weight']
         self.ef = self.aircraft.EnergyInput['Ef']
         self.final_reserve = self.aircraft.EnergyInput['Contingency Fuel']
-        if (self.aircraft.Configuration == 'Hybrid'):
-            pass
-        #  put something here that activates the battery class?
 
         return None
         
@@ -63,38 +60,30 @@ class Weight:
         
         self.WTO = brenth(func, 5000, 50000, xtol=0.1)
 
-       
-    
+
     def Hybrid(self):
-        
+
         def func(WTO):
+
                 self.TotalEnergies = self.aircraft.mission.EvaluateMission(WTO)
                 self.Wf = self.TotalEnergies[0]/self.ef
 
-                #WBat  = [self.TotalEnergies[1]/self.ebat , self.aircraft.mission.Max_PBat*(1/self.pbat), self.aircraft.mission.TO_PBat*(1/self.pbat)]
+                #maximum power for the battery, Max_PBat does not include takeoff power
+                if self.aircraft.mission.Max_PBat > self.aircraft.mission.TO_PBat:
+                    self.MaxBatPwr = self.aircraft.mission.Max_PBat
+                    self.TOPwr_or_CruisePwr = "cruise"
+                else:
+                    self.MaxBatPwr = self.aircraft.mission.TO_PBat
+                    self.TOPwr_or_CruisePwr = "takeoff"
 
-                self.MaxBatPwr=np.max([self.aircraft.mission.Max_PBat,self.aircraft.mission.TO_PBat])#maximum power for the battery, Max_PBat does not include takeoff power
-                 
-            #probably just me misunderstanding python but this does not work:
-                #self.ConfigBat  = self.aircraft.battery.Configuration(self.TotalEnergies[1],self.MaxBatPwr)
-                #self.WBat=self.ConfigBat.pack_weight
-            #instead i have to do this:
-                self.ConfigBat  = self.aircraft.battery.Configuration(self.TotalEnergies[1],self.MaxBatPwr)
+                self.aircraft.battery.Configuration(self.TotalEnergies[1],self.MaxBatPwr)
                 self.WBat=self.aircraft.battery.pack_weight
+
                 self.WPT = self.aircraft.powertrain.WeightPowertrain(WTO)
                 self.WStructure = self.aircraft.structures.StructuralWeight(WTO) 
                 if self.final_reserve == 0:
                     self.final_reserve = 0.05*self.Wf
-                 
-                #print('energies: ', self.TotalEnergies)
-                #print('Powertrain: ',self.WPT, 'Fuel: ', self.Wf, 'Battery: ', self.WBat,'Structure: ', self.WStructure)
-                #print('Empty Weight: ', self.WPT + self.WStructure + self.WCrew)
-                #print(self.Wf + self.WBat + self.WPT + self.WStructure + self.WPayload + self.WCrew - WTO)
-                #print('---------------------------------------------------------------------------')
 
                 return (self.Wf + self.final_reserve + self.WBat + self.WPT + self.WStructure + self.WPayload + self.WCrew - WTO)
-         
-        
+
         self.WTO = brenth(func, 10000, 300000, xtol=0.1)
-        
-        
