@@ -1,5 +1,5 @@
 import numpy as np
-
+import PhlyGreen.Systems.Battery.Cell_Models as Cell_Models
 class Battery:
     def __init__(self, aircraft):
         self.aircraft = aircraft
@@ -15,20 +15,19 @@ class Battery:
         self.controller_Vmax = 740 
         self.controller_Vmin = 420 #this range of voltages should be defined in the model of the motor controller, but ill do that later, for now its hardcoded
 
-    
 #should define a bunch of property setters and getters that make sure that all values are positive, and that Vmax ≥ Vnom ≥ Vmin
 
     def SetInput(self):
-        
-        self.cell_capacity = self.aircraft.CellInput['Cell Capacity']
-        self.cell_rate = self.aircraft.CellInput['Cell C rating']
+        self.cell_model = Cell_Models[self.aircraft.CellModel]
+        self.cell_capacity = self.cell_model['Cell Capacity']  #self.aircraft.CellInput['Cell Capacity']
+        self.cell_rate = self.cell_model['Cell C rating']
         self.cell_current = self.cell_rate * self.cell_capacity
-        self.cell_Vmax = self.aircraft.CellInput['Cell Voltage Max']
-        self.cell_Vmin = self.aircraft.CellInput['Cell Voltage Min']
-        self.cell_Vnom = self.aircraft.CellInput['Cell Voltage Nominal']
-        self.cell_mass = self.aircraft.CellInput['Cell Mass']
-        self.cell_volume = self.aircraft.CellInput['Cell Volume'] #possibly substitute this for a cylinder & prism volume calculator that takes in cylinder/square and corresponding xyz dimensions to calculate volume that way
-
+        self.cell_Vmax = self.cell_model['Cell Voltage Max']
+        self.cell_Vmin = self.cell_model['Cell Voltage Min']
+        self.cell_Vnom = self.cell_model['Cell Voltage Nominal']
+        self.cell_mass = self.cell_model['Cell Mass']
+        self.cell_volume = self.cell_model['Cell Volume'] #possibly substitute this for a cylinder & prism volume calculator that takes in cylinder/square and corresponding xyz dimensions to calculate volume that way
+        
 
 #determine battery configuration
     def Configuration(self,required_energy, required_power):
