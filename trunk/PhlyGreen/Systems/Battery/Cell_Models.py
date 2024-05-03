@@ -2,6 +2,7 @@ Cell_Models = {
             'SAMSUNG_LIR18650':{
                         'Cell Capacity': 2.5,        #in Ah
                         'Cell C rating': 8,          #dimensionless
+                        'Internal Resistance': 0.07,  #in ohms
                         'Cell Voltage Min': 2.5,     #in volts
                         'Cell Voltage Max': 4.2,     #in volts
                         'Cell Voltage Nominal': 3.6, #in volts
@@ -11,6 +12,7 @@ Cell_Models = {
             'LG_INR21700M50LT':{
                         'Cell Capacity': 4.8,        #in Ah
                         'Cell C rating': 3,          #dimensionless
+                        'Internal Resistance': 0.12, #in ohms
                         'Cell Voltage Min': 2.5,     #in volts
                         'Cell Voltage Max': 4.2,     #in volts
                         'Cell Voltage Nominal': 3.6, #in volts
