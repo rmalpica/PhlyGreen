@@ -1,4 +1,5 @@
 import numpy as np
+import numbers
 import PhlyGreen.Systems.Battery.Cell_Models as Cell_Models
 class Battery:
     def __init__(self, aircraft):
@@ -12,12 +13,151 @@ class Battery:
         self.cell_volume = None
         self.required_energy = None
         self.required_power = None
+        self.series_stack_size = None
         self.parallel_stack_number = 1 #initial value so things can be calculated at all, does this work?
         self.pack_energy = None
         self.controller_Vmax = 740 
         self.controller_Vmin = 420 #this range of voltages should be defined in the model of the motor controller, but ill do that later, for now its hardcoded
 
-#should define a bunch of property setters and getters that make sure that all values are positive, and that Vmax ≥ Vnom ≥ Vmin
+#should define a bunch of property setters and getters that make sure that all values are valid
+
+### pack energy
+    @property
+    def pack_energy(self):
+        if self._pack_energy == None:
+            raise ValueError("Initial pack_energy unset. Exiting")
+        return self._pack_energy
+
+    @pack_energy.setter
+    def pack_energy(self,value):
+        self._pack_energy = value
+        if(isinstance(value, numbers.Number) and (value <= 0 )):
+            raise ValueError("Error: Illegal pack_energy: %e. Exiting" %value)
+
+###number of cell stacks in parallel
+    @property
+    def parallel_stack_number(self):
+        if self._parallel_stack_number == None:
+            raise ValueError("Initial parallel_stack_number unset. Exiting")
+        return self._parallel_stack_number
+
+    @parallel_stack_number.setter
+    def parallel_stack_number(self,value):
+        self._parallel_stack_number = value
+        if(isinstance(value, int) and (value <= 0 )):
+            raise ValueError("Error: Illegal parallel_stack_number: %e. Exiting" %value)
+
+
+### series_stack_size
+    @property
+    def series_stack_size(self):
+        if self._series_stack_size == None:
+            raise ValueError("Initial series_stack_size unset. Exiting")
+        return self._series_stack_size
+
+    @series_stack_size.setter
+    def series_stack_size(self,value):
+        self._series_stack_size = value
+        if(isinstance(value, int) and (value <= 0 )):
+            raise ValueError("Error: Illegal series_stack_size: %e. Exiting" %value)
+
+### cell_capacity
+    @property
+    def cell_capacity(self):
+        if self._cell_capacity == None:
+            raise ValueError("Initial cell_capacity unset. Exiting")
+        return self._cell_capacity
+
+    @cell_capacity.setter
+    def cell_capacity(self,value):
+        self._cell_capacity = value
+        if(isinstance(value, numbers.Number) and (value <= 0 )):
+            raise ValueError("Error: Illegal cell_capacity: %e. Exiting" %value)
+
+
+### cell_rate
+    @property
+    def cell_rate(self):
+        if self._cell_rate == None:
+            raise ValueError("Initial cell_rate unset. Exiting")
+        return self._cell_rate
+
+    @cell_rate.setter
+    def cell_rate(self,value):
+        self._cell_rate = value
+        if(isinstance(value, numbers.Number) and (value <= 0 )):
+            raise ValueError("Error: Illegal cell_rate: %e. Exiting" %value)
+
+
+### cell_Vmax
+    @property
+    def cell_Vmax(self):
+        if self._cell_Vmax == None:
+            raise ValueError("Initial cell_Vmax unset. Exiting")
+        return self._cell_Vmax
+
+    @cell_Vmax.setter
+    def cell_Vmax(self,value):
+        self._cell_Vmax = value
+        if(isinstance(value, numbers.Number) and (value <= 0 )):
+            raise ValueError("Error: Illegal cell_Vmax: %e. Exiting" %value)
+
+
+### cell_Vmin
+    @property
+    def cell_Vmin(self):
+        if self._cell_Vmin == None:
+            raise ValueError("Initial cell_Vmin unset. Exiting")
+        return self._cell_Vmin
+
+    @cell_Vmin.setter
+    def cell_Vmin(self,value):
+        self._cell_Vmin = value
+        if(isinstance(value, numbers.Number) and (value <= 0 )):
+            raise ValueError("Error: Illegal cell_Vmin: %e. Exiting" %value)
+
+
+### cell_Vnom
+    @property
+    def cell_Vnom(self):
+        if self._cell_Vnom == None:
+            raise ValueError("Initial cell_Vnom unset. Exiting")
+        return self._cell_Vnom
+
+    @cell_Vnom.setter
+    def cell_Vnom(self,value):
+        self._cell_Vnom = value
+        if(isinstance(value, numbers.Number) and (value <= 0 )):
+            raise ValueError("Error: Illegal cell_Vnom: %e. Exiting" %value)
+
+
+### cell_mass
+    @property
+    def cell_mass(self):
+        if self._cell_mass == None:
+            raise ValueError("Initial cell_mass unset. Exiting")
+        return self._cell_mass
+
+    @cell_mass.setter
+    def cell_mass(self,value):
+        self._cell_mass = value
+        if(isinstance(value, numbers.Number) and (value <= 0 )):
+            raise ValueError("Error: Illegal cell_mass: %e. Exiting" %value)
+
+
+### cell_volume
+    @property
+    def cell_volume(self):
+        if self._cell_volume == None:
+            raise ValueError("Initial cell_volume unset. Exiting")
+        return self._cell_volume
+
+    @cell_volume.setter
+    def cell_volume(self,value):
+        self._cell_volume = value
+        if(isinstance(value, numbers.Number) and (value <= 0 )):
+            raise ValueError("Error: Illegal cell_volume: %e. Exiting" %value)
+
 
     def SetInput(self):
         self.cell_model = Cell_Models[self.aircraft.CellModel]
@@ -34,27 +174,13 @@ class Battery:
         self.cell_energy = 3600*self.cell_capacity*self.cell_Vnom # cell capacity in joules instead of amps hour
 
         #self.series_stack_size = np.max([np.floor(self.controller_Vmax/self.cell_Vmax), np.ceil(self.controller_Vmin/self.cell_Vmin) ])
-        # ^^ replaced by version that only considers vmax, i believe that to be correct but i need to investigate to be sure
+        # dont delete this comment until there is a good justification for why one should be picked over the other. replaced by version that only considers vmax, i believe that to be correct but i need to investigate to be sure. 
         self.series_stack_size = np.floor(self.controller_Vmax/self.cell_Vmax) #number of cells in series to achieve desired voltage
         self.pack_energy = self.parallel_stack_number*self.series_stack_size*self.cell_energy #initializing this at a non zero value
 
 #determine battery configuration
-    #def Configuration(self,required_energy, required_power): # cant work like this anymore, cells for power are calculated externally
     #must receive the number of cells in parallel for energy and power
     def Configuration(self, parallel_cells_energy, parallel_cells_power):
-
-        '''
-        #number of cells in series per stack, imposed by whatever motor controller we are using, as those have a fixed operational voltage range that cant be exceeded
-        #is this the best way of doing it? or should the optimizer be able to tweak this? - find if there is an optimal way of choosing
-        
-        #is this even true? investigate if this is actually how you calculate energy per cell, or if its just an approximation
-
-        #cell energy calculated outside of here using another function
-        #self.parallel_cells_energy = np.ceil(total_cells_energy/self.series_stack_size)
-
-        #cant work like this anymore, cells are calculated outside of here
-        #self.parallel_nr_power = np.ceil(required_power/(self.controller_Vmax*self.cell_current))
-        '''
 
         #number of cell stacks in parallel required while tracking which constraint is the driver
         if parallel_cells_energy > parallel_cells_power:
@@ -87,7 +213,8 @@ class Battery:
         SOC = Q / Q_0          #SOC gives remaining charge %
         return SOC
 
-    #convert SOC to open circuit voltage using the linear relation. possibly expand to include the exponential zones?
+    #convert SOC to open circuit voltage 
+    # near relation. possibly expand to include the exponential zones?
     def SOC_2_OC_Voltage(self, SOC):
         Cell_U_oc=(-0.7*SOC + 3.7) #linear variation of open circuit voltage with SOC, change it to use parameters of the battery instead of being hardcoded
         Pack_U_oc = Cell_U_oc * self.series_stack_size
