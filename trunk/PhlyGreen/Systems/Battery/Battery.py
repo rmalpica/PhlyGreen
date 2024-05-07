@@ -1,6 +1,7 @@
 import numpy as np
 import numbers
 import PhlyGreen.Systems.Battery.Cell_Models as Cell_Models
+from scipy.optimize import brentq
 class Battery:
     def __init__(self, aircraft):
         self.aircraft = aircraft
@@ -222,10 +223,21 @@ class Battery:
 
     #Calculates the open circuit voltage and current to enable calculating real power drain from the battery in function of useful output power. U_oc is the open circuit voltage, U_out is the measured battery output voltage
     def Power_2_Current(self, SOC, Power_out, nr_parallel_cells):
-        Resistance = self.cell_resistance * self.series_stack_size / nr_parallel_cells #calculate total internal R of the pack
-        U_oc = self.SOC_2_OC_Voltage(SOC)
-        U_out = (U_oc + (U_oc**2 - 4 * Power_out * Resistance)**0.5)/2 #this comes from the analytical solution of P_out = U_out * I_out
-        I_out = (U_oc - U_out)/Resistance
+        if Power_out != 0:
+            # U_oc = self.SOC_2_OC_Voltage(SOC)
+            # Resistance = self.cell_resistance * self.series_stack_size / nr_parallel_cells #calculate total internal R of the pack
+            # def solve_I_out(I):
+            #     I_out=(Power_out+Resistance*I**2)/U_oc
+            #     return I-I_out
+            # return brentq(solve_I_out, 0, 5000000, xtol=0.1) not needed
+            U_oc = self.SOC_2_OC_Voltage(SOC)
+            parallel_cells = np.ceil(self.cell_resistance * self.series_stack_size*(4*Power_out)/U_oc**2)
+            Resistance = self.cell_resistance * self.series_stack_size / parallel_cells #calculate total internal R of the pack
+            U_oc = self.SOC_2_OC_Voltage(SOC)
+            U_out = (U_oc + (U_oc**2 - 4 * Power_out * Resistance)**0.5)/2 #this comes from the analytical solution of P_out = U_out * I_out
+            I_out = (U_oc - U_out)/Resistance
+        else:
+            I_out = 0
         return I_out
 
     #find the number of cells required to supply the requested current at the current SOC. Assumes that the motor controller will draw a higher current to compensate for the lower input voltage as SOC goes down. Power is useful power output to the motor controller.
@@ -244,13 +256,16 @@ class Battery:
             parallel_cells = np.ceil(self.cell_resistance * self.series_stack_size*(4*Power_out)/U_oc**2)
             replace this with brent function????? idk
             """
-        U_oc = self.SOC_2_OC_Voltage(SOC)
-        parallel_cells = np.ceil(self.cell_resistance * self.series_stack_size*(4*Power_out)/U_oc**2)
-        Resistance = self.cell_resistance * self.series_stack_size / parallel_cells
-        U_out = (U_oc + (U_oc**2 - 4 * Power_out * Resistance)**0.5)/2
-        I_out = (U_oc - U_out)/Resistance
-        parallel_cells = np.ceil(I_out/self.cell_current)
-        print(parallel_cells)
+        print("SOC", SOC, "Uoc:",self.SOC_2_OC_Voltage(SOC))
+        if Power_out != 0:
+            U_oc = self.SOC_2_OC_Voltage(SOC)
+            parallel_cells = np.ceil(self.cell_resistance * self.series_stack_size*(4*Power_out)/U_oc**2)
+            Resistance = self.cell_resistance * self.series_stack_size / parallel_cells
+            U_out = (U_oc + (U_oc**2 - 4 * Power_out * Resistance)**0.5)/2
+            I_out = (U_oc - U_out)/Resistance
+            parallel_cells = np.ceil(I_out/self.cell_current)
+        else:
+            parallel_cells = 0
         return parallel_cells
 
     #find the number of cells in parallel required to obtain the total energy necessary assuming the number of cells in series is known
@@ -263,3 +278,12 @@ class Battery:
 consider changing the functions in this file to use arrays instead of single constant values? 
 in Power_2_Parallel_Cells() FIX IT because its badly broken right now
 """
+
+# def Power_2_Current2(SOC,p_out,parallel):
+#     U_oc=SOC_2_OC_Voltage(SOC)
+#     R=r*series*parallel
+#     def solve_I_out(I):
+#         I_out=(p_out+R*I**2)/U_oc
+#         return I-I_out
+#     return brentq(solve_I_out, 0, 5000000, xtol=0.1)
+

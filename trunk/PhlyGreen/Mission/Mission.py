@@ -174,8 +174,9 @@ class Mission:
             BatCurr = self.aircraft.battery.Power_2_Current(SOC, PElectric, self.aircraft.battery.parallel_stack_number) #current output of the battery at the current motor power draw
 
             dEBatdt = BatVolt * BatCurr #actual power drawn from the battery, losses included
-            dSOCdt = 1-dEBatdt/self.aircraft.battery.pack_energy #gives the rate of change of SOC over time
-
+            dSOCdt = 1+dEBatdt/self.aircraft.battery.pack_energy #gives the rate of change of SOC over time, remember dEbat is negative
+            print("Peletric:",PElectric, "stack:",self.aircraft.battery.parallel_stack_number)
+            print("dEFdt:",dEFdt,"dEBatdt:",dEBatdt,"dbetadt:",dbetadt,"dSOCdt:",dSOCdt)
             return [dEFdt,dEBatdt,dbetadt,dSOCdt]
 
         # Takeoff condition
@@ -205,9 +206,6 @@ class Mission:
             sol = integrate.solve_ivp(model,[times[i], times[i+1]], y0, method=method, rtol=rtol) 
             self.integral_solution.append(sol) 
             y0 = [sol.y[0][-1],sol.y[1][-1],sol.y[2][-1],sol.y[3][-1]]
-            """
-            SOC is y[3] lets hope this works how i think it does because i have not tested it yet
-            """
 
         self.Ef = sol.y[0]
         self.EBat = sol.y[1] 
@@ -233,9 +231,9 @@ class Mission:
 
         self.CellBatArray = []
         #get all the equivalent parallel cells needed for power at each point of the flight and put them all in an array
-        for i in range(len(self.PBatArray)):
+        for i in range(len(self.PwrBatArray)):
             instantCells=self.aircraft.battery.Power_2_Parallel_Cells(SOC[i], self.PwrBatArray[i]) 
-            self.CellBatArray = np.concatenate([self.CellBatArray, instantCells])
+            self.CellBatArray = np.append(self.CellBatArray, instantCells)
         self.Max_PBat_Cells = np.max(self.CellBatArray)
 
         #returns the required Fuel Energy & Battery Energy
