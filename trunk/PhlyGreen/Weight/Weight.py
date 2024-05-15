@@ -76,4 +76,4 @@ class Weight:
 
                 return (self.Wf + self.final_reserve + self.WBat + self.WPT + self.WStructure + self.WPayload + self.WCrew - WTO)
 
-        self.WTO = brenth(func, 10000, 30000000, xtol=0.1) ##this iterates the weight function over and over until it converges on a value of takeoff weight. notice how func() returns the difference between the takeoff weight and the previous takeoff weight. this re-runs the weight function until it returns a difference of weights below 0.1kg
+        self.WTO = brenth(func, 10000, 300000, xtol=0.1) ##this iterates the weight function over and over until it converges on a value of takeoff weight. notice how func() returns the difference between the takeoff weight and the previous takeoff weight. this re-runs the weight function until it returns a difference of weights below 0.1kg

@@ -161,7 +161,7 @@ class Mission:
         
         def model(t,y):
             #if self.aircraft.battery.P_number > 180:
-            print("time",t," and inputs",y, " and pack number",self.aircraft.battery.P_number)
+            #print("time",t," and inputs",y, " and pack number",self.aircraft.battery.P_number)
             Beta = y[2] #aircraft mass fraction
 
             #battery state of charge
@@ -211,6 +211,45 @@ class Mission:
             dbetadt = - dEFdt/(self.ef*self.WTO) #change in mass due to fuel consumption
             return [dEFdt,dEBatdt,dbetadt]
 
+
+        def evaluate_P_nr(self,P_number):
+            # resetting the constraint booleans
+            #self.constraints_met = True
+            self.constraint_low_SOC = True
+            self.constraint_low_voltage = True
+            self.constraint_overcurrent = True
+            self.constraint_TO_underpowered = True
+            self.constraint_underpowered = True
+
+            self.aircraft.battery.Configure(P_number) #changes the configuration every cycle
+            #print("pnum of the pack",self.aircraft.battery.P_number)
+            self.TO_current = self.aircraft.battery.Power_2_Current(1,self.TO_PBat)
+
+            if (self.TO_current == None):
+                self.constraint_TO_underpowered = False
+            elif (self.aircraft.battery.pack_current < self.TO_current ):
+                self.constraint_TO_underpowered = False
+            else:
+                # integrate sequentially
+                self.integral_solution = []
+                times = np.append(self.profile.Breaks,self.profile.MissionTime2)
+                rtol = 1e-5
+                method= 'BDF'
+                y0 = [0,0,self.beta0,1] #initial fuel energy, battery energy, mass fraction, and SOC
+                for i in range(len(times)-1):
+                    sol = integrate.solve_ivp(model,[times[i], times[i+1]], y0, method=method, rtol=rtol)
+                    if not sol:
+                        break
+                    self.integral_solution.append(sol) 
+                    y0 = [sol.y[0][-1],sol.y[1][-1],sol.y[2][-1],sol.y[3][-1]]
+
+            return [self.constraint_low_SOC,
+                    self.constraint_low_voltage,
+                    self.constraint_overcurrent,
+                    self.constraint_underpowered,
+                    self.constraint_TO_underpowered]
+
+
         # Takeoff condition
         Ppropulsive_TO = self.WTO * self.aircraft.performance.TakeOff(self.aircraft.DesignWTOoS,self.aircraft.constraint.TakeOffConstraints['Beta'], self.aircraft.constraint.TakeOffConstraints['Altitude'], self.aircraft.constraint.TakeOffConstraints['kTO'], self.aircraft.constraint.TakeOffConstraints['sTO'], self.aircraft.constraint.DISA, self.aircraft.constraint.TakeOffConstraints['Speed'], self.aircraft.constraint.TakeOffConstraints['Speed Type']) #calculates the propulsive power required for takeoff
 
@@ -219,7 +258,7 @@ class Mission:
         self.TO_PBat = Ppropulsive_TO * PRatio[5] #electric motor power during takeoff
 
 
-#initialize battery loop with simplified calculations for worst case scenario conditions
+#initialize with simplified calculations for worst case scenario conditions
         self.Max_PBat = -1
         self.Max_PEng = -1
 
@@ -257,75 +296,45 @@ class Mission:
         self.energy_P_number = self.aircraft.battery.Energy_2_P_num(self.EBat[-1]*5) #finds the P number for the energy requirements using an exaggerated 20% extra energy just to be safe since the simplified calculations underestimage the energy required
 
         #print(self.TO_PBat_Cells,self.flight_PBat_Cells,self.energy_P_number)
-        self.pack_P_number = int(np.ceil(np.max([self.TO_PBat_Cells,self.flight_PBat_Cells,self.energy_P_number]))) #initializes the calculation using the highest P number, picks the maximum value, rounds up, and then converts to int
+        self.P_number_ceiling = int(np.ceil(np.max([
+                                                    self.TO_PBat_Cells,
+                                                    self.flight_PBat_Cells,
+                                                    self.energy_P_number
+                                                    ]))) #initializes the calculation using the highest P number, picks the maximum value, rounds up, and then converts to int
 
         #defining some initial constants before the loop
-        j=0
-        optimal_config = False
-        self.design_constraints = []
-
-        while not optimal_config:
-            # resetting the constraint booleans
-            self.constraints_met = True
-            self.constraint_low_SOC = True
-            self.constraint_low_voltage = True
-            self.constraint_overcurrent = True
-            self.constraint_TO_underpowered = True
-            self.constraint_underpowered = True
-
-            self.aircraft.battery.Configure(self.pack_P_number) #changes the configuration every cycle
-            #print("pnum of the pack",self.aircraft.battery.P_number)
-            self.TO_current = self.aircraft.battery.Power_2_Current(1,self.TO_PBat)
-
-            if (self.TO_current == None):
-                self.constraint_TO_underpowered = False
-            elif (self.aircraft.battery.pack_current < self.TO_current ):
-                self.constraint_TO_underpowered = False
-            else:
-                # integrate sequentially
-                self.integral_solution = []
-                times = np.append(self.profile.Breaks,self.profile.MissionTime2)
-                rtol = 1e-5
-                method= 'BDF'
-                y0 = [0,0,self.beta0,1] #initial fuel energy, battery energy, mass fraction, and SOC
-                for i in range(len(times)-1):
-                    sol = integrate.solve_ivp(model,[times[i], times[i+1]], y0, method=method, rtol=rtol)
-                    if not sol:
-                        break
-                    self.integral_solution.append(sol) 
-                    y0 = [sol.y[0][-1],sol.y[1][-1],sol.y[2][-1],sol.y[3][-1]]
-
-
-            self.design_constraints.append([
-                self.constraint_low_SOC,
-                self.constraint_low_voltage,
-                self.constraint_overcurrent,
-                self.constraint_underpowered,
-                self.constraint_TO_underpowered]
-            )
-            if j>1:
-                if not all(self.design_constraints[-1]) and all(self.design_constraints[-2]):
-                    optimal_config = True
-                    print("driving constraints: ",self.design_constraints[-1])
-                    self.pack_P_number=self.pack_P_number+1
-            self.pack_P_number=self.pack_P_number-1
+        optimal = False
+        evaluation = None
+        n = self.P_number_ceiling
+        n_max=n
+        n_min=1
+        j=1
+        while not optimal:
+            print("iteration number", j)
             j=j+1
+            output_a=evaluate_P_nr(self,n)
+            output_b=evaluate_P_nr(self,n-1)
+            result_a=all(output_a)
+            result_b=all(output_b)
 
-        #run all calculations for the ideal config
-        #this is running the calculations twice, which is bad, but works for now
-        self.aircraft.battery.Configure(self.pack_P_number)
+            if result_a and result_b: #n is too big
+                print("Large: ",n)
+                n_max=n
+                n=int(np.ceil((n_max+n_min)/2))
+            elif not result_a and not result_b: #n is too small
+                print("Small: ",n)
+                n_min=n
+                n=int(np.ceil( (n_max+n_min)/2 ))
+            elif result_a and not result_b:
+                print("Optimal found: ",n)
+                print("Constraints: ", output_b, "SOC; Voltage, Overcurrent, Underpowered, TO_underpowered")
+                optimal = True
+            else:
+                raise Exception("function is not monotonic?????")
 
-        self.integral_solution = []
-        times = np.append(self.profile.Breaks,self.profile.MissionTime2)
-        for i in range(len(times)-1):
-            sol = integrate.solve_ivp(model,[times[i], times[i+1]], y0, method=method, rtol=rtol)
-            self.integral_solution.append(sol) 
-            y0 = [sol.y[0][-1],sol.y[1][-1],sol.y[2][-1],sol.y[3][-1]]
+        evaluate_P_nr(self,n)
 
         self.Ef = sol.y[0]
         self.EBat = sol.y[1]
-        #print(self.aircraft.battery.pack_config)
-        #self.Beta = sol.y[2]
-        #self.SOC = sol.y[3]
 
         return self.Ef[-1], self.EBat[-1]

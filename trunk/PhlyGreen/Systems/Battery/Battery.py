@@ -174,7 +174,7 @@ class Battery:
     def Configure(self, parallel_cells):
 
         self.P_number=parallel_cells
-        ###print("p",self.P_number,"s",self.S_number)
+
         self.cells_total = self.P_number * self.S_number
         self.pack_energy = self.cells_total * self.cell_energy
 
