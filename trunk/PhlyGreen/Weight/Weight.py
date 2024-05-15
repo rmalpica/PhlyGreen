@@ -67,31 +67,6 @@ class Weight:
 
                 self.TotalEnergies = self.aircraft.mission.EvaluateMission(WTO)
                 self.Wf = self.TotalEnergies[0]/self.ef
-
-                '''#maximum power for the battery, Max_PBat does not include takeoff power
-                if self.aircraft.mission.Max_PBat > self.aircraft.mission.TO_PBat:
-                    self.MaxBatPwr = self.aircraft.mission.Max_PBat
-                    self.TOPwr_or_CruisePwr = "cruise"
-                else:
-                    self.MaxBatPwr = self.aircraft.mission.TO_PBat
-                    self.TOPwr_or_CruisePwr = "takeoff"
-
-
-                ##everything before here needs to be rewritten to use cell counts instead of power and energy
-                # the idea is to simply make use of the number of cells in parallel as if it were the power itself
-                # this is because peak power is only representative of one SOC of the battery,
-                # while parallel cell nr is representative of the entire power profile over the mission'''
-
-                if self.aircraft.mission.Max_PBat_Cells > self.aircraft.mission.TO_PBat_Cells:
-                    self.MaxBatPwrCells = self.aircraft.mission.Max_PBat_Cells
-                    self.TOPwr_or_CruisePwr = "cruise"
-                else:
-                    self.MaxBatPwrCells = self.aircraft.mission.TO_PBat_Cells
-                    self.TOPwr_or_CruisePwr = "takeoff"
-
-                #this configures the battery pack using the number of cells in parallel required for both the power and energy requirements
-                self.aircraft.battery.Configuration(self.aircraft.battery.Energy_2_Parallel_Cells(self.TotalEnergies[1]),self.MaxBatPwrCells)
-
                 self.WBat=self.aircraft.battery.pack_weight
 
                 self.WPT = self.aircraft.powertrain.WeightPowertrain(WTO)
@@ -101,4 +76,4 @@ class Weight:
 
                 return (self.Wf + self.final_reserve + self.WBat + self.WPT + self.WStructure + self.WPayload + self.WCrew - WTO)
 
-        self.WTO = brenth(func, 10000, 3000000000000, xtol=0.1) ##this iterates the weight function over and over until it converges on a value of takeoff weight. notice how func() returns the difference between the takeoff weight and the previous takeoff weight. this re-runs the weight function until it returns a difference of weights below 0.1kg
+        self.WTO = brenth(func, 10000, 30000000, xtol=0.1) ##this iterates the weight function over and over until it converges on a value of takeoff weight. notice how func() returns the difference between the takeoff weight and the previous takeoff weight. this re-runs the weight function until it returns a difference of weights below 0.1kg

@@ -153,16 +153,22 @@ class Mission:
         
         
         def PowerPropulsive(Beta,t):
-
+            #print("AAAAAAAAAAAAAAAAAAAAAAA",self.aircraft.DesignWTOoS,Beta,self.profile.PowerExcess(t),1,self.profile.Altitude(t),self.DISA,self.profile.Velocity(t),'TAS')
             PPoWTO = self.aircraft.performance.PoWTO(self.aircraft.DesignWTOoS,Beta,self.profile.PowerExcess(t),1,self.profile.Altitude(t),self.DISA,self.profile.Velocity(t),'TAS')
           
             return PPoWTO * WTO
 
         
         def model(t,y):
-
+            #if self.aircraft.battery.P_number > 180:
+            print("time",t," and inputs",y, " and pack number",self.aircraft.battery.P_number)
             Beta = y[2] #aircraft mass fraction
-            SOC = y[3]  #battery state of charge
+
+            #battery state of charge
+            SOC = y[3]
+            if (SOC<0):
+                self.constraint_low_SOC = False
+                return [0,0,0,0]
             Ppropulsive = PowerPropulsive(Beta,t)
             PRatio = self.aircraft.powertrain.Hybrid(self.aircraft.mission.profile.SuppliedPowerRatio(t),self.profile.Altitude(t),self.profile.Velocity(t),Ppropulsive) #takes in all the mission segments and finds the required power ratio for the current time of the mission
 
@@ -170,78 +176,156 @@ class Mission:
             dbetadt = - dEFdt/(self.ef*self.WTO) #change in mass due to fuel consumption
 
             PElectric = Ppropulsive * PRatio[5] #propulsive power required for the electric motors
-            BatVolt = self.aircraft.battery.SOC_2_OC_Voltage(SOC) #open circuit voltage of the battery at the current SOC
-            BatCurr = self.aircraft.battery.Power_2_Current(SOC, PElectric, self.aircraft.battery.parallel_stack_number) #current output of the battery at the current motor power draw
+
+            #open circuit voltage of the battery at the current SOC
+            BatVolt = self.aircraft.battery.SOC_2_OC_Voltage(SOC)
+            if (BatVolt < self.aircraft.battery.controller_Vmin or BatVolt < self.aircraft.battery.pack_Vmin):
+                self.constraint_low_voltage = False
+                return [0,0,0,0]
+
+            #current drawn to meet power demands
+            BatCurr = self.aircraft.battery.Power_2_Current(SOC, PElectric)
+            if (BatCurr == None):
+                self.constraint_underpowered = False
+                return [0,0,0,0]
+            if (BatCurr > self.aircraft.battery.pack_current):
+                self.constraint_overcurrent = False
+                return [0,0,0,0]
 
             dEBatdt = BatVolt * BatCurr #actual power drawn from the battery, losses included
-            dSOCdt = 1+dEBatdt/self.aircraft.battery.pack_energy #gives the rate of change of SOC over time, remember dEbat is negative
-            print("Peletric:",PElectric, "stack:",self.aircraft.battery.parallel_stack_number)
-            print("dEFdt:",dEFdt,"dEBatdt:",dEBatdt,"dbetadt:",dbetadt,"dSOCdt:",dSOCdt)
+            dSOCdt = -dEBatdt/self.aircraft.battery.pack_energy #gives the rate of change of SOC over time
+            #print("batcurr",BatCurr)
+            #print("BBBBBBBBBBBBBBBBBB",dEFdt,dEBatdt,dbetadt,dSOCdt)
             return [dEFdt,dEBatdt,dbetadt,dSOCdt]
 
+
+        def model_simplified(t,y): #simplified model for initializing the calculations with a known upper bound on requirements
+
+            Beta = y[2] #aircraft mass fraction
+
+            Ppropulsive = PowerPropulsive(Beta,t)
+            PRatio = self.aircraft.powertrain.Hybrid(self.aircraft.mission.profile.SuppliedPowerRatio(t),self.profile.Altitude(t),self.profile.Velocity(t),Ppropulsive) #takes in all the mission segments and finds the required power ratio for the current time of the mission
+
+            dEFdt = Ppropulsive * PRatio[0] #fuel power output
+            dEBatdt = Ppropulsive * PRatio[5] #electric power required for the electric motors
+            dbetadt = - dEFdt/(self.ef*self.WTO) #change in mass due to fuel consumption
+            return [dEFdt,dEBatdt,dbetadt]
+
         # Takeoff condition
-        Ppropulsive = self.WTO * self.aircraft.performance.TakeOff(self.aircraft.DesignWTOoS,self.aircraft.constraint.TakeOffConstraints['Beta'], self.aircraft.constraint.TakeOffConstraints['Altitude'], self.aircraft.constraint.TakeOffConstraints['kTO'], self.aircraft.constraint.TakeOffConstraints['sTO'], self.aircraft.constraint.DISA, self.aircraft.constraint.TakeOffConstraints['Speed'], self.aircraft.constraint.TakeOffConstraints['Speed Type']) #calculates the propulsive power required for takeoff
+        Ppropulsive_TO = self.WTO * self.aircraft.performance.TakeOff(self.aircraft.DesignWTOoS,self.aircraft.constraint.TakeOffConstraints['Beta'], self.aircraft.constraint.TakeOffConstraints['Altitude'], self.aircraft.constraint.TakeOffConstraints['kTO'], self.aircraft.constraint.TakeOffConstraints['sTO'], self.aircraft.constraint.DISA, self.aircraft.constraint.TakeOffConstraints['Speed'], self.aircraft.constraint.TakeOffConstraints['Speed Type']) #calculates the propulsive power required for takeoff
 
-        PRatio = self.aircraft.powertrain.Hybrid(self.aircraft.mission.profile.SPW[0][0],self.aircraft.constraint.TakeOffConstraints['Altitude'],self.aircraft.constraint.TakeOffConstraints['Speed'],Ppropulsive) #hybrid power ratio for takeoff
-        self.TO_PP = Ppropulsive * PRatio[1] #combustion engine power during takeoff
-        self.TO_PBat = Ppropulsive * PRatio[5] #electric motor power during takeoff
-        self.TO_PBat_Cells = self.aircraft.battery.Power_2_Parallel_Cells(1,self.TO_PBat) #1 here is the SOC at takeoff, assumes fully charged batteries TODO CONSIDER CHANGING LATER
+        PRatio = self.aircraft.powertrain.Hybrid(self.aircraft.mission.profile.SPW[0][0],self.aircraft.constraint.TakeOffConstraints['Altitude'],self.aircraft.constraint.TakeOffConstraints['Speed'],Ppropulsive_TO) #hybrid power ratio for takeoff
+        self.TO_PP = Ppropulsive_TO * PRatio[1] #combustion engine power during takeoff
+        self.TO_PBat = Ppropulsive_TO * PRatio[5] #electric motor power during takeoff
 
-        #set/reset max values
+
+#initialize battery loop with simplified calculations for worst case scenario conditions
         self.Max_PBat = -1
         self.Max_PEng = -1
 
-        y0 = [0,0,self.beta0,1] ##integration starting point for the spent battery and fuel energy as well as mass fraction and SOC
-
+        y0 = [0,0,self.beta0] ##integration starting point for the spent battery and fuel energy as well as mass fraction and SOC
         rtol = 1e-5
         method= 'BDF'
-
-        # integrate all phases together
-        # sol = integrate.solve_ivp(model,[0, self.profile.MissionTime2],y0,method='BDF',rtol=1e-6)
 
         # integrate sequentially
         self.integral_solution = []
         times = np.append(self.profile.Breaks,self.profile.MissionTime2)
         for i in range(len(times)-1):
-            sol = integrate.solve_ivp(model,[times[i], times[i+1]], y0, method=method, rtol=rtol) 
+            sol = integrate.solve_ivp(model_simplified,[times[i], times[i+1]], y0, method=method, rtol=rtol) 
             self.integral_solution.append(sol) 
-            y0 = [sol.y[0][-1],sol.y[1][-1],sol.y[2][-1],sol.y[3][-1]]
+            y0 = [sol.y[0][-1],sol.y[1][-1],sol.y[2][-1],]
 
         self.Ef = sol.y[0]
-        self.EBat = sol.y[1] 
+        self.EBat = sol.y[1]
         self.Beta = sol.y[2]
-
-
         # compute peak Propulsive power along mission
         times = []
         beta = []
-        SOC = []
         for array in self.integral_solution:
             times = np.concatenate([times, array.t])
             beta = np.concatenate([beta, array.y[2]])
-            SOC = np.concatenate([SOC, array.y[3]])
 
         PP = np.array([WTO * self.aircraft.performance.PoWTO(self.aircraft.DesignWTOoS,beta[i], self.profile.PowerExcess(times[i]), 1, self.profile.Altitude(times[i]), self.DISA,self.profile.Velocity(times[i]), 'TAS') for i in range(len(times))])
 
         PRatio = np.array([self.aircraft.powertrain.Hybrid(self.aircraft.mission.profile.SuppliedPowerRatio(times[i]), self.profile.Altitude(times[i]), self.profile.Velocity(times[i]), PP[i]) for i in range(len(times))] )
 
         self.Max_PEng = np.max(np.multiply(PP,PRatio[:,1]))
-        #self.Max_PBat = np.max(np.multiply(PP,PRatio[:,5])) # <- replace with max nr of cells required for power
-        self.PwrBatArray = np.multiply(PP,PRatio[:,5])
+        self.Max_PBat = np.max(np.multiply(PP,PRatio[:,5]))
 
-        self.CellBatArray = []
-        #get all the equivalent parallel cells needed for power at each point of the flight and put them all in an array
-        for i in range(len(self.PwrBatArray)):
-            instantCells=self.aircraft.battery.Power_2_Parallel_Cells(SOC[i], self.PwrBatArray[i]) 
-            self.CellBatArray = np.append(self.CellBatArray, instantCells)
-        self.Max_PBat_Cells = np.max(self.CellBatArray)
+        self.flight_PBat_Cells = self.aircraft.battery.Pwr_2_P_num(0,self.Max_PBat) #finds the P number for flight at minimum SOC
+        self.TO_PBat_Cells = self.aircraft.battery.Pwr_2_P_num(1,self.TO_PBat) #finds the P number for takeoff power
+        self.energy_P_number = self.aircraft.battery.Energy_2_P_num(self.EBat[-1]*5) #finds the P number for the energy requirements using an exaggerated 20% extra energy just to be safe since the simplified calculations underestimage the energy required
 
-        #returns the required Fuel Energy & Battery Energy
+        #print(self.TO_PBat_Cells,self.flight_PBat_Cells,self.energy_P_number)
+        self.pack_P_number = int(np.ceil(np.max([self.TO_PBat_Cells,self.flight_PBat_Cells,self.energy_P_number]))) #initializes the calculation using the highest P number, picks the maximum value, rounds up, and then converts to int
+
+        #defining some initial constants before the loop
+        j=0
+        optimal_config = False
+        self.design_constraints = []
+
+        while not optimal_config:
+            # resetting the constraint booleans
+            self.constraints_met = True
+            self.constraint_low_SOC = True
+            self.constraint_low_voltage = True
+            self.constraint_overcurrent = True
+            self.constraint_TO_underpowered = True
+            self.constraint_underpowered = True
+
+            self.aircraft.battery.Configure(self.pack_P_number) #changes the configuration every cycle
+            #print("pnum of the pack",self.aircraft.battery.P_number)
+            self.TO_current = self.aircraft.battery.Power_2_Current(1,self.TO_PBat)
+
+            if (self.TO_current == None):
+                self.constraint_TO_underpowered = False
+            elif (self.aircraft.battery.pack_current < self.TO_current ):
+                self.constraint_TO_underpowered = False
+            else:
+                # integrate sequentially
+                self.integral_solution = []
+                times = np.append(self.profile.Breaks,self.profile.MissionTime2)
+                rtol = 1e-5
+                method= 'BDF'
+                y0 = [0,0,self.beta0,1] #initial fuel energy, battery energy, mass fraction, and SOC
+                for i in range(len(times)-1):
+                    sol = integrate.solve_ivp(model,[times[i], times[i+1]], y0, method=method, rtol=rtol)
+                    if not sol:
+                        break
+                    self.integral_solution.append(sol) 
+                    y0 = [sol.y[0][-1],sol.y[1][-1],sol.y[2][-1],sol.y[3][-1]]
+
+
+            self.design_constraints.append([
+                self.constraint_low_SOC,
+                self.constraint_low_voltage,
+                self.constraint_overcurrent,
+                self.constraint_underpowered,
+                self.constraint_TO_underpowered]
+            )
+            if j>1:
+                if not all(self.design_constraints[-1]) and all(self.design_constraints[-2]):
+                    optimal_config = True
+                    print("driving constraints: ",self.design_constraints[-1])
+                    self.pack_P_number=self.pack_P_number+1
+            self.pack_P_number=self.pack_P_number-1
+            j=j+1
+
+        #run all calculations for the ideal config
+        #this is running the calculations twice, which is bad, but works for now
+        self.aircraft.battery.Configure(self.pack_P_number)
+
+        self.integral_solution = []
+        times = np.append(self.profile.Breaks,self.profile.MissionTime2)
+        for i in range(len(times)-1):
+            sol = integrate.solve_ivp(model,[times[i], times[i+1]], y0, method=method, rtol=rtol)
+            self.integral_solution.append(sol) 
+            y0 = [sol.y[0][-1],sol.y[1][-1],sol.y[2][-1],sol.y[3][-1]]
+
+        self.Ef = sol.y[0]
+        self.EBat = sol.y[1]
+        #print(self.aircraft.battery.pack_config)
+        #self.Beta = sol.y[2]
+        #self.SOC = sol.y[3]
+
         return self.Ef[-1], self.EBat[-1]
-
-
-"""
-ok to do: 
-line 60
-then figure out how to initialize things in the battery.py file - done?
-"""
