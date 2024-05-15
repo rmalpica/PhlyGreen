@@ -318,22 +318,20 @@ class Mission:
         n_min=1
         n=n_max
         while not optimal: #find optimal P number using bisection search
-            output_b=evaluate_P_nr(n-1)
-            output_a=evaluate_P_nr(n)
-            result_b=all(output_b)
-            result_a=all(output_a)
+            output = evaluate_P_nr(n)
+            result = all(output)
 
-            if result_a and result_b: #n is too big
+            if result and (n-n_min)==1: #n is optimal
+                print("Optimal P number found: ",n)
+                optimal = True
+
+            elif result:#n is too big
                 n_max=n
                 n=math.floor( (n_max+n_min)/2)
 
-            elif not result_a and not result_b: #n is too small
+            elif not result : #n is too small
                 n_min=n
                 n=math.ceil((n_max+n_min)/2 )
-
-            elif result_a and not result_b: #n is optimal
-                print("Optimal P number found: ",n)
-                optimal = True
 
             else: #something went very wrong
                 raise Exception("Function is not monotonic?????")
