@@ -322,7 +322,7 @@ class Mission:
             result = all(output)
 
             if result and (n-n_min)==1: #n is optimal
-                print("Optimal P number found: ",n)
+                # print("Optimal P number found: ",n)
                 optimal = True
 
             elif result:#n is too big
@@ -335,8 +335,8 @@ class Mission:
 
             else: #something went very wrong
                 raise Exception("Function is not monotonic?????")
-            if n<1:
-                raise Exception("Algorithm is broken, n cant be zero or lower")
+            # if n<1:
+            #     raise Exception("Algorithm is broken, n cant be zero or lower")
 
         self.Ef = sol.y[0]
         self.EBat = sol.y[1]

@@ -1,4 +1,4 @@
-import numpy as np
+#import numpy as np
 import math
 import numbers
 import PhlyGreen.Systems.Battery.Cell_Models as Cell_Models
@@ -227,9 +227,11 @@ class Battery:
 
     #find the number of cells required to supply the requested current at the current SOC
     def Pwr_2_P_num(self, SOC, Power_out):
+        if Power_out == 0:
+            return 0
         U_oc = self.SOC_2_OC_Voltage(SOC) #open circuit voltage
         valid = False   #initializing
-        P_number = np.floor(4 * Power_out * self.cell_resistance * self.S_number / U_oc**2) #initializing
+        P_number = math.floor(4 * Power_out * self.cell_resistance * self.S_number / U_oc**2) #initializing with minimum possible P number
 
         while not valid:
             Resistance = self.cell_resistance * self.S_number / P_number   #calculate equivalent pack R
@@ -244,6 +246,8 @@ class Battery:
 
     #find the number of cells in parallel required to obtain the total energy necessary assuming the number of cells in series is known
     def Nrg_2_P_num(self, Energy_out):
+        if Energy_out==0:
+            return 0
         total_cells = math.ceil(Energy_out/self.cell_energy) 
         energy_P_number = math.ceil(total_cells/self.S_number)
         return energy_P_number
