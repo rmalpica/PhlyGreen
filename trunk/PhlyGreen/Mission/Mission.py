@@ -1,5 +1,6 @@
 import numpy as np
 import numbers
+import math
 import PhlyGreen.Utilities.Atmosphere as ISA
 import PhlyGreen.Utilities.Speed as Speed
 import scipy.integrate as integrate
@@ -158,16 +159,18 @@ class Mission:
           
             return PPoWTO * WTO
 
-        
+
         def model(t,y):
-            #if self.aircraft.battery.P_number > 180:
-            #print("time",t," and inputs",y, " and pack number",self.aircraft.battery.P_number)
-            Beta = y[2] #aircraft mass fraction
+            if not self.valid_solution:
+                return [0,0,0,0]
+            #aircraft mass fraction
+            Beta = y[2]
 
             #battery state of charge
             SOC = y[3]
             if (SOC<0):
                 self.constraint_low_SOC = False
+                self.valid_solution = False
                 return [0,0,0,0]
             Ppropulsive = PowerPropulsive(Beta,t)
             PRatio = self.aircraft.powertrain.Hybrid(self.aircraft.mission.profile.SuppliedPowerRatio(t),self.profile.Altitude(t),self.profile.Velocity(t),Ppropulsive) #takes in all the mission segments and finds the required power ratio for the current time of the mission
@@ -181,21 +184,22 @@ class Mission:
             BatVolt = self.aircraft.battery.SOC_2_OC_Voltage(SOC)
             if (BatVolt < self.aircraft.battery.controller_Vmin or BatVolt < self.aircraft.battery.pack_Vmin):
                 self.constraint_low_voltage = False
+                self.valid_solution = False
                 return [0,0,0,0]
 
             #current drawn to meet power demands
             BatCurr = self.aircraft.battery.Power_2_Current(SOC, PElectric)
             if (BatCurr == None):
                 self.constraint_underpowered = False
+                self.valid_solution = False
                 return [0,0,0,0]
             if (BatCurr > self.aircraft.battery.pack_current):
                 self.constraint_overcurrent = False
+                self.valid_solution = False
                 return [0,0,0,0]
 
             dEBatdt = BatVolt * BatCurr #actual power drawn from the battery, losses included
             dSOCdt = -dEBatdt/self.aircraft.battery.pack_energy #gives the rate of change of SOC over time
-            #print("batcurr",BatCurr)
-            #print("BBBBBBBBBBBBBBBBBB",dEFdt,dEBatdt,dbetadt,dSOCdt)
             return [dEFdt,dEBatdt,dbetadt,dSOCdt]
 
 
@@ -212,9 +216,12 @@ class Mission:
             return [dEFdt,dEBatdt,dbetadt]
 
 
-        def evaluate_P_nr(self,P_number):
+        def evaluate_P_nr(P_number):
+            #no maths needed to know nothing will work without a battery
+            if P_number == 0:
+                return [False,False,False,False,False]
+
             # resetting the constraint booleans
-            #self.constraints_met = True
             self.constraint_low_SOC = True
             self.constraint_low_voltage = True
             self.constraint_overcurrent = True
@@ -231,17 +238,20 @@ class Mission:
                 self.constraint_TO_underpowered = False
             else:
                 # integrate sequentially
-                self.integral_solution = []
+                #self.integral_solution = []
                 times = np.append(self.profile.Breaks,self.profile.MissionTime2)
                 rtol = 1e-5
                 method= 'BDF'
                 y0 = [0,0,self.beta0,1] #initial fuel energy, battery energy, mass fraction, and SOC
                 for i in range(len(times)-1):
+                    self.valid_solution = True
                     sol = integrate.solve_ivp(model,[times[i], times[i+1]], y0, method=method, rtol=rtol)
-                    if not sol:
+                    if not self.valid_solution:
                         break
-                    self.integral_solution.append(sol) 
+                    #y0 = [sol.y[0],sol.y[1],sol.y[2],sol.y[3]]
+                    #self.integral_solution.append(sol)
                     y0 = [sol.y[0][-1],sol.y[1][-1],sol.y[2][-1],sol.y[3][-1]]
+
 
             return [self.constraint_low_SOC,
                     self.constraint_low_voltage,
@@ -292,47 +302,43 @@ class Mission:
         self.Max_PBat = np.max(np.multiply(PP,PRatio[:,5]))
 
         self.flight_PBat_Cells = self.aircraft.battery.Pwr_2_P_num(0,self.Max_PBat) #finds the P number for flight at minimum SOC
-        self.TO_PBat_Cells = self.aircraft.battery.Pwr_2_P_num(1,self.TO_PBat) #finds the P number for takeoff power
-        self.energy_P_number = self.aircraft.battery.Energy_2_P_num(self.EBat[-1]*5) #finds the P number for the energy requirements using an exaggerated 20% extra energy just to be safe since the simplified calculations underestimage the energy required
+        self.TO_PBat_Cells     = self.aircraft.battery.Pwr_2_P_num(1,self.TO_PBat) #finds the P number for takeoff power
+        self.energy_P_number   = self.aircraft.battery.Nrg_2_P_num(self.EBat[-1]*4) #finds the P number for the energy requirements using an exaggerated 400% energy, figure out why the initial guess has to be so high?
 
-        #print(self.TO_PBat_Cells,self.flight_PBat_Cells,self.energy_P_number)
-        self.P_number_ceiling = int(np.ceil(np.max([
-                                                    self.TO_PBat_Cells,
-                                                    self.flight_PBat_Cells,
-                                                    self.energy_P_number
-                                                    ]))) #initializes the calculation using the highest P number, picks the maximum value, rounds up, and then converts to int
+        self.P_number_ceiling = math.ceil(max([
+                                                self.TO_PBat_Cells,
+                                                self.flight_PBat_Cells,
+                                                self.energy_P_number
+                                                ])) #initializes the calculation using the highest P number, picks the maximum value, rounds up
 
         #defining some initial constants before the loop
         optimal = False
         evaluation = None
-        n = self.P_number_ceiling
-        n_max=n
+        n_max=self.P_number_ceiling
         n_min=1
-        j=1
-        while not optimal:
-            print("iteration number", j)
-            j=j+1
-            output_a=evaluate_P_nr(self,n)
-            output_b=evaluate_P_nr(self,n-1)
-            result_a=all(output_a)
+        n=n_max
+        while not optimal: #find optimal P number using bisection search
+            output_b=evaluate_P_nr(n-1)
+            output_a=evaluate_P_nr(n)
             result_b=all(output_b)
+            result_a=all(output_a)
 
             if result_a and result_b: #n is too big
-                print("Large: ",n)
                 n_max=n
-                n=int(np.ceil((n_max+n_min)/2))
-            elif not result_a and not result_b: #n is too small
-                print("Small: ",n)
-                n_min=n
-                n=int(np.ceil( (n_max+n_min)/2 ))
-            elif result_a and not result_b:
-                print("Optimal found: ",n)
-                print("Constraints: ", output_b, "SOC; Voltage, Overcurrent, Underpowered, TO_underpowered")
-                optimal = True
-            else:
-                raise Exception("function is not monotonic?????")
+                n=math.floor( (n_max+n_min)/2)
 
-        evaluate_P_nr(self,n)
+            elif not result_a and not result_b: #n is too small
+                n_min=n
+                n=math.ceil((n_max+n_min)/2 )
+
+            elif result_a and not result_b: #n is optimal
+                print("Optimal P number found: ",n)
+                optimal = True
+
+            else: #something went very wrong
+                raise Exception("Function is not monotonic?????")
+            if n<1:
+                raise Exception("Algorithm is broken, n cant be zero or lower")
 
         self.Ef = sol.y[0]
         self.EBat = sol.y[1]

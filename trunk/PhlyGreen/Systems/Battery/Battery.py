@@ -1,4 +1,5 @@
 import numpy as np
+import math
 import numbers
 import PhlyGreen.Systems.Battery.Cell_Models as Cell_Models
 from scipy.optimize import brentq
@@ -167,7 +168,7 @@ class Battery:
         self.cell_volume = self.cell_model['Cell Volume'] #possibly substitute this for a cylinder & prism volume calculator that takes in cylinder/square and corresponding xyz dimensions to calculate volume that way
 
         self.cell_energy = 3600*self.cell_capacity*self.cell_Vnom # cell capacity in joules instead of amps hour
-        self.S_number = int(np.ceil(self.controller_Vmax/self.cell_Vmax)) #number of cells in series to achieve desired voltage. max voltage is preferred as it minimizes losses due to lower current being needed for a larger portion of the flight
+        self.S_number = math.ceil(self.controller_Vmax/self.cell_Vmax) #number of cells in series to achieve desired voltage. max voltage is preferred as it minimizes losses due to lower current being needed for a larger portion of the flight
 
 #determine battery configuration
     #must receive the number of cells in parallel
@@ -215,40 +216,34 @@ class Battery:
 
         else:
             U_oc = self.SOC_2_OC_Voltage(SOC)
-            if (U_oc**2 - 4 * Power_out * self.pack_resistance < 0):
-                I_out=None
+            aux=U_oc**2 - 4 * Power_out * self.pack_resistance
 
+            if (aux < 0):
+                I_out=None
             else:
-                U_out = (U_oc + (U_oc**2 - 4 * Power_out * self.pack_resistance)**0.5)/2 #from the math solution of P_out = U_out * I_out
+                U_out = (U_oc + math.sqrt(aux))/2 #from the math solution of P_out = U_out * I_out
                 I_out = (U_oc - U_out)/self.pack_resistance
-                #print("printing theguy",U_oc, Power_out, self.pack_resistance)
         return I_out
 
-    #find the number of cells required to supply the requested current at the current SOC. Assumes that the motor controller will draw a higher current to compensate for the lower input voltage as SOC goes down. Power is useful power output to the motor controller.
+    #find the number of cells required to supply the requested current at the current SOC
     def Pwr_2_P_num(self, SOC, Power_out):
-        #U_oc = self.SOC_2_OC_Voltage(SOC)
-        # P_nr_resistance  = 4 * Power_out * self.cell_resistance * self.S_number / U_oc**2 #min P number to allow the power to be physically possible given the internal R
-        # Resistance = self.cell_resistance * self.S_number / P_nr_resistance
-        # U_out = (U_oc + (U_oc**2 - 4 * Power_out * Resistance)**0.5)/2
-        # I_out = (U_oc - U_out)/Resistance
-        # P_nr_current = np.ceil(I_out/self.cell_current) #min P number to ensure that current limitations are not exceeded
-        # power_P_number = np.max([P_nr_resistance, P_nr_current])
+        U_oc = self.SOC_2_OC_Voltage(SOC) #open circuit voltage
+        valid = False   #initializing
+        P_number = np.floor(4 * Power_out * self.cell_resistance * self.S_number / U_oc**2) #initializing
 
-        U_oc = self.SOC_2_OC_Voltage(SOC)
-        valid = False
-        P_number = 0 
         while not valid:
+            Resistance = self.cell_resistance * self.S_number / P_number   #calculate equivalent pack R
+            a = U_oc**2 - 4 * Power_out * Resistance
+            if a > 0:
+                U_out = (U_oc + math.sqrt(a))/2     #find actual output voltage
+                I_out = (U_oc - U_out)/Resistance   #find current output
+                if (I_out < P_number * self.cell_current):
+                    valid = True
             P_number = P_number+1
-            Resistance = self.cell_resistance * self.S_number / P_number
-            U_out = (U_oc + (U_oc**2 - 4 * Power_out * Resistance)**0.5)/2
-            I_out = (U_oc - U_out)/Resistance
-            #print("iout",I_out," and P",P_number)
-            if (I_out < P_number * self.cell_current):
-                valid = True
         return P_number
 
     #find the number of cells in parallel required to obtain the total energy necessary assuming the number of cells in series is known
-    def Energy_2_P_num(self, Energy_out):
-        total_cells = np.ceil(Energy_out/self.cell_energy) 
-        energy_P_number = np.ceil(total_cells/self.S_number)
+    def Nrg_2_P_num(self, Energy_out):
+        total_cells = math.ceil(Energy_out/self.cell_energy) 
+        energy_P_number = math.ceil(total_cells/self.S_number)
         return energy_P_number
