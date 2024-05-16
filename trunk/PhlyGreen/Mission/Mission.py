@@ -229,7 +229,6 @@ class Mission:
             self.constraint_underpowered = True
 
             self.aircraft.battery.Configure(P_number) #changes the configuration every cycle
-            #print("pnum of the pack",self.aircraft.battery.P_number)
             self.TO_current = self.aircraft.battery.Power_2_Current(1,self.TO_PBat)
 
             if (self.TO_current == None):
@@ -238,7 +237,6 @@ class Mission:
                 self.constraint_TO_underpowered = False
             else:
                 # integrate sequentially
-                #self.integral_solution = []
                 times = np.append(self.profile.Breaks,self.profile.MissionTime2)
                 rtol = 1e-5
                 method= 'BDF'
@@ -248,8 +246,6 @@ class Mission:
                     sol = integrate.solve_ivp(model,[times[i], times[i+1]], y0, method=method, rtol=rtol)
                     if not self.valid_solution:
                         break
-                    #y0 = [sol.y[0],sol.y[1],sol.y[2],sol.y[3]]
-                    #self.integral_solution.append(sol)
                     y0 = [sol.y[0][-1],sol.y[1][-1],sol.y[2][-1],sol.y[3][-1]]
 
 
@@ -264,7 +260,7 @@ class Mission:
         Ppropulsive_TO = self.WTO * self.aircraft.performance.TakeOff(self.aircraft.DesignWTOoS,self.aircraft.constraint.TakeOffConstraints['Beta'], self.aircraft.constraint.TakeOffConstraints['Altitude'], self.aircraft.constraint.TakeOffConstraints['kTO'], self.aircraft.constraint.TakeOffConstraints['sTO'], self.aircraft.constraint.DISA, self.aircraft.constraint.TakeOffConstraints['Speed'], self.aircraft.constraint.TakeOffConstraints['Speed Type']) #calculates the propulsive power required for takeoff
 
         PRatio = self.aircraft.powertrain.Hybrid(self.aircraft.mission.profile.SPW[0][0],self.aircraft.constraint.TakeOffConstraints['Altitude'],self.aircraft.constraint.TakeOffConstraints['Speed'],Ppropulsive_TO) #hybrid power ratio for takeoff
-        self.TO_PP = Ppropulsive_TO * PRatio[1] #combustion engine power during takeoff
+        self.TO_PP = Ppropulsive_TO * PRatio[1]   #combustion engine power during takeoff
         self.TO_PBat = Ppropulsive_TO * PRatio[5] #electric motor power during takeoff
 
 
@@ -303,7 +299,7 @@ class Mission:
 
         self.flight_PBat_Cells = self.aircraft.battery.Pwr_2_P_num(0,self.Max_PBat) #finds the P number for flight at minimum SOC
         self.TO_PBat_Cells     = self.aircraft.battery.Pwr_2_P_num(1,self.TO_PBat) #finds the P number for takeoff power
-        self.energy_P_number   = self.aircraft.battery.Nrg_2_P_num(self.EBat[-1]*4) #finds the P number for the energy requirements using an exaggerated 400% energy, figure out why the initial guess has to be so high?
+        self.energy_P_number   = self.aircraft.battery.Nrg_2_P_num(self.EBat[-1]*4) #finds the P number for the energy requirements using an exaggerated 400% energy, TODO figure out why the initial guess has to be so high?
 
         self.P_number_ceiling = math.ceil(max([
                                                 self.TO_PBat_Cells,
@@ -311,9 +307,8 @@ class Mission:
                                                 self.energy_P_number
                                                 ])) #initializes the calculation using the highest P number, picks the maximum value, rounds up
 
-        #defining some initial constants before the loop
+        #initializing variables before the loop
         optimal = False
-        evaluation = None
         n_max=self.P_number_ceiling
         n_min=1
         n=n_max
@@ -332,11 +327,6 @@ class Mission:
             elif not result : #n is too small
                 n_min=n
                 n=math.ceil((n_max+n_min)/2 )
-
-            else: #something went very wrong
-                raise Exception("Function is not monotonic?????")
-            # if n<1:
-            #     raise Exception("Algorithm is broken, n cant be zero or lower")
 
         self.Ef = sol.y[0]
         self.EBat = sol.y[1]
