@@ -299,7 +299,7 @@ class Mission:
 
         self.flight_PBat_Cells = self.aircraft.battery.Pwr_2_P_num(0,self.Max_PBat) #finds the P number for flight at minimum SOC
         self.TO_PBat_Cells     = self.aircraft.battery.Pwr_2_P_num(1,self.TO_PBat) #finds the P number for takeoff power
-        self.energy_P_number   = self.aircraft.battery.Nrg_2_P_num(self.EBat[-1]*4) #finds the P number for the energy requirements using an exaggerated 400% energy, TODO figure out why the initial guess has to be so high?
+        self.energy_P_number   = self.aircraft.battery.Nrg_2_P_num(self.EBat[-1]*10) #finds the P number for the energy requirements using an exaggerated 400% energy, TODO figure out why the initial guess has to be so high?
 
         self.P_number_ceiling = math.ceil(max([
                                                 self.TO_PBat_Cells,
@@ -312,19 +312,21 @@ class Mission:
         n_max=self.P_number_ceiling
         n_min=1
         n=n_max
+        j=0
         while not optimal: #find optimal P number using bisection search
+            j=j+1
             output = evaluate_P_nr(n)
-            result = all(output)
-
-            if result and (n-n_min)==1: #n is optimal
-                # print("Optimal P number found: ",n)
+            valid_result = all(output)
+            print("[iter",j,"] [P",n,"] [min",n_min,"] [max",n_max,"] valid?",valid_result)
+            if valid_result and (n-n_min)==1: #n is optimal
+                print("Optimal P number found: ",n)
                 optimal = True
 
-            elif result:#n is too big
+            elif valid_result:#n is too big
                 n_max=n
                 n=math.floor( (n_max+n_min)/2)
 
-            elif not result : #n is too small
+            elif not valid_result : #n is too small
                 n_min=n
                 n=math.ceil((n_max+n_min)/2 )
 
