@@ -6,18 +6,6 @@ from scipy.optimize import brentq
 class Battery:
     def __init__(self, aircraft):
         self.aircraft = aircraft
-        # self.cell_capacity = None 
-        # self.cell_rate = None
-        # self.cell_Vmax = None
-        # self.cell_Vmin = None
-        # self.cell_Vnom = None
-        # self.cell_mass = None
-        # self.cell_volume = None
-        # self.required_energy = None
-        # self.required_power = None
-        # self.S_number = None #number of cells in *S*eries per stack
-        # self.P_number = None #number of stacks in *P*arallel
-        # self.pack_energy = None 
         self.controller_Vmax = 740 
         self.controller_Vmin = 420 #this range of voltages should be defined in the model of the motor controller, but ill do that later, for now its hardcoded
 
@@ -197,9 +185,10 @@ class Battery:
 
 #calculate the SOC from the energy spent so far
     def Energy_2_SOC(self, E):
-        Q_0 = self.pack_energy #total charge
-        Q   = Q_0 - E          #remaining charge
-        SOC = Q / Q_0          #SOC gives remaining charge %
+        # Q_0 = self.pack_energy #total charge
+        # Q   = Q_0 - E          #remaining charge
+        # SOC = Q / Q_0          #SOC gives remaining charge %
+        SOC = 1-E/self.pack_energy #single line definition like this
         return SOC
 
     # convert SOC to open circuit voltage 
