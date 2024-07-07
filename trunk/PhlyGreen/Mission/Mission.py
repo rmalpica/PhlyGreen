@@ -212,9 +212,8 @@ class Mission:
                 self.valid_solution = False
                 return [0,0,0,0]
 
-            dEBatdt = BatVolt * BatCurr #actual power drawn from the battery, losses included
-            dSOCdt = -dEBatdt/self.aircraft.battery.pack_energy #gives the rate of change of SOC
-            return [dEFdt,dEBatdt,dbetadt,dSOCdt]
+            dSOCdt = -BatCurr/self.aircraft.battery.pack_charge #gives the rate of change of SOC
+            return [dEFdt,BatCurr,dbetadt,dSOCdt]
 
 
         def evaluate_P_nr(P_number):
@@ -335,8 +334,8 @@ class Mission:
 
         # find the battery P number for the worst case scenario given by the initializing integration
         self.flight_P_number = self.aircraft.battery.Pwr_2_P_num(0,self.Max_PBat) #finds the P number for flight at zero SOC
-        self.TO_P_number     = self.aircraft.battery.Pwr_2_P_num(1,self.TO_PBat) #finds the P number for takeoff power
-        self.energy_P_number = self.aircraft.battery.Nrg_2_P_num(self.EBat[-1]) #finds the P number for the flight energy // TODO figure out why this is usually estimated too low
+        self.TO_P_number     = self.aircraft.battery.Pwr_2_P_num(1,self.TO_PBat)  #finds the P number for takeoff power
+        self.energy_P_number = self.aircraft.battery.Nrg_2_P_num(self.EBat[-1])   #finds the P number for the flight energy // TODO figure out why this is usually estimated too low
 
         #initializes the calculation using the largest expected P number, picks the maximum value, rounds up
         expected_P_n_max = math.ceil(max([
@@ -373,11 +372,11 @@ class Mission:
             elif valid_result:                #n is too big
                 self.driving_constraints=output
                 n_max=n
-                n=math.floor( (n_max+n_min)/2)
+                n=math.floor((n_max+n_min)/2)
 
             elif not valid_result :           #n is too small
                 self.driving_constraints=output
                 n_min=n
-                n=math.ceil((n_max+n_min)/2 )
+                n=math.ceil((n_max+n_min)/2)
 
         return self.Ef[-1], self.EBat[-1]

@@ -153,9 +153,10 @@ class Battery:
         self.cell_Vmin = self.cell_model['Cell Voltage Min']
         self.cell_Vnom = self.cell_model['Cell Voltage Nominal']
         self.cell_mass = self.cell_model['Cell Mass']
-        self.cell_volume = self.cell_model['Cell Volume'] #possibly substitute this for a cylinder & prism volume calculator that takes in cylinder/square and corresponding xyz dimensions to calculate volume that way
+        self.cell_volume = self.cell_model['Cell Volume'] #this will be replaced with height + radius dimensions later for the thermal model
 
-        self.cell_energy = 3600*self.cell_capacity*self.cell_Vnom # cell capacity in joules instead of amps hour
+        self.cell_charge = 3600*self.cell_capacity #convert the capacity from Ah to Coulomb to make the maths check out
+        self.cell_energy = self.cell_charge*self.cell_Vnom # cell capacity in joules
         self.S_number = math.ceil(self.controller_Vmax/self.cell_Vmax) #number of cells in series to achieve desired voltage. max voltage is preferred as it minimizes losses due to lower current being needed for a larger portion of the flight
 
 #determine battery configuration
@@ -163,18 +164,15 @@ class Battery:
     def Configure(self, parallel_cells):
 
         self.P_number=parallel_cells
-
         self.cells_total = self.P_number * self.S_number
+
+        self.pack_charge = self.cells_total * self.cell_charge
         self.pack_energy = self.cells_total * self.cell_energy
-
         self.pack_resistance = self.cell_resistance * self.S_number / self.P_number
-
         self.pack_current = self.cell_current * self.P_number
-
         self.pack_Vmax = self.cell_Vmax * self.S_number
         self.pack_Vmin = self.cell_Vmin * self.S_number
         self.pack_Vnom = self.cell_Vnom * self.S_number
-
         self.pack_power_max = self.pack_current * self.pack_Vmax - self.pack_resistance*self.pack_current**2
 
         self.pack_weight = self.cell_mass*self.cells_total
@@ -183,12 +181,9 @@ class Battery:
         self.pack_config='S'+str(self.S_number)+'P'+str(self.P_number)
         return ()
 
-#calculate the SOC from the energy spent so far
-    def Energy_2_SOC(self, E):
-        # Q_0 = self.pack_energy #total charge
-        # Q   = Q_0 - E          #remaining charge
-        # SOC = Q / Q_0          #SOC gives remaining charge %
-        SOC = 1-E/self.pack_energy #single line definition like this
+    #calculate the SOC from the charge spent so far
+    def Energy_2_SOC(self, C):
+        SOC = 1-C/self.pack_energy #single line definition like this
         return SOC
 
     # convert SOC to open circuit voltage 
@@ -224,7 +219,7 @@ class Battery:
 
         while not valid:
             Resistance = self.cell_resistance * self.S_number / P_number   #calculate equivalent pack R
-            a = U_oc**2 - 4 * Power_out * Resistance
+            a = U_oc**2 - 4 * Power_out * Resistance #quadratic formula parameter, if its negative then the sqrt will be imaginary, so it just skips the maths in that case
             if a > 0:
                 U_out = (U_oc + math.sqrt(a))/2     #find actual output voltage
                 I_out = (U_oc - U_out)/Resistance   #find current output
