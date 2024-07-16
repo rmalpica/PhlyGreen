@@ -351,7 +351,7 @@ class Mission:
 
         #used as a quick fix for the initial guess being undersized on some cases for some reason
         while not all(evaluate_P_nr(n_max)): 
-            print("n_max too low:",n_max)
+            print("n_max underestimated:",n_max, "; increasing.")
             n_min = n_max   #if the nmax guess is too small it can be the new nmin to save iterations since it has already been tried
             n_max = n_max*2 #increase n_max until it works
 

@@ -19,6 +19,16 @@ Cell_Models = {
                         'Cell Mass': 0.0682,           #in kg
                         'Cell Volume': 0.0000003,         #in m^3
             },
+            'FELIX_FINGER':{
+                        'Cell Capacity': 21,        #in Ah
+                        'Cell C rating': 3.4,          #dimensionless
+                        'Internal Resistance': 0.01,  #in ohms
+                        'Cell Voltage Min': 2.5,     #in volts
+                        'Cell Voltage Max': 4.2,     #in volts
+                        'Cell Voltage Nominal': 3.6, #in volts
+                        'Cell Mass': 0.05,           #in kg
+                        'Cell Volume': 0.0000003,         #in m^3
+            },
 }
 
 #things to consider:

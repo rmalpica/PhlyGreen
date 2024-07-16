@@ -155,7 +155,10 @@ class Battery:
         self.cell_mass = self.cell_model['Cell Mass']
         self.cell_volume = self.cell_model['Cell Volume'] #this will be replaced with height + radius dimensions later for the thermal model
 
-        self.cell_charge = 3600*self.cell_capacity #convert the capacity from Ah to Coulomb to make the maths check out
+        if not (self.cell_Vmax > self.cell_Vnom and self.cell_Vnom > self.cell_Vmin):
+            raise ValueError("Illegal cell voltages: Vmax must be greater than Vnom which must be greater than Vmin")
+
+        self.cell_charge = 3600*self.cell_capacity #convert the capacity from Ah to Coulomb to keep everything SI
         self.cell_energy = self.cell_charge*self.cell_Vnom # cell capacity in joules
         self.S_number = math.ceil(self.controller_Vmax/self.cell_Vmax) #number of cells in series to achieve desired voltage. max voltage is preferred as it minimizes losses due to lower current being needed for a larger portion of the flight
 
@@ -193,37 +196,41 @@ class Battery:
         Pack_U_oc = Cell_U_oc * self.S_number
         return Pack_U_oc
 
-    #Calculates the open circuit voltage and current to enable calculating real power drain from the battery in function of useful output power. U_oc is the open circuit voltage, U_out is the measured battery output voltage
+    #Calculates the open circuit voltage and current to enable calculating real power drain from the battery in function of useful output power. U_oc is the open circuit voltage, U_out is the measured battery output voltage. if no valid current exists, returns none
     def Power_2_Current(self, SOC, Power_out):
         if Power_out == 0:
             I_out = 0
 
         else:
             U_oc = self.SOC_2_OC_Voltage(SOC)
-            aux=U_oc**2 - 4 * Power_out * self.pack_resistance
+            a = U_oc**2 - 4 * Power_out * self.pack_resistance
 
-            if (aux < 0):
-                I_out=None
+            if (a < 0):
+                I_out = None
             else:
-                U_out = (U_oc + math.sqrt(aux))/2 #from the math solution of P_out = U_out * I_out
-                I_out = (U_oc - U_out)/self.pack_resistance
+                U_out = (U_oc + math.sqrt(a))/2 #from the math solution of P_out = U_out * I_out
+                I_out = Power_out/U_out
         return I_out
 
-    #find the number of cells required to supply the requested current at the current SOC
+    #find the number of cells required to supply the requested power at the current SOC
     def Pwr_2_P_num(self, SOC, Power_out):
-        if Power_out == 0:
+        if Power_out == 0: #no maths needed if there is now power being drawn
             return 0
-        U_oc = self.SOC_2_OC_Voltage(SOC) #open circuit voltage
-        valid = False   #initializing
-        P_number = math.floor(4 * Power_out * self.cell_resistance * self.S_number / U_oc**2) #initializing with minimum possible P number
+        U_oc = self.SOC_2_OC_Voltage(SOC) #open circuit pack voltage
+        valid = False       #initializing loop
+        P_number = max(     #initializing with minimum possible P number
+                        math.floor(4 * Power_out * self.cell_resistance * self.S_number / U_oc**2),
+                        math.ceil(self.cell_current*U_oc / Power_out)
+                        )
 
         while not valid:
             Resistance = self.cell_resistance * self.S_number / P_number   #calculate equivalent pack R
             a = U_oc**2 - 4 * Power_out * Resistance #quadratic formula parameter, if its negative then the sqrt will be imaginary, so it just skips the maths in that case
             if a > 0:
                 U_out = (U_oc + math.sqrt(a))/2     #find actual output voltage
-                I_out = (U_oc - U_out)/Resistance   #find current output
-                if (I_out < P_number * self.cell_current):
+                #I_out = (U_oc - U_out)/Resistance  # this is wrong, i dont want the current output that dissipates the power at the internal R, i want the current that produces the Pout at Vout
+                I_out = Power_out/U_out    #find current output needed to produce the power after the internal R voltage dropout
+                if (I_out < P_number * self.cell_current): #if the current P number is enough to supply the Iout then exit the loop
                     valid = True
             P_number = P_number+1
         return P_number
