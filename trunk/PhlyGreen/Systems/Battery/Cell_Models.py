@@ -21,8 +21,8 @@ Cell_Models = {
             },
             'FELIX_FINGER':{
                         'Cell Capacity': 21,        #in Ah
-                        'Cell C rating': 3.4,          #dimensionless
-                        'Internal Resistance': 0.01,  #in ohms
+                        'Cell C rating': 4,          #dimensionless
+                        'Internal Resistance': 0.005,  #in ohms
                         'Cell Voltage Min': 2.5,     #in volts
                         'Cell Voltage Max': 4.2,     #in volts
                         'Cell Voltage Nominal': 3.6, #in volts
