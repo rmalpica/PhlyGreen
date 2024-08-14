@@ -16,9 +16,9 @@
 #                                           #
 #############################################
 
-2024-08-14T13:25:52.912552
+2024-08-14T13:40:32.380142
 starting with configuration:
-Range =  2361 km |  Payload =  550 kg |  Hybrid powerplant
+Range =  2361.0 km |  Payload =  550.0 kg |  Hybrid powerplant
 -------------------------------------------------------------------------
 
 Warning: Eta Gas Turbine model unset. Using constant model
@@ -52,5 +52,5 @@ Sizing phase for thermal powertrain:  Climb/Cruise peak power
 Quick reference for comparison:
 
 Mission Range  [km]:  2326.579373650108
-Total Payload  [kg]:  550
+Total Payload  [kg]:  550.0
 Takeoff Weight [kg]:  11432.372373484852

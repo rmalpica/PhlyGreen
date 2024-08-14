@@ -23,10 +23,10 @@ import PhlyGreen as pg
 import numpy as np
 import matplotlib.pyplot as plt
 
-argRange   = int(sys.argv[1])
-argPayload = int(sys.argv[2])
+argRange   = float(sys.argv[1])
+argPayload = float(sys.argv[2])
 argProfile = sys.argv[3]
-
+argPhi = float(sys.argv[4])
 print(logo)
 current_date = datetime.now()
 print(current_date.isoformat())
@@ -77,41 +77,41 @@ MissionInput = {'Range Mission': argRange/1.852,  #nautical miles but the input 
 
 MissionStages = {
                  'Takeoff':
-                    {'Supplied Power Ratio':{'phi': 0.1}},
+                    {'Supplied Power Ratio':{'phi': argPhi}},
 
                  'Climb1': {'type': 'ConstantRateClimb', 'input': 
                     {'CB': 0.16, 'Speed': 77, 'StartAltitude': 100, 'EndAltitude': 560}, 
-                    'Supplied Power Ratio':{'phi_start': 0.1, 'phi_end':0.1 }},
+                    'Supplied Power Ratio':{'phi_start': argPhi, 'phi_end':argPhi }},
 
                  'Climb2': {'type': 'ConstantRateClimb', 'input': 
                     {'CB': 0.08, 'Speed': 120, 'StartAltitude': 560, 'EndAltitude': 1690}, 
-                    'Supplied Power Ratio':{'phi_start': 0.1, 'phi_end':0.1 }},
+                    'Supplied Power Ratio':{'phi_start': argPhi, 'phi_end':argPhi }},
 
                  'Climb3': {'type': 'ConstantRateClimb', 'input': 
                     {'CB': 0.07, 'Speed': 125, 'StartAltitude': 1690, 'EndAltitude': 3000}, 
-                    'Supplied Power Ratio':{'phi_start': 0.1, 'phi_end': 0.1 }},
+                    'Supplied Power Ratio':{'phi_start': argPhi, 'phi_end': argPhi }},
 
                  'Cruise': {'type': 'ConstantMachCruise', 'input': 
                     { 'Mach': 0.4, 'Altitude': 3000}, 
-                   'Supplied Power Ratio':{'phi_start': 0.1, 'phi_end':0.1 }},
+                   'Supplied Power Ratio':{'phi_start': argPhi, 'phi_end':argPhi }},
 
                  'Descent1': {'type': 'ConstantRateDescent', 'input':
                     {'CB': -0.04, 'Speed': 90, 'StartAltitude': 3000, 'EndAltitude': 200}, 
-                    'Supplied Power Ratio':{'phi_start': 0.1, 'phi_end': 0.1  }}}
+                    'Supplied Power Ratio':{'phi_start': argPhi, 'phi_end': argPhi  }}}
 
 
 DiversionStages = {
                    'Climb1': {'type': 'ConstantRateClimb', 'input': 
                         {'CB': 0.08, 'Speed': 110, 'StartAltitude': 200, 'EndAltitude': 1000}, 
-                        'Supplied Power Ratio':{'phi_start': 0.10, 'phi_end':0.1  }},
+                        'Supplied Power Ratio':{'phi_start': argPhi, 'phi_end':argPhi  }},
 
                    'Cruise': {'type': 'ConstantMachCruise', 'input':
                         { 'Mach': 0.35, 'Altitude': 1000}, 
-                        'Supplied Power Ratio':{'phi_start': 0.1, 'phi_end':0.1 }},
+                        'Supplied Power Ratio':{'phi_start': argPhi, 'phi_end':argPhi }},
 
                    'Descent1': {'type': 'ConstantRateDescent', 'input':
                         {'CB': -0.04, 'Speed': 90, 'StartAltitude': 1000, 'EndAltitude': 200}, 
-                        'Supplied Power Ratio':{'phi_start': 0.1, 'phi_end':0.1}}}
+                        'Supplied Power Ratio':{'phi_start': argPhi, 'phi_end':argPhi}}}
 
 
 

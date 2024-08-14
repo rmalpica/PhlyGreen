@@ -16,9 +16,9 @@
 #                                           #
 #############################################
 
-2024-08-14T13:25:54.583956
+2024-08-14T13:40:33.986730
 starting with configuration:
-Range =  2361 km |  Payload =  550 kg |  Traditional powerplant
+Range =  2361.0 km |  Payload =  550.0 kg |  Traditional powerplant
 -------------------------------------------------------------------------
 
 Warning: Eta Gas Turbine model unset. Using constant model
@@ -28,22 +28,22 @@ Design W/S:  1710.4654654654653
 Design P/W:  130.48855884475907
 ----------------------------------------
 
-Fuel mass (trip + altn) [Kg]:  1863.2173537070628
-Block Fuel mass [Kg]:          1993.2173537070628
-Battery mass [Kg]:             1667.6945449847146
-Structure [Kg]:                6347.185468742769
-Powertrain mass [Kg]:          541.2932899045375
-Empty Weight [Kg]:             9056.173303632022
-Zero Fuel Weight [Kg]:         9106.173303632022
+Fuel mass (trip + altn) [Kg]:  1634.7901302618166
+Block Fuel mass [Kg]:          1764.7901302618166
+Battery mass [Kg]:             0.0
+Structure [Kg]:                3880.0441297953103
+Powertrain mass [Kg]:          380.40868169542904
+Empty Weight [Kg]:             4760.452811490739
+Zero Fuel Weight [Kg]:         4810.452811490739
 ----------------------------------------
-Takeoff Weight:  11432.372373484852
-Source Energy:  333679.34643231047  MJ
-Psi:  0.028409090909090873
-Wing Surface:  65.56786748884569  m^2
-TakeOff engine shaft peak power [kW]:       872.5676976156716
-Climb/cruise engine shaft peak power [kW]:  1681.0286347931608
-TakeOff battery peak power [kW]:            440.6907563715513
-Climb/cruise battery peak power [kW]:       849.0043610066468
+Takeoff Weight:  6772.544589146983
+Source Energy:  284453.4826655561  MJ
+Psi:  0.0
+Wing Surface:  38.842445966280934  m^2
+TakeOff engine shaft peak power [kW]:       770.1895265653768
+Climb/cruise engine shaft peak power [kW]:  1483.5938586121733
+TakeOff battery peak power [kW]:            0.0
+Climb/cruise battery peak power [kW]:       0.0
 
 -------------Sizing Phase--------------
 Sizing phase for thermal powertrain:  Climb/Cruise peak power
@@ -52,5 +52,5 @@ Sizing phase for thermal powertrain:  Climb/Cruise peak power
 Quick reference for comparison:
 
 Mission Range  [km]:  2326.579373650108
-Total Payload  [kg]:  550
-Takeoff Weight [kg]:  11432.372373484852
+Total Payload  [kg]:  550.0
+Takeoff Weight [kg]:  6772.544589146983
