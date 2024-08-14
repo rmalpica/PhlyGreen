@@ -1,0 +1,71 @@
+
+#############################################
+# ____     __          ___                  #
+#/\  _`\  /\ \        /\_ \                 #
+#\ \ \L\ \ \ \ \___    \//\ \     __  __    #
+# \ \ ,__/ \ \  _ `\    \ \ \   /\ \/\ \    #
+#  \ \ \/   \ \ \ \ \    \_\ \_ \ \ \_\ \   #
+#   \ \_\    \ \_\ \_\   /\____\ \/`____ \  #
+# ___\/_/     \/_/\/_/   \/____/  `/___/> \ #
+#/\  _`\                             /\___/ #
+#\ \ \L\_\   _ __     __      __     \/__/  #
+# \ \ \L_L  /\`'__\ /'__`\  /'__`\ /' _ `\  #
+#  \ \ \/, \ \ \ \/ /\  __/ /\ __/ /\ \/\ \ #
+#   \ \____/ \ \_\ \ \____\ \ \__\ \ \_\ \_\#
+#    \/___/   \/_/  \/____/ \/____/ \/_/\/_/#
+#                                           #
+#############################################
+
+2024-08-13T19:47:48.569291
+starting with configuration:
+Range =  396 km |  Payload =  1960 kg |  Hybrid powerplant |  FELIX_FINGER cell model
+-------------------------------------------------------------------------------------------
+
+Warning: Eta Gas Turbine model unset. Using constant model
+Warning: Eta Propulsive model unset. Using constant model
+----------------------------------------
+Design W/S:  1710.4654654654653
+Design P/W:  130.48855884475907
+----------------------------------------
+Optimal P:  2
+Optimal P:  599
+Optimal P:  11
+Optimal P:  14
+Optimal P:  14
+Optimal P:  14
+Optimal P:  14
+
+Fuel mass (trip + altn) [Kg]:  283.71419022897516
+Block Fuel mass [Kg]:          413.71419022897516
+Battery mass [Kg]:             123.9
+Structure [Kg]:                4051.665391067674
+Powertrain mass [Kg]:          335.76974163313537
+Empty Weight [Kg]:             5011.3351327008095
+Zero Fuel Weight [Kg]:         6471.3351327008095
+----------------------------------------
+Takeoff Weight:  6885.015164313181
+Wing Surface:  39.487496313485785  m^2
+TakeOff engine shaft peak power [kW]:       541.2626373560959
+Climb/cruise engine shaft peak power [kW]:  1042.7591860263894
+TakeOff battery peak power [kW]:            273.3649683616646
+Climb/cruise battery peak power [kW]:       526.6460535486814
+
+-------------Battery Specs-------------
+Battery Pack Energy [kWh]:            187.3368
+Battery Pack Max Power [kW]:          786.81456
+Battery Pack Specific Energy [Wh/kg]: 1511.9999999999998
+Battery Pack Specific Power [kW/kg]:  6.3504
+
+-------------Sizing Phase--------------
+Sizing phase for thermal powertrain:  Climb/Cruise peak power
+
+-------------------------------
+Quick reference for comparison:
+
+Mission Range  [km]:  390.22678185745144
+Total Payload  [kg]:  1960
+Takeoff Weight [kg]:  6885.015164313181
+
+-------------Battery Pack Specs-------------
+Specific Energy [Wh/kg]:  1511.9999999999998
+Specific Power  [kW/kg]:  6.3504
