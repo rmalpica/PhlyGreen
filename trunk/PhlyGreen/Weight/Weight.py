@@ -97,7 +97,7 @@ class Weight:
                 return (self.Wf + self.final_reserve + self.WBat + self.WPT + self.WStructure + self.WPayload + self.WCrew - WTO)
          
         
-        self.WTO = brenth(func, 10000, 1000000, xtol=0.1)
+        self.WTO = brenth(func, 1000, 1000000, xtol=0.1)
         self.WTO += self.WTO * (1 - self.aircraft.mission.beta0) # I should consider the additional weight due to taxing and take off phases
 
         
