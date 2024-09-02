@@ -1,6 +1,7 @@
 #import numpy as np
 import math
 import numbers
+import numpy as np
 import PhlyGreen.Systems.Battery.Cell_Models as Cell_Models
 from scipy.optimize import brentq
 class Battery:
@@ -153,7 +154,8 @@ class Battery:
         self.cell_Vmin = self.cell_model['Cell Voltage Min']
         self.cell_Vnom = self.cell_model['Cell Voltage Nominal']
         self.cell_mass = self.cell_model['Cell Mass']
-        self.cell_volume = self.cell_model['Cell Volume'] #this will be replaced with height + radius dimensions later for the thermal model
+        self.cell_radius = self.cell_model['Cell Radius']
+        self.cell_height = self.cell_model['Cell Height']
 
         if not (self.cell_Vmax > self.cell_Vnom and self.cell_Vnom > self.cell_Vmin):
             raise ValueError("Illegal cell voltages: Vmax must be greater than Vnom which must be greater than Vmin")
@@ -179,9 +181,18 @@ class Battery:
         self.pack_power_max = self.pack_current * self.pack_Vmax - self.pack_resistance*self.pack_current**2
 
         self.pack_weight = self.cell_mass*self.cells_total
-        self.pack_volume = self.cell_volume*self.cells_total
 
-        self.pack_config='S'+str(self.S_number)+'P'+str(self.P_number)
+        # if self.S_number % 2:
+        #     self.stack_length = self.cell_radius * (self.S_number+1)/2
+        # else:
+        #     self.stack_length = self.cell_radius * (self.S_number)/2 + self.cell_radius * (sqrt3-1)
+        # the difference is so small this is irrelevant, uncomment if it turns out to be relevant
+
+        self.stack_length = self.cell_radius * math.ceil(self.S_number/2)
+        self.stack_width = self.cell_radius * (2 + np.sqrt(3))
+        self.pack_volume = self.cell_height * self.stack_width * self.stack_length
+
+        self.pack_config='S'+str(self.S_number)+' P'+str(self.P_number)
         return ()
 
     #calculate the SOC from the charge spent so far
@@ -242,3 +253,22 @@ class Battery:
         total_cells = math.ceil(Energy_out/self.cell_energy) 
         energy_P_number = math.ceil(total_cells/self.S_number)
         return energy_P_number
+
+
+
+# /->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/
+# \-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\
+# this is where the thermal model starts, it lives in the battery class for now because i dont expect it to be very big 
+# but who knows maybe that will change? 
+
+#C = self.S_number * self.cell_mass * 1130      # mass times specific heat capacity = heat capacity
+#R = 1/(self.stack_length * self.cell_height * 1000) # 1/(wall area times convection coef) = thermal resistance of the walls
+#Ti = 300 # ambient temperature in kelvin
+#T = Ti   # initial temperature starts at ambient
+#dTdt = 0 #T derivative being initialized
+#P_t = []
+#T_t = []
+#dTdt_t = []
+
+    def Curr2Heat(self,I):
+        return (self.cell_resistance*self.S_number * I/self.P_number)
