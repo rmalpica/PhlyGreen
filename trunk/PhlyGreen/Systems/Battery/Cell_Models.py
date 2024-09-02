@@ -7,7 +7,8 @@ Cell_Models = {
                         'Cell Voltage Max': 4.2,     #in volts
                         'Cell Voltage Nominal': 3.6, #in volts
                         'Cell Mass': 0.0438,           #in kg
-                        'Cell Volume': 0.0000003,         #in m^3
+                        'Cell Radius': 0.006,         #in m
+                        'Cell Height': 0.065,         #in m
             },
             'LG_INR21700M50LT':{
                         'Cell Capacity': 4.8,        #in Ah
@@ -17,7 +18,8 @@ Cell_Models = {
                         'Cell Voltage Max': 4.2,     #in volts
                         'Cell Voltage Nominal': 3.6, #in volts
                         'Cell Mass': 0.0682,           #in kg
-                        'Cell Volume': 0.0000003,         #in m^3
+                        'Cell Radius': 0.006,         #in m
+                        'Cell Height': 0.065,         #in m
             },
             'FELIX_FINGER':{
                         'Cell Capacity': 21,        #in Ah
@@ -27,12 +29,11 @@ Cell_Models = {
                         'Cell Voltage Max': 4.2,     #in volts
                         'Cell Voltage Nominal': 3.6, #in volts
                         'Cell Mass': 0.05,           #in kg
-                        'Cell Volume': 0.0000003,         #in m^3
+                        'Cell Radius': 0.006,         #in m
+                        'Cell Height': 0.065,         #in m
             },
 }
 
 #things to consider:
-#   make volume vs dimensions
 #   energy in Wh vs volts*Ah
 #   current in C rating vs Amps
-#   figure out how to get a more detailed model in that isnt just these parameters?

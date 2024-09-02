@@ -213,10 +213,13 @@ class Mission:
                 return [0,0,0,0]
 
             dSOCdt = -BatCurr/self.aircraft.battery.pack_charge #gives the rate of change of SOC
+            self.CurrentvsTime=np.append(self.CurrentvsTime,[[t,BatCurr]],axis=0)
             return [dEFdt,BatCurr,dbetadt,dSOCdt]
 
 
         def evaluate_P_nr(P_number):
+            self.CurrentvsTime = np.empty((0,2)) #for the heat calculations. maybe this can be moved elsewhere?
+
             #no maths needed to know nothing will work without a battery
             if P_number == 0:
                 return [False,False,False,False,False]

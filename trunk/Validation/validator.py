@@ -23,6 +23,12 @@ import PhlyGreen as pg
 import numpy as np
 import matplotlib.pyplot as plt
 
+import seaborn as sns
+import pandas as pd
+import matplotlib
+matplotlib.use('agg')
+
+
 argRange   = int(sys.argv[1])
 argPayload = int(sys.argv[2])
 argProfile = sys.argv[3]
@@ -242,18 +248,134 @@ if not (myaircraft.Configuration == 'Traditional'):
     print('Specific Energy [Wh/kg]: ',(myaircraft.battery.pack_energy/3600)/myaircraft.weight.WBat)
     print('Specific Power  [kW/kg]: ',(myaircraft.battery.pack_power_max/1000)/myaircraft.weight.WBat)
 
-# times = np.array([])
-# Ef = np.array([])
-# Ebat = np.array([])
-# beta = np.array([])
-# soc = np.array([])
-# for array in mission.integral_solution:
-#     times = np.concatenate([times, array.t])
-#     Ef = np.concatenate([Ef, array.y[0]])
-#     Ebat = np.concatenate([Ebat, array.y[1]])
-#     beta = np.concatenate([beta, array.y[2]])
-#     soc = np.concatenate([soc, array.y[3]])
 
-# print(myaircraft.performance.TakeOff(myaircraft.DesignWTOoS,myaircraft.constraint.TakeOffConstraints['Beta'], myaircraft.constraint.TakeOffConstraints['Altitude'],myaircraft.constraint.TakeOffConstraints['kTO'], myaircraft.constraint.TakeOffConstraints['sTO'], myaircraft.constraint.DISA, myaircraft.constraint.TakeOffConstraints['Speed'], myaircraft.constraint.TakeOffConstraints['Speed Type']))
-# print (max([myaircraft.performance.PoWTO(myaircraft.DesignWTOoS,beta[t],myaircraft.mission.profile.PowerExcess(times[t]),1,myaircraft.mission.profile.Altitude(times[t]),myaircraft.mission.DISA,myaircraft.mission.profile.Velocity(times[t]),'TAS') for t in range(len(times))]))
-# print("Final SOC:",soc[-1])
+# begin thermal stuff
+
+fTime = []
+fHeat = []
+# clean up repeated and unsorted data points
+tosort=myaircraft.mission.CurrentvsTime
+sortedarr=tosort[np.argsort(tosort[:, 0])]
+
+for i in range(len(sortedarr)): 
+    if sortedarr[i,0] != sortedarr[i-1,0]:
+        fTime += [sortedarr[i,0]]
+        fHeat += [myaircraft.battery.Curr2Heat(sortedarr[i,1])]
+
+
+#print(fHeat)
+#print(fTime)
+#fTime = myaircraft.mission.CurrentvsTime[:,0]
+#fHeat = myaircraft.battery.Curr2Heat(myaircraft.mission.CurrentvsTime[:,1])
+
+#print(myaircraft.mission.CurrentvsTime)
+
+#C = 8.85 * 1130      # mass times specific heat capacity = heat capacity
+#R = 1/(0.208 * 1000) # 1/(wall area times convection coef) = thermal resistance of the walls
+#Ti = 300 # ambient temperature in kelvin
+#T = Ti   # initial temperature starts at ambient
+#dTdt = 0 #T derivative being initialized
+#P_t = []
+#T_t = []
+#dTdt_t = []
+
+#for i in range(len(fHeat)-1):
+#    dt=fTime[i+1]-fTime[i]
+#    P=fHeat[i]
+##    dTdt = P/C + (Ti-T)/(R*C) 
+ #   T = T+dTdt*dt
+ #   T_t += [T]
+#    dTdt_t += [dTdt]
+
+data = pd.DataFrame({
+    'Time': fTime[:-1],
+    'Heat': fHeat[:-1],
+    #'Temp': T_t,
+    #'dTdt': dTdt_t
+})
+
+
+#sns.scatterplot(data=data, x='Time', y='Temp', label='Temp', color='red')
+#plt.savefig('Temp.png')
+#plt.clf()
+
+#sns.scatterplot(data=data, x='Time', y='Heat', label='Heat', color='red')
+#plt.savefig('Heat.png')
+#plt.clf()
+
+#sns.scatterplot(data=data, x='Time', y='dTdt', label='dTdt', color='red')
+#plt.savefig('dTdt.png')
+#plt.clf()
+
+def interpolate(x,y,samples): # here it returns the current power given a certain time, for now we assume its linear for everything
+    t = np.linspace(x[0],x[-1],samples)
+    f_t = [] #np.empty(samples)
+    debug = [] #np.empty(samples)
+    for i in range(samples):
+        for j in range(len(x)):
+            if x[j] == t[i]:
+                f_t += [y[j]]
+                #debug = np.vstack([debug,[x[j],t[i],y[j],f_t[i]]])
+                debug.append([x[j],t[i],y[j],f_t[i]])
+                break
+            elif x[j] > t[i]:
+                f_t += [y[j-1] + (y[j] - y[j-1]) * (t[i] - x[j-1]) / (x[j]-x[j-1])]
+                #debug = np.vstack([debug,[x[j],t[i],y[j],f_t[i]]])
+                debug.append([x[j],t[i],y[j],f_t[i]])
+                break
+    debug=np.array(debug)
+    return t, f_t, debug
+
+
+samples=500000
+#lin_time = np.linspace(fTime[0], fTime[-1], samples)
+#lin_heat = np.interp(lin_time, fTime, fHeat)
+lin_time,lin_heat, debug = interpolate(fTime,fHeat,samples)
+
+
+C = 8.85 * 1130    # mass times specific heat capacity = heat capacity
+R = 1/(0.208 * 100) # 1/(wall area times convection coef) = thermal resistance of the walls
+Ti = 300 # ambient temperature in kelvin
+T = Ti   # initial temperature starts at ambient
+dTdt = 0 #T derivative being initialized
+P_t = []
+T_t = []
+dTdt_t = []
+
+for i in range(samples-1):
+    dt=lin_time[i+1]-lin_time[i]
+    P=lin_heat[i]
+    dTdt = P/C + (Ti-T)/(R*C) 
+    T = T+dTdt*dt
+    T_t += [T]
+    dTdt_t += [dTdt]
+
+datalin = pd.DataFrame({
+    'Time': lin_time[:-1],
+    'Heat': lin_heat[:-1],
+    'Temp': T_t,
+    'dTdt': dTdt_t
+})
+
+
+sns.lineplot(data=datalin, x='Time', y='Temp', label='lin_Temp', color='green')
+plt.savefig(sys.argv[1]+'lin_Temp.png')
+plt.clf()
+
+sns.lineplot(data=datalin, x='Time', y='Heat', label='interpolated', color='green')
+sns.scatterplot(data=data, x='Time', y='Heat', label='original', color='red')
+plt.savefig(sys.argv[1]+'interpheat.png')
+plt.clf()
+
+sns.lineplot(data=datalin, x='Time', y='dTdt', label='lin_dTdt', color='green')
+plt.savefig(sys.argv[1]+'lin_dTdt.png')
+plt.clf()
+
+print('----------------------debug prints----------------------')
+print()
+print('time_og , time_interp , power_og , power_interp')
+print(np.matrix(debug))
+print()
+print()
+print('time_og , power_og')
+print(np.matrix(np.column_stack((fTime, fHeat))))
