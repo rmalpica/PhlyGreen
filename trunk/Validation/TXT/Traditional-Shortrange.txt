@@ -1,0 +1,58 @@
+
+#############################################
+# ____     __          ___                  #
+#/\  _`\  /\ \        /\_ \                 #
+#\ \ \L\ \ \ \ \___    \//\ \     __  __    #
+# \ \ ,__/ \ \  _ `\    \ \ \   /\ \/\ \    #
+#  \ \ \/   \ \ \ \ \    \_\ \_ \ \ \_\ \   #
+#   \ \_\    \ \_\ \_\   /\____\ \/`____ \  #
+# ___\/_/     \/_/\/_/   \/____/  `/___/> \ #
+#/\  _`\                             /\___/ #
+#\ \ \L\_\   _ __     __      __     \/__/  #
+# \ \ \L_L  /\`'__\ /'__`\  /'__`\ /' _ `\  #
+#  \ \ \/, \ \ \ \/ /\  __/ /\ __/ /\ \/\ \ #
+#   \ \____/ \ \_\ \ \____\ \ \__\ \ \_\ \_\#
+#    \/___/   \/_/  \/____/ \/____/ \/_/\/_/#
+#                                           #
+#############################################
+
+2024-09-03T12:08:15.397662
+starting with configuration:
+Range =  396 km |  Payload =  1960 kg |  Traditional powerplant |  FELIX_FINGER cell model
+-------------------------------------------------------------------------------------------
+
+Warning: Eta Gas Turbine model unset. Using constant model
+Warning: Eta Propulsive model unset. Using constant model
+----------------------------------------
+Design W/S:  1710.4654654654653
+Design P/W:  130.48855884475907
+----------------------------------------
+
+Fuel mass (trip + altn) [Kg]:  436.3814364498394
+Block Fuel mass [Kg]:          566.3814364498394
+Structure [Kg]:                4181.227070837217
+Powertrain mass [Kg]:          411.8981975851115
+Empty Weight [Kg]:             5093.125268422328
+Zero Fuel Weight [Kg]:         6553.125268422328
+----------------------------------------
+Takeoff Weight:  7119.471430242038
+Wing Surface:  40.83216886911449  m^2
+TakeOff engine shaft peak power [kW]:       833.944337864721
+Climb/cruise engine shaft peak power [kW]:  1606.402970581935
+-------------Sizing Phase--------------
+Sizing phase for thermal powertrain  Climb/Cruise peak power
+
+-------------------------------
+Quick reference for comparison:
+
+Mission Range  [km]:  390.22678185745144
+Total Payload  [kg]:  1960
+Takeoff Weight [kg]:  7119.471430242038
+takeoff weight
+empty weight
+fuel weight
+battery weight
+7119.471430242038
+5093.125268422328
+566.3814364498394
+0

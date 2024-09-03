@@ -33,7 +33,7 @@ argRange   = int(sys.argv[1])
 argPayload = int(sys.argv[2])
 argProfile = sys.argv[3]
 argCell    = sys.argv[4]
-
+args = (sys.argv[1]+'-'+sys.argv[2]+'-'+sys.argv[3]+'-'+sys.argv[4])
 print(logo)
 current_date = datetime.now()
 print(current_date.isoformat())
@@ -249,133 +249,113 @@ if not (myaircraft.Configuration == 'Traditional'):
     print('Specific Power  [kW/kg]: ',(myaircraft.battery.pack_power_max/1000)/myaircraft.weight.WBat)
 
 
-# begin thermal stuff
+    # begin thermal stuff which really should be its own function but oh well
+if argProfile == 'Hybrid' :
+    fTime = []
+    fHeat = []
+    # clean up repeated and unsorted data points
+    tosort=myaircraft.mission.CurrentvsTime
+    sortedarr=tosort[np.argsort(tosort[:, 0])]
 
-fTime = []
-fHeat = []
-# clean up repeated and unsorted data points
-tosort=myaircraft.mission.CurrentvsTime
-sortedarr=tosort[np.argsort(tosort[:, 0])]
+    for i in range(len(sortedarr)): 
+        if sortedarr[i,0] != sortedarr[i-1,0]:
+            fTime += [sortedarr[i,0]]
+            fHeat += [myaircraft.battery.Curr2Heat(sortedarr[i,1])]
 
-for i in range(len(sortedarr)): 
-    if sortedarr[i,0] != sortedarr[i-1,0]:
-        fTime += [sortedarr[i,0]]
-        fHeat += [myaircraft.battery.Curr2Heat(sortedarr[i,1])]
+    data = pd.DataFrame({
+        'Time': fTime[:-1],
+        'Heat': fHeat[:-1],
+        #'Temp': T_t,
+        #'dTdt': dTdt_t
+    })
 
-
-#print(fHeat)
-#print(fTime)
-#fTime = myaircraft.mission.CurrentvsTime[:,0]
-#fHeat = myaircraft.battery.Curr2Heat(myaircraft.mission.CurrentvsTime[:,1])
-
-#print(myaircraft.mission.CurrentvsTime)
-
-#C = 8.85 * 1130      # mass times specific heat capacity = heat capacity
-#R = 1/(0.208 * 1000) # 1/(wall area times convection coef) = thermal resistance of the walls
-#Ti = 300 # ambient temperature in kelvin
-#T = Ti   # initial temperature starts at ambient
-#dTdt = 0 #T derivative being initialized
-#P_t = []
-#T_t = []
-#dTdt_t = []
-
-#for i in range(len(fHeat)-1):
-#    dt=fTime[i+1]-fTime[i]
-#    P=fHeat[i]
-##    dTdt = P/C + (Ti-T)/(R*C) 
- #   T = T+dTdt*dt
- #   T_t += [T]
-#    dTdt_t += [dTdt]
-
-data = pd.DataFrame({
-    'Time': fTime[:-1],
-    'Heat': fHeat[:-1],
-    #'Temp': T_t,
-    #'dTdt': dTdt_t
-})
+    def interpolate(x,y,samples): # here it returns the current power given a certain time, for now we assume its linear for everything
+        t = np.linspace(x[0],x[-1],samples)
+        f_t = [] #np.empty(samples)
+        debug = [] #np.empty(samples)
+        for i in range(samples):
+            for j in range(len(x)):
+                if x[j] == t[i]:
+                    f_t += [y[j]]
+                    #debug = np.vstack([debug,[x[j],t[i],y[j],f_t[i]]])
+                    debug.append([x[j],t[i],y[j],f_t[i]])
+                    break
+                elif x[j] > t[i]:
+                    f_t += [y[j-1] + (y[j] - y[j-1]) * (t[i] - x[j-1]) / (x[j]-x[j-1])]
+                    #debug = np.vstack([debug,[x[j],t[i],y[j],f_t[i]]])
+                    debug.append([x[j],t[i],y[j],f_t[i]])
+                    break
+        debug=np.array(debug)
+        return t, f_t, debug
 
 
-#sns.scatterplot(data=data, x='Time', y='Temp', label='Temp', color='red')
-#plt.savefig('Temp.png')
-#plt.clf()
-
-#sns.scatterplot(data=data, x='Time', y='Heat', label='Heat', color='red')
-#plt.savefig('Heat.png')
-#plt.clf()
-
-#sns.scatterplot(data=data, x='Time', y='dTdt', label='dTdt', color='red')
-#plt.savefig('dTdt.png')
-#plt.clf()
-
-def interpolate(x,y,samples): # here it returns the current power given a certain time, for now we assume its linear for everything
-    t = np.linspace(x[0],x[-1],samples)
-    f_t = [] #np.empty(samples)
-    debug = [] #np.empty(samples)
-    for i in range(samples):
-        for j in range(len(x)):
-            if x[j] == t[i]:
-                f_t += [y[j]]
-                #debug = np.vstack([debug,[x[j],t[i],y[j],f_t[i]]])
-                debug.append([x[j],t[i],y[j],f_t[i]])
-                break
-            elif x[j] > t[i]:
-                f_t += [y[j-1] + (y[j] - y[j-1]) * (t[i] - x[j-1]) / (x[j]-x[j-1])]
-                #debug = np.vstack([debug,[x[j],t[i],y[j],f_t[i]]])
-                debug.append([x[j],t[i],y[j],f_t[i]])
-                break
-    debug=np.array(debug)
-    return t, f_t, debug
+    samples=500000
+    #lin_time = np.linspace(fTime[0], fTime[-1], samples)
+    #lin_heat = np.interp(lin_time, fTime, fHeat)
+    lin_time,lin_heat, debug = interpolate(fTime,fHeat,samples)
 
 
-samples=500000
-#lin_time = np.linspace(fTime[0], fTime[-1], samples)
-#lin_heat = np.interp(lin_time, fTime, fHeat)
-lin_time,lin_heat, debug = interpolate(fTime,fHeat,samples)
+    C = 8.85 * 1130    # mass times specific heat capacity = heat capacity
+    R = 1/(0.208 * 10) # 1/(wall area times convection coef) = thermal resistance of the walls
+    Ti = 300 # ambient temperature in kelvin
+    T = Ti   # initial temperature starts at ambient
+    dTdt = 0 #T derivative being initialized
+    P_t = []
+    T_t = []
+    dTdt_t = []
+
+    for i in range(samples-1):
+        dt=lin_time[i+1]-lin_time[i]
+        P=lin_heat[i]
+        dTdt = P/C + (Ti-T)/(R*C) 
+        T = T+dTdt*dt
+        T_t += [T]
+        dTdt_t += [dTdt]
+
+    datalin = pd.DataFrame({
+        'Time': lin_time[:-1],
+        'Heat': lin_heat[:-1],
+        'Temp': T_t,
+        'dTdt': dTdt_t
+    })
 
 
-C = 8.85 * 1130    # mass times specific heat capacity = heat capacity
-R = 1/(0.208 * 100) # 1/(wall area times convection coef) = thermal resistance of the walls
-Ti = 300 # ambient temperature in kelvin
-T = Ti   # initial temperature starts at ambient
-dTdt = 0 #T derivative being initialized
-P_t = []
-T_t = []
-dTdt_t = []
+    sns.lineplot(data=datalin, x='Time', y='Temp', label='lin_Temp', color='green')
+    plt.savefig(args+'--Temp.png')
+    plt.clf()
 
-for i in range(samples-1):
-    dt=lin_time[i+1]-lin_time[i]
-    P=lin_heat[i]
-    dTdt = P/C + (Ti-T)/(R*C) 
-    T = T+dTdt*dt
-    T_t += [T]
-    dTdt_t += [dTdt]
+    sns.lineplot(data=datalin, x='Time', y='Heat', label='interpolated', color='green')
+    sns.scatterplot(data=data, x='Time', y='Heat', label='original', color='red')
+    plt.savefig(args+'--Heat.png')
+    plt.clf()
 
-datalin = pd.DataFrame({
-    'Time': lin_time[:-1],
-    'Heat': lin_heat[:-1],
-    'Temp': T_t,
-    'dTdt': dTdt_t
-})
+    sns.lineplot(data=datalin, x='Time', y='dTdt', label='lin_dTdt', color='green')
+    plt.savefig(args+'--dTdt.png')
+    plt.clf()
+
+    #print('----------------------debug prints----------------------')
+    #print()
+    #print('time_og , time_interp , power_og , power_interp')
+    #print(np.matrix(debug))
+    #print()
+    #print()
+    #print('time_og , power_og')
+    #print(np.matrix(np.column_stack((fTime, fHeat))))
 
 
-sns.lineplot(data=datalin, x='Time', y='Temp', label='lin_Temp', color='green')
-plt.savefig(sys.argv[1]+'lin_Temp.png')
-plt.clf()
+print('takeoff weight')
+print('empty weight')
+print('fuel weight')
+print('battery weight')
 
-sns.lineplot(data=datalin, x='Time', y='Heat', label='interpolated', color='green')
-sns.scatterplot(data=data, x='Time', y='Heat', label='original', color='red')
-plt.savefig(sys.argv[1]+'interpheat.png')
-plt.clf()
 
-sns.lineplot(data=datalin, x='Time', y='dTdt', label='lin_dTdt', color='green')
-plt.savefig(sys.argv[1]+'lin_dTdt.png')
-plt.clf()
-
-print('----------------------debug prints----------------------')
-print()
-print('time_og , time_interp , power_og , power_interp')
-print(np.matrix(debug))
-print()
-print()
-print('time_og , power_og')
-print(np.matrix(np.column_stack((fTime, fHeat))))
+if not (myaircraft.Configuration == 'Traditional'):
+    print(myaircraft.weight.WTO)
+    print(myaircraft.weight.WPT + myaircraft.weight.WStructure + myaircraft.weight.WCrew + myaircraft.weight.WBat)
+    print(myaircraft.weight.Wf + myaircraft.weight.final_reserve)
+    print(myaircraft.weight.WBat)
+else:
+    print(myaircraft.weight.WTO)
+    print(myaircraft.weight.WPT + myaircraft.weight.WStructure + myaircraft.weight.WCrew)
+    print(myaircraft.weight.Wf + myaircraft.weight.final_reserve)
+    print('0')
