@@ -16,7 +16,7 @@
 #                                           #
 #############################################
 
-2024-08-14T13:40:35.508261
+2024-09-03T12:40:14.188477
 starting with configuration:
 Range =  1280.0 km |  Payload =  1330.0 kg |  Hybrid powerplant
 -------------------------------------------------------------------------
@@ -54,3 +54,11 @@ Quick reference for comparison:
 Mission Range  [km]:  1261.33909287257
 Total Payload  [kg]:  1330.0
 Takeoff Weight [kg]:  8283.94690741387
+takeoff weight
+empty weight
+fuel weight
+battery weight
+8283.94690741387
+6290.350603890485
+922.316296468568
+709.1719937527296

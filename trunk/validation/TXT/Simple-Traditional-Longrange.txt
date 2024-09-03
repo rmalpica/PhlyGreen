@@ -16,7 +16,7 @@
 #                                           #
 #############################################
 
-2024-08-14T13:40:33.986730
+2024-09-03T12:40:11.439550
 starting with configuration:
 Range =  2361.0 km |  Payload =  550.0 kg |  Traditional powerplant
 -------------------------------------------------------------------------
@@ -54,3 +54,11 @@ Quick reference for comparison:
 Mission Range  [km]:  2326.579373650108
 Total Payload  [kg]:  550.0
 Takeoff Weight [kg]:  6772.544589146983
+takeoff weight
+empty weight
+fuel weight
+battery weight
+6772.544589146983
+4760.452811490739
+1764.7901302618166
+0.0

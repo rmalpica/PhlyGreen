@@ -276,8 +276,20 @@ print()
 print('Mission Range  [km]: ', myaircraft.mission.profile.MissionRange/1000)
 print('Total Payload  [kg]: ', myaircraft.weight.WPayload + myaircraft.weight.WCrew)
 print('Takeoff Weight [kg]: ', myaircraft.weight.WTO)
-# if not (myaircraft.Configuration == 'Traditional'):
-#     print()
-#     print('-------------Battery Pack Specs-------------')
-#     print('Specific Energy [Wh/kg]: ',(myaircraft.battery.pack_energy/3600)/myaircraft.weight.WBat)
-#     print('Specific Power  [kW/kg]: ',(myaircraft.battery.pack_power_max/1000)/myaircraft.weight.WBat)
+
+print('takeoff weight')
+print('empty weight')
+print('fuel weight')
+print('battery weight')
+
+
+if not (myaircraft.Configuration == 'Traditional'):
+    print(myaircraft.weight.WTO)
+    print(myaircraft.weight.WPT + myaircraft.weight.WStructure + myaircraft.weight.WCrew + myaircraft.weight.WBat)
+    print(myaircraft.weight.Wf + myaircraft.weight.final_reserve)
+    print(myaircraft.weight.WBat)
+else:
+    print(myaircraft.weight.WTO)
+    print(myaircraft.weight.WPT + myaircraft.weight.WStructure + myaircraft.weight.WCrew)
+    print(myaircraft.weight.Wf + myaircraft.weight.final_reserve)
+    print('0')
