@@ -188,7 +188,7 @@ class Mission:
             Beta = y[2]
             Ppropulsive = PowerPropulsive(Beta,t)
             PRatio = self.aircraft.powertrain.Hybrid(self.aircraft.mission.profile.SuppliedPowerRatio(t),self.profile.Altitude(t),self.profile.Velocity(t),Ppropulsive) #takes in all the mission segments and finds the required power ratio for the current time of the mission
-
+            self.debugPRatio.append([PRatio,t]) #here to debug the power during the mission
             dEFdt = Ppropulsive * PRatio[0] #fuel power output
             dbetadt = - dEFdt/(self.ef*self.WTO) #change in mass due to fuel consumption
 
@@ -213,12 +213,11 @@ class Mission:
                 return [0,0,0,0]
 
             dSOCdt = -BatCurr/self.aircraft.battery.pack_charge #gives the rate of change of SOC
-            self.CurrentvsTime=np.append(self.CurrentvsTime,[[t,BatCurr]],axis=0)
+
             return [dEFdt,BatCurr,dbetadt,dSOCdt]
 
 
         def evaluate_P_nr(P_number):
-            self.CurrentvsTime = np.empty((0,2)) #for the heat calculations. maybe this can be moved elsewhere?
 
             #no maths needed to know nothing will work without a battery
             if P_number == 0:
@@ -240,18 +239,32 @@ class Mission:
                 self.constraint_TO_underpowered = False
             else:
                 # integrate sequentially
+                self.debugPRatio = [] # here to DEBUG the power ratio used during the mission 
                 self.integral_solution = []
+                self.CurrentvsTime = [] #for the heat calculations. maybe this can be moved elsewhere?
                 times = np.append(self.profile.Breaks,self.profile.MissionTime2)
                 rtol = 1e-5
                 method= 'BDF'
                 y0 = [0,0,self.beta0,1] #initial fuel energy, battery energy, mass fraction, and SOC
+
                 for i in range(len(times)-1):
                     self.valid_solution = True
                     sol = integrate.solve_ivp(model,[times[i], times[i+1]], y0, method=method, rtol=rtol) #"model" returns d
                     if not self.valid_solution:
                         break
                     self.integral_solution.append(sol)
+
+                    # make array of the calculated time points and battery current 
+                    # in order to calculate the heat. Possibly change this so that
+                    # it feeds directly into a function instead of making an array
+                    # to enable calculating the battery heating in the integration
+                    for k in range(len(sol.t)):
+                        yy0 = [sol.y[0][k],sol.y[1][k],sol.y[2][k],sol.y[3][k]]
+                        self.CurrentvsTime.append([sol.t[k],model(sol.t[k],yy0)[1]])
+
                     y0 = [sol.y[0][-1],sol.y[1][-1],sol.y[2][-1],sol.y[3][-1]]
+                    # watch out, the simplified model returns battery energy but the
+                    # complete model returns battery CHARGE instead
 
 
             return [self.constraint_low_SOC,

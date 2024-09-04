@@ -270,5 +270,6 @@ class Battery:
 #T_t = []
 #dTdt_t = []
 
+    # returns the heat dissipated IN A SINGLE STACK. this divides the current by the stacks in parallel
     def Curr2Heat(self,I):
         return (self.cell_resistance*self.S_number * I/self.P_number)

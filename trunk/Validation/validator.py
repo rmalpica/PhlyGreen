@@ -248,52 +248,47 @@ if not (myaircraft.Configuration == 'Traditional'):
     print('Specific Energy [Wh/kg]: ',(myaircraft.battery.pack_energy/3600)/myaircraft.weight.WBat)
     print('Specific Power  [kW/kg]: ',(myaircraft.battery.pack_power_max/1000)/myaircraft.weight.WBat)
 
+print()
+print('prints for quick copypasting to a spreadsheet')
+print('takeoff weight')
+print('empty weight')
+print('fuel weight')
+print('battery weight')
 
-    # begin thermal stuff which really should be its own function but oh well
+
+if not (myaircraft.Configuration == 'Traditional'):
+    print(myaircraft.weight.WTO)
+    print(myaircraft.weight.WPT + myaircraft.weight.WStructure + myaircraft.weight.WCrew + myaircraft.weight.WBat)
+    print(myaircraft.weight.Wf + myaircraft.weight.final_reserve)
+    print(myaircraft.weight.WBat)
+else:
+    print(myaircraft.weight.WTO)
+    print(myaircraft.weight.WPT + myaircraft.weight.WStructure + myaircraft.weight.WCrew)
+    print(myaircraft.weight.Wf + myaircraft.weight.final_reserve)
+    print('0')
+
+###########################################################################
+###########################################################################
+# begin thermal stuff which really should be its own function but oh well #
+###########################################################################
+###########################################################################
+
 if argProfile == 'Hybrid' :
     fTime = []
     fHeat = []
-    # clean up repeated and unsorted data points
-    tosort=myaircraft.mission.CurrentvsTime
-    sortedarr=tosort[np.argsort(tosort[:, 0])]
 
-    for i in range(len(sortedarr)): 
-        if sortedarr[i,0] != sortedarr[i-1,0]:
-            fTime += [sortedarr[i,0]]
-            fHeat += [myaircraft.battery.Curr2Heat(sortedarr[i,1])]
+    CurrentvsTime = np.array(myaircraft.mission.CurrentvsTime)
+    fTime= CurrentvsTime[:,0]
+    fHeat= CurrentvsTime[:,1]
 
     data = pd.DataFrame({
         'Time': fTime[:-1],
         'Heat': fHeat[:-1],
-        #'Temp': T_t,
-        #'dTdt': dTdt_t
     })
 
-    def interpolate(x,y,samples): # here it returns the current power given a certain time, for now we assume its linear for everything
-        t = np.linspace(x[0],x[-1],samples)
-        f_t = [] #np.empty(samples)
-        debug = [] #np.empty(samples)
-        for i in range(samples):
-            for j in range(len(x)):
-                if x[j] == t[i]:
-                    f_t += [y[j]]
-                    #debug = np.vstack([debug,[x[j],t[i],y[j],f_t[i]]])
-                    debug.append([x[j],t[i],y[j],f_t[i]])
-                    break
-                elif x[j] > t[i]:
-                    f_t += [y[j-1] + (y[j] - y[j-1]) * (t[i] - x[j-1]) / (x[j]-x[j-1])]
-                    #debug = np.vstack([debug,[x[j],t[i],y[j],f_t[i]]])
-                    debug.append([x[j],t[i],y[j],f_t[i]])
-                    break
-        debug=np.array(debug)
-        return t, f_t, debug
-
-
     samples=500000
-    #lin_time = np.linspace(fTime[0], fTime[-1], samples)
-    #lin_heat = np.interp(lin_time, fTime, fHeat)
-    lin_time,lin_heat, debug = interpolate(fTime,fHeat,samples)
-
+    lin_time = np.linspace(fTime[0], fTime[-1], samples)
+    lin_heat = np.interp(lin_time, fTime, fHeat)
 
     C = 8.85 * 1130    # mass times specific heat capacity = heat capacity
     R = 1/(0.208 * 10) # 1/(wall area times convection coef) = thermal resistance of the walls
@@ -319,7 +314,6 @@ if argProfile == 'Hybrid' :
         'dTdt': dTdt_t
     })
 
-
     sns.lineplot(data=datalin, x='Time', y='Temp', label='lin_Temp', color='green')
     plt.savefig(args+'--Temp.png')
     plt.clf()
@@ -332,30 +326,3 @@ if argProfile == 'Hybrid' :
     sns.lineplot(data=datalin, x='Time', y='dTdt', label='lin_dTdt', color='green')
     plt.savefig(args+'--dTdt.png')
     plt.clf()
-
-    #print('----------------------debug prints----------------------')
-    #print()
-    #print('time_og , time_interp , power_og , power_interp')
-    #print(np.matrix(debug))
-    #print()
-    #print()
-    #print('time_og , power_og')
-    #print(np.matrix(np.column_stack((fTime, fHeat))))
-
-
-print('takeoff weight')
-print('empty weight')
-print('fuel weight')
-print('battery weight')
-
-
-if not (myaircraft.Configuration == 'Traditional'):
-    print(myaircraft.weight.WTO)
-    print(myaircraft.weight.WPT + myaircraft.weight.WStructure + myaircraft.weight.WCrew + myaircraft.weight.WBat)
-    print(myaircraft.weight.Wf + myaircraft.weight.final_reserve)
-    print(myaircraft.weight.WBat)
-else:
-    print(myaircraft.weight.WTO)
-    print(myaircraft.weight.WPT + myaircraft.weight.WStructure + myaircraft.weight.WCrew)
-    print(myaircraft.weight.Wf + myaircraft.weight.final_reserve)
-    print('0')
