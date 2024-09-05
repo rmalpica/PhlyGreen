@@ -283,12 +283,20 @@ if argProfile == 'Hybrid' :
     fTime= CurrentvsTime[:,0]
     fHeat= CurrentvsTime[:,1]
 
+    #catch if somehow time has become unsorted, bug that used to happen at some point before i changed the code\
+    #this is here mostly to prevent the same bug from resurfacing on accident
+    if not np.all(fTime[:-1] < fTime[1:]):
+        raise Exception('time array is unordered or has repeated elements, is the time coming from the integrator solution?')
+    
+    #here to allow plotting of original data
     data = pd.DataFrame({
-        'Time': fTime[:-1], # no need to remove the last one here
-        'Heat': fHeat[:-1],
+        'Time': fTime, 
+        'Heat': fHeat,
     })
 
-    samples=500000
+    #interpolate the data to allow iterative integration later
+    dt = 1
+    samples = int(np.ceil((fTime[-1]-fTime[0])/dt))
     lin_time = np.linspace(fTime[0], fTime[-1], samples)
     lin_heat = np.interp(lin_time, fTime, fHeat)
 
@@ -297,11 +305,12 @@ if argProfile == 'Hybrid' :
     Ti = 300 # ambient temperature in kelvin
     T = Ti   # initial temperature starts at ambient
     dTdt = 0 #T derivative being initialized
-    P_t = []
-    T_t = []
-    dTdt_t = []
 
-    for i in range(samples-1): # consider changing this for a better numerical method, perhaps an EDO solver from numpy? the one that integrates the flight?
+    T_t = []    # temperature over time
+    dTdt_t = [] # temperature derivative over time
+
+# consider changing this for a better numerical method, perhaps an EDO solver from numpy? the one that integrates the flight?
+    for i in range(samples-1):
         dt=lin_time[i+1]-lin_time[i]
         P=lin_heat[i]
         dTdt = P/C + (Ti-T)/(R*C) 
@@ -310,7 +319,7 @@ if argProfile == 'Hybrid' :
         dTdt_t += [dTdt]
 
     datalin = pd.DataFrame({
-        'Time': lin_time[1:], # i think this is wrong, should be everything except the first value
+        'Time': lin_time[1:],
         'Heat': lin_heat[1:],
         'Temp': T_t,
         'dTdt': dTdt_t
