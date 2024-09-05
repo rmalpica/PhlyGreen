@@ -239,7 +239,6 @@ class Mission:
                 self.constraint_TO_underpowered = False
             else:
                 # integrate sequentially
-                self.debugPRatio = [] # here to DEBUG the power ratio used during the mission 
                 self.integral_solution = []
                 self.CurrentvsTime = [] #for the heat calculations. maybe this can be moved elsewhere?
                 times = np.append(self.profile.Breaks,self.profile.MissionTime2)
@@ -261,16 +260,6 @@ class Mission:
                     for k in range(len(sol.t)):
                         yy0 = [sol.y[0][k],sol.y[1][k],sol.y[2][k],sol.y[3][k]]
                         self.CurrentvsTime.append([sol.t[k],model(sol.t[k],yy0)[1]])
-
-###############################################################
-                        # DEBUG # DEBUG # DEBUG # DEBUG # DEBUG 
-                        debugPProp = PowerPropulsive(sol.y[2][k],sol.t[k])
-                        self.debugPRatio.append(self.aircraft.powertrain.Hybrid(self.aircraft.mission.profile.SuppliedPowerRatio(sol.t[k]),
-                                                                                self.profile.Altitude(sol.t[k]),
-                                                                                self.profile.Velocity(sol.t[k]),
-                                                                                debugPProp))
-                        # DEBUG # DEBUG # DEBUG # DEBUG # DEBUG 
-###############################################################
 
                     y0 = [sol.y[0][-1],sol.y[1][-1],sol.y[2][-1],sol.y[3][-1]]
                     # watch out, the simplified model returns battery energy but the
@@ -305,10 +294,6 @@ class Mission:
         self.TO_PP = Ppropulsive_TO * PRatio[1]   #combustion engine power during takeoff
         self.TO_PBat = Ppropulsive_TO * PRatio[5] #electric motor power during takeoff
 
-        ###########################
-        # FOR DEBUG
-        self.debugPRatioTO = PRatio
-        ###########################
 
 #initialize with simplified calculations for worst case scenario conditions
 #this initialization does not concern itself with validating a battery size or calculating its behavior

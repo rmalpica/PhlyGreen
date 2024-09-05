@@ -268,62 +268,6 @@ else:
     print(myaircraft.weight.Wf + myaircraft.weight.final_reserve)
     print('0')
 
-##########################################################################
-# begin DEBUG power ratio stuff
-#Pf/Pp  Pgt/Pp   Pgb/Pp    Pe1/Pp  Pe2/Pp   Pbat/Pp   Ps2/Pp   Pp1/Pp 
-# fuel ; gas turbine; gearbox; ?engine1; ?engine2; battery; ?? ; ??
-if True: # change to false to ignore debug
-    for array in myaircraft.mission.debugPRatio:
-        pFuel = np.array(array[0])
-        pTurbine = np.array(array[1])
-        pGearbox = np.array(array[2])
-        #pEngine1 = array[3]
-        #pEngine2 = array[4]
-        pBattery = np.array(array[5])
-
-
-    CurrentvsTime = np.array(myaircraft.mission.CurrentvsTime)
-    fTime= CurrentvsTime[:,0]
-    debugData = pd.DataFrame({
-                        'Time': fTime,
-                        'Battery': pBattery,
-                        'Turbine': pTurbine,
-                        'Fuel': pFuel,
-                        'batt+fuel': pBattery+pFuel,
-                        'batt+turbine': pBattery+pTurbine
-                        })
-
-
-    print()
-    print('BEGIN DEBUG')
-    print('Input Phi: ', argPhi )
-    print('TO Fuel pr         =',myaircraft.mission.debugPRatioTO[0])
-    print('TO Turbine pr      =',myaircraft.mission.debugPRatioTO[1])
-    print('TO Battery pr      =',myaircraft.mission.debugPRatioTO[5])
-    print('TO batt+turbine pr =', myaircraft.mission.debugPRatioTO[5] + myaircraft.mission.debugPRatioTO[1])
-    print('TO batt+fuel pr =', myaircraft.mission.debugPRatioTO[5] + myaircraft.mission.debugPRatioTO[0])
-    print()
-    print('Input Phi')
-    print('TO Fuel pr')
-    print('TO Turbine pr')
-    print('TO Battery pr')
-    print('TO batt+turbine pr')
-    print('TO batt+fuel pr')
-    print()
-    print(argPhi )
-    print(myaircraft.mission.debugPRatioTO[0])
-    print(myaircraft.mission.debugPRatioTO[1])
-    print(myaircraft.mission.debugPRatioTO[5])
-    print( myaircraft.mission.debugPRatioTO[5] + myaircraft.mission.debugPRatioTO[1])
-    print(myaircraft.mission.debugPRatioTO[5] + myaircraft.mission.debugPRatioTO[0])
-    
-    sns.scatterplot(data=debugData, x='Time', y='Battery', label='Battery', color='blue')
-    sns.scatterplot(data=debugData, x='Time', y='Turbine', label='Turbine', color='green')
-    sns.scatterplot(data=debugData, x='Time', y='Fuel', label='Fuel', color='red')
-    sns.scatterplot(data=debugData, x='Time', y='batt+fuel', label='batt+fuel', color='black')
-    sns.scatterplot(data=debugData, x='Time', y='batt+turbine', label='batt+turbine', color='black')
-    plt.savefig(args+'-debug-power-ratios.png')
-    plt.clf()
 
 ###########################################################################
 ###########################################################################
