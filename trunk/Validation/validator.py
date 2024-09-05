@@ -29,17 +29,18 @@ import matplotlib
 matplotlib.use('agg')
 
 
-argRange   = int(sys.argv[1])
-argPayload = int(sys.argv[2])
+argRange   = float(sys.argv[1])
+argPayload = float(sys.argv[2])
 argProfile = sys.argv[3]
 argCell    = sys.argv[4]
-args = (sys.argv[1]+'-'+sys.argv[2]+'-'+sys.argv[3]+'-'+sys.argv[4])
+argPhi     = float(sys.argv[5])
+args = (sys.argv[1]+'-'+sys.argv[2]+'-'+sys.argv[3]+'-'+sys.argv[4]+'-'+sys.argv[5])
 print(logo)
 current_date = datetime.now()
 print(current_date.isoformat())
 print("starting with configuration:")
-print("Range = ",argRange,"km | ","Payload = ",argPayload,"kg | ",argProfile,"powerplant | ",argCell,"cell model")
-print("-------------------------------------------------------------------------------------------")
+print("Range = ",argRange,"km | ","Payload = ",argPayload,"kg | ",argProfile,"powerplant | ",argCell,"cell model | phi = ",argPhi)
+print("----------------------------------------------------------------------------------------------------------")
 print()
 powertrain = pg.Systems.Powertrain.Powertrain(None)
 structures = pg.Systems.Structures.Structures(None)
@@ -82,41 +83,41 @@ MissionInput = {'Range Mission': argRange/1.852,  #nautical miles but the input 
 
 MissionStages = {
                  'Takeoff':
-                    {'Supplied Power Ratio':{'phi': 0.1}},
+                    {'Supplied Power Ratio':{'phi': argPhi}},
 
                  'Climb1': {'type': 'ConstantRateClimb', 'input': 
                     {'CB': 0.16, 'Speed': 77, 'StartAltitude': 100, 'EndAltitude': 560}, 
-                    'Supplied Power Ratio':{'phi_start': 0.1, 'phi_end':0.1 }},
+                    'Supplied Power Ratio':{'phi_start': argPhi, 'phi_end':argPhi }},
 
                  'Climb2': {'type': 'ConstantRateClimb', 'input': 
                     {'CB': 0.08, 'Speed': 120, 'StartAltitude': 560, 'EndAltitude': 1690}, 
-                    'Supplied Power Ratio':{'phi_start': 0.1, 'phi_end':0.1 }},
+                    'Supplied Power Ratio':{'phi_start': argPhi, 'phi_end':argPhi }},
 
                  'Climb3': {'type': 'ConstantRateClimb', 'input': 
                     {'CB': 0.07, 'Speed': 125, 'StartAltitude': 1690, 'EndAltitude': 3000}, 
-                    'Supplied Power Ratio':{'phi_start': 0.1, 'phi_end': 0.1 }},
+                    'Supplied Power Ratio':{'phi_start': argPhi, 'phi_end': argPhi }},
 
                  'Cruise': {'type': 'ConstantMachCruise', 'input': 
                     { 'Mach': 0.4, 'Altitude': 3000}, 
-                   'Supplied Power Ratio':{'phi_start': 0.1, 'phi_end':0.1 }},
+                   'Supplied Power Ratio':{'phi_start': argPhi, 'phi_end':argPhi }},
 
                  'Descent1': {'type': 'ConstantRateDescent', 'input':
                     {'CB': -0.04, 'Speed': 90, 'StartAltitude': 3000, 'EndAltitude': 200}, 
-                    'Supplied Power Ratio':{'phi_start': 0.1, 'phi_end': 0.1  }}}
+                    'Supplied Power Ratio':{'phi_start': argPhi, 'phi_end': argPhi  }}}
 
 
 DiversionStages = {
                    'Climb1': {'type': 'ConstantRateClimb', 'input': 
                         {'CB': 0.08, 'Speed': 110, 'StartAltitude': 200, 'EndAltitude': 1000}, 
-                        'Supplied Power Ratio':{'phi_start': 0.10, 'phi_end':0.1  }},
+                        'Supplied Power Ratio':{'phi_start': argPhi, 'phi_end':argPhi  }},
 
                    'Cruise': {'type': 'ConstantMachCruise', 'input':
                         { 'Mach': 0.35, 'Altitude': 1000}, 
-                        'Supplied Power Ratio':{'phi_start': 0.1, 'phi_end':0.1 }},
+                        'Supplied Power Ratio':{'phi_start': argPhi, 'phi_end':argPhi }},
 
                    'Descent1': {'type': 'ConstantRateDescent', 'input':
                         {'CB': -0.04, 'Speed': 90, 'StartAltitude': 1000, 'EndAltitude': 200}, 
-                        'Supplied Power Ratio':{'phi_start': 0.1, 'phi_end':0.1}}}
+                        'Supplied Power Ratio':{'phi_start': argPhi, 'phi_end':argPhi}}}
 
 EnergyInput = {'Ef': 43.5*10**6,
                    'Contingency Fuel': 130,
@@ -267,6 +268,63 @@ else:
     print(myaircraft.weight.Wf + myaircraft.weight.final_reserve)
     print('0')
 
+##########################################################################
+# begin DEBUG power ratio stuff
+#Pf/Pp  Pgt/Pp   Pgb/Pp    Pe1/Pp  Pe2/Pp   Pbat/Pp   Ps2/Pp   Pp1/Pp 
+# fuel ; gas turbine; gearbox; ?engine1; ?engine2; battery; ?? ; ??
+if True: # change to false to ignore debug
+    for array in myaircraft.mission.debugPRatio:
+        pFuel = np.array(array[0])
+        pTurbine = np.array(array[1])
+        pGearbox = np.array(array[2])
+        #pEngine1 = array[3]
+        #pEngine2 = array[4]
+        pBattery = np.array(array[5])
+
+
+    CurrentvsTime = np.array(myaircraft.mission.CurrentvsTime)
+    fTime= CurrentvsTime[:,0]
+    debugData = pd.DataFrame({
+                        'Time': fTime,
+                        'Battery': pBattery,
+                        'Turbine': pTurbine,
+                        'Fuel': pFuel,
+                        'batt+fuel': pBattery+pFuel,
+                        'batt+turbine': pBattery+pTurbine
+                        })
+
+
+    print()
+    print('BEGIN DEBUG')
+    print('Input Phi: ', argPhi )
+    print('TO Fuel pr         =',myaircraft.mission.debugPRatioTO[0])
+    print('TO Turbine pr      =',myaircraft.mission.debugPRatioTO[1])
+    print('TO Battery pr      =',myaircraft.mission.debugPRatioTO[5])
+    print('TO batt+turbine pr =', myaircraft.mission.debugPRatioTO[5] + myaircraft.mission.debugPRatioTO[1])
+    print('TO batt+fuel pr =', myaircraft.mission.debugPRatioTO[5] + myaircraft.mission.debugPRatioTO[0])
+    print()
+    print('Input Phi')
+    print('TO Fuel pr')
+    print('TO Turbine pr')
+    print('TO Battery pr')
+    print('TO batt+turbine pr')
+    print('TO batt+fuel pr')
+    print()
+    print(argPhi )
+    print(myaircraft.mission.debugPRatioTO[0])
+    print(myaircraft.mission.debugPRatioTO[1])
+    print(myaircraft.mission.debugPRatioTO[5])
+    print( myaircraft.mission.debugPRatioTO[5] + myaircraft.mission.debugPRatioTO[1])
+    print(myaircraft.mission.debugPRatioTO[5] + myaircraft.mission.debugPRatioTO[0])
+    
+    sns.scatterplot(data=debugData, x='Time', y='Battery', label='Battery', color='blue')
+    sns.scatterplot(data=debugData, x='Time', y='Turbine', label='Turbine', color='green')
+    sns.scatterplot(data=debugData, x='Time', y='Fuel', label='Fuel', color='red')
+    sns.scatterplot(data=debugData, x='Time', y='batt+fuel', label='batt+fuel', color='black')
+    sns.scatterplot(data=debugData, x='Time', y='batt+turbine', label='batt+turbine', color='black')
+    plt.savefig(args+'-debug-power-ratios.png')
+    plt.clf()
+
 ###########################################################################
 ###########################################################################
 # begin thermal stuff which really should be its own function but oh well #
@@ -282,7 +340,7 @@ if argProfile == 'Hybrid' :
     fHeat= CurrentvsTime[:,1]
 
     data = pd.DataFrame({
-        'Time': fTime[:-1],
+        'Time': fTime[:-1], # no need to remove the last one here
         'Heat': fHeat[:-1],
     })
 
@@ -291,7 +349,7 @@ if argProfile == 'Hybrid' :
     lin_heat = np.interp(lin_time, fTime, fHeat)
 
     C = 8.85 * 1130    # mass times specific heat capacity = heat capacity
-    R = 1/(0.208 * 10) # 1/(wall area times convection coef) = thermal resistance of the walls
+    R = 1/(0.208 * 100) # 1/(wall area times convection coef) = thermal resistance of the walls
     Ti = 300 # ambient temperature in kelvin
     T = Ti   # initial temperature starts at ambient
     dTdt = 0 #T derivative being initialized
@@ -299,7 +357,7 @@ if argProfile == 'Hybrid' :
     T_t = []
     dTdt_t = []
 
-    for i in range(samples-1):
+    for i in range(samples-1): # consider changing this for a better numerical method, perhaps an EDO solver from numpy? the one that integrates the flight?
         dt=lin_time[i+1]-lin_time[i]
         P=lin_heat[i]
         dTdt = P/C + (Ti-T)/(R*C) 
@@ -308,7 +366,7 @@ if argProfile == 'Hybrid' :
         dTdt_t += [dTdt]
 
     datalin = pd.DataFrame({
-        'Time': lin_time[:-1],
+        'Time': lin_time[:-1], # i think this is wrong, should be everything except the first value
         'Heat': lin_heat[:-1],
         'Temp': T_t,
         'dTdt': dTdt_t

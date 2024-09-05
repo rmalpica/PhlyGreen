@@ -3,6 +3,7 @@ mkdir dTdt
 mkdir Power
 mkdir TXT
 mkdir Temp
+mkdir Debug
 #python3 validator.py (range km) (payload kg) (profile Traditional/Hybrid) (cell FELIX_FINGER) > outputfile
 echo "----------------------------------------------------------"
 echo "doing hybrid vs traditional range comparisons"
@@ -68,4 +69,5 @@ python3 validator.py 1500 2000 Hybrid SAMSUNG_LIR18650 > Thermal_Samsung-2.txt
 mv -f *--Temp.png Temp/
 mv -f *--Heat.png Power/
 mv -f *--dTdt.png dTdt/
+mv -f *-debug-power-ratios.png Debug/
 mv -f *.txt TXT/

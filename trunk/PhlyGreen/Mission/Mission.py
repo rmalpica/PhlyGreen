@@ -188,7 +188,7 @@ class Mission:
             Beta = y[2]
             Ppropulsive = PowerPropulsive(Beta,t)
             PRatio = self.aircraft.powertrain.Hybrid(self.aircraft.mission.profile.SuppliedPowerRatio(t),self.profile.Altitude(t),self.profile.Velocity(t),Ppropulsive) #takes in all the mission segments and finds the required power ratio for the current time of the mission
-            self.debugPRatio.append([PRatio,t]) #here to debug the power during the mission
+
             dEFdt = Ppropulsive * PRatio[0] #fuel power output
             dbetadt = - dEFdt/(self.ef*self.WTO) #change in mass due to fuel consumption
 
@@ -262,6 +262,16 @@ class Mission:
                         yy0 = [sol.y[0][k],sol.y[1][k],sol.y[2][k],sol.y[3][k]]
                         self.CurrentvsTime.append([sol.t[k],model(sol.t[k],yy0)[1]])
 
+###############################################################
+                        # DEBUG # DEBUG # DEBUG # DEBUG # DEBUG 
+                        debugPProp = PowerPropulsive(sol.y[2][k],sol.t[k])
+                        self.debugPRatio.append(self.aircraft.powertrain.Hybrid(self.aircraft.mission.profile.SuppliedPowerRatio(sol.t[k]),
+                                                                                self.profile.Altitude(sol.t[k]),
+                                                                                self.profile.Velocity(sol.t[k]),
+                                                                                debugPProp))
+                        # DEBUG # DEBUG # DEBUG # DEBUG # DEBUG 
+###############################################################
+
                     y0 = [sol.y[0][-1],sol.y[1][-1],sol.y[2][-1],sol.y[3][-1]]
                     # watch out, the simplified model returns battery energy but the
                     # complete model returns battery CHARGE instead
@@ -295,6 +305,10 @@ class Mission:
         self.TO_PP = Ppropulsive_TO * PRatio[1]   #combustion engine power during takeoff
         self.TO_PBat = Ppropulsive_TO * PRatio[5] #electric motor power during takeoff
 
+        ###########################
+        # FOR DEBUG
+        self.debugPRatioTO = PRatio
+        ###########################
 
 #initialize with simplified calculations for worst case scenario conditions
 #this initialization does not concern itself with validating a battery size or calculating its behavior
