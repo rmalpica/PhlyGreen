@@ -6,5 +6,4 @@ python3 validator.py 1500 2000 Hybrid SAMSUNG_LIR18650 0.1 > quickValidate.txt
 mv -f *--Temp.png quickValidate/
 mv -f *--Heat.png quickValidate/
 mv -f *--dTdt.png quickValidate/
-mv -f *-debug-power-ratios.png quickValidate/
 mv -f *.txt quickValidate/

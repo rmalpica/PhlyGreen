@@ -310,8 +310,8 @@ if argProfile == 'Hybrid' :
         dTdt_t += [dTdt]
 
     datalin = pd.DataFrame({
-        'Time': lin_time[:-1], # i think this is wrong, should be everything except the first value
-        'Heat': lin_heat[:-1],
+        'Time': lin_time[1:], # i think this is wrong, should be everything except the first value
+        'Heat': lin_heat[1:],
         'Temp': T_t,
         'dTdt': dTdt_t
     })

@@ -69,5 +69,4 @@ python3 validator.py 1500 2000 Hybrid SAMSUNG_LIR18650 > Thermal_Samsung-2.txt
 mv -f *--Temp.png Temp/
 mv -f *--Heat.png Power/
 mv -f *--dTdt.png dTdt/
-mv -f *-debug-power-ratios.png Debug/
 mv -f *.txt TXT/
