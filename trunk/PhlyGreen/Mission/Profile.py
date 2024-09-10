@@ -314,7 +314,7 @@ class Profile:
         return np.piecewise(t, [ t >= ti for ti in self.Breaks], self.Velocities)
 
     def SuppliedPowerRatio(self,t):
-        idx=np.piecewise(t, [ self.times[i] <= t <= self.times[i+1] for i in range(len(self.times)-1)], [i for i in range(len(self.times)-1)])
+        idx=np.piecewise(t, [ self.times[i] < t <= self.times[i+1] for i in range(len(self.times)-1)], [i for i in range(len(self.times)-1)])
         return self.SPWinterp[idx.astype(int)](t) 
 
 

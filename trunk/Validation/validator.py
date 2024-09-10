@@ -281,12 +281,13 @@ if argProfile == 'Hybrid' :
 
     CurrentvsTime = np.array(myaircraft.mission.CurrentvsTime)
     fTime= CurrentvsTime[:,0]
-    fHeat= CurrentvsTime[:,1]
+    fHeat= myaircraft.battery.Curr2Heat(CurrentvsTime[:,1])
 
-    #catch if somehow time has become unsorted, bug that used to happen at some point before i changed the code\
+    #catch if somehow time has become unsorted, bug that used to happen at some point before i changed the code
     #this is here mostly to prevent the same bug from resurfacing on accident
-    if not np.all(fTime[:-1] < fTime[1:]):
-        raise Exception('time array is unordered or has repeated elements, is the time coming from the integrator solution?')
+    if not np.all(fTime[:-1] <= fTime[1:]):
+        print(CurrentvsTime)
+        raise Exception('time array is unordered, is the time coming from the integrator solution?')
     
     #here to allow plotting of original data
     data = pd.DataFrame({
@@ -309,7 +310,7 @@ if argProfile == 'Hybrid' :
     T_t = []    # temperature over time
     dTdt_t = [] # temperature derivative over time
 
-# consider changing this for a better numerical method, perhaps an EDO solver from numpy? the one that integrates the flight?
+    # consider changing this for a better numerical method, perhaps an EDO solver from numpy? the one that integrates the flight?
     for i in range(samples-1):
         dt=lin_time[i+1]-lin_time[i]
         P=lin_heat[i]

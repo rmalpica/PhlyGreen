@@ -262,9 +262,8 @@ class Mission:
                         self.CurrentvsTime.append([sol.t[k],model(sol.t[k],yy0)[1]])
 
                     y0 = [sol.y[0][-1],sol.y[1][-1],sol.y[2][-1],sol.y[3][-1]]
-                    # watch out, the simplified model returns battery energy but the
-                    # complete model returns battery CHARGE instead
-
+                    # watch out: the simplified model returns battery energy in joules,
+                    # but the complete model returns battery CHARGE in coulombs instead
 
             return [self.constraint_low_SOC,
                     self.constraint_low_voltage,
@@ -362,11 +361,11 @@ class Mission:
         #initializing variables before the loop
         optimal = False
         n_max = expected_P_n_max
-        n_min = 1
+        n_min = 0
 
         #used as a quick fix for the initial guess being undersized on some cases for some reason
         while not all(evaluate_P_nr(n_max)): 
-            print("n_max underestimated:",n_max, "; increasing.")
+            #print("n_max underestimated:",n_max, "; increasing.")
             n_min = n_max   #if the nmax guess is too small it can be the new nmin to save iterations since it has already been tried
             n_max = n_max*2 #increase n_max until it works
 
