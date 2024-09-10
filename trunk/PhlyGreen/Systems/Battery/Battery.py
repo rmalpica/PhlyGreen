@@ -171,7 +171,7 @@ class Battery:
         self.P_number=parallel_cells
         self.cells_total = self.P_number * self.S_number
 
-        self.pack_charge = self.cells_total * self.cell_charge
+        self.pack_charge = self.P_number * self.cell_charge
         self.pack_energy = self.cells_total * self.cell_energy
         self.pack_resistance = self.cell_resistance * self.S_number / self.P_number
         self.pack_current = self.cell_current * self.P_number
@@ -204,25 +204,26 @@ class Battery:
     # possibly expand to include the exponential zones?
     def SOC_2_OC_Voltage(self, SOC):
         #Cell_U_oc=(-0.7*SOC + 3.7) #linear variation of open circuit voltage with SOC, change it to use parameters of the battery instead of being hardcoded
-        Cell_U_oc=( 3 + SOC )
+        Cell_U_oc=( 3.2 + 0.8*SOC )
         Pack_U_oc = Cell_U_oc * self.S_number
         return Pack_U_oc
 
     #Calculates the open circuit voltage and current to enable calculating real power drain from the battery in function of useful output power. U_oc is the open circuit voltage, U_out is the measured battery output voltage. if no valid current exists, returns none
-    def Power_2_Current(self, SOC, Power_out):
+    def Power_2_V_A(self, SOC, Power_out):
         if Power_out == 0:
             I_out = 0
-
+            U_out = self.SOC_2_OC_Voltage(SOC)
         else:
             U_oc = self.SOC_2_OC_Voltage(SOC)
             a = U_oc**2 - 4 * Power_out * self.pack_resistance
 
             if (a < 0):
                 I_out = None
+                U_out = None
             else:
                 U_out = (U_oc + math.sqrt(a))/2 #from the math solution of P_out = U_out * I_out
                 I_out = Power_out/U_out
-        return I_out
+        return U_out , I_out 
 
     #find the number of cells required to supply the requested power at the current SOC
     def Pwr_2_P_num(self, SOC, Power_out):

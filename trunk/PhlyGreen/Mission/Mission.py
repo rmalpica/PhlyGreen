@@ -195,14 +195,14 @@ class Mission:
             PElectric = Ppropulsive * PRatio[5] #propulsive power required for the electric motors
 
             #open circuit voltage of the battery at the current SOC
-            BatVolt = self.aircraft.battery.SOC_2_OC_Voltage(SOC)
-            if (BatVolt < self.aircraft.battery.controller_Vmin or BatVolt < self.aircraft.battery.pack_Vmin):
+            BatVoltOC = self.aircraft.battery.SOC_2_OC_Voltage(SOC)
+            if (BatVoltOC < self.aircraft.battery.pack_Vmin):
                 self.constraint_low_voltage = False
                 self.valid_solution = False
                 return [0,0,0,0]
 
             #current drawn to meet power demands
-            BatCurr = self.aircraft.battery.Power_2_Current(SOC, PElectric)
+            BatVolt, BatCurr  = self.aircraft.battery.Power_2_V_A(SOC, PElectric) #convert output power to volts and amps
             if (BatCurr == None):
                 self.constraint_underpowered = False
                 self.valid_solution = False
@@ -211,10 +211,14 @@ class Mission:
                 self.constraint_overcurrent = False
                 self.valid_solution = False
                 return [0,0,0,0]
+            if (BatVolt < self.aircraft.battery.controller_Vmin):
+                self.constraint_low_voltage = False
+                self.valid_solution = False
+                return [0,0,0,0]
 
             dSOCdt = -BatCurr/self.aircraft.battery.pack_charge #gives the rate of change of SOC
-
-            return [dEFdt,BatCurr,dbetadt,dSOCdt]
+            dEdt_bat = BatVoltOC * BatCurr #gives the watts spent by the battery
+            return [dEFdt,dEdt_bat,dbetadt,dSOCdt]
 
 
         def evaluate_P_nr(P_number):
@@ -231,9 +235,12 @@ class Mission:
             self.constraint_underpowered = True
 
             self.aircraft.battery.Configure(P_number) #changes the configuration every cycle
-            self.TO_current = self.aircraft.battery.Power_2_Current(1,self.TO_PBat)
-
-            if (self.TO_current == None):
+            self.TO_Voltage , self.TO_current = self.aircraft.battery.Power_2_V_A(1,self.TO_PBat)
+            if (self.TO_Voltage == None):
+                self.constraint_low_voltage = False
+            elif (self.TO_Voltage < self.aircraft.battery.controller_Vmin):
+                self.constraint_low_voltage = False
+            elif (self.TO_current == None):
                 self.constraint_TO_underpowered = False
             elif (self.aircraft.battery.pack_current < self.TO_current ):
                 self.constraint_TO_underpowered = False

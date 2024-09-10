@@ -302,7 +302,7 @@ if argProfile == 'Hybrid' :
     lin_heat = np.interp(lin_time, fTime, fHeat)
 
     C = 8.85 * 1130    # mass times specific heat capacity = heat capacity
-    R = 1/(0.208 * 100) # 1/(wall area times convection coef) = thermal resistance of the walls
+    R = 1/(0.208 * 1000) # 1/(wall area times convection coef) = thermal resistance of the walls
     Ti = 300 # ambient temperature in kelvin
     T = Ti   # initial temperature starts at ambient
     dTdt = 0 #T derivative being initialized
