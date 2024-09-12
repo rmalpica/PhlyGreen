@@ -269,72 +269,29 @@ else:
     print('0')
 
 
-###########################################################################
-###########################################################################
-# begin thermal stuff which really should be its own function but oh well #
-###########################################################################
-###########################################################################
+########################
+########################
+# begin thermal stuff  #
 
 if argProfile == 'Hybrid' :
-    fTime = []
-    fHeat = []
 
-    CurrentvsTime = np.array(myaircraft.mission.CurrentvsTime)
-    fTime= CurrentvsTime[:,0]
-    fHeat= myaircraft.battery.Curr2Heat(CurrentvsTime[:,1])
+    battery_heating_data = myaircraft.battery.BatteryHeating(myaircraft.mission.CurrentvsTime)
 
-    #catch if somehow time has become unsorted, bug that used to happen at some point before i changed the code
-    #this is here mostly to prevent the same bug from resurfacing on accident
-    if not np.all(fTime[:-1] <= fTime[1:]):
-        print(CurrentvsTime)
-        raise Exception('time array is unordered, is the time coming from the integrator solution?')
-    
-    #here to allow plotting of original data
-    data = pd.DataFrame({
-        'Time': fTime, 
-        'Heat': fHeat,
+    heatdata = pd.DataFrame({
+        'Time': battery_heating_data[0],
+        'Heat': battery_heating_data[1],
+        'Temperature': battery_heating_data[2],
+        'dTdt': battery_heating_data[3]
     })
-
-    #interpolate the data to allow iterative integration later
-    dt = 1
-    samples = int(np.ceil((fTime[-1]-fTime[0])/dt))
-    lin_time = np.linspace(fTime[0], fTime[-1], samples)
-    lin_heat = np.interp(lin_time, fTime, fHeat)
-
-    C = 8.85 * 1130    # mass times specific heat capacity = heat capacity
-    R = 1/(0.208 * 1000) # 1/(wall area times convection coef) = thermal resistance of the walls
-    Ti = 300 # ambient temperature in kelvin
-    T = Ti   # initial temperature starts at ambient
-    dTdt = 0 #T derivative being initialized
-
-    T_t = []    # temperature over time
-    dTdt_t = [] # temperature derivative over time
-
-    # consider changing this for a better numerical method, perhaps an EDO solver from numpy? the one that integrates the flight?
-    for i in range(samples-1):
-        dt=lin_time[i+1]-lin_time[i]
-        P=lin_heat[i]
-        dTdt = P/C + (Ti-T)/(R*C) 
-        T = T+dTdt*dt
-        T_t += [T]
-        dTdt_t += [dTdt]
-
-    datalin = pd.DataFrame({
-        'Time': lin_time[1:],
-        'Heat': lin_heat[1:],
-        'Temp': T_t,
-        'dTdt': dTdt_t
-    })
-
-    sns.lineplot(data=datalin, x='Time', y='Temp', label='lin_Temp', color='green')
+    sns.lineplot(data=heatdata, x='Time', y='Temperature', label='Temperature', color='green')
     plt.savefig(args+'--Temp.png')
     plt.clf()
 
-    sns.lineplot(data=datalin, x='Time', y='Heat', label='interpolated', color='green')
-    sns.scatterplot(data=data, x='Time', y='Heat', label='original', color='red')
+    sns.lineplot(data=heatdata, x='Time', y='Heat', label='Dissipated Heat Power', color='green')
+    #sns.scatterplot(data=data, x='Time', y='Heat', label='original', color='red')
     plt.savefig(args+'--Heat.png')
     plt.clf()
 
-    sns.lineplot(data=datalin, x='Time', y='dTdt', label='lin_dTdt', color='green')
+    sns.lineplot(data=heatdata, x='Time', y='dTdt', label='dT/dt', color='green')
     plt.savefig(args+'--dTdt.png')
     plt.clf()

@@ -163,6 +163,16 @@ class Battery:
         self.cell_charge = 3600*self.cell_capacity #convert the capacity from Ah to Coulomb to keep everything SI
         self.cell_energy = self.cell_charge*self.cell_Vnom # cell capacity in joules
         self.S_number = math.ceil(self.controller_Vmax/self.cell_Vmax) #number of cells in series to achieve desired voltage. max voltage is preferred as it minimizes losses due to lower current being needed for a larger portion of the flight
+        ####################################################################
+        ####################################################################
+        ### NEEDS TO COME FROM AN INPUT SOMEWHERE, SHOULDNT BE HARDCODED ###
+        ### thermal stuff for the thermal calculations:
+
+        self.cell_heat_capacity= 1130 #joule kelvin kg
+
+
+
+
 
 #determine battery configuration
     #must receive the number of cells in parallel
@@ -278,3 +288,78 @@ class Battery:
     # returns the heat dissipated IN A SINGLE STACK. this divides the current by the stacks in parallel
     def Curr2Heat(self,I):
         return (self.cell_resistance*self.S_number * I/self.P_number)
+
+    def Heat2Temp(self, time, heatpwr ):
+        coef_convection = 1000
+        R = 1/(self.stack_length * self.cell_height * coef_convection )
+        C = self.cell_mass * self.S_number * self.cell_heat_capacity
+        #C = 8.85 * 1130    # mass times specific heat capacity = heat capacity
+        #R = 1/(0.208 * 1000) # 1/(wall area times convection coef) = thermal resistance of the walls
+
+        Ti = 300 # ambient temperature in kelvin, should come from the mission profile? maybe?
+        T = Ti   # initial temperature starts at ambient
+        dTdt = 0 #T derivative being initialized
+
+        T_t = []    # temperature over time
+        dTdt_t = [] # temperature derivative over time
+
+        for i in range(len(time)-1):
+            dt   = time[i+1] - time[i]
+            P    = heatpwr[i]
+            dTdt = P/C + (Ti - T)/(R*C) 
+            T    = T + dTdt*dt
+
+            T_t.append(T)# += [T]
+            dTdt_t.append(dTdt)# += [dTdt]
+        return T_t , dTdt_t
+
+
+
+    def BatteryHeating(self, CurrentvsTime ):
+
+        Time = []
+        HeatPWR = []
+
+        CurrentvsTime = np.array(CurrentvsTime)
+        Time = CurrentvsTime[:,0]
+        HeatPWR = self.Curr2Heat(CurrentvsTime[:,1])
+
+        #catch if somehow time has become unsorted, bug that used to happen at some point before i changed the code
+        #this is here mostly to prevent the same bug from resurfacing on accident
+        if not np.all(Time[:-1] <= Time[1:]):
+            print(CurrentvsTime)
+            raise Exception('time array is unordered, is the time coming from the integrator solution?')
+
+
+        #interpolate the data to allow iterative integration
+        dt = 1
+        samples = int(np.ceil((Time[-1]-Time[0])/dt))
+        lin_time = np.linspace(Time[0], Time[-1], samples)
+        lin_heat = np.interp(lin_time, Time, HeatPWR)
+
+        T_t , dTdt_t = self.Heat2Temp(lin_time, lin_heat )
+
+#        C = 8.85 * 1130    # mass times specific heat capacity = heat capacity
+#        R = 1/(0.208 * 1000) # 1/(wall area times convection coef) = thermal resistance of the walls
+#        Ti = 300 # ambient temperature in kelvin
+#        T = Ti   # initial temperature starts at ambient
+#        dTdt = 0 #T derivative being initialized
+
+#        T_t = []    # temperature over time
+#        dTdt_t = [] # temperature derivative over time#
+
+#        # consider changing this for a better numerical method, perhaps an EDO solver from numpy? the one that integrates the flight?
+#        for i in range(samples-1):
+#            dt=lin_time[i+1]-lin_time[i]
+#            P=lin_heat[i]
+#            dTdt = P/C + (Ti-T)/(R*C) 
+#            T = T+dTdt*dt
+#            T_t += [T]
+#            dTdt_t += [dTdt]
+
+        heatData=[lin_time[1:],
+                  lin_heat[1:],
+                  T_t,
+                  dTdt_t]
+
+        return heatData
