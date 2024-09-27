@@ -339,24 +339,6 @@ class Battery:
 
         T_t , dTdt_t = self.Heat2Temp(lin_time, lin_heat )
 
-#        C = 8.85 * 1130    # mass times specific heat capacity = heat capacity
-#        R = 1/(0.208 * 1000) # 1/(wall area times convection coef) = thermal resistance of the walls
-#        Ti = 300 # ambient temperature in kelvin
-#        T = Ti   # initial temperature starts at ambient
-#        dTdt = 0 #T derivative being initialized
-
-#        T_t = []    # temperature over time
-#        dTdt_t = [] # temperature derivative over time#
-
-#        # consider changing this for a better numerical method, perhaps an EDO solver from numpy? the one that integrates the flight?
-#        for i in range(samples-1):
-#            dt=lin_time[i+1]-lin_time[i]
-#            P=lin_heat[i]
-#            dTdt = P/C + (Ti-T)/(R*C) 
-#            T = T+dTdt*dt
-#            T_t += [T]
-#            dTdt_t += [dTdt]
-
         heatData=[lin_time[1:],
                   lin_heat[1:],
                   T_t,
