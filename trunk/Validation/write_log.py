@@ -70,4 +70,9 @@ def printLog(myaircraft,filename):
             print('Specific Power  [kW/kg]: ',(myaircraft.battery.pack_power_max/1000)/myaircraft.weight.WBat)
 
     sys.stdout = sys.__stdout__
-    return
+
+def failLog(filename):
+    with open(filename, "w") as file:
+        sys.stdout = file #redirecting stdout to file to avoid recreating the print function for files
+        print('fail')
+        sys.stdout = sys.__stdout__
