@@ -1,5 +1,5 @@
 import sys
-
+import json
 def printLog(myaircraft,filename):
 
     with open(filename, "w") as file:
@@ -76,3 +76,11 @@ def failLog(filename):
         sys.stdout = file #redirecting stdout to file to avoid recreating the print function for files
         print('fail')
         sys.stdout = sys.__stdout__
+
+def printJSON(dicts,jsonfn):
+    with open(jsonfn, "w") as json_file:
+        json.dump(dicts, json_file, indent=4)
+
+def failJSON(jsonfn):
+    with open(jsonfn, "w") as json_file:
+        json.dump(['fail'], json_file, indent=4)  # indent for readable formatting
