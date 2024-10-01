@@ -169,7 +169,8 @@ def CalculateFlight(argArch, argMission, argRange, argPayload, argCell, argPhi):
                                     myaircraft.mission.DISA,
                                     myaircraft.mission.profile.Velocity(times[t]),
                                     'TAS') for t in range(len(times))]
-
+            
+            aircraftParameters=write_log.parameters(myaircraft)
             outputsDic={
                     'Battery Heating':heatdata,
                     'Time':times.tolist(),
@@ -179,7 +180,8 @@ def CalculateFlight(argArch, argMission, argRange, argPayload, argCell, argPhi):
                     'SOC':soc.tolist(),
                     'Power':power_propulsive,
                     'Altitude':mission.profile.Altitude(times).tolist(),
-                    'Phi':phi}
+                    'Phi':phi,
+                    'Parameters':aircraftParameters}
 
         else: #remove references to the battery in traditional powerplant because the variables dont exist in the code
             times = np.array([])
@@ -197,12 +199,16 @@ def CalculateFlight(argArch, argMission, argRange, argPayload, argCell, argPhi):
                                     myaircraft.mission.DISA,
                                     myaircraft.mission.profile.Velocity(times[t]),
                                     'TAS') for t in range(len(times))]
+
+            aircraftParameters=write_log.parameters(myaircraft)
+
             outputsDic={
                     'Time':times.tolist(),
                     'Fuel Energy':Ef.tolist(),
                     'Beta':beta.tolist(),
                     'Power':power_propulsive,
-                    'Altitude':mission.profile.Altitude(times).tolist()}
+                    'Altitude':mission.profile.Altitude(times).tolist(),
+                    'Parameters':aircraftParameters}
 
         print('Writting output files')
 
@@ -280,9 +286,9 @@ def main(ArchList,MissionList,RangesList,PayloadsList,CellsList,PhisList):
 ArchList     ={'Hybrid','Traditional'}
 MissionList  ={'FelixFinger'}
 CellsList    ={'SAMSUNG_LIR18650','FELIX_FINGER'}
-PhisList     ={0.1,0.2}
-RangesList   ={396,1280}
-PayloadsList ={550,1330}
+PhisList     ={0.2}
+RangesList   ={396}
+PayloadsList ={550}
 
 # actually run the function if the script is called directly
 # otherwise a separate script can be made that only contains the lists and then calls the main function

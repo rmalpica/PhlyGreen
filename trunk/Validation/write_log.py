@@ -71,6 +71,39 @@ def printLog(myaircraft,filename):
 
     sys.stdout = sys.__stdout__
 
+def parameters(myaircraft):
+    outputs={ #organize all the outputs that are always common to all the aircraft
+        'Fuel Mass':myaircraft.weight.Wf,
+        'Block Fuel Mass':myaircraft.weight.Wf + myaircraft.weight.final_reserve,
+        'Structure Mass': myaircraft.weight.WStructure,
+        'Powertrain Mass': myaircraft.weight.WPT,
+        'Empty Weight': myaircraft.weight.WPT + myaircraft.weight.WStructure + myaircraft.weight.WCrew,
+        'Zero Fuel Weight': myaircraft.weight.WPT + myaircraft.weight.WStructure + myaircraft.weight.WCrew + myaircraft.weight.WPayload,
+        'Takeoff Weight':myaircraft.weight.WTO,
+        'Wing Surface: ':myaircraft.WingSurface,
+        'TakeOff Engine Shaft PP': myaircraft.mission.TO_PP/1000, # PP = Peak Power
+        'Climb Cruise Engine Shaft PP':myaircraft.mission.Max_PEng/1000} # PP = Peak Power
+
+    if myaircraft.Configuration == 'Hybrid': #write outputs for when a battery is involved
+        electricOutputs={
+            'Battery Mass': myaircraft.weight.WBat,
+            'Empty Weight':myaircraft.weight.WPT + myaircraft.weight.WStructure + myaircraft.weight.WCrew + myaircraft.weight.WBat,
+            'Zero Fuel Weight':myaircraft.weight.WPT + myaircraft.weight.WStructure + myaircraft.weight.WCrew + myaircraft.weight.WBat + myaircraft.weight.WPayload,
+            'Takeoff Weight':myaircraft.weight.WTO,
+            'TakeOff Battery PP': myaircraft.mission.TO_PBat/1000, # PP = Peak Power
+            'Climb Cruise Battery PP':myaircraft.mission.Max_PBat/1000, # PP = Peak Power
+            'Battery Pack Energy': myaircraft.battery.pack_energy/3600000,
+            'Battery Pack Max Power': myaircraft.battery.pack_power_max/1000,
+            'Battery Pack Specific Energy':(myaircraft.battery.pack_energy/3600)/myaircraft.weight.WBat,
+            'Battery Pack Specific Power':(myaircraft.battery.pack_power_max/1000)/myaircraft.weight.WBat}
+        outputs.update(electricOutputs)
+
+    if myaircraft.WellToTankInput is not None:
+        welltotank={'Source Energy': myaircraft.welltowake.SourceEnergy/1.e6,
+                    'Psi':myaircraft.welltowake.Psi}
+        outputs.update(welltotank)
+    return outputs
+
 def failLog(filename):
     with open(filename, "w") as file:
         sys.stdout = file #redirecting stdout to file to avoid recreating the print function for files
@@ -80,7 +113,3 @@ def failLog(filename):
 def printJSON(dicts,jsonfn):
     with open(jsonfn, "w") as json_file:
         json.dump(dicts, json_file, indent=4)
-
-def failJSON(jsonfn):
-    with open(jsonfn, "w") as json_file:
-        json.dump(['fail'], json_file, indent=4)  # indent for readable formatting

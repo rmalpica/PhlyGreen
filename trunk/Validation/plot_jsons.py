@@ -88,7 +88,7 @@ def runPlots(directoryIN, directoryOUT):
 
         print('>--',i,'-->\n')
         print('Plot nr',i)
-        print('Plotting ', file)
+        print('Plotting from', file,'\n')
         if not flight['Converged']:
             print('\nINVALID DESIGN, SKIPPING') # in the future this can be useful for gathering where in the design space an input leads to failure
 
