@@ -17,6 +17,20 @@ def loadJSON(file):
         data = json.load(f)
     return data
 
+#def scanDesigns(directory):
+#    jsons = findJSONs(directory)
+#    flights={'Traditional':[],
+#             'Hybrid':[]}
+
+#    for file in jsons:
+#        design = loadJSON(file)
+        #todo a lot of stuff here, make it append the data that is relevant here
+        #like
+#        flight[design['Inputs']['Powerplant']].append[]
+
+
+
+
 # list of plots to be made from the collected data
 def traditionalPlots(flight):
     # outputDir is a global variable and the name is already in the json
@@ -78,8 +92,8 @@ def createDir(dirname):
 
     return outdir
 
-# main function that runs the plotting
-def runPlots(directoryIN, directoryOUT):
+# main plots of flight data
+def flightPlots(directoryIN, directoryOUT):
     jsons = findJSONs(directoryIN)
     i=0
     for file in jsons:
@@ -102,8 +116,14 @@ def runPlots(directoryIN, directoryOUT):
                 raise ValueError('invalid powerplant')
         print('\n<--',i,'--<')
 
+
+
 # pick which folder to plot
 jsonFolder = 'JSONs'
 outputDir = 'Plots'
 outputDir  = createDir(outputDir)
-runPlots(jsonFolder, outputDir)
+flightPlots(jsonFolder, outputDir)
+
+#designspace=scanDesigns(jsonFolder)
+
+#extraPlots(designspace)
