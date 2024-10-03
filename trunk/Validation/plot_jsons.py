@@ -17,17 +17,44 @@ def loadJSON(file):
         data = json.load(f)
     return data
 
-#def scanDesigns(directory):
-#    jsons = findJSONs(directory)
-#    flights={'Traditional':[],
-#             'Hybrid':[]}
+def writeJSON(data,file):
+    with open(file, "w") as f:
+        json.dump(data, f, indent=4)
 
-#    for file in jsons:
-#        design = loadJSON(file)
-        #todo a lot of stuff here, make it append the data that is relevant here
-        #like
-#        flight[design['Inputs']['Powerplant']].append[]
+# grab all the designs from the jsons folder and condense them into a sinlge json
+# listing out all the parameters of the different flights to be plotted
+def scanDesigns(directory, flights):
+    jsons = findJSONs(directory)
+    i=0
+    for file in jsons:
+        i+=1
+        print('------------\nFound:\n',file,'\n')
 
+        design = loadJSON(file)
+
+        arch = design['Inputs']['Powerplant']
+        miss = design['Inputs']['Mission Name']
+
+        if miss not in flights:
+            flights[miss]={}
+        if arch not in flights[miss]:
+            flights[miss][arch]={'Success':[],'Fail':[]}
+
+        inputs = design['Inputs']
+        del inputs['Mission Profile']
+        del inputs['Mission Name']
+        del inputs['Powerplant']
+
+        if design['Converged']:
+            print('Writing',design['Name'], 'to',miss,'-',arch,'- Success')
+            outputs = design['Outputs']['Parameters']
+            flights[miss][arch]['Success'].append(inputs|outputs)
+
+        else:
+            print('Writing',design['Name'],'to',miss,'-',arch,'- Fail')
+            flights[miss][arch]['Fail'].append(inputs)
+    print('Processed',i,'designs')        
+    return flights
 
 
 
@@ -118,12 +145,19 @@ def flightPlots(directoryIN, directoryOUT):
 
 
 
-# pick which folder to plot
-jsonFolder = 'JSONs'
-outputDir = 'Plots'
-outputDir  = createDir(outputDir)
-flightPlots(jsonFolder, outputDir)
 
-#designspace=scanDesigns(jsonFolder)
+# pick which folder to plot
+jsonFolder = 'JSONs' #which folder the jsons should be read from
+outputDir = 'Plots' # which folder plots should be stored in
+designsJSON = 'designspace.json' # which file the aircraft designs should be writen to and read from
+
+outputDir  = createDir(outputDir)
+#flightPlots(jsonFolder, outputDir)
+try:
+    flights=loadJSON(designsJSON)
+except:
+    flights={}
+designspace=scanDesigns(jsonFolder,flights)
+writeJSON(designspace,designsJSON)
 
 #extraPlots(designspace)
