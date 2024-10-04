@@ -80,7 +80,7 @@ def parameters(myaircraft):
         'Empty Weight': myaircraft.weight.WPT + myaircraft.weight.WStructure + myaircraft.weight.WCrew,
         'Zero Fuel Weight': myaircraft.weight.WPT + myaircraft.weight.WStructure + myaircraft.weight.WCrew + myaircraft.weight.WPayload,
         'Takeoff Weight':myaircraft.weight.WTO,
-        'Wing Surface: ':myaircraft.WingSurface,
+        'Wing Surface':myaircraft.WingSurface,
         'TakeOff Engine Shaft PP': myaircraft.mission.TO_PP/1000, # PP = Peak Power
         'Climb Cruise Engine Shaft PP':myaircraft.mission.Max_PEng/1000} # PP = Peak Power
 

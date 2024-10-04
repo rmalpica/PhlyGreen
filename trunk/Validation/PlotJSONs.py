@@ -139,7 +139,7 @@ def multiPlot(dictList,X,Y,Z,title,foldername):
     #plots Y against X multiple times with a different line for each Z
     data=[]
     for d in dictList:
-        data.append({x:d[X],Y:d[Y],Z:d[Z]}) #reorganize the data so that it can go into pandas
+        data.append({X:d[X],Y:d[Y],Z:d[Z]}) #reorganize the data so that it can go into pandas
     df = pd.DataFrame(data) #convert to pandas dataframe for easier use with seaborn
     sns.scatterplot(data=df, x=X, y=Y, hue=Z)
     # Add labels and title
@@ -166,7 +166,7 @@ def plotFlights(directoryIN,directoryOUT):
         i+=1
         flight = loadJSON(file)
 
-        print('>--',i,'-->\n')
+        print('\n>--',i,'-->')
         print('Plot nr',i)
         print('Plotting from', file,'\n')
         if not flight['Converged']: # skip any unconverged file as those dont have data to plot
@@ -200,22 +200,28 @@ def extraPlots(json,voi,outfolder):
     print('Starting extra plots, sweep over',X,'and',Z)
     i=0
     db=loadJSON(json)
-    #write some stuff so that outfolder builds itself up into foldername
-    #should be fast
+
     for mission in db:
-        #create dir with mission name and change to it
+        print('++++++++++++++++++++++++++++++++++')
         print('Mission:',mission)
         for powerplant in db[mission]:
-            #same thing again
+            print('++++++++++++++++++++++++++++++++++')
             print('Powerplant:',powerplant)
+            # Create folder corresponding to the mission and powerplant combo
+            foldername=os.path.join(outfolder,mission,powerplant)
+            os.makedirs(foldername, exist_ok = True)
+
+            # use only successful designs
             data = db[mission][powerplant]['Success']
-            for Y in voi['To Plot']: #plot with either X or Z as the hue right away
+            for Y in voi['To Plot']: #plot with either X or Z as the hue
                 i+=1
-                print('>==',i,'==>\n')
-                print('Plot nr',i)
-                print('Plotting from', file,'\n')
-                title = (Y+' VS '+X+' over '+Z)
-                multiPlot(data,X,Y,Z,title,foldername)
-                title = (Y+' VS '+Z+' over '+X)
-                multiPlot(data,Z,Y,X,title,foldername)
+                print('\n>==',i,'==>')
+                try:
+                    title = (Y+' VS '+X+' over '+Z)
+                    multiPlot(data,X,Y,Z,title,foldername)
+                    title = (Y+' VS '+Z+' over '+X)
+                    multiPlot(data,Z,Y,X,title,foldername)
+                except KeyError:
+                    print('ERROR: INVALID KEY, SKIPPING')
+                    print("KEY:",Y)
                 print('<==',i,'==<\n')

@@ -19,16 +19,34 @@ import json
 import FlightProfiles
 import WriteLog
 
+
+# function to create the output folders as a relative path to the script
+def CreateDir(dirname):
+ #new relative directory
+    if not os.path.exists(outdir): # make directory if it doesnt exist already
+        os.makedirs(outdir)
+    return outdir
+
+
 # Function for creating these global variables
 # so that directories can be configured externally
 # kind of a quick hack, i should make the functions
 # take arguments in a reasonable way
-def Configure(logdir,jsondir):
+def Configure(name):
     global logs_directory
     global json_directory
-    logs_directory=CreateDir(logdir)
-    json_directory=CreateDir(jsondir)
+    global dirOutput
+    srcdir = os.path.dirname(__file__) #script directory
+    outdir = os.path.join(srcdir, 'Outputs') #make Outputs folder relative to the script
+    dirOutput = CreateDir(outdir,name) #create both the "Outputs" directory and the folder for the current Run
+    logs_directory = CreateDir(dirOutput,'Log')
+    json_directory = CreateDir(dirOutput,'JSONs')
 
+# function to create the output folders as a relative path to the script
+def CreateDir(name,dirname):
+    outdir = os.path.join(name, dirname) #new relative directory
+    os.makedirs(outdir, exist_ok=True)
+    return outdir
 
 # argRange   - range in nautical miles
 # argPayload - payload in kg
@@ -241,15 +259,6 @@ def CalculateFlight(argArch, argMission, argRange, argPayload, argCell, argPhi):
         'Outputs':outputsDic,
         'Converged': Converged }
     WriteLog.printJSON(dicts,jsonfn)
-
-
-# function to create the output folders as a relative path to the script
-def CreateDir(dirname):
-    srcdir = os.path.dirname(__file__) #script directory
-    outdir = os.path.join(srcdir, dirname) #new relative directory
-    if not os.path.exists(outdir): # make directory if it doesnt exist already
-        os.makedirs(outdir)
-    return outdir
 
 # main loop that sweeps the parameters given
 def main(ArchList,MissionList,RangesList,PayloadsList,CellsList,PhisList):
