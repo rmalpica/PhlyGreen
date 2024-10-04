@@ -5,6 +5,18 @@ import json
 import seaborn as sns
 import matplotlib.pyplot as plt
 import pandas as pd
+
+
+# makes directories as needed on the script directory
+def createDir(dirname):
+    srcdir = os.path.dirname(__file__) #script directory
+    outdir = os.path.join(srcdir, dirname) #new relative directory
+    try:
+        os.makedirs(outdir)
+    except: #if it already exists, ignore the error
+        pass
+    return outdir
+
 # this way directories can be made relative to the script in an OS agnostic way
 def findJSONs(directory):
     srcdir = os.path.dirname(__file__) #script directory
@@ -17,18 +29,27 @@ def loadJSON(file):
         data = json.load(f)
     return data
 
+#write data to json
 def writeJSON(data,file):
     with open(file, "w") as f:
         json.dump(data, f, indent=4)
 
 # grab all the designs from the jsons folder and condense them into a sinlge json
 # listing out all the parameters of the different flights to be plotted
-def scanDesigns(directory, flights):
+# directory is the folder where the flight jsons are
+# designsJSON is the filename of the json where all the different design parameters will be saved
+def scanDesigns(directory, designsJSON):
+    try:
+        flights=loadJSON(designsJSON)
+    except:
+        print(designsJSON,"not found and will be created")
+        flights={}
+
     jsons = findJSONs(directory)
     i=0
     for file in jsons:
         i+=1
-        print('------------\nFound:\n',file,'\n')
+        print('- - - - - - - -\nFound:\n',file,'\n')
 
         design = loadJSON(file)
 
@@ -54,49 +75,40 @@ def scanDesigns(directory, flights):
             print('Writing',design['Name'],'to',miss,'-',arch,'- Fail')
             flights[miss][arch]['Fail'].append(inputs)
     print('Processed',i,'designs')        
+    writeJSON(flights,designsJSON)
     return flights
 
 
 
 # list of plots to be made from the collected data
-def traditionalPlots(flight):
-    # outputDir is a global variable and the name is already in the json
-    filename = os.path.join(outputDir, flight['Name'])  
+def traditionalPlots(flight,folder):
+
     data = flight['Outputs']
-    try:
-        os.mkdir(filename)
-    except:
-        pass
-    plotData(data,'Time','Beta','Beta vs Time',filename)
-    plotData(data,'Time','Fuel Energy','Fuel Energy vs Time',filename)
-    plotData(data,'Time','Power','Power vs Time',filename)
-    plotData(data,'Time','Altitude','Altitude vs Time',filename)
+
+    plotData(data,'Time','Beta','Beta vs Time',folder)
+    plotData(data,'Time','Fuel Energy','Fuel Energy vs Time',folder)
+    plotData(data,'Time','Power','Power vs Time',folder)
+    plotData(data,'Time','Altitude','Altitude vs Time',folder)
 
 # extra plots that are made only when the configuration is hybrid
-def hybridPlots(flight):
-    # outputDir is a global variable and the name is already in the json
-    filename = os.path.join(outputDir, flight['Name']) 
-    
+def hybridPlots(flight,folder):
+
+    # plots the data
     data = flight['Outputs']
     dataHeat = data['Battery Heating']
 
-    # plots the data
-    try:
-        os.mkdir(filename)
-    except:
-        pass
-    plotData(data,'Time','SOC','SOC vs Time',filename)
-    plotData(data,'Time','Beta','Beta vs Time',filename)
-    plotData(data,'Time','Fuel Energy','Fuel Energy vs Time',filename)
-    plotData(data,'Time','Power','Power vs Time',filename)
-    plotData(data,'Time','Battery Energy','Battery Energy vs Time',filename)
-    plotData(data,'Time','Altitude','Altitude vs Time',filename)
-    plotData(data,'Time','Phi','Phi vs Time',filename)
+    plotData(data,'Time','SOC','SOC vs Time',folder)
+    plotData(data,'Time','Beta','Beta vs Time',folder)
+    plotData(data,'Time','Fuel Energy','Fuel Energy vs Time',folder)
+    plotData(data,'Time','Power','Power vs Time',folder)
+    plotData(data,'Time','Battery Energy','Battery Energy vs Time',folder)
+    plotData(data,'Time','Altitude','Altitude vs Time',folder)
+    plotData(data,'Time','Phi','Phi vs Time',folder)
 
     # battery heat stuff
-    plotData(dataHeat,'Time','Temperature','Temperature vs Time',filename)
-    plotData(dataHeat,'Time','dTdt','Change in Temperature vs Time',filename)
-    plotData(dataHeat,'Time','Heat','Heating Power vs Time',filename)
+    plotData(dataHeat,'Time','Temperature','Temperature vs Time',folder)
+    plotData(dataHeat,'Time','dTdt','Change in Temperature vs Time',folder)
+    plotData(dataHeat,'Time','Heat','Heating Power vs Time',folder)
 
 # function to plot the data in a generic way so that all plots have the same formatting
 # receives a dictionary that contains the keys X and Y pointing to ordered lists
@@ -117,39 +129,6 @@ def plotData(data, X , Y, title, foldername):
     plt.savefig(filename)
     print('||>- Saved \'',title,'\' to',filename)
     plt.close()  # Close the plot
-
-# makes directories as needed
-def createDir(dirname):
-    srcdir = os.path.dirname(__file__) #script directory
-    outdir = os.path.join(srcdir, dirname) #new relative directory
-    if not os.path.exists(outdir): # make directory if it doesnt exist already
-        os.makedirs(outdir)
-
-    return outdir
-
-# main plots of flight data
-def flightPlots(directoryIN, directoryOUT):
-    jsons = findJSONs(directoryIN)
-    i=0
-    for file in jsons:
-        i+=1
-        flight = loadJSON(file)
-
-        print('>--',i,'-->\n')
-        print('Plot nr',i)
-        print('Plotting from', file,'\n')
-        if not flight['Converged']:
-            print('\nINVALID DESIGN, SKIPPING') # in the future this can be useful for gathering where in the design space an input leads to failure
-
-        else:
-            powerplant = flight['Inputs']['Powerplant']
-            if  powerplant == 'Hybrid':
-                hybridPlots(flight)
-            elif powerplant == 'Traditional':
-                traditionalPlots(flight)
-            else:
-                raise ValueError('invalid powerplant')
-        print('\n<--',i,'--<')
 
 # function to plot graphs with three variables at once
 # receives a list of dictionaries where each dictionary
@@ -174,28 +153,45 @@ def multiPlot(dictList,X,Y,Z,title,foldername):
     print('||>- Saved \'',title,'\' to',filename)
     plt.close()  # Close the plot
 
+# main plots of flight data
+def plotFlights(directoryIN,directoryOUT):
+
+    # start by creating the folder for the plots
+    plotsDir = createDir(directoryOUT)
+    #find the jsons containing the flights
+    jsons = findJSONs(directoryIN)
+
+    i=0
+    for file in jsons:
+        i+=1
+        flight = loadJSON(file)
+
+        print('>--',i,'-->\n')
+        print('Plot nr',i)
+        print('Plotting from', file,'\n')
+        if not flight['Converged']: # skip any unconverged file as those dont have data to plot
+            print('\nINVALID DESIGN, SKIPPING') # in the future this can be useful for gathering where in the design space an input leads to failure
+
+        else:
+            # create folder to store the plots of this flight
+            flightDir = os.path.join(plotsDir, flight['Name'])
+            try:
+                os.mkdir(flightDir)
+            except:
+                pass
+            #run the appropriate plots depending on the powerplant
+            powerplant = flight['Inputs']['Powerplant']
+            if  powerplant == 'Hybrid':
+                hybridPlots(flight,flightDir)
+            elif powerplant == 'Traditional':
+                traditionalPlots(flight,flightDir)
+            else:
+                raise ValueError('invalid powerplant')
+        print('\n<--',i,'--<')
 
 # add here whatever plots between two interesting variables coming from the design space json
 # plots should cover sweeps of one or two inputs while the rest are constant
-def extraPlots(designspace):
-    # outputDir is a global variable and the name is already in the json
-    filename = os.path.join(outputDir, 'DesignSpace') 
-    print(designspace)
+def extraPlots(designspace,filename):
+    print(loadJSON(designspace))
     # plots the data
     #plotData(designspace,'Range','','SOC vs Time',filename)
-
-# pick which folder to plot
-jsonFolder = 'JSONs' #which folder the jsons should be read from
-outputDir = 'Plots' # which folder plots should be stored in
-designsJSON = 'designspace.json' # which file the aircraft designs should be writen to and read from
-
-outputDir  = createDir(outputDir)
-flightPlots(jsonFolder, outputDir)
-try:
-    flights=loadJSON(designsJSON)
-except:
-    flights={}
-designspace=scanDesigns(jsonFolder,flights)
-writeJSON(designspace,designsJSON)
-
-extraPlots(designspace)

@@ -2,7 +2,7 @@ logo=r"""
 -------------------------------------------------
     ____  __    __      ______
    / __ \/ /_  / /_  __/ ____/_______  ___  ____
-  / /_/ / __ \/ / / / / / __/ ___/ _ \/ _ \/ __ \ 
+  / /_/ / __ \/ / / / / / __/ ___/ _ \/ _ \/ __ \
  / ____/ / / / / /_/ / /_/ / /  /  __/  __/ / / /
 /_/   /_/ /_/_/\__, /\____/_/   \___/\___/_/ /_/
               /____/
@@ -16,17 +16,28 @@ sys.path.insert(0,'../')
 import PhlyGreen as pg
 import numpy as np
 import json
-import flight_profiles
-import write_log
+import FlightProfiles
+import WriteLog
 
-#get all the inputs from the command line or shell script
+# Function for creating these global variables
+# so that directories can be configured externally
+# kind of a quick hack, i should make the functions
+# take arguments in a reasonable way
+def Configure(logdir,jsondir):
+    global logs_directory
+    global json_directory
+    logs_directory=CreateDir(logdir)
+    json_directory=CreateDir(jsondir)
+
+
 # argRange   - range in nautical miles
 # argPayload - payload in kg
 # argArch    - 'Hybrid' vs 'Traditional' architecture
 # argCell    - name of the cell model to use, see Cell_Models.py
 # argPhi     - base hybridization ratio to use, actual effect depends on flight profile chosen
 # argMission - mission profile to follow, look in flight_profiles.py
-print(logo)
+
+# function that runs the main calculations loop, its the same flow as the jupyter notebooks, modified to work in the script
 def CalculateFlight(argArch, argMission, argRange, argPayload, argCell, argPhi):
     args = (str(argRange) + '-' + str(argPayload) + '-' + str(argArch) + '-' + str(argCell) + '-' + str(argPhi) + '-' + str(argMission))
     argRange   = float(argRange)
@@ -45,13 +56,11 @@ def CalculateFlight(argArch, argMission, argRange, argPayload, argCell, argPhi):
     print()
 
     # begin by setting up the output files
-    logs_directory=CreateDir('TXTlogs')
-    json_directory=CreateDir('JSONs')
     textfn = os.path.join(logs_directory, args+ "_log.txt") #txt file name
     jsonfn=os.path.join(json_directory, args+".json") #json file name
 
     # load the flight profile
-    flight_profile=flight_profiles.MissionParameters(argRange,argPayload,argArch,argCell,argPhi,argMission)
+    flight_profile=FlightProfiles.MissionParameters(argRange,argPayload,argArch,argCell,argPhi,argMission)
 
     #write all inputs to a dictionary for posteriority right away
     inputsDic={
@@ -169,8 +178,8 @@ def CalculateFlight(argArch, argMission, argRange, argPayload, argCell, argPhi):
                                     myaircraft.mission.DISA,
                                     myaircraft.mission.profile.Velocity(times[t]),
                                     'TAS') for t in range(len(times))]
-            
-            aircraftParameters=write_log.parameters(myaircraft)
+
+            aircraftParameters=WriteLog.parameters(myaircraft)
             outputsDic={
                     'Battery Heating':heatdata,
                     'Time':times.tolist(),
@@ -200,7 +209,7 @@ def CalculateFlight(argArch, argMission, argRange, argPayload, argCell, argPhi):
                                     myaircraft.mission.profile.Velocity(times[t]),
                                     'TAS') for t in range(len(times))]
 
-            aircraftParameters=write_log.parameters(myaircraft)
+            aircraftParameters=WriteLog.parameters(myaircraft)
 
             outputsDic={
                     'Time':times.tolist(),
@@ -212,28 +221,26 @@ def CalculateFlight(argArch, argMission, argRange, argPayload, argCell, argPhi):
 
         print('Writting output files')
 
-        #create folders for json and text logs
-        logs_directory=CreateDir('TXTlogs')
-        json_directory=CreateDir('JSONs')
+        #create the path for the json and text log files
         textfn = os.path.join(logs_directory, args+ "_log.txt") #txt file name
         jsonfn=os.path.join(json_directory, args+".json") #json file name
 
         #print the txt log with relevant data
-        write_log.printLog(myaircraft,textfn)
+        WriteLog.printLog(myaircraft,textfn)
 
     else:
         print("----------------")
         print("DID NOT CONVERGE")
         print("----------------")
         outputsDic = {}
-        write_log.failLog(textfn)   #calls function to print fail log
+        WriteLog.failLog(textfn)   #calls function to print fail log
     # regardless of result, json file is always made
     dicts={
         'Name':args,
         'Inputs':inputsDic,
         'Outputs':outputsDic,
         'Converged': Converged }
-    write_log.printJSON(dicts,jsonfn)
+    WriteLog.printJSON(dicts,jsonfn)
 
 
 # function to create the output folders as a relative path to the script
@@ -246,7 +253,7 @@ def CreateDir(dirname):
 
 # main loop that sweeps the parameters given
 def main(ArchList,MissionList,RangesList,PayloadsList,CellsList,PhisList):
-
+    print(logo)
     # to present the user with an idea of how long this is going to take
     iterations=len(MissionList)*len(RangesList)*len(PayloadsList)
     if 'Hybrid' in ArchList:
@@ -283,17 +290,12 @@ def main(ArchList,MissionList,RangesList,PayloadsList,CellsList,PhisList):
 #PayloadsList ={550, 1330, 1960}
 
 # smaller list just for testing
-ArchList     ={'Hybrid','Traditional'}
-MissionList  ={'FelixFinger'}
-CellsList    ={'SAMSUNG_LIR18650','FELIX_FINGER'}
-PhisList     ={0.2}
-RangesList   ={396}
-PayloadsList ={550}
+
 
 # actually run the function if the script is called directly
 # otherwise a separate script can be made that only contains the lists and then calls the main function
 # which could be easier for a user to define inputs that way
 
-main(ArchList,MissionList,RangesList,PayloadsList,CellsList,PhisList)
+#main(ArchList,MissionList,RangesList,PayloadsList,CellsList,PhisList)
 
 # a script could also be made to independently call tryFlight() to do a parametric sweep in any other way
