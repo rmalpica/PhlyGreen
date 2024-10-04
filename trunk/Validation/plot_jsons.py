@@ -4,7 +4,7 @@ import sys
 import json
 import seaborn as sns
 import matplotlib.pyplot as plt
-
+import pandas as pd
 # this way directories can be made relative to the script in an OS agnostic way
 def findJSONs(directory):
     srcdir = os.path.dirname(__file__) #script directory
@@ -63,7 +63,10 @@ def traditionalPlots(flight):
     # outputDir is a global variable and the name is already in the json
     filename = os.path.join(outputDir, flight['Name'])  
     data = flight['Outputs']
-
+    try:
+        os.mkdir(filename)
+    except:
+        pass
     plotData(data,'Time','Beta','Beta vs Time',filename)
     plotData(data,'Time','Fuel Energy','Fuel Energy vs Time',filename)
     plotData(data,'Time','Power','Power vs Time',filename)
@@ -78,6 +81,10 @@ def hybridPlots(flight):
     dataHeat = data['Battery Heating']
 
     # plots the data
+    try:
+        os.mkdir(filename)
+    except:
+        pass
     plotData(data,'Time','SOC','SOC vs Time',filename)
     plotData(data,'Time','Beta','Beta vs Time',filename)
     plotData(data,'Time','Fuel Energy','Fuel Energy vs Time',filename)
@@ -92,11 +99,12 @@ def hybridPlots(flight):
     plotData(dataHeat,'Time','Heat','Heating Power vs Time',filename)
 
 # function to plot the data in a generic way so that all plots have the same formatting
-def plotData(data, X , Y, title, filename):
-    x_data = data[X]  # Assuming 'x' is a list of values
-    y_data = data[Y]  # Assuming 'y' is a list of values
+# receives a dictionary that contains the keys X and Y pointing to ordered lists
+# and plots the Y list over the X list
+def plotData(data, X , Y, title, foldername):
+    x_data = data[X]
+    y_data = data[Y]
     # Create a plot using Seaborn
-    #plt.figure(figsize=(10, 6))  # Set the figure size
     sns.lineplot(x=x_data, y=y_data)
 
     # Add labels and title
@@ -105,10 +113,10 @@ def plotData(data, X , Y, title, filename):
     plt.title(title)
 
     # Save the plot as a PDF
-    filename = filename+title+".pdf"
+    filename = os.path.join(foldername, title+".pdf") #create file inside the output directory
     plt.savefig(filename)
-    print('Saved \'',title,'\' to',filename)
-    plt.close()  # Close the plot to avoid overwriting issues
+    print('||>- Saved \'',title,'\' to',filename)
+    plt.close()  # Close the plot
 
 # makes directories as needed
 def createDir(dirname):
@@ -143,8 +151,38 @@ def flightPlots(directoryIN, directoryOUT):
                 raise ValueError('invalid powerplant')
         print('\n<--',i,'--<')
 
+# function to plot graphs with three variables at once
+# receives a list of dictionaries where each dictionary
+# has the keys X Y Z corresponding to a single value
+def multiPlot(dictList,X,Y,Z,title,foldername):
+    #searches in the data for flights with the same Z
+    #puts them all in a dictionary grouped by Z
+    #plots Y against X multiple times with a different line for each Z
+    data=[]
+    for d in dictList:
+        data.append({x:d[X],Y:d[Y],Z:d[Z]}) #reorganize the data so that it can go into pandas
+    df = pd.DataFrame(data) #convert to pandas dataframe for easier use with seaborn
+    sns.scatterplot(data=df, x=X, y=Y, hue=Z)
+    # Add labels and title
+    plt.xlabel(X)
+    plt.ylabel(Y)
+    plt.title(title)
+
+    # Save the plot as a PDF
+    filename = os.path.join(foldername, title+".pdf") #create file inside the output directory
+    plt.savefig(filename)
+    print('||>- Saved \'',title,'\' to',filename)
+    plt.close()  # Close the plot
 
 
+# add here whatever plots between two interesting variables coming from the design space json
+# plots should cover sweeps of one or two inputs while the rest are constant
+def extraPlots(designspace):
+    # outputDir is a global variable and the name is already in the json
+    filename = os.path.join(outputDir, 'DesignSpace') 
+    print(designspace)
+    # plots the data
+    #plotData(designspace,'Range','','SOC vs Time',filename)
 
 # pick which folder to plot
 jsonFolder = 'JSONs' #which folder the jsons should be read from
@@ -152,7 +190,7 @@ outputDir = 'Plots' # which folder plots should be stored in
 designsJSON = 'designspace.json' # which file the aircraft designs should be writen to and read from
 
 outputDir  = createDir(outputDir)
-#flightPlots(jsonFolder, outputDir)
+flightPlots(jsonFolder, outputDir)
 try:
     flights=loadJSON(designsJSON)
 except:
@@ -160,4 +198,4 @@ except:
 designspace=scanDesigns(jsonFolder,flights)
 writeJSON(designspace,designsJSON)
 
-#extraPlots(designspace)
+extraPlots(designspace)
