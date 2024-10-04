@@ -150,7 +150,7 @@ def multiPlot(dictList,X,Y,Z,title,foldername):
     # Save the plot as a PDF
     filename = os.path.join(foldername, title+".pdf") #create file inside the output directory
     plt.savefig(filename)
-    print('||>- Saved \'',title,'\' to',filename)
+    print(']]=> Saved \'',title,'\' to',filename)
     plt.close()  # Close the plot
 
 # main plots of flight data
@@ -189,9 +189,33 @@ def plotFlights(directoryIN,directoryOUT):
                 raise ValueError('invalid powerplant')
         print('\n<--',i,'--<')
 
-# add here whatever plots between two interesting variables coming from the design space json
-# plots should cover sweeps of one or two inputs while the rest are constant
-def extraPlots(designspace,filename):
-    print(loadJSON(designspace))
-    # plots the data
-    #plotData(designspace,'Range','','SOC vs Time',filename)
+# receives a Variables Of Interest argument
+# that defines which two parameters are being swept
+# and which keys should be automatically plotted for those two
+def extraPlots(json,voi,outfolder):
+    print('= - = - = - = - = - = - = - = - = - = - = - = - = - = - =')
+    print('Plotting Extras')
+    X=voi['In'][0]
+    Z=voi['In'][1]
+    print('Starting extra plots, sweep over',X,'and',Z)
+    i=0
+    db=loadJSON(json)
+    #write some stuff so that outfolder builds itself up into foldername
+    #should be fast
+    for mission in db:
+        #create dir with mission name and change to it
+        print('Mission:',mission)
+        for powerplant in db[mission]:
+            #same thing again
+            print('Powerplant:',powerplant)
+            data = db[mission][powerplant]['Success']
+            for Y in voi['To Plot']: #plot with either X or Z as the hue right away
+                i+=1
+                print('>==',i,'==>\n')
+                print('Plot nr',i)
+                print('Plotting from', file,'\n')
+                title = (Y+' VS '+X+' over '+Z)
+                multiPlot(data,X,Y,Z,title,foldername)
+                title = (Y+' VS '+Z+' over '+X)
+                multiPlot(data,Z,Y,X,title,foldername)
+                print('<==',i,'==<\n')
