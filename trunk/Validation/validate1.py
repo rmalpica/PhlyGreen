@@ -6,7 +6,8 @@ import os
 def runAndPlotAll(aL,runName,varsOfInterest):
     if len(varsOfInterest['In']) != 2:
         raise ValueError("Must provide two values to plot against")
-    #first configure the name of the output directories
+
+    #first configure the output directories
     FlightSweeps.Configure(runName)
     dirJSONs = FlightSweeps.json_directory
     dirPlots = os.path.join(FlightSweeps.dirOutput,"Plots")
@@ -14,6 +15,7 @@ def runAndPlotAll(aL,runName,varsOfInterest):
     jsonExtras=os.path.join(FlightSweeps.dirOutput,'Extras','designspace.json')
     os.makedirs(dirPlots,exist_ok=True)
     os.makedirs(dirExtraPlots,exist_ok=True)
+
     # FlightSweeps.main runs everything needed to sweep the parameters given
     # run multiple times with different lists to sweep different things
     # it runs a nested loop of all the different combinations given
@@ -50,8 +52,8 @@ def runAndPlotAll(aL,runName,varsOfInterest):
 aL={'ArchList'     :{'Hybrid','Traditional'},
     'MissionList'  :{'FelixFinger'},
     'CellsList'    :{'FELIX_FINGER'},
-    'RangesList'   :{300,600,900,1200,1500,1800,2100},
-    'PayloadsList' :{1200},
+    'RangesList'   :{600,1200,1800,2400},
+    'PayloadsList' :{1500},
     'PhisList'     :{0.1,0.2,0.3,0.4,0.5}}
 #runAndPlotMost(aL,'test')
 # define which values from the output json should be multiplotted,
