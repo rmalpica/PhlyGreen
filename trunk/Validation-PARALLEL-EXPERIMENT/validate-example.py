@@ -51,11 +51,11 @@ def runAndPlot(aL,runName,varsOfInterest={}):
 # of pointless mission combinations at once that are unmanageable
 
 aL={'ArchList'     :{'Hybrid','Traditional'},
-    'MissionList'  :{'FelixFinger'},
+    'MissionList'  :{'Mission-FelixFinger',"HybridCruiseOnly","HybridTOClimbOnly","HybridCruiseHighAltitude","HybridTOClimbHighAltitude"},
     'CellsList'    :{'SAMSUNG_LIR18650','FELIX_FINGER'},
-    'RangesList'   :{600,2100},
-    'PayloadsList' :{1200},
-    'PhisList'     :{0.1,0.3,0.5}}
+    'RangesList'   :{500,1200,2000},
+    'PayloadsList' :{600,900,1400},
+    'PhisList'     :{0.3}}
 
 # define which values from the output json should be multiplotted,
 # and which should be considered the TWO inputs that were swept
@@ -68,34 +68,6 @@ varsOfInterest={'In':['Range','Base Phi'], # lets see how range affects the desi
                            'Climb Cruise Battery PP'
                           ]}
 # specify the list and name to use, specify a non empty varsOfInterest in order to run the extra plots
-runAndPlot(aL,'Sweep1',varsOfInterest=varsOfInterest)
+runAndPlot(aL,'MultiMiss-rangevpayload',varsOfInterest=varsOfInterest)
 
 
-#################
-aL={'ArchList'     :{'Hybrid','Traditional'},
-    'MissionList'  :{'FelixFinger'},
-    'CellsList'    :{'SAMSUNG_LIR18650','FELIX_FINGER'},
-    'RangesList'   :{1800},
-    'PayloadsList' :{1200,2400},
-    'PhisList'     :{0.1,0.3,0.5}}
-
-varsOfInterest={'In':['Payload','Base Phi'], # now do different payloads instead
-                'To Plot':['Structure Mass',
-                           'Wing Surface',
-                           'Battery Mass',
-                           'Takeoff Weight',
-                           'Climb Cruise Battery PP'
-                          ]}
-
-runAndPlot(aL,'Sweep2',varsOfInterest=varsOfInterest)
-
-
-#################
-aL={'ArchList'     :{'Hybrid','Traditional'},
-    'MissionList'  :{'FelixFinger'},
-    'CellsList'    :{'SAMSUNG_LIR18650','FELIX_FINGER'},
-    'RangesList'   :{600,2100},
-    'PayloadsList' :{1200,2400},
-    'PhisList'     :{0.1,0.5}}
-
-runAndPlot(aL,'Sweep3')
