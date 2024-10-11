@@ -18,6 +18,9 @@ import numpy as np
 import json
 import FlightProfiles
 import WriteLog
+import multiprocessing
+from itertools import product
+
 
 
 # function to create the output folders as a relative path to the script
@@ -70,8 +73,8 @@ def CalculateFlight(argArch, argMission, argRange, argPayload, argCell, argPhi):
     if argArch == 'Hybrid':
         print( argCell,"Cell Model | Phi = ",argPhi)
     print("Range = ",argRange,"km | ","Payload = ",argPayload,"kg")
-    print("- - - - - - - - - - - - - - - - - - - - - - - - - -")
-    print()
+    #print("- - - - - - - - - - - - - - - - - - - - - - - - - -")
+    #print()
 
     # begin by setting up the output files
     textfn = os.path.join(logs_directory, args+ "_log.txt") #txt file name
@@ -114,7 +117,7 @@ def CalculateFlight(argArch, argMission, argRange, argPayload, argCell, argPhi):
     welltowake.aircraft = myaircraft
     battery.aircraft = myaircraft
 
-    print('Configuring mission')
+    #print('Configuring mission')
     # here it actually defines all the mission inputs from the file containing all the profiles
     # done this way to allow for quick sweeps of common settings like payload and Phi while allowing
     # different mission flight profiles without having to copy paste them 100 times
@@ -146,7 +149,6 @@ def CalculateFlight(argArch, argMission, argRange, argPayload, argCell, argPhi):
     #Initialize Battery Configurator
     myaircraft.battery.SetInput()
 
-    print('Starting weight estimation')
     #run the actual maths that configures the aircraft
     myaircraft.constraint.FindDesignPoint()
     try:
@@ -159,7 +161,6 @@ def CalculateFlight(argArch, argMission, argRange, argPayload, argCell, argPhi):
     if Converged:
         #do the battery heating calculations if the aircraft is hybrid
         if argArch == 'Hybrid' :
-            print('Starting heat calculations')
             battery_heating_data = myaircraft.battery.BatteryHeating(myaircraft.mission.CurrentvsTime)
             # save heating data to dictionary
             heatdata = {
@@ -167,8 +168,6 @@ def CalculateFlight(argArch, argMission, argRange, argPayload, argCell, argPhi):
                         'Heat': battery_heating_data[1].tolist(), # they are converted to be put in the json
                         'Temperature': battery_heating_data[2],
                         'dTdt': battery_heating_data[3]}
-
-        print('Gathering outputs')
 
         myaircraft.WingSurface = myaircraft.weight.WTO / myaircraft.DesignWTOoS * 9.81
 
@@ -188,6 +187,15 @@ def CalculateFlight(argArch, argMission, argRange, argPayload, argCell, argPhi):
             phi = [mission.profile.SuppliedPowerRatio(t) for t in times]
             # add one here for battery power over time
             # add another for efficiency over time maybe also
+            voltcurr=np.array(mission.plottingVars)
+            Time = voltcurr[:,0]
+            Voc = voltcurr[:,1]
+            Vout = voltcurr[:,2]
+            Curr = voltcurr[:,3]
+            SpentPwr = Voc*Curr
+            DeliveredPwr = Vout*Curr
+            BatEfficiency = Vout/Voc
+
 
             power_propulsive=[(myaircraft.weight.WTO/1000) * myaircraft.performance.PoWTO(myaircraft.DesignWTOoS,beta[t],
                                     myaircraft.mission.profile.PowerExcess(times[t]),
@@ -203,9 +211,15 @@ def CalculateFlight(argArch, argMission, argRange, argPayload, argCell, argPhi):
                     'Time':times.tolist(),
                     'Fuel Energy':Ef.tolist(),
                     'Battery Energy':Ebat.tolist(),
+                    'Battery Current':Curr.tolist(),
+                    'Battery Voltage':Vout.tolist(),
+                    'Battery OC Voltage':Voc.tolist(),
+                    'Battery Efficiency':BatEfficiency.tolist(),
+                    'Battery Spent Power':SpentPwr.tolist(),
+                    'Battery Delivered Power':DeliveredPwr.tolist(),
                     'Beta':beta.tolist(),
                     'SOC':soc.tolist(),
-                    'Power':power_propulsive,
+                    'Total Power':power_propulsive,
                     'Altitude':mission.profile.Altitude(times).tolist(),
                     'Phi':phi,
                     'Parameters':aircraftParameters}
@@ -237,7 +251,7 @@ def CalculateFlight(argArch, argMission, argRange, argPayload, argCell, argPhi):
                     'Altitude':mission.profile.Altitude(times).tolist(),
                     'Parameters':aircraftParameters}
 
-        print('Writting output files')
+        #print('Writting output files')
 
         #create the path for the json and text log files
         textfn = os.path.join(logs_directory, args+ "_log.txt") #txt file name
@@ -260,51 +274,43 @@ def CalculateFlight(argArch, argMission, argRange, argPayload, argCell, argPhi):
         'Converged': Converged }
     WriteLog.printJSON(dicts,jsonfn)
 
-# main loop that sweeps the parameters given
-def main(ArchList,MissionList,RangesList,PayloadsList,CellsList,PhisList):
+# = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = #
+# here begins the chatgpt code hell:
+
+# Separate function to calculate a single flight
+def calculate_single_flight(params):
+    Arch, Mission, Range, Payload, Cell, Phi = params
+    CalculateFlight(Arch, Mission, Range, Payload, Cell, Phi)
+    
+
+def main(ArchList, MissionList, RangesList, PayloadsList, CellsList, PhisList):
     print(logo)
-    # to present the user with an idea of how long this is going to take
-    iterations=len(MissionList)*len(RangesList)*len(PayloadsList)
+    
+    # Calculate total number of iterations
+    iterations = len(MissionList) * len(RangesList) * len(PayloadsList)
     if 'Hybrid' in ArchList:
-        iterations += len(MissionList)*len(RangesList)*len(PayloadsList)*len(CellsList)*len(PhisList) 
-    i=0
-    #start nested loops that execute the parameter sweep
+        iterations += len(MissionList) * len(RangesList) * len(PayloadsList) * len(CellsList) * len(PhisList)
+    
+    # Create a list of parameter combinations
+    param_list = []
     for Arch in ArchList:
         for Mission in MissionList:
             for Range in RangesList:
                 for Payload in PayloadsList:
-                    if Arch == 'Hybrid': #only sweep the battery parameters if the battery is actually used
-                        for Cell in CellsList:
-                            for Phi in PhisList:
-                                timestart = time.time() #for execution timing purposes
-                                CalculateFlight(Arch,Mission,Range,Payload,Cell,Phi)
-                                print("Done. Took %5.2f seconds" % (time.time()-timestart))
-                                i+=1
-                                print("Iteration ",i," of ",iterations)
+                    if Arch == 'Hybrid':
+                        param_list.extend(product([Arch], [Mission], [Range], [Payload], CellsList, PhisList))
                     else:
-                        Cell='FELIX_FINGER' # TODO update the code so that it runs with None as inputs for
-                        Phi=0.1             # cell and phi if using traditional architecture
-                        timestart = time.time() #for execution timing purposes
-                        CalculateFlight(Arch,Mission,Range,Payload,Cell,Phi)
-                        print("Done. Took %5.2f seconds" % (time.time()-timestart))
-                        i+=1
-                        print("Iteration ",i," of ",iterations)
+                        # Assign dummy values for Cell and Phi when not using Hybrid
+                        param_list.append((Arch, Mission, Range, Payload, 'FELIX_FINGER', 0.1))
 
-#full sized list for actually running this 
-#ArchList     ={'Hybrid','Traditional'}
-#MissionList  ={'FelixFinger'} #'ATR_Flight' - reconfigure and add later
-#CellsList    ={'SAMSUNG_LIR18650','FELIX_FINGER'}
-#PhisList     ={ 0.1, 0.2, 0.3, 0.5}
-#RangesList   ={396, 1280 , 2361}
-#PayloadsList ={550, 1330, 1960}
+    # Multiprocessing setup
+    num_workers = multiprocessing.cpu_count()  # Use all available CPU cores
+    pool = multiprocessing.Pool(processes=num_workers)
 
-# smaller list just for testing
+    # Execute in parallel
+    results = pool.map(calculate_single_flight, param_list)
 
+    # Close the pool
+    pool.close()
+    pool.join()
 
-# actually run the function if the script is called directly
-# otherwise a separate script can be made that only contains the lists and then calls the main function
-# which could be easier for a user to define inputs that way
-
-#main(ArchList,MissionList,RangesList,PayloadsList,CellsList,PhisList)
-
-# a script could also be made to independently call tryFlight() to do a parametric sweep in any other way

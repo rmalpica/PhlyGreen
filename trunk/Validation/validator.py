@@ -2,7 +2,7 @@
 import FlightSweeps
 import PlotJSONs
 import os
-
+import numpy as np
 # This will configure run and plot everything relating to a single sweep
 # receives:
 # - argument list
@@ -46,11 +46,11 @@ def runAndPlot(aL,runName,varsOfInterest={}):
 #=========================================================================================#
 # write script here using the function above
 
-aL={'ArchList'     :{'Hybrid','Traditional'},
-    'MissionList'  :{'Mission-FelixFinger',"HybridCruiseOnly","HybridTOClimbOnly","HybridCruiseHighAltitude","HybridTOClimbHighAltitude"},
+aL={'ArchList'     :{'Hybrid'},
+    'MissionList'  :{'Mission-FelixFinger'},#,"HybridCruiseOnly","HybridTOClimbOnly","HybridCruiseHighAltitude","HybridTOClimbHighAltitude"},
     'CellsList'    :{'FELIX_FINGER'},
-    'RangesList'   :{500,1200,2000},
-    'PayloadsList' :{600,900,1400},
+    'RangesList'   :np.linspace(600,2000,2),
+    'PayloadsList' :np.linspace(400,1500,2),
     'PhisList'     :{0.3}}
 
 varsOfInterest={'In':['Range','Payload'], 
@@ -81,15 +81,14 @@ varsOfInterest={'In':['Range','Payload'],
                             'Battery Pack Resistance'
                           ]}
 
-runAndPlot(aL,'Range-v-Payload',varsOfInterest=varsOfInterest)
-
+runAndPlot(aL,'experiment3',varsOfInterest=varsOfInterest)
 
 aL={'ArchList'     :{'Hybrid','Traditional'},
     'MissionList'  :{'Mission-FelixFinger',"HybridCruiseOnly","HybridTOClimbOnly","HybridCruiseHighAltitude","HybridTOClimbHighAltitude"},
     'CellsList'    :{'FELIX_FINGER'},
-    'RangesList'   :{1200},
-    'PayloadsList' :{600,900,1400},
-    'PhisList'     :{0.1,0.3,0.5}}
+    'RangesList'   :np.linspace(600,2400,6),
+    'PayloadsList' :{900},
+    'PhisList'     :np.linspace(0.05,1,6)}
 
 varsOfInterest={'In':['Range','Base Phi'], 
                 'To Plot':[ 'Fuel Mass',
@@ -119,8 +118,7 @@ varsOfInterest={'In':['Range','Base Phi'],
                             'Battery Pack Resistance'
                           ]}
                           
-runAndPlot(aL,'Phi-v-Payload',varsOfInterest=varsOfInterest)
-
+#runAndPlot(aL,'EXP-rangephi',varsOfInterest=varsOfInterest)
 
 
 

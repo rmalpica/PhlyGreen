@@ -216,6 +216,10 @@ class Mission:
                 self.valid_solution = False
                 return [0,0,0,0]
 
+            self.outBatVoltOC = BatVoltOC
+            self.outBatVolt = BatVolt
+            self.outBatCurr = BatCurr
+
             dSOCdt = -BatCurr/self.aircraft.battery.pack_charge #gives the rate of change of SOC
             dEdt_bat = BatVoltOC * BatCurr #gives the watts spent by the battery
             return [dEFdt,dEdt_bat,dbetadt,dSOCdt]
@@ -248,6 +252,7 @@ class Mission:
                 # integrate sequentially
                 self.integral_solution = []
                 self.CurrentvsTime = [] #for the heat calculations. maybe this can be moved elsewhere?
+                self.plottingVars=[]
                 times = np.append(self.profile.Breaks,self.profile.MissionTime2)
                 rtol = 1e-5
                 method= 'BDF'
@@ -266,7 +271,13 @@ class Mission:
                     # to enable calculating the battery heating in the integration
                     for k in range(len(sol.t)):
                         yy0 = [sol.y[0][k],sol.y[1][k],sol.y[2][k],sol.y[3][k]]
-                        self.CurrentvsTime.append([sol.t[k],model(sol.t[k],yy0)[1]])
+                        model(sol.t[k],yy0)
+
+                        self.CurrentvsTime.append([sol.t[k],self.outBatCurr])
+                        self.plottingVars.append([sol.t[k],
+                                                  self.outBatVoltOC,
+                                                  self.outBatVolt,
+                                                  self.outBatCurr])
 
                     y0 = [sol.y[0][-1],sol.y[1][-1],sol.y[2][-1],sol.y[3][-1]]
                     # watch out: the simplified model returns battery energy in joules,
