@@ -2,7 +2,7 @@
 import FlightSweeps
 import PlotJSONs
 import os
-
+import numpy as np
 # This will configure run and plot everything relating to a single sweep
 # receives:
 # - argument list
@@ -49,11 +49,11 @@ def runAndPlot(aL,runName,varsOfInterest={}):
 aL={'ArchList'     :{'Hybrid','Traditional'},
     'MissionList'  :{'Mission-FelixFinger'},#,"HybridCruiseOnly","HybridTOClimbOnly","HybridCruiseHighAltitude","HybridTOClimbHighAltitude"},
     'CellsList'    :[{'Energy':1500,'Power':6000}],
-    'RangesList'   :{500,2000},
-    'PayloadsList' :{600,1400},
-    'PhisList'     :{0.3}}
+    'RangesList'   :np.linspace(400,2000,4,dtype=int),
+    'PayloadsList' :{900},
+    'PhisList'     :np.linspace(5,100,4,dtype=int)/100}
 
-varsOfInterest={'In':['Range','Payload'], 
+varsOfInterest={'In':['Range','Base Phi'], 
                 'To Plot':[ 'Fuel Mass',
                             'Block Fuel Mass',
                             'Structure Mass',
@@ -119,7 +119,7 @@ varsOfInterest={'In':['Range','Base Phi'],
                             'Battery Pack Resistance'
                           ]}
                           
-runAndPlot(aL,'Phi-v-Payload',varsOfInterest=varsOfInterest)
+#runAndPlot(aL,'Phi-v-Payload',varsOfInterest=varsOfInterest)
 
 
 

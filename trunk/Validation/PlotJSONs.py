@@ -39,12 +39,8 @@ def writeJSON(data,file):
 # directory is the folder where the flight jsons are
 # designsJSON is the filename of the json where all the different design parameters will be saved
 def scanDesigns(directory, designsJSON):
-    try:
-        flights=loadJSON(designsJSON)
-    except:
-        print(designsJSON,"not found and will be created")
-        flights={}
-
+    
+    flights={}
     jsons = findJSONs(directory)
     i=0
     for file in jsons:
@@ -147,6 +143,28 @@ def multiPlot(dictList,X,Y,Z,title,foldername):
     print(']]=> Saved \'',title,'\' to',filename)
     plt.close()  # Close the plot
 
+def heatMap(dictList,X,Y,Z,title,foldername):
+    #searches in the data for flights with the same Z
+    #puts them all in a dictionary grouped by Z
+    #plots Y against X multiple times with a different line for each Z
+    data=[]
+    for d in dictList:
+        data.append({X:d[X],Y:d[Y],Z:d[Z]}) #reorganize the data so that it can go into pandas
+    df = pd.DataFrame(data) #convert to pandas dataframe for easier use with seaborn
+    df = df.pivot(index=Y, columns=X, values=Z)
+    sns.heatmap(data=df)
+    # Add labels and title
+    plt.xlabel(X)
+    plt.ylabel(Y)
+    plt.title(title)
+
+    # Save the plot as a PDF
+    filename = os.path.join(foldername, title+".pdf") #create file inside the output directory
+    plt.savefig(filename)
+    print(']]=> Saved \'',title,'\' to',filename)
+    plt.close()  # Close the plot
+
+
 # main plots of flight data
 def plotFlights(directoryIN,directoryOUT):
 
@@ -211,10 +229,14 @@ def extraPlots(json,voi,outfolder):
                 i+=1
                 print('\n>==',i,'==>')
                 try:
-                    title = (Y+' VS '+X+' over '+Z)
-                    multiPlot(data,X,Y,Z,title,foldername)
-                    title = (Y+' VS '+Z+' over '+X)
-                    multiPlot(data,Z,Y,X,title,foldername)
+                    title = f"{Y} VS {X} over {Z}"
+                    multiPlot(data, X, Y, Z, title, foldername)
+
+                    title = f"{Y} VS {Z} over {X}"
+                    multiPlot(data, Z, Y, X, title, foldername)
+
+                    title = f"{Y} mapped on {X} vs {Z}"
+                    heatMap(data, X, Z, Y, title, foldername)
                 except KeyError:
                     print('ERROR: INVALID KEY, SKIPPING')
                     print("KEY:",Y)
