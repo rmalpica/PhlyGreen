@@ -23,7 +23,7 @@ def runAndPlot(aL,runName,varsOfInterest={}):
 
     # plot all the flight simulations that were written to json files
     print('----------------------\nPlotting')
-    PlotJSONs.plotFlights(dirJSONs,dirPlots)
+    #PlotJSONs.plotFlights(dirJSONs,dirPlots)
 
     # begin the extra multi variable plots if said variables are passed as input
     if varsOfInterest!={}:
@@ -46,11 +46,49 @@ def runAndPlot(aL,runName,varsOfInterest={}):
 #=========================================================================================#
 # write script here using the function above
 
-aL={'ArchList'     :{'Hybrid'},
-    'MissionList'  :{'Mission-FelixFinger'},#,"HybridCruiseOnly","HybridTOClimbOnly","HybridCruiseHighAltitude","HybridTOClimbHighAltitude"},
+aL={'ArchList'     :{'Hybrid','Traditional'},
+    'MissionList'  :{'Mission-FelixFinger',"HybridCruiseOnly","HybridTOClimbOnly","HybridCruiseHighAltitude","HybridTOClimbHighAltitude"},
     'CellsList'    :{'FELIX_FINGER'},
-    'RangesList'   :np.linspace(600,2000,2),
-    'PayloadsList' :np.linspace(400,1500,2),
+    'RangesList'   :np.linspace(400,2000,3,dtype=int),
+    'PayloadsList' :{900},
+    'PhisList'     :np.linspace(5,100,3,dtype=int)/100}
+
+varsOfInterest={'In':['Range','Base Phi'], 
+                'To Plot':[ 'Fuel Mass',
+                            'Block Fuel Mass',
+                            'Structure Mass',
+                            'Powertrain Mass',
+                            'Empty Weight',
+                            'Zero Fuel Weight',
+                            'Takeoff Weight',
+                            'Wing Surface',
+                            'TakeOff Engine Shaft PP',
+                            'Climb Cruise Engine Shaft PP',
+                            'Battery Mass',
+                            'Empty Weight',
+                            'Zero Fuel Weight',
+                            'Takeoff Weight',
+                            'TakeOff Battery PP',
+                            'Climb Cruise Battery PP',
+                            'Battery Pack Energy',
+                            'Battery Pack Max Power',
+                            'Battery Pack Specific Energy',
+                            'Battery Pack Specific Power',
+                            'Battery P number',
+                            'Battery S number',
+                            'Battery Pack Charge',
+                            'Battery Pack Max Current',
+                            'Battery Pack Resistance'
+                          ]}
+                          
+runAndPlot(aL,'TESTING',varsOfInterest=varsOfInterest)
+
+
+aL={'ArchList'     :{'Hybrid'},
+    'MissionList'  :{'Mission-FelixFinger',"HybridCruiseOnly","HybridTOClimbOnly","HybridCruiseHighAltitude","HybridTOClimbHighAltitude"},
+    'CellsList'    :{'FELIX_FINGER'},
+    'RangesList'   :np.linspace(400,2000,3,dtype=int),
+    'PayloadsList' :np.linspace(400,2000,3,dtype=int),
     'PhisList'     :{0.3}}
 
 varsOfInterest={'In':['Range','Payload'], 
@@ -81,44 +119,8 @@ varsOfInterest={'In':['Range','Payload'],
                             'Battery Pack Resistance'
                           ]}
 
-runAndPlot(aL,'experiment3',varsOfInterest=varsOfInterest)
+#runAndPlot(aL,'MAP-payloadrange',varsOfInterest=varsOfInterest)
 
-aL={'ArchList'     :{'Hybrid','Traditional'},
-    'MissionList'  :{'Mission-FelixFinger',"HybridCruiseOnly","HybridTOClimbOnly","HybridCruiseHighAltitude","HybridTOClimbHighAltitude"},
-    'CellsList'    :{'FELIX_FINGER'},
-    'RangesList'   :np.linspace(600,2400,6),
-    'PayloadsList' :{900},
-    'PhisList'     :np.linspace(0.05,1,6)}
-
-varsOfInterest={'In':['Range','Base Phi'], 
-                'To Plot':[ 'Fuel Mass',
-                            'Block Fuel Mass',
-                            'Structure Mass',
-                            'Powertrain Mass',
-                            'Empty Weight',
-                            'Zero Fuel Weight',
-                            'Takeoff Weight',
-                            'Wing Surface',
-                            'TakeOff Engine Shaft PP',
-                            'Climb Cruise Engine Shaft PP',
-                            'Battery Mass',
-                            'Empty Weight',
-                            'Zero Fuel Weight',
-                            'Takeoff Weight',
-                            'TakeOff Battery PP',
-                            'Climb Cruise Battery PP',
-                            'Battery Pack Energy',
-                            'Battery Pack Max Power',
-                            'Battery Pack Specific Energy',
-                            'Battery Pack Specific Power',
-                            'Battery P number',
-                            'Battery S number',
-                            'Battery Pack Charge',
-                            'Battery Pack Max Current',
-                            'Battery Pack Resistance'
-                          ]}
-                          
-#runAndPlot(aL,'EXP-rangephi',varsOfInterest=varsOfInterest)
 
 
 

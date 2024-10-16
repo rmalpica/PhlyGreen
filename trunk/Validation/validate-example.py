@@ -2,7 +2,7 @@
 import FlightSweeps
 import PlotJSONs
 import os
-
+import numpy as np
 # This will configure run and plot everything relating to a single sweep
 # receives:
 # - argument list
@@ -51,11 +51,11 @@ def runAndPlot(aL,runName,varsOfInterest={}):
 # of pointless mission combinations at once that are unmanageable
 
 aL={'ArchList'     :{'Hybrid','Traditional'},
-    'MissionList'  :{'Mission-FelixFinger',"HybridCruiseOnly","HybridTOClimbOnly","HybridCruiseHighAltitude","HybridTOClimbHighAltitude"},
-    'CellsList'    :{'SAMSUNG_LIR18650','FELIX_FINGER'},
-    'RangesList'   :{500,1200,2000},
-    'PayloadsList' :{600,900,1400},
-    'PhisList'     :{0.3}}
+    'MissionList'  :{'Mission-FelixFinger',"HybridCruiseOnly","HybridTOClimbOnly"},
+    'CellsList'    :{'FELIX_FINGER'},
+    'RangesList'   :np.linspace(400,2000,3,dtype=int),
+    'PayloadsList' :{900},
+    'PhisList'     :np.linspace(5,100,3,dtype=int)/100}
 
 # define which values from the output json should be multiplotted,
 # and which should be considered the TWO inputs that were swept
@@ -65,9 +65,8 @@ varsOfInterest={'In':['Range','Base Phi'], # lets see how range affects the desi
                            'Wing Surface',
                            'Battery Mass',
                            'Takeoff Weight',
-                           'Climb Cruise Battery PP'
-                          ]}
+                           'Climb Cruise Battery PP']}
 # specify the list and name to use, specify a non empty varsOfInterest in order to run the extra plots
-runAndPlot(aL,'MultiMiss-rangevpayload',varsOfInterest=varsOfInterest)
+runAndPlot(aL,'EXAMPLE',varsOfInterest=varsOfInterest)
 
 
