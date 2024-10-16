@@ -2,7 +2,7 @@
 import FlightSweeps
 import PlotJSONs
 import os
-
+import numpy as np
 # This will configure run and plot everything relating to a single sweep
 # receives:
 # - argument list
@@ -51,51 +51,31 @@ def runAndPlot(aL,runName,varsOfInterest={}):
 # of pointless mission combinations at once that are unmanageable
 
 aL={'ArchList'     :{'Hybrid','Traditional'},
-    'MissionList'  :{'FelixFinger'},
-    'CellsList'    :[{'Energy':1500,'Power':6000}], # the old code doesnt support cells, needs battery energy density in watts hour per kg and power in watts per kg instead
-    'RangesList'   :{600,2100},
-    'PayloadsList' :{1200},
-    'PhisList'     :{0.1,0.3,0.5}}
+    'MissionList'  :{'Mission-FelixFinger',"HybridCruiseOnly","HybridTOClimbOnly"},
+    'CellsList'    :[{'Energy':1500,'Power':6000}],
+    'RangesList'   :np.linspace(400,2000,3,dtype=int),
+    'PayloadsList' :np.linspace(400,2000,3,dtype=int),
+    'PhisList'     :np.linspace(5,100,1,dtype=int)/100}
 
 # define which values from the output json should be multiplotted,
 # and which should be considered the TWO inputs that were swept
 # the names here are passed to the plotter so they have to be the keys found on the output json
-varsOfInterest={'In':['Range','Base Phi'], # lets see how range affects the design at different phi values
-                'To Plot':['Structure Mass',
-                           'Wing Surface',
-                           'Battery Mass',
-                           'Takeoff Weight',
-                           'Climb Cruise Battery PP'
-                          ]}
+varsOfInterest={'In':['Range','Payload'], # lets see how range affects the design at different phi values
+                'To Plot':[ 'Fuel Mass',
+                            'Block Fuel Mass',
+                            'Structure Mass',
+                            'Powertrain Mass',
+                            'Empty Weight',
+                            'Zero Fuel Weight',
+                            'Takeoff Weight',
+                            'Wing Surface',
+                            'TakeOff Engine Shaft PP',
+                            'Climb Cruise Engine Shaft PP',
+                            'Battery Mass',
+                            'Empty Weight',
+                            'Zero Fuel Weight',
+                            'Takeoff Weight',
+                            'TakeOff Battery PP',
+                            'Climb Cruise Battery PP']}
 # specify the list and name to use, specify a non empty varsOfInterest in order to run the extra plots
-runAndPlot(aL,'Sweep1',varsOfInterest=varsOfInterest)
-
-
-#################
-aL={'ArchList'     :{'Hybrid','Traditional'},
-    'MissionList'  :{'FelixFinger'},
-    'CellsList'    :[{'Energy':1500,'Power':6000}], # the old code doesnt support cells, needs battery energy density in watts hour per kg and power in watts per kg instead
-    'RangesList'   :{1800},
-    'PayloadsList' :{1200,2400},
-    'PhisList'     :{0.1,0.3,0.5}}
-
-varsOfInterest={'In':['Payload','Base Phi'], # now do different payloads instead
-                'To Plot':['Structure Mass',
-                           'Wing Surface',
-                           'Battery Mass',
-                           'Takeoff Weight',
-                           'Climb Cruise Battery PP'
-                          ]}
-
-runAndPlot(aL,'Sweep2',varsOfInterest=varsOfInterest)
-
-
-#################
-aL={'ArchList'     :{'Hybrid','Traditional'},
-    'MissionList'  :{'FelixFinger'},
-    'CellsList'    :[{'Energy':1500,'Power':6000},{'Energy':250,'Power':1000}], # the old code doesnt support cells, needs battery energy density in watts hour per kg and power in watts per kg instead
-    'RangesList'   :{600,2100},
-    'PayloadsList' :{1200,2400},
-    'PhisList'     :{0.1,0.5}}
-
-runAndPlot(aL,'Sweep3')
+runAndPlot(aL,'EXAMPLE',varsOfInterest=varsOfInterest)

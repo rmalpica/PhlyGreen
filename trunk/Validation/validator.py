@@ -49,9 +49,9 @@ def runAndPlot(aL,runName,varsOfInterest={}):
 aL={'ArchList'     :{'Hybrid','Traditional'},
     'MissionList'  :{'Mission-FelixFinger'},#,"HybridCruiseOnly","HybridTOClimbOnly","HybridCruiseHighAltitude","HybridTOClimbHighAltitude"},
     'CellsList'    :[{'Energy':1500,'Power':6000}],
-    'RangesList'   :np.linspace(400,2000,4,dtype=int),
+    'RangesList'   :np.linspace(400,2000,16,dtype=int),
     'PayloadsList' :{900},
-    'PhisList'     :np.linspace(5,100,4,dtype=int)/100}
+    'PhisList'     :np.linspace(5,100,16,dtype=int)/100}
 
 varsOfInterest={'In':['Range','Base Phi'], 
                 'To Plot':[ 'Fuel Mass',
@@ -70,15 +70,6 @@ varsOfInterest={'In':['Range','Base Phi'],
                             'Takeoff Weight',
                             'TakeOff Battery PP',
                             'Climb Cruise Battery PP',
-                            'Battery Pack Energy',
-                            'Battery Pack Max Power',
-                            'Battery Pack Specific Energy',
-                            'Battery Pack Specific Power',
-                            'Battery P number',
-                            'Battery S number',
-                            'Battery Pack Charge',
-                            'Battery Pack Max Current',
-                            'Battery Pack Resistance'
                           ]}
 
 runAndPlot(aL,'Range-v-Payload',varsOfInterest=varsOfInterest)
@@ -88,8 +79,8 @@ aL={'ArchList'     :{'Hybrid','Traditional'},
     'MissionList'  :{'Mission-FelixFinger',"HybridCruiseOnly","HybridTOClimbOnly","HybridCruiseHighAltitude","HybridTOClimbHighAltitude"},
     'CellsList'    :[{'Energy':1500,'Power':6000}],
     'RangesList'   :{1200},
-    'PayloadsList' :{600,900,1400},
-    'PhisList'     :{0.1,0.3,0.5}}
+    'PayloadsList' :np.linspace(400,1400,16,dtype=int),
+    'PhisList'     :np.linspace(5,100,16,dtype=int)/100}
 
 varsOfInterest={'In':['Range','Base Phi'], 
                 'To Plot':[ 'Fuel Mass',
@@ -119,7 +110,7 @@ varsOfInterest={'In':['Range','Base Phi'],
                             'Battery Pack Resistance'
                           ]}
                           
-#runAndPlot(aL,'Phi-v-Payload',varsOfInterest=varsOfInterest)
+runAndPlot(aL,'Phi-v-Payload',varsOfInterest=varsOfInterest)
 
 
 

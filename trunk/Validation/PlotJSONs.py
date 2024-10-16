@@ -5,7 +5,7 @@ import json
 import seaborn as sns
 import matplotlib.pyplot as plt
 import pandas as pd
-
+import multiprocessing
 
 # makes directories as needed on the script directory
 def createDir(dirname):
@@ -165,6 +165,103 @@ def heatMap(dictList,X,Y,Z,title,foldername):
     plt.close()  # Close the plot
 
 
+# = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = #
+# here begins the chatgpt code hell:
+
+# Function to process a single flight (JSON file)
+def process_flight(file, plotsDir):
+    flight = loadJSON(file)
+
+    if not flight['Converged']:  # skip unconverged files
+        print(f'\nINVALID DESIGN, SKIPPING: {file}')
+        return
+
+    # Create folder to store the plots for this flight
+    flightDir = os.path.join(plotsDir, flight['Name'])
+    os.makedirs(flightDir, exist_ok=True)
+
+    # Run the appropriate plots depending on the powerplant
+    powerplant = flight['Inputs']['Powerplant']
+    if powerplant == 'Hybrid':
+        hybridPlots(flight, flightDir)
+    elif powerplant == 'Traditional':
+        traditionalPlots(flight, flightDir)
+    else:
+        raise ValueError('Invalid powerplant')
+
+def plotFlights(directoryIN, directoryOUT):
+    # Create the output directory for plots
+    plotsDir = createDir(directoryOUT)
+
+    # Find the JSON files containing the flights
+    jsons = findJSONs(directoryIN)
+
+    # Set up multiprocessing pool
+    num_workers = multiprocessing.cpu_count()  # Use all available CPU cores
+    pool = multiprocessing.Pool(processes=num_workers)
+
+    # Process flights in parallel
+    pool.starmap(process_flight, [(file, plotsDir) for file in jsons])
+
+    # Close and join the pool
+    pool.close()
+    pool.join()
+
+# Function to process and plot for a single mission-powerplant combination
+def process_mission_powerplant(mission, powerplant, db, voi, outfolder):
+    print('++++++++++++++++++++++++++++++++++')
+    print('Mission:', mission)
+    print('Powerplant:', powerplant)
+
+    # Create folder corresponding to the mission and powerplant combo
+    foldername = os.path.join(outfolder, mission, powerplant)
+    os.makedirs(foldername, exist_ok=True)
+
+    # Use only successful designs
+    data = db[mission][powerplant]['Success']
+    X = voi['In'][0]
+    Z = voi['In'][1]
+
+    # Plot with either X or Z as the hue
+    for Y in voi['To Plot']:
+        try:
+            title = f"{Y} VS {X} over {Z}"
+            multiPlot(data, X, Y, Z, title, foldername)
+
+            title = f"{Y} VS {Z} over {X}"
+            multiPlot(data, Z, Y, X, title, foldername)
+
+            title = f"{Y} mapped on {X} vs {Z}"
+            heatMap(data, X, Z, Y, title, foldername)
+
+        except KeyError:
+            print('ERROR: INVALID KEY, SKIPPING')
+            print("KEY:", Y)
+
+def extraPlots(json, voi, outfolder):
+    print('Plotting Extras')
+    X = voi['In'][0]
+    Z = voi['In'][1]
+    db = loadJSON(json)
+
+    # Prepare list of tasks (mission, powerplant combinations)
+    tasks = []
+    for mission in db:
+        for powerplant in db[mission]:
+            tasks.append((mission, powerplant, db, voi, outfolder))
+
+    # Set up multiprocessing pool
+    num_workers = multiprocessing.cpu_count()  # Use all available CPU cores
+    pool = multiprocessing.Pool(processes=num_workers)
+
+    # Process each mission-powerplant combination in parallel
+    pool.starmap(process_mission_powerplant, tasks)
+
+    # Close and join the pool
+    pool.close()
+    pool.join()
+
+"""
 # main plots of flight data
 def plotFlights(directoryIN,directoryOUT):
 
@@ -240,4 +337,4 @@ def extraPlots(json,voi,outfolder):
                 except KeyError:
                     print('ERROR: INVALID KEY, SKIPPING')
                     print("KEY:",Y)
-                print('<==',i,'==<\n')
+                print('<==',i,'==<\n')"""

@@ -18,14 +18,8 @@ import numpy as np
 import json
 import FlightProfiles
 import WriteLog
-
-
-# function to create the output folders as a relative path to the script
-def CreateDir(dirname):
- #new relative directory
-    if not os.path.exists(outdir): # make directory if it doesnt exist already
-        os.makedirs(outdir)
-    return outdir
+import multiprocessing
+from itertools import product
 
 
 # Function for creating these global variables
@@ -44,8 +38,13 @@ def Configure(name):
 
 # function to create the output folders as a relative path to the script
 def CreateDir(name,dirname):
-    outdir = os.path.join(name, dirname) #new relative directory
-    os.makedirs(outdir, exist_ok=True)
+    path = os.path.join(name, dirname) #new relative directory
+    counter = 1
+    outdir = path
+    while os.path.exists(outdir): #append numbers to it if it already exists
+        outdir = path + str(counter)
+        counter += 1
+    os.makedirs(outdir)
     return outdir
 
 # argRange   - range in nautical miles
@@ -62,19 +61,17 @@ def CalculateFlight(argArch, argMission, argRange, argPayload, argCell, argPhi):
     argPayload = float(argPayload)
     argPhi     = float(argPhi)
     #set up some strings and prints to terminal to help organize what is going on when the code is ran
-    print("\n\n--------------------------------------------------<||\n")
-    current_date = datetime.now()
-    print(current_date.isoformat())
-    print("starting with configuration:")
-    print( argArch," Powerplant |  Mission Profile: ",argMission)
-
-    #if argArch == 'Hybrid':
-    print( argCell,"Cell Model | Phi = ",argPhi)
-
-    print("Range = ",argRange,"km | ","Payload = ",argPayload,"kg")
-    print("- - - - - - - - - - - - - - - - - - - - - - - - - -")
-    print()
-
+    out=f"""--------------------------------------------------<||
+{datetime.now().isoformat()}
+Starting with configuration:
+{argArch} Powerplant
+Mission Profile: {argMission}
+{argCell} Cell Model
+Phi = {argPhi}
+Range = {argRange}km
+Payload = {argPayload}kg
+- - - - - - - - - - - - - - - - - - - - - - - - - -\n"""
+    print(out)
     # begin by setting up the output files
     textfn = os.path.join(logs_directory, args+ "_log.txt") #txt file name
     jsonfn=os.path.join(json_directory, args+".json") #json file name
@@ -248,51 +245,44 @@ def CalculateFlight(argArch, argMission, argRange, argPayload, argCell, argPhi):
         'Converged': Converged }
     WriteLog.printJSON(dicts,jsonfn)
 
-# main loop that sweeps the parameters given
-def main(ArchList,MissionList,RangesList,PayloadsList,CellsList,PhisList):
+# = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = #
+# parallel execution stuff:
+
+# Separate function to calculate a single flight
+def calculate_single_flight(params):
+    Arch, Mission, Range, Payload, Cell, Phi = params
+    CalculateFlight(Arch, Mission, Range, Payload, Cell, Phi)
+    
+
+def main(ArchList, MissionList, RangesList, PayloadsList, CellsList, PhisList):
     print(logo)
-    # to present the user with an idea of how long this is going to take
-    iterations=len(MissionList)*len(RangesList)*len(PayloadsList)
+    
+    # Calculate total number of iterations
+    iterations = len(MissionList) * len(RangesList) * len(PayloadsList)
     if 'Hybrid' in ArchList:
-        iterations += len(MissionList)*len(RangesList)*len(PayloadsList)*len(CellsList)*len(PhisList) 
-    i=0
-    #start nested loops that execute the parameter sweep
+        iterations += len(MissionList) * len(RangesList) * len(PayloadsList) * len(CellsList) * len(PhisList)
+
+    param_list = []
     for Arch in ArchList:
         for Mission in MissionList:
             for Range in RangesList:
                 for Payload in PayloadsList:
-                    if Arch == 'Hybrid': #only sweep the battery parameters if the battery is actually used
-                        for Cell in CellsList:
-                            for Phi in PhisList:
-                                timestart = time.time() #for execution timing purposes
-                                CalculateFlight(Arch,Mission,Range,Payload,Cell,Phi)
-                                print("Done. Took %5.2f seconds" % (time.time()-timestart))
-                                i+=1
-                                print("Iteration ",i," of ",iterations)
+                    if Arch == 'Hybrid':
+                            for Cell in CellsList:
+                                for Phi in PhisList:
+                                    #param_list.extend(product([Arch], [Mission], [Range], [Payload], CellsList, PhisList))
+                                    param_list.append((Arch, Mission, Range, Payload, Cell, Phi))
                     else:
-                        Cell={'Energy':1500,'Power':6000} # TODO update the code so that it runs with None as inputs for
-                        Phi=0.1             # cell and phi if using traditional architecture
-                        timestart = time.time() #for execution timing purposes
-                        CalculateFlight(Arch,Mission,Range,Payload,Cell,Phi)
-                        print("Done. Took %5.2f seconds" % (time.time()-timestart))
-                        i+=1
-                        print("Iteration ",i," of ",iterations)
+                        # Assign dummy values for Cell and Phi when not using Hybrid
+                        param_list.append((Arch, Mission, Range, Payload, {'Energy':1500,'Power':6000}, 0.1))
 
-#full sized list for actually running this 
-#ArchList     ={'Hybrid','Traditional'}
-#MissionList  ={'FelixFinger'} #'ATR_Flight' - reconfigure and add later
-#CellsList    ={'SAMSUNG_LIR18650','FELIX_FINGER'}
-#PhisList     ={ 0.1, 0.2, 0.3, 0.5}
-#RangesList   ={396, 1280 , 2361}
-#PayloadsList ={550, 1330, 1960}
+    # Multiprocessing setup
+    num_workers = multiprocessing.cpu_count()  # Use all available CPU cores
+    pool = multiprocessing.Pool(processes=num_workers)
 
-# smaller list just for testing
+    # Execute in parallel
+    results = pool.map(calculate_single_flight, param_list)
 
-
-# actually run the function if the script is called directly
-# otherwise a separate script can be made that only contains the lists and then calls the main function
-# which could be easier for a user to define inputs that way
-
-#main(ArchList,MissionList,RangesList,PayloadsList,CellsList,PhisList)
-
-# a script could also be made to independently call tryFlight() to do a parametric sweep in any other way
+    # Close the pool
+    pool.close()
+    pool.join()
