@@ -51,22 +51,62 @@ def runAndPlot(aL,runName,varsOfInterest={}):
 # of pointless mission combinations at once that are unmanageable
 
 aL={'ArchList'     :{'Hybrid','Traditional'},
-    'MissionList'  :{'Mission-FelixFinger',"HybridCruiseOnly","HybridTOClimbOnly"},
+    'MissionList'  :{'Mission-FelixFinger'},# "HybridCruiseOnly","HybridTOClimbOnly"
     'CellsList'    :{'FELIX_FINGER'},
-    'RangesList'   :np.linspace(400,2000,3,dtype=int),
-    'PayloadsList' :{900},
-    'PhisList'     :np.linspace(5,100,3,dtype=int)/100}
+    'RangesList'   :np.linspace(400,2000,21,dtype=int),
+    'PayloadsList' :{1200},
+    'PhisList'     :np.linspace(5,100,21,dtype=int)/100}
 
 # define which values from the output json should be multiplotted,
 # and which should be considered the TWO inputs that were swept
 # the names here are passed to the plotter so they have to be the keys found on the output json
-varsOfInterest={'In':['Range','Base Phi'], # lets see how range affects the design at different phi values
-                'To Plot':['Structure Mass',
-                           'Wing Surface',
-                           'Battery Mass',
-                           'Takeoff Weight',
-                           'Climb Cruise Battery PP']}
+varsOfInterest={'In':['Range','Base Phi'], 
+                'To Plot':[ 'Fuel Mass',
+                            'Block Fuel Mass',
+                            'Structure Mass',
+                            'Powertrain Mass',
+                            'Empty Weight',
+                            'Zero Fuel Weight',
+                            'Takeoff Weight',
+                            'Wing Surface',
+                            'TakeOff Engine Shaft PP',
+                            'Climb Cruise Engine Shaft PP',
+                            'Battery Mass',
+                            'Takeoff Weight',
+                            'TakeOff Battery PP',
+                            'Climb Cruise Battery PP',
+                          ]}
+
 # specify the list and name to use, specify a non empty varsOfInterest in order to run the extra plots
-runAndPlot(aL,'EXAMPLE',varsOfInterest=varsOfInterest)
+runAndPlot(aL,'ForThesis-phi',varsOfInterest=varsOfInterest)
 
 
+aL={'ArchList'     :{'Hybrid','Traditional'},
+    'MissionList'  :{'Mission-FelixFinger'},# "HybridCruiseOnly","HybridTOClimbOnly"
+    'CellsList'    :{'FELIX_FINGER'},
+    'RangesList'   :np.linspace(400,2000,21,dtype=int),
+    'PayloadsList' :np.linspace(400,2000,21,dtype=int),
+    'PhisList'     :{0.2}}
+
+# define which values from the output json should be multiplotted,
+# and which should be considered the TWO inputs that were swept
+# the names here are passed to the plotter so they have to be the keys found on the output json
+varsOfInterest={'In':['Range','Payload'], 
+                'To Plot':[ 'Fuel Mass',
+                            'Block Fuel Mass',
+                            'Structure Mass',
+                            'Powertrain Mass',
+                            'Empty Weight',
+                            'Zero Fuel Weight',
+                            'Takeoff Weight',
+                            'Wing Surface',
+                            'TakeOff Engine Shaft PP',
+                            'Climb Cruise Engine Shaft PP',
+                            'Battery Mass',
+                            'Takeoff Weight',
+                            'TakeOff Battery PP',
+                            'Climb Cruise Battery PP',
+                          ]}
+
+# specify the list and name to use, specify a non empty varsOfInterest in order to run the extra plots
+runAndPlot(aL,'ForThesis-payload',varsOfInterest=varsOfInterest)
