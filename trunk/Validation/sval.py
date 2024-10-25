@@ -25,7 +25,7 @@ def runAndPlot(aL,runName,varsOfInterest={}):
 
     # plot all the flight simulations that were written to json files
     print('----------------------\nPlotting')
-    #PlotJSONs.plotFlights(dirJSONs,dirPlots)
+    PlotJSONs.plotFlights(dirJSONs,dirPlots)
 
     # begin the extra multi variable plots if said variables are passed as input
     if varsOfInterest!={}:

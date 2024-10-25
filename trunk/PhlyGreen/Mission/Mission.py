@@ -160,19 +160,6 @@ class Mission:
             return PPoWTO * WTO
 
 
-        def model_simplified(t,y): #simplified model for initializing the calculations with a known upper bound on requirements
-
-            Beta = y[2] #aircraft mass fraction
-
-            Ppropulsive = PowerPropulsive(Beta,t)
-            PRatio = self.aircraft.powertrain.Hybrid(self.aircraft.mission.profile.SuppliedPowerRatio(t),self.profile.Altitude(t),self.profile.Velocity(t),Ppropulsive) #takes in all the mission segments and finds the required power ratio for the current time of the mission
-
-            dEFdt = Ppropulsive * PRatio[0] #fuel power output
-            dEBatdt = Ppropulsive * PRatio[5] #electric power required for the electric motors
-            dbetadt = - dEFdt/(self.ef*self.WTO) #change in mass due to fuel consumption
-            return [dEFdt,dEBatdt,dbetadt]
-
-
         def model(t,y):
             if not self.valid_solution:
                 return [0,0,0,0]
@@ -278,7 +265,9 @@ class Mission:
                                                   self.outBatVoltOC,
                                                   self.outBatVolt,
                                                   self.outBatCurr])
-
+                    self.Ef = sol.y[0]
+                    self.EBat = sol.y[1]
+                    self.Beta = sol.y[2]
                     y0 = [sol.y[0][-1],sol.y[1][-1],sol.y[2][-1],sol.y[3][-1]]
                     # watch out: the simplified model returns battery energy in joules,
                     # but the complete model returns battery CHARGE in coulombs instead
@@ -301,7 +290,6 @@ class Mission:
                                                                       self.aircraft.constraint.DISA,
                                                                       self.aircraft.constraint.TakeOffConstraints['Speed'],
                                                                       self.aircraft.constraint.TakeOffConstraints['Speed Type'])
-
         #hybrid power ratio for takeoff
         PRatio = self.aircraft.powertrain.Hybrid(self.aircraft.mission.profile.SPW[0][0],
                                                  self.aircraft.constraint.TakeOffConstraints['Altitude'],
@@ -311,94 +299,58 @@ class Mission:
         self.TO_PP = Ppropulsive_TO * PRatio[1]   #combustion engine power during takeoff
         self.TO_PBat = Ppropulsive_TO * PRatio[5] #electric motor power during takeoff
 
-
-#initialize with simplified calculations for worst case scenario conditions
-#this initialization does not concern itself with validating a battery size or calculating its behavior
-#it simply finds the max power and energy required for the battery during the flight
-#and then uses that value to find the worst case scenario for the battery dimension
-#this is faster than trying to iteratively validate larger and larger batteries until one works
-
-        self.Max_PBat = -1
-        self.Max_PEng = -1
-
-        y0 = [0,0,self.beta0] #integration starting point for the battery and fuel energy as well as mass fraction
-        rtol = 1e-5 #integrator tolerance
-        method= 'BDF'
-
-        # integrate the flight sequentially
-        self.integral_solution = []
-        times = np.append(self.profile.Breaks,self.profile.MissionTime2)
-        for i in range(len(times)-1):
-            sol = integrate.solve_ivp(model_simplified,[times[i], times[i+1]], y0, method=method, rtol=rtol) 
-            self.integral_solution.append(sol) 
-            y0 = [sol.y[0][-1],sol.y[1][-1],sol.y[2][-1],]
-
-
-        # compute peak Propulsive power along mission
-        self.Ef = sol.y[0]
-        self.EBat = sol.y[1]
-        self.Beta = sol.y[2]
-        times = []
-        beta = []
-        for array in self.integral_solution:
-            times = np.concatenate([times, array.t])
-            beta = np.concatenate([beta, array.y[2]])
-
-        # get the propulsive power along the mission
-        PP = np.array([WTO * self.aircraft.performance.PoWTO(
-                                                             self.aircraft.DesignWTOoS,beta[i],
-                                                             self.profile.PowerExcess(times[i]),
-                                                             1,
-                                                             self.profile.Altitude(times[i]),
-                                                             self.DISA,self.profile.Velocity(times[i]),
-                                                             'TAS'
-                                                            ) for i in range(len(times))])
-        # get the power ratio along the mission
-        PRatio = np.array([self.aircraft.powertrain.Hybrid(
-                                                           self.aircraft.mission.profile.SuppliedPowerRatio(times[i]),
-                                                           self.profile.Altitude(times[i]),
-                                                           self.profile.Velocity(times[i]), PP[i]
-                                                          ) for i in range(len(times))])
-
-        # find maximum power for both the electrical and thermal powerplants
-        self.Max_PEng = np.max(np.multiply(PP,PRatio[:,1]))
-        self.Max_PBat = np.max(np.multiply(PP,PRatio[:,5]))
-
-        # find the battery P number for the worst case scenario given by the initializing integration
-        self.flight_P_number = self.aircraft.battery.Pwr_2_P_num(0,self.Max_PBat) #finds the P number for flight at zero SOC
-        self.TO_P_number     = self.aircraft.battery.Pwr_2_P_num(1,self.TO_PBat)  #finds the P number for takeoff power
-        self.energy_P_number = self.aircraft.battery.Nrg_2_P_num(self.EBat[-1])   #finds the P number for the flight energy // TODO figure out why this is usually estimated too low
-
-        #initializes the calculation using the largest expected P number, picks the maximum value, rounds up
-        expected_P_n_max = math.ceil(max([
-                                          self.TO_P_number,
-                                          self.flight_P_number,
-                                          self.energy_P_number
-                                         ])) 
-
-        #initializing variables before the loop
+        # as the brent search converges the binary search algorithm needs to do more pointless iterations to reach the same value
+        # the old method used a simplified model to initialize a first guess of the p number
+        # this proved slow and cumbersome, so i came up with a new method that uses the previous result to initialize the search
+        # it grabs the n value from the previous iteration and tries to find an nmax and nmin from there 
         optimal = False
-        n_max = expected_P_n_max
-        n_min = 0
+        try:
+            n_max = self.optimal_n
+            n_min = self.optimal_n-1
+            #print(f'using {n_max} and {n_min} from optimal {self.optimal_n}')
+        except Exception as err:
+            #print(f'optimal not found because of:\n {err}')
+            n_max = 128  # hardcoding a value that is anecdotally known to be ok for a first guess
+            n_min = 0
 
-        #used as a quick fix for the initial guess being undersized on some cases for some reason
+        #lower the min p number until its valid
+        while all(evaluate_P_nr(n_min)): 
+            #print("n_min overestimated:",n_min, "; halving.")
+            n_max = n_min   #if the n_min guess is too large it can be the new n_max to save iterations since it has already been tried
+            n_min = math.floor(n_min/2) #half n_min until it fails
+
+        #raise the max p number until its valid
         while not all(evaluate_P_nr(n_max)): 
-            #print("n_max underestimated:",n_max, "; increasing.")
+            #print("n_max underestimated:",n_max, "; doubling.")
             n_min = n_max   #if the nmax guess is too small it can be the new nmin to save iterations since it has already been tried
-            n_max = n_max*2 #increase n_max until it works
+            n_max = n_max*2 #double n_max until it works
+
+        # if nmax and nmin are just 1 apart then the optimal n is nmax
+        # all checks can be skipped and we jump right into evaluating n to configure the flight
+        # print(f"nmax ({n_max}) validity is {all(evaluate_P_nr(n_max))} and nmin ({n_min}) validity is {all(evaluate_P_nr(n_min))}") # debug only
+        if n_max - n_min == 1: 
+            optimal = True
+            n = n_max
+            output = evaluate_P_nr(n)
+            valid_result = all(output)
+            if not valid_result:
+                raise Exception("Impossible n value somehow")
+            print("Optimal P: ",n)
+            self.optimal_n = n
 
         n=math.ceil((n_max+n_min)/2) #start from the middle to make it one iteration shorter
-        j=0
+        #j=0
 
         #find optimal P number using bisection search
         while not optimal:
-            j=j+1
+            #j=j+1
             output = evaluate_P_nr(n)
             valid_result = all(output)
             # print("[iter",j,"] [P",n,"] [min",n_min,"] [max",n_max,"] valid?",valid_result) #uncomment for debug
 
             if valid_result and (n-n_min)==1: #n is optimal
                 print("Optimal P: ",n)
+                self.optimal_n = n
                 optimal = True
 
             elif valid_result:                #n is too big
@@ -410,5 +362,5 @@ class Mission:
                 self.driving_constraints=output
                 n_min=n
                 n=math.ceil((n_max+n_min)/2)
-
+        
         return self.Ef[-1], self.EBat[-1]
