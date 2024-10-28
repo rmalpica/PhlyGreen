@@ -159,13 +159,12 @@ class Mission:
           
             return PPoWTO * WTO
 
-
         def model(t,y):
             if not self.valid_solution:
                 return [0,0,0,0]
 
             #battery state of charge
-            SOC = y[3]
+            SOC = 1-y[3]/self.aircraft.battery.pack_charge
             if (SOC<self.SOC_min):
                 self.constraint_low_SOC = False
                 self.valid_solution = False
@@ -181,15 +180,15 @@ class Mission:
 
             PElectric = Ppropulsive * PRatio[5] #propulsive power required for the electric motors
 
-            #open circuit voltage of the battery at the current SOC
+            '''#open circuit voltage of the battery at the current SOC
             BatVoltOC = self.aircraft.battery.SOC_2_OC_Voltage(SOC)
             if (BatVoltOC < self.aircraft.battery.pack_Vmin):
                 self.constraint_low_voltage = False
                 self.valid_solution = False
-                return [0,0,0,0]
+                return [0,0,0,0]'''
 
             #current drawn to meet power demands
-            BatVolt, BatCurr  = self.aircraft.battery.Power_2_V_A(SOC, PElectric) #convert output power to volts and amps
+            BatVolt, BatCurr  = self.aircraft.battery.Power_2_V_A(y[3], PElectric) #convert output power to volts and amps
             if (BatCurr == None):
                 self.constraint_underpowered = False
                 self.valid_solution = False
@@ -200,20 +199,26 @@ class Mission:
                 return [0,0,0,0]
             if (BatVolt < self.aircraft.battery.controller_Vmin):
                 self.constraint_low_voltage = False
+                print("failing 3")
+                self.valid_solution = False
+                return [0,0,0,0]
+            if (BatVolt < self.aircraft.battery.pack_Vmin):
+                self.constraint_low_voltage = False
+                print("failing 4")
                 self.valid_solution = False
                 return [0,0,0,0]
 
-            self.outBatVoltOC = BatVoltOC
+            #self.outBatVoltOC = BatVoltOC
             self.outBatVolt = BatVolt
             self.outBatCurr = BatCurr
 
-            dSOCdt = -BatCurr/self.aircraft.battery.pack_charge #gives the rate of change of SOC
-            dEdt_bat = BatVoltOC * BatCurr #gives the watts spent by the battery
-            return [dEFdt,dEdt_bat,dbetadt,dSOCdt]
+            #dSOCdt = -BatCurr/self.aircraft.battery.pack_charge #gives the rate of change of SOC
+            dEdt_bat = BatVolt * BatCurr #gives the watts spent by the battery
+            return [dEFdt,dEdt_bat,dbetadt,BatCurr]
 
 
         def evaluate_P_nr(P_number):
-
+            print(f"pnumber {P_number}")
             #no maths needed to know nothing will work without a battery
             if P_number == 0:
                 return [False,False,False,False,False]
@@ -228,9 +233,11 @@ class Mission:
             self.aircraft.battery.Configure(P_number) #changes the configuration every cycle
             self.TO_Voltage , self.TO_current = self.aircraft.battery.Power_2_V_A(1,self.TO_PBat)
             if (self.TO_Voltage == None):
+                print("failing 1")
                 self.constraint_low_voltage = False
             elif (self.TO_Voltage < self.aircraft.battery.controller_Vmin):
                 self.constraint_low_voltage = False
+                print("failing 2")
             elif (self.TO_current == None):
                 self.constraint_TO_underpowered = False
             elif (self.aircraft.battery.pack_current < self.TO_current ):
@@ -262,7 +269,7 @@ class Mission:
 
                         self.CurrentvsTime.append([sol.t[k],self.outBatCurr])
                         self.plottingVars.append([sol.t[k],
-                                                  self.outBatVoltOC,
+                                                  self.outBatVolt,
                                                   self.outBatVolt,
                                                   self.outBatCurr])
                     self.Ef = sol.y[0]
@@ -321,6 +328,7 @@ class Mission:
 
         #raise the max p number until its valid
         while not all(evaluate_P_nr(n_max)): 
+            print(evaluate_P_nr(n_max))
             #print("n_max underestimated:",n_max, "; doubling.")
             n_min = n_max   #if the nmax guess is too small it can be the new nmin to save iterations since it has already been tried
             n_max = n_max*2 #double n_max until it works

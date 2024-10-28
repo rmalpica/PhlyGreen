@@ -147,12 +147,14 @@ Payload = {argPayload}kg
 
     #run the actual maths that configures the aircraft
     myaircraft.constraint.FindDesignPoint()
-    try:
+    '''try:
         Converged = True
         myaircraft.weight.WeightEstimation()
-    except:
-        Converged = False
-
+    except Exception as err:
+        print(err)
+        Converged = False'''
+    Converged = True
+    myaircraft.weight.WeightEstimation()
     # only run the output calculations if the calculation converged
     if Converged:
         #do the battery heating calculations if the aircraft is hybrid

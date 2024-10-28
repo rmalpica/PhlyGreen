@@ -157,6 +157,12 @@ class Battery:
         self.cell_radius = self.cell_model['Cell Radius']
         self.cell_height = self.cell_model['Cell Height']
 
+        self.cell_polarization_constant = self.cell_model['Polarization Ctt']
+        self.cell_exponential_amplitude = self.cell_model['Exp Amplitude']
+        self.cell_exponential_time_constant = self.cell_model['Exp Time constant']
+        self.cell_voltage_constant = self.cell_model['Voltage Constant']
+
+
         if not (self.cell_Vmax > self.cell_Vnom and self.cell_Vnom > self.cell_Vmin):
             raise ValueError("Illegal cell voltages: Vmax must be greater than Vnom which must be greater than Vmin")
 
@@ -171,9 +177,6 @@ class Battery:
         self.cell_heat_capacity= 1130 #joule kelvin kg
 
 
-
-
-
 #determine battery configuration
     #must receive the number of cells in parallel
     def Configure(self, parallel_cells):
@@ -184,6 +187,12 @@ class Battery:
         self.pack_charge = self.P_number * self.cell_charge
         self.pack_energy = self.cells_total * self.cell_energy
         self.pack_resistance = self.cell_resistance * self.S_number / self.P_number
+
+        self.pack_polarization_constant     = self.cell_polarization_constant * self.S_number / self.P_number
+        self.pack_exponential_amplitude     = self.cell_exponential_amplitude * self.S_number
+        self.pack_exponential_time_constant = self.cell_exponential_time_constant * self.P_number
+        self.pack_voltage_constant          = self.cell_voltage_constant * self.S_number
+
         self.pack_current = self.cell_current * self.P_number
         self.pack_Vmax = self.cell_Vmax * self.S_number
         self.pack_Vmin = self.cell_Vmin * self.S_number
@@ -202,24 +211,82 @@ class Battery:
         self.stack_width = self.cell_radius * (2 + np.sqrt(3))
         self.pack_volume = self.cell_height * self.stack_width * self.stack_length
 
-        self.pack_config='S'+str(self.S_number)+' P'+str(self.P_number)
-        return ()
+        self.pack_config=f'S{self.S_number} P{self.P_number}'
 
     #calculate the SOC from the charge spent so far || unused
     #def Energy_2_SOC(self, C):
     #    SOC = 1-C/self.pack_energy #single line definition like this
     #    return SOC
 
-    # convert SOC to open circuit voltage 
+    def Nrg_n_Curr_2_Volt(self, it, i):
+        '''Converts the current being drawn + the current
+        spent so far into an output voltage'''
+        E0 = self.pack_voltage_constant
+        R  = self.pack_resistance
+        A  = self.pack_exponential_amplitude
+        B  = self.pack_exponential_time_constant
+        K  = self.pack_polarization_constant
+        Q  = self.pack_charge
+
+        return (E0 
+                 -i*R
+                 -i*K*(Q/(Q-it)) 
+                 -it*K*(Q/(Q-it)) 
+                 +A*np.exp(-B * it))
+
+
+    """# convert SOC to open circuit voltage 
     # possibly expand to include the exponential zones?
     def SOC_2_OC_Voltage(self, SOC):
         #Cell_U_oc=(-0.7*SOC + 3.7) #linear variation of open circuit voltage with SOC, change it to use parameters of the battery instead of being hardcoded
         Cell_U_oc=( 3.2 + 0.8*SOC )
         Pack_U_oc = Cell_U_oc * self.S_number
-        return Pack_U_oc
+        return Pack_U_oc"""
+
+
+    def Power_2_V_A(self, it, P):
+        '''Receives: 
+              it - charge spent from the battery over time, the integral of the current
+              P  - power demanded from the battery
+           Returns:
+              U_out - voltage at the battery terminals
+              I_out - current output from the battery
+              '''
+
+        if P == 0: #skips all the math if power is zero
+            I_out = 0
+            U_out = self.Nrg_n_Curr_2_Volt( it, I_out)
+
+        else:
+            ''' V = E0 - i*R - i*K*(Q/(Q-it)) - it*K*(Q/(Q-it)) + A*exp(-B * it)
+                V = E0 - I*R - I*Qr - it*Qr + ee <- with substitutions to make shorter
+                P = V*I = E0*I - I^2*R - I^2*Qr - I*it*Qr + I*ee 
+                P = I^2 *(-R-Qr) + I *(E0+ee-it*Qr)
+                quadratic solve: 
+                a*I^2 + b*I - P = 0
+                '''
+            E0 = self.pack_voltage_constant
+            R  = self.pack_resistance
+            A  = self.pack_exponential_amplitude
+            B  = self.pack_exponential_time_constant
+            K  = self.pack_polarization_constant
+            Q  = self.pack_charge
+            Qr = K*Q/(Q-it)
+            ee = A*np.exp(-B * it)
+            a = (-R-Qr)
+            b = (E0+ee-it*Qr)
+            c = -P
+            try:
+                I_out = (-b+math.sqrt(b**2-4*a*c))/(2*a) # just the quadratic formula
+                U_out = self.Nrg_n_Curr_2_Volt(it, I_out)
+            except Exception as err:
+                print(err)
+                I_out = None
+                U_out = None
+        return U_out, I_out
 
     #Calculates the open circuit voltage and current to enable calculating real power drain from the battery in function of useful output power. U_oc is the open circuit voltage, U_out is the measured battery output voltage. if no valid current exists, returns none
-    def Power_2_V_A(self, SOC, Power_out):
+    def old_Power_2_V_A(self, SOC, Power_out):
         if Power_out == 0:
             I_out = 0
             U_out = self.SOC_2_OC_Voltage(SOC)
@@ -234,41 +301,6 @@ class Battery:
                 U_out = (U_oc + math.sqrt(a))/2 #from the math solution of P_out = U_out * I_out
                 I_out = Power_out/U_out
         return U_out , I_out 
-
-    #find the number of cells required to supply the requested power at the current SOC
-    def Pwr_2_P_num(self, SOC, Power_out):
-        if Power_out == 0: #no maths needed if there is no power being drawn
-            return 0
-        U_oc = self.SOC_2_OC_Voltage(SOC) #open circuit pack voltage
-        valid = False       #initializing loop
-        P_number = max(     #initializing with minimum possible P number
-                        math.floor(4 * Power_out * self.cell_resistance * self.S_number / U_oc**2),
-                        math.ceil(self.cell_current*U_oc / Power_out)
-                        )
-
-        while not valid:
-            Resistance = self.cell_resistance * self.S_number / P_number   #calculate equivalent pack R
-            a = U_oc**2 - 4 * Power_out * Resistance #quadratic formula parameter, if its negative then the sqrt will be imaginary, so it just skips the maths in that case
-            if a >= 0:
-                U_out = (U_oc + math.sqrt(a))/2     #find actual output voltage
-                #I_out = (U_oc - U_out)/Resistance  # this is wrong, i dont want the current output that dissipates the power at the internal R, i want the current that produces the Pout at Vout
-                I_out = Power_out/U_out    #find current output needed to produce the power after the internal R voltage dropout
-                if (I_out < P_number * self.cell_current): #if the current P number is enough to supply the Iout then exit the loop
-                    valid = True
-                else:
-                    P_number = P_number+1
-            else:
-                P_number = P_number+1
-        return P_number
-
-    #find the number of cells in parallel required to obtain the total energy necessary assuming the number of cells in series is known
-    def Nrg_2_P_num(self, Energy_out):
-        if Energy_out==0:
-            return 0
-        total_cells = math.ceil(Energy_out/self.cell_energy) 
-        energy_P_number = math.ceil(total_cells/self.S_number)
-        return energy_P_number
-
 
 
 # /->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/
