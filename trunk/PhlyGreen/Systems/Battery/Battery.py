@@ -283,6 +283,7 @@ class Battery:
                 print(err)
                 I_out = None
                 U_out = None
+        print(U_out, I_out)
         return U_out, I_out
 
     #Calculates the open circuit voltage and current to enable calculating real power drain from the battery in function of useful output power. U_oc is the open circuit voltage, U_out is the measured battery output voltage. if no valid current exists, returns none
