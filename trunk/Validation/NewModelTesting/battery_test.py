@@ -95,12 +95,12 @@ class Battery:
     def Nrg_n_Curr_2_Volt(self, it, i):
         '''Converts the current being drawn + the current
         spent so far into an output voltage'''
-        E0 = self.cell_voltage_constant
-        R  = self.cell_resistance
-        A  = self.cell_exponential_amplitude
-        B  = self.cell_exponential_time_constant
-        K  = self.cell_polarization_constant
-        Q  = self.cell_charge
+        E0 = self.pack_voltage_constant
+        R  = self.pack_resistance
+        A  = self.pack_exponential_amplitude
+        B  = self.pack_exponential_time_constant
+        K  = self.pack_polarization_constant
+        Q  = self.pack_charge
 
         V = E0 -i*K*(Q/(Q-it)) -it*K*(Q/(Q-it)) +A*np.exp(-B * it) -i*R
         return V
@@ -126,12 +126,12 @@ class Battery:
                 quadratic solve: 
                 a*I^2 + b*I - P = 0
                 '''
-            E0 = self.cell_voltage_constant
-            R  = self.cell_resistance
-            A  = self.cell_exponential_amplitude
-            B  = self.cell_exponential_time_constant
-            K  = self.cell_polarization_constant
-            Q  = self.cell_charge
+            E0 = self.pack_voltage_constant
+            R  = self.pack_resistance
+            A  = self.pack_exponential_amplitude
+            B  = self.pack_exponential_time_constant
+            K  = self.pack_polarization_constant
+            Q  = self.pack_charge
 
             it = it/self.P_number
             Qr = K*Q/(Q-it)
@@ -141,8 +141,7 @@ class Battery:
             c = -P/(self.P_number*self.S_number)
             try:
                 I_out = (-b+math.sqrt(b**2-4*a*c))/(2*a)  # just the quadratic formula
-                U_out = self.Nrg_n_Curr_2_Volt(it, I_out) *self.S_number
-                I_out = I_out *self.P_number
+                U_out = self.Nrg_n_Curr_2_Volt(it, I_out) 
             except Exception as err:
                 print(err)
                 I_out = None
@@ -157,11 +156,11 @@ class Mission:
         self.battery = mybattery
 
     def modelP(self,t,y):
-
+        '''constant power'''
         #battery state of charge
         SOC = 1-y[0]/self.battery.pack_charge
 
-        PElectric = 1
+        PElectric = 6
         #current drawn to meet power demands
         BatVolt, BatCurr  = self.battery.Power_2_V_A(y[0], PElectric) #convert output power to volts and amps
         BatVolt = max(0,BatVolt)
@@ -172,10 +171,10 @@ class Mission:
         return [BatCurr]
 
     def modelC(self,t,y):
-        
+        '''constant current'''
         #battery state of charge
         SOC = 1-y[0]/self.battery.pack_charge
-        BatCurr = 0.2
+        BatCurr = 0.3
         #current drawn to meet power demands
         
         BatVolt  = self.battery.Nrg_n_Curr_2_Volt(y[0], BatCurr) #convert output power to volts and amps
@@ -192,7 +191,7 @@ class Mission:
 
         self.battery.Configure(P_n,S_n)
         self.integral_solution = []
-        minutes = 230
+        minutes = 350
         times = range(0,minutes*60,minutes)
 
         
@@ -201,7 +200,7 @@ class Mission:
         method= 'BDF'
         y0 = [0] #initial spent charge
         for i in range(len(times)-1):
-            sol = integrate.solve_ivp(self.modelC,[times[i], times[i+1]], y0, method=method, rtol=rtol) #"model" returns d
+            sol = integrate.solve_ivp(self.modelC,[times[i], times[i+1]], y0, method=method, rtol=rtol)
             self.integral_solution.append(sol)
             for k in range(len(sol.t)):
                 yy0 = [sol.y[0][k]]
@@ -219,7 +218,7 @@ class Mission:
         method= 'BDF'
         y0 = [0] #initial spent charge
         for i in range(len(times)-1):
-            sol = integrate.solve_ivp(self.modelP,[times[i], times[i+1]], y0, method=method, rtol=rtol) #"model" returns d
+            sol = integrate.solve_ivp(self.modelP,[times[i], times[i+1]], y0, method=method, rtol=rtol)
             self.integral_solution.append(sol)
             for k in range(len(sol.t)):
                 yy0 = [sol.y[0][k]]
@@ -238,7 +237,7 @@ mybat = Battery()
 mybat.SetInput()
 mymiss = Mission(mybat)
 
-mymiss.evaluate(1,1)
+mymiss.evaluate(1,3)
 aC=mymiss.plottingVarsC
 aP=mymiss.plottingVarsP
 #for k in range(len(aC)):

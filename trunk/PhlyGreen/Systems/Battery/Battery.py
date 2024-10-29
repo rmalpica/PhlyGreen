@@ -157,15 +157,16 @@ class Battery:
         self.cell_radius = self.cell_model['Cell Radius']
         self.cell_height = self.cell_model['Cell Height']
 
-        self.cell_polarization_constant = self.cell_model['Polarization Ctt']
+        self.cell_polarization_constant = self.cell_model['Polarization Ctt']/3600
         self.cell_exponential_amplitude = self.cell_model['Exp Amplitude']
-        self.cell_exponential_time_constant = self.cell_model['Exp Time constant']
+        self.cell_exponential_time_constant = self.cell_model['Exp Time constant']/3600
         self.cell_voltage_constant = self.cell_model['Voltage Constant']
 
 
         if not (self.cell_Vmax > self.cell_Vnom and self.cell_Vnom > self.cell_Vmin):
             raise ValueError("Illegal cell voltages: Vmax must be greater than Vnom which must be greater than Vmin")
 
+        self.cell_Vmax = self.cell_exponential_amplitude + self.cell_voltage_constant
         self.cell_charge = 3600*self.cell_capacity #convert the capacity from Ah to Coulomb to keep everything SI
         self.cell_energy = self.cell_charge*self.cell_Vnom # cell capacity in joules
         self.S_number = math.ceil(self.controller_Vmax/self.cell_Vmax) #number of cells in series to achieve desired voltage. max voltage is preferred as it minimizes losses due to lower current being needed for a larger portion of the flight
@@ -283,7 +284,7 @@ class Battery:
                 print(err)
                 I_out = None
                 U_out = None
-        print(U_out, I_out)
+        #print(U_out, I_out)
         return U_out, I_out
 
     #Calculates the open circuit voltage and current to enable calculating real power drain from the battery in function of useful output power. U_oc is the open circuit voltage, U_out is the measured battery output voltage. if no valid current exists, returns none

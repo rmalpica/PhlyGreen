@@ -322,14 +322,14 @@ class Mission:
 
         #lower the min p number until its valid
         while all(evaluate_P_nr(n_min)): 
-            #print("n_min overestimated:",n_min, "; halving.")
+            print("n_min overestimated:",n_min, "; halving.")
             n_max = n_min   #if the n_min guess is too large it can be the new n_max to save iterations since it has already been tried
             n_min = math.floor(n_min/2) #half n_min until it fails
 
         #raise the max p number until its valid
         while not all(evaluate_P_nr(n_max)): 
-            print(evaluate_P_nr(n_max))
-            #print("n_max underestimated:",n_max, "; doubling.")
+            #print(evaluate_P_nr(n_max))
+            print("n_max underestimated:",n_max, "; doubling.")
             n_min = n_max   #if the nmax guess is too small it can be the new nmin to save iterations since it has already been tried
             n_max = n_max*2 #double n_max until it works
 
