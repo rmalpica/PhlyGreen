@@ -169,7 +169,7 @@ class Battery:
         self.cell_Vmax = self.cell_exponential_amplitude + self.cell_voltage_constant
         self.cell_charge = 3600*self.cell_capacity #convert the capacity from Ah to Coulomb to keep everything SI
         self.cell_energy = self.cell_charge*self.cell_Vnom # cell capacity in joules
-        self.S_number = math.ceil(self.controller_Vmax/self.cell_Vmax) #number of cells in series to achieve desired voltage. max voltage is preferred as it minimizes losses due to lower current being needed for a larger portion of the flight
+        self.S_number = math.floor(self.controller_Vmax/self.cell_Vmax) #number of cells in series to achieve desired voltage. max voltage is preferred as it minimizes losses due to lower current being needed for a larger portion of the flight
         ####################################################################
         ####################################################################
         ### NEEDS TO COME FROM AN INPUT SOMEWHERE, SHOULDNT BE HARDCODED ###
@@ -189,18 +189,22 @@ class Battery:
         self.pack_energy = self.cells_total * self.cell_energy
         self.pack_resistance = self.cell_resistance * self.S_number / self.P_number
 
+        # empirical constants scaled for the whole pack:
         self.pack_polarization_constant     = self.cell_polarization_constant * self.S_number / self.P_number
         self.pack_exponential_amplitude     = self.cell_exponential_amplitude * self.S_number
         self.pack_exponential_time_constant = self.cell_exponential_time_constant * self.P_number
         self.pack_voltage_constant          = self.cell_voltage_constant * self.S_number
 
-        self.pack_current = self.cell_current * self.P_number
+        # relevant pack voltages:
         self.pack_Vmax = self.cell_Vmax * self.S_number
         self.pack_Vmin = self.cell_Vmin * self.S_number
         self.pack_Vnom = self.cell_Vnom * self.S_number
-        self.pack_power_max = self.pack_current * self.pack_Vmax - self.pack_resistance*self.pack_current**2
 
-        self.pack_weight = self.cell_mass*self.cells_total
+        # peak current that can be delivered safely from the pack
+        self.pack_current = self.cell_current * self.P_number 
+
+        #max power that can be delivered at 100% SOC and peak current:
+        self.pack_power_max = self.pack_current * self.Nrg_n_Curr_2_Volt(0,self.pack_current) 
 
         # if self.S_number % 2:
         #     self.stack_length = self.cell_radius * (self.S_number+1)/2
@@ -208,20 +212,18 @@ class Battery:
         #     self.stack_length = self.cell_radius * (self.S_number)/2 + self.cell_radius * (sqrt3-1)
         # the difference is so small this is irrelevant, uncomment if it turns out to be relevant
 
+        # physical characteristics of the whole pack:
         self.stack_length = self.cell_radius * math.ceil(self.S_number/2)
         self.stack_width = self.cell_radius * (2 + np.sqrt(3))
         self.pack_volume = self.cell_height * self.stack_width * self.stack_length
+        self.pack_weight = self.cell_mass*self.cells_total
 
         self.pack_config=f'S{self.S_number} P{self.P_number}'
 
-    #calculate the SOC from the charge spent so far || unused
-    #def Energy_2_SOC(self, C):
-    #    SOC = 1-C/self.pack_energy #single line definition like this
-    #    return SOC
 
     def Nrg_n_Curr_2_Volt(self, it, i):
         '''Converts the current being drawn + the current
-        spent so far into an output voltage'''
+           spent so far into an output voltage'''
         E0 = self.pack_voltage_constant
         R  = self.pack_resistance
         A  = self.pack_exponential_amplitude
@@ -229,21 +231,7 @@ class Battery:
         K  = self.pack_polarization_constant
         Q  = self.pack_charge
 
-        return (E0 
-                 -i*R
-                 -i*K*(Q/(Q-it)) 
-                 -it*K*(Q/(Q-it)) 
-                 +A*np.exp(-B * it))
-
-
-    """# convert SOC to open circuit voltage 
-    # possibly expand to include the exponential zones?
-    def SOC_2_OC_Voltage(self, SOC):
-        #Cell_U_oc=(-0.7*SOC + 3.7) #linear variation of open circuit voltage with SOC, change it to use parameters of the battery instead of being hardcoded
-        Cell_U_oc=( 3.2 + 0.8*SOC )
-        Pack_U_oc = Cell_U_oc * self.S_number
-        return Pack_U_oc"""
-
+        return (E0 -i*R -i*K*(Q/(Q-it)) -it*K*(Q/(Q-it)) +A*np.exp(-B * it))
 
     def Power_2_V_A(self, it, P):
         '''Receives: 
@@ -252,7 +240,7 @@ class Battery:
            Returns:
               U_out - voltage at the battery terminals
               I_out - current output from the battery
-              '''
+        '''
 
         if P == 0: #skips all the math if power is zero
             I_out = 0
@@ -265,7 +253,7 @@ class Battery:
                 P = I^2 *(-R-Qr) + I *(E0+ee-it*Qr)
                 quadratic solve: 
                 a*I^2 + b*I - P = 0
-                '''
+            '''
             E0 = self.pack_voltage_constant
             R  = self.pack_resistance
             A  = self.pack_exponential_amplitude
@@ -284,26 +272,7 @@ class Battery:
                 print(err)
                 I_out = None
                 U_out = None
-        #print(U_out, I_out)
         return U_out, I_out
-
-    #Calculates the open circuit voltage and current to enable calculating real power drain from the battery in function of useful output power. U_oc is the open circuit voltage, U_out is the measured battery output voltage. if no valid current exists, returns none
-    def old_Power_2_V_A(self, SOC, Power_out):
-        if Power_out == 0:
-            I_out = 0
-            U_out = self.SOC_2_OC_Voltage(SOC)
-        else:
-            U_oc = self.SOC_2_OC_Voltage(SOC)
-            a = U_oc**2 - 4 * Power_out * self.pack_resistance
-
-            if (a < 0):
-                I_out = None
-                U_out = None
-            else:
-                U_out = (U_oc + math.sqrt(a))/2 #from the math solution of P_out = U_out * I_out
-                I_out = Power_out/U_out
-        return U_out , I_out 
-
 
 # /->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/->-/
 # \-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\-<-\

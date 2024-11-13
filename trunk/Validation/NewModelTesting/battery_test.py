@@ -81,16 +81,22 @@ class Battery:
         self.pack_energy = self.cells_total * self.cell_energy
         self.pack_resistance = self.cell_resistance * self.S_number / self.P_number
 
+        # empirical constants scaled for the whole pack:
         self.pack_polarization_constant     = self.cell_polarization_constant * self.S_number / self.P_number
         self.pack_exponential_amplitude     = self.cell_exponential_amplitude * self.S_number
         self.pack_exponential_time_constant = self.cell_exponential_time_constant * self.P_number
         self.pack_voltage_constant          = self.cell_voltage_constant * self.S_number
 
-        self.pack_current = self.cell_current * self.P_number
+        # voltages:
         self.pack_Vmax = self.cell_Vmax * self.S_number
         self.pack_Vmin = self.cell_Vmin * self.S_number
         self.pack_Vnom = self.cell_Vnom * self.S_number
-        self.pack_power_max = self.pack_current * self.pack_Vmax - self.pack_resistance*self.pack_current**2
+
+        # peak current that can be delivered safely from the pack
+        self.pack_current = self.cell_current * self.P_number 
+
+        #max power that can be delivered at 100% SOC and peak current:
+        self.pack_power_max = self.pack_current * self.Nrg_n_Curr_2_Volt(0,self.pack_current)  
 
     def Nrg_n_Curr_2_Volt(self, it, i):
         '''Converts the current being drawn + the current
@@ -112,7 +118,7 @@ class Battery:
            Returns:
               U_out - voltage at the battery terminals
               I_out - current output from the battery
-              '''
+        '''
 
         if P == 0: #skips all the math if power is zero
             I_out = 0
@@ -125,29 +131,26 @@ class Battery:
                 P = I^2 *(-R-Qr) + I *(E0+ee-it*Qr)
                 quadratic solve: 
                 a*I^2 + b*I - P = 0
-                '''
+            '''
             E0 = self.pack_voltage_constant
             R  = self.pack_resistance
             A  = self.pack_exponential_amplitude
             B  = self.pack_exponential_time_constant
             K  = self.pack_polarization_constant
             Q  = self.pack_charge
-
-            it = it/self.P_number
             Qr = K*Q/(Q-it)
             ee = A*np.exp(-B * it)
             a = (-R-Qr)
             b = (E0+ee-it*Qr)
-            c = -P/(self.P_number*self.S_number)
+            c = -P
             try:
-                I_out = (-b+math.sqrt(b**2-4*a*c))/(2*a)  # just the quadratic formula
-                U_out = self.Nrg_n_Curr_2_Volt(it, I_out) 
+                I_out = (-b+math.sqrt(b**2-4*a*c))/(2*a) # just the quadratic formula
+                U_out = self.Nrg_n_Curr_2_Volt(it, I_out)
             except Exception as err:
                 print(err)
                 I_out = None
                 U_out = None
-        #print(U_out, I_out)
-        return U_out, I_out 
+        return U_out, I_out
 
 
 #####################################################################

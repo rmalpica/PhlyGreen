@@ -180,13 +180,6 @@ class Mission:
 
             PElectric = Ppropulsive * PRatio[5] #propulsive power required for the electric motors
 
-            '''#open circuit voltage of the battery at the current SOC
-            BatVoltOC = self.aircraft.battery.SOC_2_OC_Voltage(SOC)
-            if (BatVoltOC < self.aircraft.battery.pack_Vmin):
-                self.constraint_low_voltage = False
-                self.valid_solution = False
-                return [0,0,0,0]'''
-
             #current drawn to meet power demands
             BatVolt, BatCurr  = self.aircraft.battery.Power_2_V_A(y[3], PElectric) #convert output power to volts and amps
             if (BatCurr == None):
@@ -212,7 +205,6 @@ class Mission:
             self.outBatVolt = BatVolt
             self.outBatCurr = BatCurr
 
-            #dSOCdt = -BatCurr/self.aircraft.battery.pack_charge #gives the rate of change of SOC
             dEdt_bat = BatVolt * BatCurr #gives the watts spent by the battery
             return [dEFdt,dEdt_bat,dbetadt,BatCurr]
 
