@@ -18,7 +18,7 @@ cellparameters={
                 'Internal Resistance': 0.0126,    #in ohms
                 'Arrhenius a': 1225,
                 'Arrhenius b': 2836,
-                'Charge Slope': 0.1766,
+                'Charge Slope': 0.1766/3600,
                 'Voltage Slope': 0.00004918,
                 'Cell Voltage Min': 2.5,        #in volts
                 'Cell Voltage Max': 4.2,        #in volts
@@ -60,9 +60,9 @@ class Battery:
         self.cell_Vmin = self.cell_model['Cell Voltage Min']
         self.cell_Vnom = self.cell_model['Cell Voltage Nominal']
 
-        self.cell_polarization_constant = self.cell_model['Polarization Ctt']/3600
+        self.cell_polarization_constant = self.cell_model['Polarization Ctt']
         self.cell_exponential_amplitude = self.cell_model['Exp Amplitude']
-        self.cell_exponential_time_constant = self.cell_model['Exp Time constant']/3600
+        self.cell_exponential_time_constant = self.cell_model['Exp Time constant']
         self.cell_voltage_constant = self.cell_model['Voltage Constant']
         self.arrh_a = self.cell_model['Arrhenius a']
         self.arrh_b = self.cell_model['Arrhenius b']
@@ -73,7 +73,7 @@ class Battery:
             raise ValueError("Illegal cell voltages: Vmax must be greater than Vnom which must be greater than Vmin")
 
         self.cell_Vmax = self.cell_exponential_amplitude + self.cell_voltage_constant
-        self.cell_charge = 3600*self.cell_capacity #convert the capacity from Ah to Coulomb to keep everything SI
+        self.cell_charge = self.cell_capacity #convert the capacity from Ah to Coulomb to keep everything SI
         self.cell_energy = self.cell_charge*self.cell_Vnom # cell capacity in joules
 
     #determine battery configuration
@@ -164,11 +164,16 @@ class Battery:
         bet = self.arrh_b
         EDelta = self.DeltaV
         QDelta = self.DeltaQ
-        Tref=275
+        print("start E0, R, A, B, K, Q, Cv")
+        print(E0, R, A, B, K, Q, Cv)
+        Tref=300
         E0 = E0 + EDelta*(T-Tref)
         Q = Q + QDelta*(T-Tref)
         K = K * math.exp(alf * (1/T - 1/Tref))
         R = R * math.exp(bet * (1/T - 1/Tref))
+        print("end E0, R, A, B, K, Q, Cv")
+        print(E0, R, A, B, K, Q, Cv)
+        print("-----------------------")
         return E0, R, A, B, K, Q, Cv
 
     def Curr_2_Ploss(self,T,it,i):
@@ -177,7 +182,7 @@ class Battery:
         return Ploss
 
     def Ploss_2_Heat(self,P,T):
-        Ta=275
+        Ta=320
         Cth = 11000
         Rth = 0.629
         dTdt = P/Cth + (Ta - T)/(Rth*Cth) 
@@ -193,8 +198,8 @@ class Mission:
     def __init__(self, mybattery):
         self.battery = mybattery
 
-    def modelP(self,t,y):
-        '''constant power'''
+    '''def modelP(self,t,y):
+        
         #battery state of charge
         it = y[0]
         T = y[1]
@@ -210,13 +215,13 @@ class Mission:
         self.outSOC = SOC
         self.outTemp = T
         self.outdTdt=dTdt
-        return [i,dTdt]
+        return [i,dTdt]'''
 
     def modelC(self,t,y):
         '''constant current'''
         T=y[1]
-        it=y[0]
-        i = 5
+        it=y[0]/3600
+        i = 20
     
         #battery state of charge
         SOC = 1-it/self.battery.pack_charge
@@ -236,13 +241,13 @@ class Mission:
 
         self.battery.Configure(P_n,S_n)
         self.integral_solution = []
-        minutes = 2
+        minutes = 120
         times = range(0,minutes*60,minutes)
 
         self.plottingVarsC=[]
         rtol = 1e-5
         method= 'BDF'
-        y0 = [0,275] #initial spent charge
+        y0 = [0,320] #initial spent charge
         for i in range(len(times)-1):
             sol = integrate.solve_ivp(self.modelC,[times[i], times[i+1]], y0, method=method, rtol=rtol)
             self.integral_solution.append(sol)
@@ -258,7 +263,7 @@ class Mission:
                                             self.outTemp])
             y0 = [sol.y[0][-1],sol.y[1][-1]]
         
-        #########
+        '''#########
         self.plottingVarsP=[]
         rtol = 1e-5
         method= 'BDF'
@@ -276,7 +281,7 @@ class Mission:
                                             self.outBatPwr,
                                             self.outdTdt,
                                             self.outTemp])
-            y0 = [sol.y[0][-1],sol.y[1][-1]]
+            y0 = [sol.y[0][-1],sol.y[1][-1]]'''
 
 
 ##############################################################
@@ -287,12 +292,12 @@ mymiss = Mission(mybat)
 
 mymiss.evaluate(1,1)
 aC=mymiss.plottingVarsC
-aP=mymiss.plottingVarsP
+#aP=mymiss.plottingVarsP
 #for k in range(len(aC)):
     #print(f'{aC[k][0]}|{aC[k][1]}|{aC[k][2]}|{aC[k][3]}|{aC[k][4]}')
 
 aC=np.array(aC)
-aP=np.array(aP)
+#aP=np.array(aP)
 bC = {'time': aC[:,0],
      'soc':aC[:,1],
      'voltage':aC[:,2],
@@ -301,6 +306,7 @@ bC = {'time': aC[:,0],
      'dTdt':aC[:,5],
      'temperature':aC[:,6]
     }
+'''
 bP = {'time': aP[:,0],
      'soc':aP[:,1],
      'voltage':aP[:,2],
@@ -308,7 +314,7 @@ bP = {'time': aP[:,0],
      'power': aP[:,4],
      'dTdt':aP[:,5],
      'temperature':aP[:,6]
-    }
+    }'''
 
 foldername = 'testingoutputs'
 plotData(bC, 'time' , 'soc' , 'CC t v soc', foldername)
@@ -317,27 +323,10 @@ plotData(bC, 'time' , 'current' , 'CC t v curr', foldername)
 plotData(bC, 'time' , 'power' , 'CC t v pwr', foldername)
 plotData(bC, 'time' , 'temperature' , 'CC t v temp', foldername)
 plotData(bC, 'time' , 'dTdt' , 'CC t v dTdt', foldername)
-
+'''
 plotData(bP, 'time' , 'soc' , 'PP t v soc', foldername)
 plotData(bP, 'time' , 'voltage' , 'PP t v volt', foldername)
 plotData(bP, 'time' , 'current' , 'PP t v curr', foldername)
 plotData(bP, 'time' , 'temperature' , 'PP t v temp', foldername)
 plotData(bP, 'time' , 'dTdt' , 'PP t v dTdt', foldername)
-
 '''
-data = {'time':[],
-        'voltage':[],
-        'it':[]}
-
-for t in range(0,300*60):
-    i=0.2*1.3
-    data['time'].append(t)
-    data['it'].append(i*t)
-    v=mybat.Nrg_n_Curr_2_Volt(data['it'][-1],i)
-    v = max(0,v)
-    data['voltage'].append(v)
-    print(data['voltage'][-1])
-
-foldername = 'testingoutputs'
-plotData(data, 'time' , 'voltage' , 'linear t v volt', foldername)
-plotData(data, 'time' , 'it' , 'linear t v it', foldername)'''
