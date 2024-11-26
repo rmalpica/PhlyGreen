@@ -10,8 +10,8 @@ import pandas as pd
 
 cellparameters={
                 'Polarization Ctt': 0.0033,     #in Volts over amp hour
-                'Exp Amplitude': 0.2711,        #in volts
-                'Exp Time constant': 152.13,    #in Ah^-1 
+                'Exp Amplitude': 0.7,        #in volts
+                'Exp Time constant': 1.5213,    #in Ah^-1 
                 'Voltage Constant':13.338,        #in volts
                 'Cell Capacity': 42.82,            #in Ah
                 'Cell C rating': 4,             #dimensionless
@@ -102,10 +102,7 @@ class Battery:
         # peak current that can be delivered safely from the pack
         self.pack_current = self.cell_current * self.P_number 
 
-        #max power that can be delivered at 100% SOC and peak current:
-        #self.pack_power_max = self.pack_current * self.outPuts(0,self.pack_current)  
-
-    def outPuts(self, T,it,i):
+    def voltageModel(self, T,it,i):
         '''Converts the current being drawn + the current
         spent so far into an output voltage'''
 
@@ -126,7 +123,7 @@ class Battery:
 
         if P == 0: #skips all the math if power is zero
             I_out = 0
-            U_out = self.outPuts(T,it, I_out)
+            U_out = self.voltageModel(T,it, I_out)
 
         else:
             ''' V = E0 - i*R - i*K*(Q/(Q-it)) - it*K*(Q/(Q-it)) + A*exp(-B * it) - C*it
@@ -145,7 +142,7 @@ class Battery:
             c = -P
             try:
                 I_out = (-b+math.sqrt(b**2-4*a*c))/(2*a) # just the quadratic formula
-                U_out = self.outPuts(T, it, I_out)
+                U_out = self.voltageModel(T, it, I_out)
             except Exception as err:
                 print(err)
                 I_out = None
@@ -153,45 +150,40 @@ class Battery:
         return U_out, I_out
 
     def ConfigTemp(self,T):
-        E0 = self.pack_voltage_constant
-        R  = self.pack_resistance
+        sE0 = self.pack_voltage_constant
+        sR  = self.pack_resistance
         A  = self.pack_exponential_amplitude
         B  = self.pack_exponential_time_constant
-        K  = self.pack_polarization_constant
-        Q  = self.pack_charge
+        sK  = self.pack_polarization_constant
+        sQ  = self.pack_charge
         Cv = 0.015
         alf = self.arrh_a
         bet = self.arrh_b
         EDelta = self.DeltaV
         QDelta = self.DeltaQ
-        print("start E0, R, A, B, K, Q, Cv")
-        print(E0, R, A, B, K, Q, Cv)
+        
         Tref=300
-        E0 = E0 + EDelta*(T-Tref)
-        Q = Q + QDelta*(T-Tref)
-        K = K * math.exp(alf * (1/T - 1/Tref))
-        R = R * math.exp(bet * (1/T - 1/Tref))
-        print("end E0, R, A, B, K, Q, Cv")
-        print(E0, R, A, B, K, Q, Cv)
+        E0 = sE0 + EDelta*(T-Tref)
+        Q = sQ + QDelta*(T-Tref)
+        K = sK * math.exp(alf * (1/T - 1/Tref))
+        R = sR * math.exp(bet * (1/T - 1/Tref))
+
+        print("E0 , R , K , Q")
+        print(f'old {sE0:.5} | {sR:.5} | {sK:.5} | {sQ:.5}')
+        print(f'new {E0:.5} | {R:.5} | {K:.5} | {Q:.5}')
+        print(f'dlt {E0-sE0:.5} | {R-sR:.5} | {K-sK:.5} | {Q-sQ:.5}')
+        print(f'pct {100*(E0-sE0)/sE0:.5} | {100*(R-sR)/sR:.5} | {100*(K-sK)/sK:.5} | {100*(Q-sQ)/sQ:.5}')
         print("-----------------------")
         return E0, R, A, B, K, Q, Cv
+ 
+    def Curr_2_Heat(self,Ta,T,it,i):
 
-    def Curr_2_Ploss(self,T,it,i):
         E0,R,A,B,K,Q,Cv = self.ConfigTemp(T)
-        Ploss = (i**2)*(K*(Q/(Q-it))+R)
-        return Ploss
-
-    def Ploss_2_Heat(self,P,T):
-        Ta=320
-        Cth = 11000
+        P = (i**2)*(K*(Q/(Q-it))+R)
+        Cth = 110
         Rth = 0.629
         dTdt = P/Cth + (Ta - T)/(Rth*Cth) 
-        return dTdt
-    
-    def Curr_2_Heat(self,T,it,i):
-        P = self.Curr_2_Ploss(T,it,i)
-        dTdt = self.Ploss_2_Heat(P,T)
-        return dTdt
+        return dTdt,P
 
 #####################################################################
 class Mission:
@@ -226,8 +218,8 @@ class Mission:
         #battery state of charge
         SOC = 1-it/self.battery.pack_charge
 
-        Vout  = self.battery.outPuts(T,it,i)
-        dTdt = self.battery.Curr_2_Heat(T,it,i)
+        Vout  = self.battery.voltageModel(T,it,i)
+        dTdt,Pl = self.battery.Curr_2_Heat(Ta,T,it,i)
         PElectric = Vout * i
         self.outBatVolt = Vout
         self.outBatCurr = i
@@ -235,9 +227,10 @@ class Mission:
         self.outSOC = SOC
         self.outTemp = T
         self.outdTdt=dTdt
+        self.outHeat=Pl
         return [i,dTdt]
 
-    def evaluate(self,P_n,S_n):
+    def evaluate(self,P_n,S_n,Ta,Tb):
 
         self.battery.Configure(P_n,S_n)
         self.integral_solution = []
@@ -247,7 +240,7 @@ class Mission:
         self.plottingVarsC=[]
         rtol = 1e-5
         method= 'BDF'
-        y0 = [0,320] #initial spent charge
+        y0 = [0,Tb] #initial spent charge
         for i in range(len(times)-1):
             sol = integrate.solve_ivp(self.modelC,[times[i], times[i+1]], y0, method=method, rtol=rtol)
             self.integral_solution.append(sol)
@@ -260,10 +253,11 @@ class Mission:
                                             self.outBatCurr,
                                             self.outBatPwr,
                                             self.outdTdt,
-                                            self.outTemp])
+                                            self.outTemp,
+                                            self.outHeat])
             y0 = [sol.y[0][-1],sol.y[1][-1]]
         
-        '''#########
+    '''#########
         self.plottingVarsP=[]
         rtol = 1e-5
         method= 'BDF'
@@ -290,7 +284,9 @@ mybat = Battery()
 mybat.SetInput()
 mymiss = Mission(mybat)
 
-mymiss.evaluate(1,1)
+Ta=300 #ambient T
+Tb=Ta  #initial battery T
+mymiss.evaluate(1,1,Ta,Tb)
 aC=mymiss.plottingVarsC
 #aP=mymiss.plottingVarsP
 #for k in range(len(aC)):
@@ -304,7 +300,8 @@ bC = {'time': aC[:,0],
      'current': aC[:,3],
      'power': aC[:,4],
      'dTdt':aC[:,5],
-     'temperature':aC[:,6]
+     'temperature':aC[:,6]-273.15,
+     'loss':aC[:,7]
     }
 '''
 bP = {'time': aP[:,0],
@@ -323,6 +320,8 @@ plotData(bC, 'time' , 'current' , 'CC t v curr', foldername)
 plotData(bC, 'time' , 'power' , 'CC t v pwr', foldername)
 plotData(bC, 'time' , 'temperature' , 'CC t v temp', foldername)
 plotData(bC, 'time' , 'dTdt' , 'CC t v dTdt', foldername)
+plotData(bC, 'time' , 'loss' , 'CC t v loss', foldername)
+
 '''
 plotData(bP, 'time' , 'soc' , 'PP t v soc', foldername)
 plotData(bP, 'time' , 'voltage' , 'PP t v volt', foldername)
