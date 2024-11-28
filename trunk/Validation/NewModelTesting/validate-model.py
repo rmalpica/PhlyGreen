@@ -1,7 +1,6 @@
 import math
 import numbers
 import numpy as np
-from scipy.optimize import brentq
 import scipy.integrate as integrate
 import os
 import seaborn as sns
@@ -44,6 +43,33 @@ def plotData(data, X , Y, title, foldername):
     print('||>- Saved \'',title,'\' to',filename)
     plt.close()  # Close the plot
 
+def load_csv(file_path):
+    """Loads CSV with timestamps and values into numpy arrays."""
+    data = pd.read_csv(file_path)
+    timestamps = data.iloc[:, 0].values
+    V = data.iloc[:, 1].values
+    T = data.iloc[:, 2].values
+    return timestamps, V, T
+
+def ePlot(time, err, title, foldername):
+    sns.scatterplot(x=time, y=err)
+    # Add labels and title
+    plt.xlabel('Time')
+    plt.ylabel('Error')
+    plt.title(title)
+    # Save the plot as a PDF
+    filename = os.path.join(foldername, title+".pdf") #create file inside the output directory
+    plt.savefig(filename)
+    print('||>- Saved \'',title,'\' to',filename)
+    plt.close()  # Close the plot
+
+def plotErrors(time, real, sim, title, foldername):
+    absolute_err = sim-real
+    relative_err = 100*absolute_err/real
+    ePlot(time, absolute_err, title+"-err_abs", foldername)
+    ePlot(time, relative_err, title+"-err_rel", foldername)
+
+
 class Battery:
     def __init__(self):
         pass
@@ -73,31 +99,6 @@ class Battery:
         if not (self.cell_Vmax > self.cell_Vmin):
             raise ValueError("Illegal cell voltages: Vmax must be greater than Vmin")
 
-        self.cell_charge = self.cell_capacity #convert the capacity from Ah to Coulomb to keep everything SI
-
-    #determine battery configuration
-    #must receive the number of cells in parallel
-    def Configure(self, parallel_cells, series_cells):
-        #print(parallel_cells)
-        self.P_number=parallel_cells
-        self.S_number=series_cells
-
-        self.pack_charge = self.P_number * self.cell_charge
-        self.pack_resistance = self.cell_resistance * self.S_number / self.P_number
-
-        # empirical constants scaled for the whole pack:
-        self.pack_polarization_constant     = self.cell_polarization_ctt * self.S_number / self.P_number
-        self.pack_exponential_amplitude     = self.cell_exp_amplitude * self.S_number
-        self.pack_exponential_time_constant = self.cell_exp_time_ctt * self.P_number
-        self.pack_voltage_constant          = self.cell_voltage_ctt * self.S_number
-
-        # voltages:
-        self.pack_Vmax = self.cell_Vmax * self.S_number
-        self.pack_Vmin = self.cell_Vmin * self.S_number
-
-        # peak current that can be delivered safely from the pack
-        self.pack_current = self.cell_current * self.P_number 
-
     def voltageModel(self, T,it,i):
         '''Converts the current being drawn + the current
         spent so far into an output voltage'''
@@ -107,51 +108,13 @@ class Battery:
         V = E0 -i*K*(Q/(Q-it)) -it*K*(Q/(Q-it)) +A*np.exp(-B * it) -i*R -it*Cv
         return V
 
-    def Power_2_V_A(self, it, P, T):
-        '''Receives: 
-              it - charge spent from the battery over time, the integral of the current
-              P  - power demanded from the battery
-              T  - pack temperature
-           Returns:
-              U_out - voltage at the battery terminals
-              I_out - current output from the battery
-        '''
-
-        if P == 0: #skips all the math if power is zero
-            I_out = 0
-            U_out = self.voltageModel(T,it, I_out)
-
-        else:
-            ''' V = E0 - i*R - i*K*(Q/(Q-it)) - it*K*(Q/(Q-it)) + A*exp(-B * it) - C*it
-                V = E0 - I*R - I*Qr - it*Qr + ee <- with substitutions to make shorter
-                P = V*I = E0*I - I^2*R - I^2*Qr - I*it*Qr + I*ee 
-                P = I^2 *(-R-Qr) + I *(E0+ee-it*Qr)
-                quadratic solve: 
-                a*I^2 + b*I - P = 0
-            '''
-            E0,R,A,B,K,Q,Cv = self.ConfigTemp(T)
-
-            Qr = K*Q/(Q-it)
-            ee = A*np.exp(-B * it)
-            a = (-R-Qr)
-            b = (E0+ee-it*Qr-it*Cv)
-            c = -P
-            try:
-                I_out = (-b+math.sqrt(b**2-4*a*c))/(2*a) # just the quadratic formula
-                U_out = self.voltageModel(T, it, I_out)
-            except Exception as err:
-                print(err)
-                I_out = None
-                U_out = None
-        return U_out, I_out
-
     def ConfigTemp(self,T):
-        sE0 = self.pack_voltage_constant
-        sR  = self.pack_resistance
-        A  = self.pack_exponential_amplitude
-        B  = self.pack_exponential_time_constant
-        sK  = self.pack_polarization_constant
-        sQ  = self.pack_charge
+        sE0 = self.cell_voltage_ctt
+        sR  = self.cell_resistance
+        A  = self.cell_exp_amplitude
+        B  = self.cell_exp_time_ctt
+        sK  = self.cell_polarization_ctt
+        sQ  = self.cell_capacity
         Cv = 0.015
         alf = self.cell_K_arrhenius
         bet = self.cell_R_arrhenius
@@ -189,37 +152,18 @@ class Mission:
     def __init__(self, mybattery):
         self.battery = mybattery
 
-    '''def modelP(self,t,y):
-        
-        #battery state of charge
-        it = y[0]
-        T = y[1]
-        PElectric = 6
-        SOC = 1-it/self.battery.pack_charge
-        #current drawn to meet power demands
-        Vout, i  = self.battery.Power_2_V_A(it, PElectric,T) #convert output power to volts and amps
-        Vout = max(0,Vout)
-        dTdt = self.battery.Curr_2_Heat(T,it,i)
-        self.outBatVolt = Vout
-        self.outBatCurr = i
-        self.outBatPwr = PElectric
-        self.outSOC = SOC
-        self.outTemp = T
-        self.outdTdt=dTdt
-        return [i,dTdt]'''
-
-    def modelC(self,t,y):
+    def model(self,t,y):
         '''constant current'''
         T=y[1]
         it=y[0]/3600
         i = 20
     
         #battery state of charge
-        SOC = 1-it/self.battery.pack_charge
+        SOC = 1-it/self.battery.cell_capacity
 
         Vout  = self.battery.voltageModel(T,it,i)
         dTdt,Pl = self.battery.Curr_2_Heat(Ta,T,it,i)
-        print("TA TA TAT ATA",Ta)
+        print("Ta",Ta)
         PElectric = Vout * i
         self.outBatVolt = Vout
         self.outBatCurr = i
@@ -230,53 +174,12 @@ class Mission:
         self.outHeat=Pl
         return [i,dTdt]
 
-    def evaluate(self,P_n,S_n,Ta,Tb):
-
-        self.battery.Configure(P_n,S_n)
-        self.integral_solution = []
-        minutes = 120
-        times = range(0,minutes*60,minutes)
-
-        self.plottingVarsC=[]
+    def evaluate(self,times,Tb):
         rtol = 1e-5
         method= 'BDF'
         y0 = [0,Tb] #initial spent charge
-        for i in range(len(times)-1):
-            sol = integrate.solve_ivp(self.modelC,[times[i], times[i+1]], y0, method=method, rtol=rtol)
-            self.integral_solution.append(sol)
-            for k in range(len(sol.t)):
-                yy0 = [sol.y[0][k],sol.y[1][k]]
-                self.modelC(sol.t[k],yy0)
-                self.plottingVarsC.append([sol.t[k],
-                                            self.outSOC,
-                                            self.outBatVolt,
-                                            self.outBatCurr,
-                                            self.outBatPwr,
-                                            self.outdTdt,
-                                            self.outTemp,
-                                            self.outHeat])
-            y0 = [sol.y[0][-1],sol.y[1][-1]]
-        
-    '''#########
-        self.plottingVarsP=[]
-        rtol = 1e-5
-        method= 'BDF'
-        y0 = [0,275] #initial spent charge and T
-        for i in range(len(times)-1):
-            sol = integrate.solve_ivp(self.modelP,[times[i], times[i+1]], y0, method=method, rtol=rtol)
-            self.integral_solution.append(sol)
-            for k in range(len(sol.t)):
-                yy0 = [sol.y[0][k],sol.y[1][k]]
-                self.modelP(sol.t[k],yy0)
-                self.plottingVarsP.append([sol.t[k],
-                                            self.outSOC,
-                                            self.outBatVolt,
-                                            self.outBatCurr,
-                                            self.outBatPwr,
-                                            self.outdTdt,
-                                            self.outTemp])
-            y0 = [sol.y[0][-1],sol.y[1][-1]]'''
-
+        sol = integrate.solve_ivp(self.model,(times[0],times[-1]), y0, method=method, rtol=rtol, t_eval=times)
+        return sol
 
 ##############################################################
 
@@ -286,14 +189,24 @@ mymiss = Mission(mybat)
 
 Ta=273.15+0 #ambient T
 Tb=Ta  #initial battery T
-mymiss.evaluate(1,1,Ta,Tb)
-aC=mymiss.plottingVarsC
-#aP=mymiss.plottingVarsP
-#for k in range(len(aC)):
-    #print(f'{aC[k][0]}|{aC[k][1]}|{aC[k][2]}|{aC[k][3]}|{aC[k][4]}')
 
+times, Vs, Ts = load_csv('data.csv')
+results = mymiss.evaluate(times,Tb)
+
+aC=[]
+for k in range(len(results.t)):
+    yy0 = [results.y[0][k],results.y[1][k]]
+    mymiss.model(results.t[k],yy0)
+    aC.append([ results.t[k],
+                mymiss.outSOC,
+                mymiss.outBatVolt,
+                mymiss.outBatCurr,
+                mymiss.outBatPwr,
+                mymiss.outdTdt,
+                mymiss.outTemp,
+                mymiss.outHeat])
 aC=np.array(aC)
-#aP=np.array(aP)
+
 bC = {'time': aC[:,0],
      'soc':aC[:,1],
      'voltage':aC[:,2],
@@ -303,15 +216,6 @@ bC = {'time': aC[:,0],
      'temperature':aC[:,6]-273.15,
      'loss':aC[:,7]
     }
-'''
-bP = {'time': aP[:,0],
-     'soc':aP[:,1],
-     'voltage':aP[:,2],
-     'current': aP[:,3],
-     'power': aP[:,4],
-     'dTdt':aP[:,5],
-     'temperature':aP[:,6]
-    }'''
 
 foldername = 'testingoutputs'
 plotData(bC, 'time' , 'soc' , 'CC t v soc', foldername)
@@ -324,10 +228,4 @@ plotData(bC, 'time' , 'temperature' , 'CC t v temp', foldername)
 plotData(bC, 'time' , 'dTdt' , 'CC t v dTdt', foldername)
 plotData(bC, 'time' , 'loss' , 'CC t v loss', foldername)
 
-'''
-plotData(bP, 'time' , 'soc' , 'PP t v soc', foldername)
-plotData(bP, 'time' , 'voltage' , 'PP t v volt', foldername)
-plotData(bP, 'time' , 'current' , 'PP t v curr', foldername)
-plotData(bP, 'time' , 'temperature' , 'PP t v temp', foldername)
-plotData(bP, 'time' , 'dTdt' , 'PP t v dTdt', foldername)
-'''
+plotErrors(times,Vs,bC['voltage'],'VoltageError',foldername)

@@ -23,13 +23,20 @@ class Battery:
         self._cell_mass = None
         self._cell_radius = None
         self._cell_height = None
+
         self.controller_Vmax = 740 
         self.controller_Vmin = 420 #this range of voltages should be defined in the model of the motor controller, but ill do that later, for now its hardcoded
 
+        self.SOC = 1
+        self.Current = 0
+        self.Vout = None
+        self.Voc = None
+        self.Temperature = None
+
     def _validate_positive(self, value, name):
         """small function to make the setters and getters neater"""
-        if not isinstance(value, numbers.Number) or value <= 0:
-            raise ValueError(f"Error: Illegal {name}: {value}. Must be a positive number.")
+        if not isinstance(value, numbers.Number) or value < 0:
+            raise ValueError(f"Error, Illegal {name}: {value}. Must be non negative.")
 
 ### Properties
 
@@ -230,11 +237,12 @@ class Battery:
         self.cell_polarization_ctt  = self.cell_model['Polarization Constant']          # in Volts over amp hour
         self.cell_K_arrhenius       = self.cell_model['Polarization Arrhenius Constant']# dimensionless
         self.cell_capacity          = self.cell_model['Cell Capacity']                  # in Ah
-        self.cell_Q_slope           = self.cell_model['Capacity Thermal Slope']         # in UNCLEAR per kelvin
+        self.cell_Q_slope           = self.cell_model['Capacity Thermal Slope']         # in ??UNCLEAR?? per kelvin
         self.cell_voltage_ctt       = self.cell_model['Voltage Constant']               # in volts
         self.cell_E_slope           = self.cell_model['Voltage Thermal Slope']          # in volts per kelvin
         self.cell_Vmax              = self.cell_exp_amplitude + self.cell_voltage_ctt   # in volts
         self.cell_Vmin              = self.cell_model['Cell Voltage Min']               # in volts
+        self.cell_rate              = self.cell_model['Cell C rating']                  # dimensionless
         self.cell_current           = self.cell_rate * self.cell_capacity               # in amperes
         self.cell_mass              = self.cell_model['Cell Mass']                      # in kg
         self.cell_radius            = self.cell_model['Cell Radius']                    # in m
@@ -246,23 +254,16 @@ class Battery:
         self.cell_charge = 3600*self.cell_capacity #convert the capacity from Ah to Coulomb to keep everything SI
         self.cell_energy = self.cell_charge*self.cell_Vnom # cell capacity in joules
         self.S_number = math.floor(self.controller_Vmax/self.cell_Vmax) #number of cells in series to achieve desired voltage. max voltage is preferred as it minimizes losses due to lower current being needed for a larger portion of the flight
-        ####################################################################
-        ####################################################################
-        ### NEEDS TO COME FROM AN INPUT SOMEWHERE, SHOULDNT BE HARDCODED ###
-        ### thermal stuff for the thermal calculations:
-
-        self.cell_heat_capacity= 1130 #joule kelvin kg
-
 
 #determine battery configuration
     #must receive the number of cells in parallel
     def Configure(self, parallel_cells):
 
-        self.P_number=parallel_cells
+        self.P_number = parallel_cells
         self.cells_total = self.P_number * self.S_number
 
-        self.pack_charge = self.P_number * self.cell_charge
-        self.pack_energy = self.cells_total * self.cell_energy
+        self.pack_charge =  self.cell_charge * self.P_number
+        self.pack_energy =  self.cell_energy * self.cells_total
         self.pack_resistance = self.cell_resistance * self.S_number / self.P_number
 
         # empirical constants scaled for the whole pack:
