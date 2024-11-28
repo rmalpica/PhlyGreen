@@ -1,61 +1,19 @@
-Cell_Models = { 
-            'SAMSUNG_LIR18650':{
-                        'Cell Capacity': 2.5,        #in Ah
-                        'Cell C rating': 8,          #dimensionless
-                        'Internal Resistance': 0.07,  #in ohms
-                        'Cell Voltage Min': 2.5,     #in volts
-                        'Cell Voltage Max': 4.2,     #in volts
-                        'Cell Voltage Nominal': 3.6, #in volts
-                        'Cell Mass': 0.0438,           #in kg
-                        'Cell Radius': 0.006,         #in m
-                        'Cell Height': 0.065,         #in m
-            },
-            'LG_INR21700M50LT':{
-                        'Cell Capacity': 4.8,        #in Ah
-                        'Cell C rating': 3,          #dimensionless
-                        'Internal Resistance': 0.12, #in ohms
-                        'Cell Voltage Min': 2.5,     #in volts
-                        'Cell Voltage Max': 4.2,     #in volts
-                        'Cell Voltage Nominal': 3.6, #in volts
-                        'Cell Mass': 0.0682,           #in kg
-                        'Cell Radius': 0.006,         #in m
-                        'Cell Height': 0.065,         #in m
-            },
-            'FELIX_FINGER':{
-                        'Cell Capacity': 21,        #in Ah
-                        'Cell C rating': 4,          #dimensionless
-                        'Internal Resistance': 0.005,  #in ohms
-                        'Cell Voltage Min': 2.5,     #in volts
-                        'Cell Voltage Max': 4.2,     #in volts
-                        'Cell Voltage Nominal': 3.6, #in volts
-                        'Cell Mass': 0.05,           #in kg
-                        'Cell Radius': 0.006,         #in m
-                        'Cell Height': 0.065,         #in m
-            },
-            'Realistic':{
-                        'Polarization Ctt': 0.0119,     #in Volts over amp hour
-                        'Exp Amplitude': 0.2711,        #in volts
-                        'Exp Time constant': 152.13,    #in Ah^-1 
-                        'Voltage Constant':3.21,        #in volts
-                        'Cell Capacity': 1.3,            #in Ah
-                        'Cell C rating': 4,             #dimensionless
-                        'Internal Resistance': 0.03,    #in ohms
-                        'Cell Voltage Min': 2.5,        #in volts
-                        'Cell Voltage Max': 4.2,        #in volts
-                        'Cell Voltage Nominal': 3.00,   #in volts
-                        'Cell Mass': 0.046,              #in kg
-                        'Cell Radius': 0.006,           #in m
-                        'Cell Height': 0.065,           #in m
-            },
-            'PipeDream':{
-                        'Cell Capacity': 21,        #in Ah
-                        'Cell C rating': 4,          #dimensionless
-                        'Internal Resistance': 0.005,  #in ohms
-                        'Cell Voltage Min': 2.5,     #in volts
-                        'Cell Voltage Max': 4.2,     #in volts
-                        'Cell Voltage Nominal': 3.6, #in volts
-                        'Cell Mass': 0.05,           #in kg
-                        'Cell Radius': 0.006,         #in m
-                        'Cell Height': 0.065,         #in m
-            },
+Cell_Models = {
+    'ThermalModel-Cell':{
+        'Exp Amplitude': 0.7,                   #in volts
+        'Exp Time constant': 1.5213,            #in Ah^-1 
+        'Internal Resistance': 0.0126,          #in ohms
+        'Resistance Arrhenius Constant': 1225,  #dimensionless
+        'Polarization Constant': 0.0033,             #in Volts over amp hour
+        'Polarization Arrhenius Constant': 2836,#dimensionless
+        'Cell Capacity': 42.82,                 #in Ah
+        'Capacity Thermal Slope': 0.1766/3600,  #in UNCLEAR per kelvin
+        'Voltage Constant':13.338,              #in volts
+        'Voltage Thermal Slope': 0.00004918,    #in volts per kelvin
+        'Cell Voltage Min': 2.5,                #in volts
+        'Cell C rating': 4,                     #dimensionless
+        'Cell Mass': 0.005,                     #in kg
+        'Cell Radius': 0.006,                   #in m
+        'Cell Height': 0.065,                   #in m
+    }
 }
