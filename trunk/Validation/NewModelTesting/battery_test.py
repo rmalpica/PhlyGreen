@@ -178,10 +178,13 @@ class Battery:
  
     def Curr_2_Heat(self,Ta,T,it,i):
 
-        E0,R,A,B,K,Q,Cv = self.ConfigTemp(T)
-        P = (i**2)*(K*(Q/(Q-it))+R)
-        Cth = 110
+        #E0,R,A,B,K,Q,Cv = self.ConfigTemp(T)
+        V = self.voltageModel(T,it,i)
+        Voc = self.voltageModel(T,it,0)
+        P = (Voc-V)*i+self.DeltaV*i*T
+        tc = 4880
         Rth = 0.629
+        Cth = tc/Rth
         dTdt = P/Cth + (Ta - T)/(Rth*Cth) 
         return dTdt,P
 
@@ -220,6 +223,7 @@ class Mission:
 
         Vout  = self.battery.voltageModel(T,it,i)
         dTdt,Pl = self.battery.Curr_2_Heat(Ta,T,it,i)
+        print("TA TA TAT ATA",Ta)
         PElectric = Vout * i
         self.outBatVolt = Vout
         self.outBatCurr = i
@@ -284,7 +288,7 @@ mybat = Battery()
 mybat.SetInput()
 mymiss = Mission(mybat)
 
-Ta=300 #ambient T
+Ta=273.15+0 #ambient T
 Tb=Ta  #initial battery T
 mymiss.evaluate(1,1,Ta,Tb)
 aC=mymiss.plottingVarsC
@@ -318,6 +322,8 @@ plotData(bC, 'time' , 'soc' , 'CC t v soc', foldername)
 plotData(bC, 'time' , 'voltage' , 'CC t v volt', foldername)
 plotData(bC, 'time' , 'current' , 'CC t v curr', foldername)
 plotData(bC, 'time' , 'power' , 'CC t v pwr', foldername)
+
+plt.ylim(-20, 60)
 plotData(bC, 'time' , 'temperature' , 'CC t v temp', foldername)
 plotData(bC, 'time' , 'dTdt' , 'CC t v dTdt', foldername)
 plotData(bC, 'time' , 'loss' , 'CC t v loss', foldername)
