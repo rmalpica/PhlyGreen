@@ -8,14 +8,14 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 cellparameters={
-    'Exp Amplitude': 0.7,                   # in volts
+    'Exp Amplitude': 13.768-13.338,         # in volts
     'Exp Time constant': 1.5213,            # in Ah^-1 
     'Internal Resistance': 0.0126,          # in ohms
     'Resistance Arrhenius Constant': 2836,  # dimensionless
     'Polarization Constant': 0.0033,        # in Volts over amp hour
     'Polarization Arrhenius Constant': 1225,# dimensionless
     'Cell Capacity': 42.82,                 # in Ah
-    'Capacity Thermal Slope': 0.1766/3600,  # in UNCLEAR per kelvin
+    'Capacity Thermal Slope': 0.17660,      # in Ah per kelvin
     'Voltage Constant':13.338,              # in volts
     'Voltage Thermal Slope': 0.00004918,    # in volts per kelvin
     'Cell Voltage Min': 2.5,                # in volts
@@ -26,30 +26,28 @@ cellparameters={
     'Cell Height': 0.065,                   # in m
 }
 
-def plotData(data, X , Y, title, foldername):
-    x_data = data[X]
-    y_data = data[Y]
-    # Create a plot using Seaborn
-    sns.lineplot(x=x_data, y=y_data)
 
-    # Add labels and title
-    plt.xlabel(X)
-    plt.ylabel(Y)
-    plt.title(title)
-
-    # Save the plot as a PDF
-    filename = os.path.join(foldername, title+".pdf") #create file inside the output directory
-    plt.savefig(filename)
-    print('||>- Saved \'',title,'\' to',filename)
-    plt.close()  # Close the plot
-
-def load_csv(file_path):
+def load_csv(file):
     """Loads CSV with timestamps and values into numpy arrays."""
-    data = pd.read_csv(file_path)
-    timestamps = data.iloc[:, 0].values
-    V = data.iloc[:, 1].values
-    T = data.iloc[:, 2].values
-    return timestamps, V, T
+    data = pd.read_csv(file)
+    t = data.iloc[:, 0].values
+    y = data.iloc[:, 1].values
+    return t, y
+
+def plotData(data, foldername):
+    time = data['time']
+    for key, values in data.items():
+        if key != 'time':
+            sns.scatterplot(x=time, y=values)
+            plt.xlabel('Time')
+            plt.ylabel(key)
+            title = f'{key}_over_time'
+            plt.title(title)
+            # Save the plot as a PDF
+            filename = os.path.join(foldername, title+".pdf") #create file inside the output directory
+            plt.savefig(filename)
+            print('||>- Saved \'',title,'\' to',filename)
+            plt.close()  # Close the plot
 
 def ePlot(time, err, title, foldername):
     sns.scatterplot(x=time, y=err)
@@ -69,34 +67,63 @@ def plotErrors(time, real, sim, title, foldername):
     ePlot(time, absolute_err, title+"-err_abs", foldername)
     ePlot(time, relative_err, title+"-err_rel", foldername)
 
+    sns.scatterplot(x=time, y=real)
+    sns.scatterplot(x=time, y=sim)
+
+    # Add labels and title
+    plt.xlabel("time")
+    plt.ylabel("value")
+    plt.title(title)
+
+    # Save the plot as a PDF
+    filename = os.path.join(foldername, title+"-compare.pdf") #create file inside the output directory
+    plt.savefig(filename)
+    print('||>- Saved \'',title,'\' to',filename)
+    plt.close()  # Close the plot
+
 
 class Battery:
     def __init__(self):
-        pass
+        self.T = None
+        self.i = None
+        self.it = None
+
+    @property
+    def Vout(self) -> float:
+        return self.voltageModel(self.T , self.it , self.i)
+    
+    @property
+    def Voc(self) -> float:
+        return self.voltageModel(self.T , self.it , 0)
+    
+    @property
+    def SOC(self) -> float:
+        return 1-self.it/self.capacity
 
     # Set inputs from cell model chosen
     def SetInput(self):
-        self.cell_model = cellparameters
+        self.cell = cellparameters
         # Get all parameters of the battery
-        self.cell_exp_amplitude     = self.cell_model['Exp Amplitude']                  # in volts
-        self.cell_exp_time_ctt      = self.cell_model['Exp Time constant']              # in Ah^-1 
-        self.cell_resistance        = self.cell_model['Internal Resistance']            # in ohms
-        self.cell_R_arrhenius       = self.cell_model['Resistance Arrhenius Constant']  # dimensionless
-        self.cell_polarization_ctt  = self.cell_model['Polarization Constant']          # in Volts over amp hour
-        self.cell_K_arrhenius       = self.cell_model['Polarization Arrhenius Constant']# dimensionless
-        self.cell_capacity          = self.cell_model['Cell Capacity']                  # in Ah
-        self.cell_Q_slope           = self.cell_model['Capacity Thermal Slope']         # in ??UNCLEAR?? per kelvin
-        self.cell_voltage_ctt       = self.cell_model['Voltage Constant']               # in volts
-        self.cell_E_slope           = self.cell_model['Voltage Thermal Slope']          # in volts per kelvin
-        self.cell_Vmax              = self.cell_exp_amplitude + self.cell_voltage_ctt   # in volts
-        self.cell_Vmin              = self.cell_model['Cell Voltage Min']               # in volts
-        self.cell_rate              = self.cell_model['Cell C rating']                  # dimensionless
-        self.cell_current           = self.cell_rate * self.cell_capacity               # in amperes
-        self.cell_mass              = self.cell_model['Cell Mass']                      # in kg
-        self.cell_radius            = self.cell_model['Cell Radius']                    # in m
-        self.cell_height            = self.cell_model['Cell Height']                    # in m
+        self.Tref              = 273.15+23 #self.cell['Reference Temperature']
+        self.exp_amplitude     = self.cell['Exp Amplitude']                  # in volts
+        self.exp_time_ctt      = self.cell['Exp Time constant']              # in Ah^-1 
+        self.resistance        = self.cell['Internal Resistance']            # in ohms
+        self.R_arrhenius       = self.cell['Resistance Arrhenius Constant']  # dimensionless
+        self.polarization_ctt  = self.cell['Polarization Constant']          # in Volts over amp hour
+        self.K_arrhenius       = self.cell['Polarization Arrhenius Constant']# dimensionless
+        self.capacity          = self.cell['Cell Capacity']                  # in Ah
+        self.Q_slope           = self.cell['Capacity Thermal Slope']         # in ??UNCLEAR?? per kelvin
+        self.voltage_ctt       = self.cell['Voltage Constant']               # in volts
+        self.E_slope           = self.cell['Voltage Thermal Slope']          # in volts per kelvin
+        self.Vmax              = self.exp_amplitude + self.voltage_ctt       # in volts
+        self.Vmin              = self.cell['Cell Voltage Min']               # in volts
+        self.rate              = self.cell['Cell C rating']                  # dimensionless
+        self.current           = self.rate * self.capacity                   # in amperes
+        self.mass              = self.cell['Cell Mass']                      # in kg
+        self.radius            = self.cell['Cell Radius']                    # in m
+        self.height            = self.cell['Cell Height']                    # in m
 
-        if not (self.cell_Vmax > self.cell_Vmin):
+        if not (self.Vmax > self.Vmin):
             raise ValueError("Illegal cell voltages: Vmax must be greater than Vmin")
 
     def voltageModel(self, T,it,i):
@@ -109,38 +136,26 @@ class Battery:
         return V
 
     def ConfigTemp(self,T):
-        sE0 = self.cell_voltage_ctt
-        sR  = self.cell_resistance
-        A  = self.cell_exp_amplitude
-        B  = self.cell_exp_time_ctt
-        sK  = self.cell_polarization_ctt
-        sQ  = self.cell_capacity
-        Cv = 0.015
-        alf = self.cell_K_arrhenius
-        bet = self.cell_R_arrhenius
-        EDelta = self.cell_E_slope
-        QDelta = self.cell_Q_slope
-        
-        Tref=300
+        sE0 , sR , A      = self.voltage_ctt , self.resistance      , self.exp_amplitude
+        B   , sK , sQ     = self.exp_time_ctt, self.polarization_ctt, self.capacity
+        alf , bet, EDelta = self.K_arrhenius , self.R_arrhenius     , self.E_slope
+        QDelta, Tref      = self.Q_slope     , self.Tref
+
+        Cv = 0.015*0 # delete this later
         E0 = sE0 + EDelta*(T-Tref)
         Q = sQ + QDelta*(T-Tref)
         K = sK * math.exp(alf * (1/T - 1/Tref))
         R = sR * math.exp(bet * (1/T - 1/Tref))
 
-        print("E0 , R , K , Q")
-        print(f'old {sE0:.5} | {sR:.5} | {sK:.5} | {sQ:.5}')
-        print(f'new {E0:.5} | {R:.5} | {K:.5} | {Q:.5}')
-        print(f'dlt {E0-sE0:.5} | {R-sR:.5} | {K-sK:.5} | {Q-sQ:.5}')
-        print(f'pct {100*(E0-sE0)/sE0:.5} | {100*(R-sR)/sR:.5} | {100*(K-sK)/sK:.5} | {100*(Q-sQ)/sQ:.5}')
-        print("-----------------------")
         return E0, R, A, B, K, Q, Cv
  
-    def Curr_2_Heat(self,Ta,T,it,i):
+    def heatLoss(self,Ta):
 
-        #E0,R,A,B,K,Q,Cv = self.ConfigTemp(T)
-        V = self.voltageModel(T,it,i)
-        Voc = self.voltageModel(T,it,0)
-        P = (Voc-V)*i+self.cell_E_slope*i*T
+        V , Voc  = self.Vout , self.Voc
+        i , it   = self.i    , self.it
+        T , dEdT = self.T    , self.E_slope
+
+        P = (Voc-V)*i + dEdT*i*T
         tc = 4880
         Rth = 0.629
         Cth = tc/Rth
@@ -149,62 +164,46 @@ class Battery:
 
 #####################################################################
 class Mission:
-    def __init__(self, mybattery):
-        self.battery = mybattery
-
+    def __init__(self, batt,Ta):
+        self.bt = batt
+        self.Ta = Ta
     def model(self,t,y):
-        '''constant current'''
-        T=y[1]
-        it=y[0]/3600
-        i = 20
-    
-        #battery state of charge
-        SOC = 1-it/self.battery.cell_capacity
+        
+        # update the battery temperature, charge, and current
+        self.bt.T = y[1]
+        self.bt.it = y[0]/3600
+        self.bt.i = 20
+        # calculate the heat loss at the present ambient T
+        dTdt,_ = self.bt.heatLoss(Ta)
 
-        Vout  = self.battery.voltageModel(T,it,i)
-        dTdt,Pl = self.battery.Curr_2_Heat(Ta,T,it,i)
-        print("Ta",Ta)
-        PElectric = Vout * i
-        self.outBatVolt = Vout
-        self.outBatCurr = i
-        self.outBatPwr = PElectric
-        self.outSOC = SOC
-        self.outTemp = T
-        self.outdTdt=dTdt
-        self.outHeat=Pl
-        return [i,dTdt]
+        return [self.bt.i,dTdt]
 
-    def evaluate(self,times,Tb):
-        rtol = 1e-5
-        method= 'BDF'
-        y0 = [0,Tb] #initial spent charge
-        sol = integrate.solve_ivp(self.model,(times[0],times[-1]), y0, method=method, rtol=rtol, t_eval=times)
+    def evaluate(self,times):
+        y0 = [0,self.Ta] #initial spent charge
+        sol = integrate.solve_ivp(self.model,(times[0],times[-1]), y0, t_eval=times, method='BDF', rtol=1e-5)
         return sol
 
 ##############################################################
 
-mybat = Battery()
-mybat.SetInput()
-mymiss = Mission(mybat)
-
+bat = Battery()
+bat.SetInput()
 Ta=273.15+0 #ambient T
-Tb=Ta  #initial battery T
 
-times, Vs, Ts = load_csv('data.csv')
-results = mymiss.evaluate(times,Tb)
+mymiss = Mission(bat,Ta)
+times, Vs = load_csv('data.csv')
+results = mymiss.evaluate(times)
 
 aC=[]
 for k in range(len(results.t)):
     yy0 = [results.y[0][k],results.y[1][k]]
-    mymiss.model(results.t[k],yy0)
+    out = mymiss.model(results.t[k],yy0)
     aC.append([ results.t[k],
-                mymiss.outSOC,
-                mymiss.outBatVolt,
-                mymiss.outBatCurr,
-                mymiss.outBatPwr,
-                mymiss.outdTdt,
-                mymiss.outTemp,
-                mymiss.outHeat])
+                bat.SOC,
+                bat.Vout,
+                bat.i,
+                bat.i*bat.Vout,
+                out[1],
+                bat.T])
 aC=np.array(aC)
 
 bC = {'time': aC[:,0],
@@ -213,19 +212,10 @@ bC = {'time': aC[:,0],
      'current': aC[:,3],
      'power': aC[:,4],
      'dTdt':aC[:,5],
-     'temperature':aC[:,6]-273.15,
-     'loss':aC[:,7]
+     'temperature':aC[:,6]-273.15
     }
 
 foldername = 'testingoutputs'
-plotData(bC, 'time' , 'soc' , 'CC t v soc', foldername)
-plotData(bC, 'time' , 'voltage' , 'CC t v volt', foldername)
-plotData(bC, 'time' , 'current' , 'CC t v curr', foldername)
-plotData(bC, 'time' , 'power' , 'CC t v pwr', foldername)
-
-plt.ylim(-20, 60)
-plotData(bC, 'time' , 'temperature' , 'CC t v temp', foldername)
-plotData(bC, 'time' , 'dTdt' , 'CC t v dTdt', foldername)
-plotData(bC, 'time' , 'loss' , 'CC t v loss', foldername)
+plotData(bC,foldername)
 
 plotErrors(times,Vs,bC['voltage'],'VoltageError',foldername)
