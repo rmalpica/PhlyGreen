@@ -27,12 +27,39 @@ cellparameters={
 }
 
 
-def load_csv(file):
+def load_csv():
     """Loads CSV with timestamps and values into numpy arrays."""
-    data = pd.read_csv(file)
-    t = data.iloc[:, 0].values
-    y = data.iloc[:, 1].values
-    return t, y
+    # Read the CSV file
+    df = pd.read_csv('temperature.csv', header=[0,1])
+    # Create a dictionary to store temperature data
+    temperatures = {
+    '0': {'time': df[('0', 'X')].dropna().values, 
+           'temperature': df[('0', 'Y')].dropna().values},
+    '10': {'time': df[('10', 'X')].dropna().values, 
+            'temperature': df[('10', 'Y')].dropna().values},
+    '23': {'time': df[('23', 'X')].dropna().values, 
+            'temperature': df[('23', 'Y')].dropna().values},
+    '45': {'time': df[('45', 'X')].dropna().values, 
+            'temperature': df[('45', 'Y')].dropna().values}
+}
+
+    # Read the CSV file
+    df = pd.read_csv('voltage.csv', header=[0,1])
+    # Create a dictionary to store temperature data
+    temperatures = {
+    '0': {'time': df[('0', 'X')].dropna().values, 
+           'voltage': df[('0', 'Y')].dropna().values},
+    '10': {'time': df[('10', 'X')].dropna().values, 
+            'voltage': df[('10', 'Y')].dropna().values},
+    '23': {'time': df[('23', 'X')].dropna().values, 
+            'voltage': df[('23', 'Y')].dropna().values},
+    '45': {'time': df[('45', 'X')].dropna().values, 
+            'voltage': df[('45', 'Y')].dropna().values}
+}
+    return temperatures, voltages
+
+
+
 
 def plotData(data, foldername):
     time = data['time']
@@ -184,6 +211,19 @@ class Mission:
         return sol
 
 ##############################################################
+def validate(data):
+    for key in temp_data:
+        evaluator=Mission(bat,int(key))
+        results = evaluator.evaluate(data[key]['time'])
+        
+
+def validate_all():
+    temp_data, volt_data = load_csv()
+    validate(temp_data)
+    validate(volt_data)
+
+
+
 
 bat = Battery()
 bat.SetInput()
