@@ -26,89 +26,6 @@ cellparameters={
     'Cell Height': 0.065,                   # in m
 }
 
-
-def load_csv():
-    """Loads CSV with timestamps and values into numpy arrays."""
-    # Read the CSV file
-    df = pd.read_csv('temperature.csv', header=[0,1])
-    # Create a dictionary to store temperature data
-    temperatures = {
-    '0': {'time': df[('0', 'X')].dropna().values, 
-           'temperature': df[('0', 'Y')].dropna().values},
-    '10': {'time': df[('10', 'X')].dropna().values, 
-            'temperature': df[('10', 'Y')].dropna().values},
-    '23': {'time': df[('23', 'X')].dropna().values, 
-            'temperature': df[('23', 'Y')].dropna().values},
-    '45': {'time': df[('45', 'X')].dropna().values, 
-            'temperature': df[('45', 'Y')].dropna().values}
-}
-
-    # Read the CSV file
-    df = pd.read_csv('voltage.csv', header=[0,1])
-    # Create a dictionary to store temperature data
-    temperatures = {
-    '0': {'time': df[('0', 'X')].dropna().values, 
-           'voltage': df[('0', 'Y')].dropna().values},
-    '10': {'time': df[('10', 'X')].dropna().values, 
-            'voltage': df[('10', 'Y')].dropna().values},
-    '23': {'time': df[('23', 'X')].dropna().values, 
-            'voltage': df[('23', 'Y')].dropna().values},
-    '45': {'time': df[('45', 'X')].dropna().values, 
-            'voltage': df[('45', 'Y')].dropna().values}
-}
-    return temperatures, voltages
-
-
-
-
-def plotData(data, foldername):
-    time = data['time']
-    for key, values in data.items():
-        if key != 'time':
-            sns.scatterplot(x=time, y=values)
-            plt.xlabel('Time')
-            plt.ylabel(key)
-            title = f'{key}_over_time'
-            plt.title(title)
-            # Save the plot as a PDF
-            filename = os.path.join(foldername, title+".pdf") #create file inside the output directory
-            plt.savefig(filename)
-            print('||>- Saved \'',title,'\' to',filename)
-            plt.close()  # Close the plot
-
-def ePlot(time, err, title, foldername):
-    sns.scatterplot(x=time, y=err)
-    # Add labels and title
-    plt.xlabel('Time')
-    plt.ylabel('Error')
-    plt.title(title)
-    # Save the plot as a PDF
-    filename = os.path.join(foldername, title+".pdf") #create file inside the output directory
-    plt.savefig(filename)
-    print('||>- Saved \'',title,'\' to',filename)
-    plt.close()  # Close the plot
-
-def plotErrors(time, real, sim, title, foldername):
-    absolute_err = sim-real
-    relative_err = 100*absolute_err/real
-    ePlot(time, absolute_err, title+"-err_abs", foldername)
-    ePlot(time, relative_err, title+"-err_rel", foldername)
-
-    sns.scatterplot(x=time, y=real)
-    sns.scatterplot(x=time, y=sim)
-
-    # Add labels and title
-    plt.xlabel("time")
-    plt.ylabel("value")
-    plt.title(title)
-
-    # Save the plot as a PDF
-    filename = os.path.join(foldername, title+"-compare.pdf") #create file inside the output directory
-    plt.savefig(filename)
-    print('||>- Saved \'',title,'\' to',filename)
-    plt.close()  # Close the plot
-
-
 class Battery:
     def __init__(self):
         self.T = None
@@ -139,7 +56,7 @@ class Battery:
         self.polarization_ctt  = self.cell['Polarization Constant']          # in Volts over amp hour
         self.K_arrhenius       = self.cell['Polarization Arrhenius Constant']# dimensionless
         self.capacity          = self.cell['Cell Capacity']                  # in Ah
-        self.Q_slope           = self.cell['Capacity Thermal Slope']         # in ??UNCLEAR?? per kelvin
+        self.Q_slope           = self.cell['Capacity Thermal Slope']         # in Ah per kelvin
         self.voltage_ctt       = self.cell['Voltage Constant']               # in volts
         self.E_slope           = self.cell['Voltage Thermal Slope']          # in volts per kelvin
         self.Vmax              = self.exp_amplitude + self.voltage_ctt       # in volts
@@ -154,15 +71,14 @@ class Battery:
             raise ValueError("Illegal cell voltages: Vmax must be greater than Vmin")
 
     def voltageModel(self, T,it,i):
-        '''Converts the current being drawn + the current
-        spent so far into an output voltage'''
-
-        E0,R,A,B,K,Q,Cv = self.ConfigTemp(T)
-
-        V = E0 -i*K*(Q/(Q-it)) -it*K*(Q/(Q-it)) +A*np.exp(-B * it) -i*R -it*Cv
-        return V
-
-    def ConfigTemp(self,T):
+        '''Model that determines the voltage from the present battery state
+        Receives: 
+            - T  - battery's temperature
+            - it - battery current integral, aka charge spent so far
+            - i  - current draw from the battery
+        Returns:
+            - V - battery voltage output
+        '''
         sE0 , sR , A      = self.voltage_ctt , self.resistance      , self.exp_amplitude
         B   , sK , sQ     = self.exp_time_ctt, self.polarization_ctt, self.capacity
         alf , bet, EDelta = self.K_arrhenius , self.R_arrhenius     , self.E_slope
@@ -174,10 +90,18 @@ class Battery:
         K = sK * math.exp(alf * (1/T - 1/Tref))
         R = sR * math.exp(bet * (1/T - 1/Tref))
 
-        return E0, R, A, B, K, Q, Cv
- 
-    def heatLoss(self,Ta):
+        V = E0 -i*K*(Q/(Q-it)) -it*K*(Q/(Q-it)) +A*np.exp(-B * it) -i*R -it*Cv
+        return V
 
+    def heatLoss(self,Ta):
+        '''Simple differential equation describing a simplified lumped element thermal
+        model of the battery
+        Receives: 
+            - Ta - temperature of the ambient cooling air
+        Returns:
+            - dTdt - battery temperature derivative
+            - P    - dissipated waste power
+        '''
         V , Voc  = self.Vout , self.Voc
         i , it   = self.i    , self.it
         T , dEdT = self.T    , self.E_slope
@@ -194,68 +118,161 @@ class Mission:
     def __init__(self, batt,Ta):
         self.bt = batt
         self.Ta = Ta
+
     def model(self,t,y):
-        
+
         # update the battery temperature, charge, and current
         self.bt.T = y[1]
         self.bt.it = y[0]/3600
         self.bt.i = 20
         # calculate the heat loss at the present ambient T
-        dTdt,_ = self.bt.heatLoss(Ta)
+        dTdt,_ = self.bt.heatLoss(self.Ta)
 
         return [self.bt.i,dTdt]
 
     def evaluate(self,times):
         y0 = [0,self.Ta] #initial spent charge
+        #print(times)
         sol = integrate.solve_ivp(self.model,(times[0],times[-1]), y0, t_eval=times, method='BDF', rtol=1e-5)
         return sol
 
 ##############################################################
-def validate(data):
-    for key in temp_data:
-        evaluator=Mission(bat,int(key))
-        results = evaluator.evaluate(data[key]['time'])
+
+def load_csv():
+    """Loads CSV with timestamps and values into numpy arrays."""
+    # Read the CSV file
+    df = pd.read_csv('temperature.csv', header=[0,1])
+    # Create a dictionary to store temperature data
+    temperatures = {
+    '2': {'time': df[('2', 'X')].dropna().values, 
+           'temperature': df[('2', 'Y')].dropna().values},
+    '12': {'time': df[('12', 'X')].dropna().values, 
+            'temperature': df[('12', 'Y')].dropna().values},
+    '25': {'time': df[('25', 'X')].dropna().values, 
+            'temperature': df[('25', 'Y')].dropna().values},
+    '47': {'time': df[('47', 'X')].dropna().values, 
+            'temperature': df[('47', 'Y')].dropna().values}
+    }
+
+    # Read the CSV file
+    df = pd.read_csv('voltage.csv', header=[0,1])
+    # Create a dictionary to store temperature data
+    voltages = {
+    '2': {'time': df[('2', 'X')].dropna().values, 
+           'voltage': df[('2', 'Y')].dropna().values},
+    '12': {'time': df[('12', 'X')].dropna().values, 
+            'voltage': df[('12', 'Y')].dropna().values},
+    '25': {'time': df[('25', 'X')].dropna().values, 
+            'voltage': df[('25', 'Y')].dropna().values},
+    '47': {'time': df[('47', 'X')].dropna().values, 
+            'voltage': df[('47', 'Y')].dropna().values}
+    }
+    return temperatures, voltages
+
+
+def plotData(dataset):
+
+    to_plot = ['soc', 'vout', 'i', 'T', 'dTdt']
+
+    for variable in to_plot:
+
+        sns.scatterplot(
+            data=dataset,
+            x='time',
+            y=variable,
+            hue='Ta')
+
+        plt.xlabel('Time')
+        plt.ylabel(variable)
+        title = f'{variable}_over_time'
+        plt.title(title)
+        # Save the plot as a PDF
+        filename = os.path.join(foldername, title+".pdf") #create file inside the output directory
+        plt.savefig(filename)
+        print('||>- Saved \'',title,'\' to',filename)
+        plt.close()  # Close the plot
+
+def ePlot(time, err, title):
+    sns.scatterplot(x=time, y=err)
+    # Add labels and title
+    plt.xlabel('Time')
+    plt.ylabel('Error')
+    plt.title(title)
+    # Save the plot as a PDF
+    filename = os.path.join(foldername, title+".pdf") #create file inside the output directory
+    plt.savefig(filename)
+    print('||>- Saved \'',title,'\' to',filename)
+    plt.close()  # Close the plot
+
+def plotErrors(simDataset,realDataset, which):
+    err_dataset={}
+    for key, data in simDataset.items():
+        sim = simDataset[key][which]
+        sim = np.array(sim)
+        real = realDataset[key][which]
+        real = np.array(real)
+        if which == 'temperature':
+            real = real+273.15
+        time = simDataset[key]['time']
+        absolute_err = sim - real 
+        relative_err = 100*absolute_err/real
+        err_dataset[key] = {'time':time , 'abs':absolute_err ,'rel':relative_err}
+        title = f'{which}_comparison_at_{key}C'
+        ePlot(time, absolute_err, title+"-err_abs")
+        ePlot(time, relative_err, title+"-err_rel")
+        sns.scatterplot(x=time, y=real)
+        sns.scatterplot(x=time, y=sim)
+        plt.xlabel("time")
+        plt.ylabel(which)
+        plt.title(title)
+        filename = os.path.join(foldername, title+"-compare.pdf") #create file inside the output directory
+        plt.savefig(filename)
+        print('||>- Saved \'',title,'\' to',filename)
+        plt.close()
+
+def getData(results,evaluator):
+    out={'time':[],'soc':[],'vout':[],'i':[],'T':[],'dTdt':[],'Ta':[]}
+    outerr={'time':[],'voltage':[],'temperature':[]}
+    for k in range(len(results.t)):
+        yy0 = [results.y[0][k],results.y[1][k]]
+        sol = evaluator.model(results.t[k],yy0)
+        out['time'].append(results.t[k])
+        out['soc'].append(bat.SOC)
+        out['vout'].append(bat.Vout)
+        out['i'].append(bat.i)
+        out['T'].append(bat.T)
+        out['dTdt'].append(sol[1])
+        out['Ta'].append(evaluator.Ta)
+
+        outerr['time'].append(results.t[k])
+        outerr['temperature'].append(bat.T)
+        outerr['voltage'].append(bat.Vout)
+
+    return pd.DataFrame(out), outerr
+
+def validate(realdata):
+    frames=[]
+    errdat={}
+    for key in realdata:
+        Ta = int(key)
+        evaluator=Mission(bat,Ta+273.15)
+        solution = evaluator.evaluate(realdata[key]['time'])
+        results_df, errdat[key] = getData(solution,evaluator)
+        frames.append(results_df)
         
+    return pd.concat(frames, ignore_index=True), errdat
 
 def validate_all():
     temp_data, volt_data = load_csv()
-    validate(temp_data)
-    validate(volt_data)
+    results, forerrors = validate(temp_data)
+    #plotData(results)
+    plotErrors(forerrors, temp_data,'temperature')
 
-
-
+    results, forerrors = validate(volt_data)
+    #plotData(results)
+    plotErrors(forerrors, volt_data,'voltage')
 
 bat = Battery()
 bat.SetInput()
-Ta=273.15+0 #ambient T
-
-mymiss = Mission(bat,Ta)
-times, Vs = load_csv('data.csv')
-results = mymiss.evaluate(times)
-
-aC=[]
-for k in range(len(results.t)):
-    yy0 = [results.y[0][k],results.y[1][k]]
-    out = mymiss.model(results.t[k],yy0)
-    aC.append([ results.t[k],
-                bat.SOC,
-                bat.Vout,
-                bat.i,
-                bat.i*bat.Vout,
-                out[1],
-                bat.T])
-aC=np.array(aC)
-
-bC = {'time': aC[:,0],
-     'soc':aC[:,1],
-     'voltage':aC[:,2],
-     'current': aC[:,3],
-     'power': aC[:,4],
-     'dTdt':aC[:,5],
-     'temperature':aC[:,6]-273.15
-    }
-
 foldername = 'testingoutputs'
-plotData(bC,foldername)
-
-plotErrors(times,Vs,bC['voltage'],'VoltageError',foldername)
+validate_all()
