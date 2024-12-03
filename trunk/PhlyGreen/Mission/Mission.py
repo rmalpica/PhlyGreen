@@ -58,7 +58,7 @@ class Mission:
 
         self.beta0 = self.aircraft.MissionInput['Beta start']
         self.ef = self.aircraft.EnergyInput['Ef']
-        self.SOC_min = self.aircraft.MissionInput['Minimum SOC']
+        self.aircraft.battery.SOC_min = self.aircraft.MissionInput['Minimum SOC']
 
     def InitializeProfile(self):
         
@@ -163,13 +163,6 @@ class Mission:
             if not self.valid_solution:
                 return [0,0,0,0]
 
-            #battery state of charge
-            SOC = 1-y[3]/self.aircraft.battery.pack_charge
-            if (SOC<self.SOC_min):
-                self.constraint_low_SOC = False
-                self.valid_solution = False
-                return [0,0,0,0]
-
             #aircraft mass fraction
             Beta = y[2]
             Ppropulsive = PowerPropulsive(Beta,t)
@@ -181,101 +174,71 @@ class Mission:
             PElectric = Ppropulsive * PRatio[5] #propulsive power required for the electric motors
 
             #current drawn to meet power demands
-            BatVolt, BatCurr  = self.aircraft.battery.Power_2_V_A(y[3], PElectric) #convert output power to volts and amps
-            if (BatCurr == None):
-                self.constraint_underpowered = False
+            try:
+                self.aircraft.battery.T = y[4]
+                self.aircraft.battery.it = y[3]
+                self.aircraft.battery.i  = self.aircraft.battery.Power_2_current(PElectric) #convert output power to volts and amps
+                dEdt_bat = self.aircraft.battery.i * self.aircraft.battery.Vout
+                dTdt = self.aircraft.battery.heatLoss(300)
+            except Exception as err:
+                print(err)
                 self.valid_solution = False
                 return [0,0,0,0]
-            if (BatCurr > self.aircraft.battery.pack_current):
-                self.constraint_overcurrent = False
-                self.valid_solution = False
-                return [0,0,0,0]
-            if (BatVolt < self.aircraft.battery.controller_Vmin):
-                self.constraint_low_voltage = False
-                print("failing 3")
-                self.valid_solution = False
-                return [0,0,0,0]
-            if (BatVolt < self.aircraft.battery.pack_Vmin):
-                self.constraint_low_voltage = False
-                print("failing 4")
-                self.valid_solution = False
-                return [0,0,0,0]
-
-            #self.outBatVoltOC = BatVoltOC
-            self.outBatVolt = BatVolt
-            self.outBatCurr = BatCurr
-
-            dEdt_bat = BatVolt * BatCurr #gives the watts spent by the battery
-            return [dEFdt,dEdt_bat,dbetadt,BatCurr]
+            return [dEFdt,dEdt_bat,dbetadt,self.aircraft.battery.i,dTdt]
 
 
         def evaluate_P_nr(P_number):
             print(f"pnumber {P_number}")
+            self.valid_solution = True
             #no maths needed to know nothing will work without a battery
             if P_number == 0:
-                return [False,False,False,False,False]
-
-            # resetting the constraint booleans
-            self.constraint_low_SOC = True
-            self.constraint_low_voltage = True
-            self.constraint_overcurrent = True
-            self.constraint_TO_underpowered = True
-            self.constraint_underpowered = True
+                self.valid_solution = False
+                return self.valid_solution
 
             self.aircraft.battery.Configure(P_number) #changes the configuration every cycle
-            self.TO_Voltage , self.TO_current = self.aircraft.battery.Power_2_V_A(1,self.TO_PBat)
-            if (self.TO_Voltage == None):
-                print("failing 1")
-                self.constraint_low_voltage = False
-            elif (self.TO_Voltage < self.aircraft.battery.controller_Vmin):
-                self.constraint_low_voltage = False
-                print("failing 2")
-            elif (self.TO_current == None):
-                self.constraint_TO_underpowered = False
-            elif (self.aircraft.battery.pack_current < self.TO_current ):
-                self.constraint_TO_underpowered = False
-            else:
-                # integrate sequentially
-                self.integral_solution = []
-                self.CurrentvsTime = [] #for the heat calculations. maybe this can be moved elsewhere?
-                self.plottingVars=[]
-                times = np.append(self.profile.Breaks,self.profile.MissionTime2)
-                rtol = 1e-5
-                method= 'BDF'
-                y0 = [0,0,self.beta0,1] #initial fuel energy, battery energy, mass fraction, and SOC
+            try:
+                self.aircraft.battery.it = 0
+                self.aircraft.battery.i  = self.aircraft.battery.Power_2_current(self.TO_PBat) #convert output power to volts and amps
+                self.aircraft.battery.Vout
+            except Exception as err:
+                print(err)
+                self.valid_solution = False
+                return self.valid_solution
+            
+            # integrate sequentially
+            self.integral_solution = []
+            self.CurrentvsTime = [] #for the heat calculations. maybe this can be moved elsewhere?
+            self.plottingVars=[]
+            times = np.append(self.profile.Breaks,self.profile.MissionTime2)
+            rtol = 1e-5
+            method= 'BDF'
+            y0 = [0,0,self.beta0,0] #initial fuel energy, battery energy, mass fraction, and spent charge
+            for i in range(len(times)-1):
+                sol = integrate.solve_ivp(model,[times[i], times[i+1]], y0, method=method, rtol=rtol) #"model" returns d
+                if not self.valid_solution:
+                    break
+                self.integral_solution.append(sol)
 
-                for i in range(len(times)-1):
-                    self.valid_solution = True
-                    sol = integrate.solve_ivp(model,[times[i], times[i+1]], y0, method=method, rtol=rtol) #"model" returns d
-                    if not self.valid_solution:
-                        break
-                    self.integral_solution.append(sol)
+                # make array of the calculated time points and battery current 
+                # in order to calculate the heat. Possibly change this so that
+                # it feeds directly into a function instead of making an array
+                # to enable calculating the battery heating in the integration
+                for k in range(len(sol.t)):
+                    yy0 = [sol.y[0][k],sol.y[1][k],sol.y[2][k],sol.y[3][k]]
+                    model(sol.t[k],yy0)
 
-                    # make array of the calculated time points and battery current 
-                    # in order to calculate the heat. Possibly change this so that
-                    # it feeds directly into a function instead of making an array
-                    # to enable calculating the battery heating in the integration
-                    for k in range(len(sol.t)):
-                        yy0 = [sol.y[0][k],sol.y[1][k],sol.y[2][k],sol.y[3][k]]
-                        model(sol.t[k],yy0)
+                    self.CurrentvsTime.append([sol.t[k],self.outBatCurr])
+                    self.plottingVars.append([sol.t[k],
+                                                self.outBatVolt,
+                                                self.outBatVolt,
+                                                self.outBatCurr])
+                self.Ef = sol.y[0]
+                self.EBat = sol.y[1]
+                self.Beta = sol.y[2]
+                y0 = [sol.y[0][-1],sol.y[1][-1],sol.y[2][-1],sol.y[3][-1],sol.y[4][-1]]
 
-                        self.CurrentvsTime.append([sol.t[k],self.outBatCurr])
-                        self.plottingVars.append([sol.t[k],
-                                                  self.outBatVolt,
-                                                  self.outBatVolt,
-                                                  self.outBatCurr])
-                    self.Ef = sol.y[0]
-                    self.EBat = sol.y[1]
-                    self.Beta = sol.y[2]
-                    y0 = [sol.y[0][-1],sol.y[1][-1],sol.y[2][-1],sol.y[3][-1]]
-                    # watch out: the simplified model returns battery energy in joules,
-                    # but the complete model returns battery CHARGE in coulombs instead
 
-            return [self.constraint_low_SOC,
-                    self.constraint_low_voltage,
-                    self.constraint_overcurrent,
-                    self.constraint_underpowered,
-                    self.constraint_TO_underpowered]
+            return self.valid_solution
 
 
         # Takeoff condition, calculated before anything else as it does not depend on the battery size, just the aircraft
