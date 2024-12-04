@@ -50,7 +50,7 @@ def runAndPlot(aL,runName,varsOfInterest={}):
 
 aL={'ArchList'     :{'Hybrid'},
     'MissionList'  :{'Mission-FelixFinger'},
-    'CellsList'    :{'NEWMODELTESTING'},
+    'CellsList'    :{'ThermalModel-Cell-Mega'},
     'RangesList'   :{1200},
     'PayloadsList' :{1200},
     'PhisList'     :{0.3}}

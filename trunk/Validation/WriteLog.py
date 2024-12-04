@@ -1,7 +1,8 @@
 import sys
 import json
 def printLog(myaircraft,filename):
-
+    pass
+    return
     with open(filename, "w") as file:
         sys.stdout = file #redirecting stdout to file to avoid recreating the print function for files
 

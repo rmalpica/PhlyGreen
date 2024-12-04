@@ -92,7 +92,6 @@ def hybridPlots(flight,folder):
 
     # plots the data
     data = flight['Outputs']
-    dataHeat = data['Battery Heating']
 
     plotData(data,'Time','SOC','SOC vs Time',folder)
     plotData(data,'Time','Beta','Beta vs Time',folder)
@@ -107,12 +106,7 @@ def hybridPlots(flight,folder):
     plotData(data,'Time','Battery Efficiency','Battery Efficiency vs Time',folder)
     plotData(data,'Time','Altitude','Altitude vs Time',folder)
     plotData(data,'Time','Phi','Phi vs Time',folder)
-
-
-    # battery heat stuff
-    plotData(dataHeat,'Time','Temperature','Temperature vs Time',folder)
-    plotData(dataHeat,'Time','dTdt','Change in Temperature vs Time',folder)
-    plotData(dataHeat,'Time','Heat','Heating Power vs Time',folder)
+    plotData(data,'Time','Battery Temperature','Temperature vs Time',folder)
 
 # function to plot the data in a generic way so that all plots have the same formatting
 # receives a dictionary that contains the keys X and Y pointing to ordered lists

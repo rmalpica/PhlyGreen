@@ -5,6 +5,7 @@ import PhlyGreen.Utilities.Atmosphere as ISA
 import PhlyGreen.Utilities.Speed as Speed
 import scipy.integrate as integrate
 from .Profile import Profile
+from PhlyGreen.Systems.Battery.Battery import BatteryError
 
 class Mission:
   
@@ -161,29 +162,44 @@ class Mission:
 
         def model(t,y):
             if not self.valid_solution:
-                return [0,0,0,0]
+                return [0,0,0,0,0]
 
             #aircraft mass fraction
             Beta = y[2]
             Ppropulsive = PowerPropulsive(Beta,t)
-            PRatio = self.aircraft.powertrain.Hybrid(self.aircraft.mission.profile.SuppliedPowerRatio(t),self.profile.Altitude(t),self.profile.Velocity(t),Ppropulsive) #takes in all the mission segments and finds the required power ratio for the current time of the mission
-
+            #takes in all the mission segments and finds the required power ratio for the current time of the mission
+            PRatio = self.aircraft.powertrain.Hybrid(self.aircraft.mission.profile.SuppliedPowerRatio(t),
+                                                     self.profile.Altitude(t),
+                                                     self.profile.Velocity(t),
+                                                     Ppropulsive) 
             dEFdt = Ppropulsive * PRatio[0] #fuel power output
             dbetadt = - dEFdt/(self.ef*self.WTO) #change in mass due to fuel consumption
-
             PElectric = Ppropulsive * PRatio[5] #propulsive power required for the electric motors
 
-            #current drawn to meet power demands
+            ''' Finds the battery state for the requested power.
+                The battery class raises an exception if any of its parameters
+                exceed the allowed limits or there are unphysical values.
+                This is taken as a sign that the P number is invalid.
+                The exception may be caught into a global variable so that
+                the last constraint driving the battery sizing may be
+                printed to the user. Temperature limits are not validated
+                because T depends on the cooling sizing, not the P number.
+            '''
             try:
-                self.aircraft.battery.T = y[4]
-                self.aircraft.battery.it = y[3]
-                self.aircraft.battery.i  = self.aircraft.battery.Power_2_current(PElectric) #convert output power to volts and amps
-                dEdt_bat = self.aircraft.battery.i * self.aircraft.battery.Vout
-                dTdt = self.aircraft.battery.heatLoss(300)
-            except Exception as err:
+                self.aircraft.battery.T = y[4] # assign a temperature, battery class validates temp
+                self.aircraft.battery.it = y[3]/3600 # assign spent charge, battery validates SOC
+                self.aircraft.battery.i  = self.aircraft.battery.Power_2_current(PElectric) # assign current, also validated here by the class
+                dEdt_bat = self.aircraft.battery.i * self.aircraft.battery.Vout # calculate power, this causes Vout to be generated and validated
+                # WIP TODO make this take in the atmosphere class instead of a hardcoded air temp value:
+                dTdt, _ = self.aircraft.battery.heatLoss(300) 
+            except BatteryError as err:
                 print(err)
                 self.valid_solution = False
-                return [0,0,0,0]
+                return [0,0,0,0,0]
+            except Exception as e:
+                print(f"Unexpected error: {e}")
+                raise
+
             return [dEFdt,dEdt_bat,dbetadt,self.aircraft.battery.i,dTdt]
 
 
@@ -197,46 +213,48 @@ class Mission:
 
             self.aircraft.battery.Configure(P_number) #changes the configuration every cycle
             try:
+                self.aircraft.battery.T = 300 # battery T TODO FIX THIS
                 self.aircraft.battery.it = 0
                 self.aircraft.battery.i  = self.aircraft.battery.Power_2_current(self.TO_PBat) #convert output power to volts and amps
                 self.aircraft.battery.Vout
-            except Exception as err:
+            except BatteryError as err:
                 print(err)
                 self.valid_solution = False
                 return self.valid_solution
+            except Exception as e:
+                print(f"Unexpected error: {e}")
+                raise
             
             # integrate sequentially
             self.integral_solution = []
-            self.CurrentvsTime = [] #for the heat calculations. maybe this can be moved elsewhere?
             self.plottingVars=[]
             times = np.append(self.profile.Breaks,self.profile.MissionTime2)
             rtol = 1e-5
             method= 'BDF'
-            y0 = [0,0,self.beta0,0] #initial fuel energy, battery energy, mass fraction, and spent charge
+            #initial fuel energy, battery energy, mass fraction, spent charge, and battery T TODO FIX THIS
+            y0 = [0,0,self.beta0,0,300] 
+            
             for i in range(len(times)-1):
-                sol = integrate.solve_ivp(model,[times[i], times[i+1]], y0, method=method, rtol=rtol) #"model" returns d
+
+                sol = integrate.solve_ivp(model,[times[i], times[i+1]], y0, method=method, rtol=rtol,dense_output=True)
                 if not self.valid_solution:
                     break
-                self.integral_solution.append(sol)
 
-                # make array of the calculated time points and battery current 
-                # in order to calculate the heat. Possibly change this so that
-                # it feeds directly into a function instead of making an array
-                # to enable calculating the battery heating in the integration
+                self.integral_solution.append(sol)
                 for k in range(len(sol.t)):
-                    yy0 = [sol.y[0][k],sol.y[1][k],sol.y[2][k],sol.y[3][k]]
+                    yy0 = [sol.y[0][k],sol.y[1][k],sol.y[2][k],sol.y[3][k],sol.y[4][k]]
                     model(sol.t[k],yy0)
 
-                    self.CurrentvsTime.append([sol.t[k],self.outBatCurr])
                     self.plottingVars.append([sol.t[k],
-                                                self.outBatVolt,
-                                                self.outBatVolt,
-                                                self.outBatCurr])
+                                              self.aircraft.battery.SOC,
+                                              self.aircraft.battery.Voc,
+                                              self.aircraft.battery.Vout,
+                                              self.aircraft.battery.i,
+                                              self.aircraft.battery.T])
                 self.Ef = sol.y[0]
                 self.EBat = sol.y[1]
                 self.Beta = sol.y[2]
                 y0 = [sol.y[0][-1],sol.y[1][-1],sol.y[2][-1],sol.y[3][-1],sol.y[4][-1]]
-
 
             return self.valid_solution
 
@@ -273,16 +291,16 @@ class Mission:
         except Exception as err:
             #print(f'optimal not found because of:\n {err}')
             n_max = 128  # hardcoding a value that is anecdotally known to be ok for a first guess
-            n_min = 0
+            n_min = 64
 
         #lower the min p number until its valid
-        while all(evaluate_P_nr(n_min)): 
+        while evaluate_P_nr(n_min): 
             print("n_min overestimated:",n_min, "; halving.")
             n_max = n_min   #if the n_min guess is too large it can be the new n_max to save iterations since it has already been tried
-            n_min = math.floor(n_min/2) #half n_min until it fails
+            n_min = math.floor(n_min/2) #halve n_min until it fails
 
         #raise the max p number until its valid
-        while not all(evaluate_P_nr(n_max)): 
+        while not evaluate_P_nr(n_max): 
             #print(evaluate_P_nr(n_max))
             print("n_max underestimated:",n_max, "; doubling.")
             n_min = n_max   #if the nmax guess is too small it can be the new nmin to save iterations since it has already been tried
@@ -294,10 +312,9 @@ class Mission:
         if n_max - n_min == 1: 
             optimal = True
             n = n_max
-            output = evaluate_P_nr(n)
-            valid_result = all(output)
+            valid_result = evaluate_P_nr(n)
             if not valid_result:
-                raise Exception("Impossible n value somehow")
+                raise Exception("Impossible n value somehow?")
             print("Optimal P: ",n)
             self.optimal_n = n
 
@@ -307,8 +324,7 @@ class Mission:
         #find optimal P number using bisection search
         while not optimal:
             #j=j+1
-            output = evaluate_P_nr(n)
-            valid_result = all(output)
+            valid_result = evaluate_P_nr(n)
             # print("[iter",j,"] [P",n,"] [min",n_min,"] [max",n_max,"] valid?",valid_result) #uncomment for debug
 
             if valid_result and (n-n_min)==1: #n is optimal
@@ -317,12 +333,10 @@ class Mission:
                 optimal = True
 
             elif valid_result:                #n is too big
-                self.driving_constraints=output
                 n_max=n
                 n=math.floor((n_max+n_min)/2)
 
             elif not valid_result :           #n is too small
-                self.driving_constraints=output
                 n_min=n
                 n=math.ceil((n_max+n_min)/2)
         

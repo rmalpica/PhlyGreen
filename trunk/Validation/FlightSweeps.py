@@ -19,6 +19,7 @@ import json
 import FlightProfiles
 import WriteLog
 import multiprocessing
+from scipy import integrate
 from itertools import product
 
 
@@ -89,7 +90,6 @@ Payload = {argPayload}kg
             'Base Phi':argPhi,
             'Mission Profile':flight_profile}
 
-
     # setup just to initialize everything
     powertrain = pg.Systems.Powertrain.Powertrain(None)
     structures = pg.Systems.Structures.Structures(None)
@@ -157,15 +157,6 @@ Payload = {argPayload}kg
     myaircraft.weight.WeightEstimation()
     # only run the output calculations if the calculation converged
     if Converged:
-        #do the battery heating calculations if the aircraft is hybrid
-        if argArch == 'Hybrid' :
-            battery_heating_data = myaircraft.battery.BatteryHeating(myaircraft.mission.CurrentvsTime)
-            # save heating data to dictionary
-            heatdata = {
-                        'Time': battery_heating_data[0].tolist(), # these two are np arrays
-                        'Heat': battery_heating_data[1].tolist(), # they are converted to be put in the json
-                        'Temperature': battery_heating_data[2],
-                        'dTdt': battery_heating_data[3]}
 
         myaircraft.WingSurface = myaircraft.weight.WTO / myaircraft.DesignWTOoS * 9.81
 
@@ -174,26 +165,25 @@ Payload = {argPayload}kg
             Ef    = np.array([])
             Ebat  = np.array([])
             beta  = np.array([])
-            soc   = np.array([])
+
             for array in mission.integral_solution:
                 times = np.concatenate([times, array.t])
                 Ef    = np.concatenate([Ef   , array.y[0]])
                 Ebat  = np.concatenate([Ebat , array.y[1]])
                 beta  = np.concatenate([beta , array.y[2]])
-                soc   = np.concatenate([soc  , array.y[3]])
 
             phi = [mission.profile.SuppliedPowerRatio(t) for t in times]
-            # add one here for battery power over time
-            # add another for efficiency over time maybe also
-            voltcurr=np.array(mission.plottingVars)
-            Time = voltcurr[:,0]
-            Voc = voltcurr[:,1]
-            Vout = voltcurr[:,2]
-            Curr = voltcurr[:,3]
+
+            toplot=np.array(mission.plottingVars)
+            Time = toplot[:,0] # must be equal to 'times' i think?
+            soc  = toplot[:,1]
+            Voc  = toplot[:,2]
+            Vout = toplot[:,3]
+            Curr = toplot[:,4]
+            Temp = toplot[:,5]
             SpentPwr = Voc*Curr
             DeliveredPwr = Vout*Curr
             BatEfficiency = Vout/Voc
-
 
             power_propulsive=[(myaircraft.weight.WTO/1000) * myaircraft.performance.PoWTO(myaircraft.DesignWTOoS,beta[t],
                                     myaircraft.mission.profile.PowerExcess(times[t]),
@@ -203,9 +193,9 @@ Payload = {argPayload}kg
                                     myaircraft.mission.profile.Velocity(times[t]),
                                     'TAS') for t in range(len(times))]
 
-            aircraftParameters=WriteLog.parameters(myaircraft)
+            aircraftParameters=[]#WriteLog.parameters(myaircraft)
             outputsDic={
-                    'Battery Heating':heatdata,
+                    'Battery Temperature':Temp.tolist(),
                     'Time':times.tolist(),
                     'Fuel Energy':Ef.tolist(),
                     'Battery Energy':Ebat.tolist(),
@@ -239,7 +229,7 @@ Payload = {argPayload}kg
                                     myaircraft.mission.profile.Velocity(times[t]),
                                     'TAS') for t in range(len(times))]
 
-            aircraftParameters=WriteLog.parameters(myaircraft)
+            aircraftParameters=[]#WriteLog.parameters(myaircraft)
 
             outputsDic={
                     'Time':times.tolist(),
