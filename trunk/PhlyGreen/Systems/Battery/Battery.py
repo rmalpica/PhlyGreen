@@ -192,14 +192,10 @@ class Battery:
         self.pack_config=f'S{self.S_number} P{self.P_number}'
 
     def Power_2_current(self, P):
-        ''' Calculates the current output from the battery.
-            The calculations are for a single cell, as that
-            is what the model is made for. The output is
-            the current for the entire battery pack however.
-            The power is simply divided by the total number of
-            cells, as every cell delivers equal power regardless
-            of the configuration of the battery.
-
+        ''' Calculates the current output from the battery. The calculations are for a single
+            cell, as that is what the model is made for. The output is the current for the entire
+            battery pack however. The power is simply divided by the total number of cells, as
+            every cell delivers equal power regardless of the configuration of the battery.
         Receives:
             P - power demanded from the battery
         Returns:
@@ -226,7 +222,7 @@ class Battery:
         a = (-R-Qr)
         b = (E0+ee-it*Qr)
         c = -P
-        Disc = b**2-4*a*c
+        Disc = b**2-4*a*c # quadratic formula discriminant
 
         if Disc < 0 :
             I_out = None
@@ -237,11 +233,12 @@ class Battery:
 
         return I_out * self.P_number
 
-    def heatLoss(self,Ta):
-        '''WIP Simple differential equation describing a simplified lumped element thermal
-        model of the cells
+    def heatLoss(self,Ta,rho):
+        ''' WIP Simple differential equation describing a
+            simplified lumped element thermal model of the cells
         Receives: 
-            - Ta - temperature of the ambient cooling air
+            - Ta   - temperature of the ambient cooling air
+            - rho  - density of the ambient air
         Returns:
             - dTdt - battery temperature derivative
             - P    - dissipated waste power per cell
@@ -251,8 +248,11 @@ class Battery:
         T , dEdT = self.T         , self.E_slope
 
         P = (Voc-V)*i + dEdT*i*T
-        #TODO make these not hardcoded
-        Rth = 800
+        area_surface = 0.4
+        area_section = 0.05
+        mdot = 2
+        h = 30*((area_section*mdot/rho)/5) ** 0.8 # taken from http://dx.doi.org/10.1016/j.jpowsour.2013.10.052
+        Rth = 1/(h * area_surface)
         Cth = 1300*self.cell_mass
         dTdt = P/Cth + (Ta - T)/(Rth*Cth) 
         return dTdt,P

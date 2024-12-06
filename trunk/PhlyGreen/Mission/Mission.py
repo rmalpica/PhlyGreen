@@ -176,22 +176,24 @@ class Mission:
             dbetadt = - dEFdt/(self.ef*self.WTO) #change in mass due to fuel consumption
             PElectric = Ppropulsive * PRatio[5] #propulsive power required for the electric motors
 
-            ''' Finds the battery state for the requested power.
-                The battery class raises an exception if any of its parameters
-                exceed the allowed limits or there are unphysical values.
-                This is taken as a sign that the P number is invalid.
-                The exception may be caught into a global variable so that
-                the last constraint driving the battery sizing may be
-                printed to the user. Temperature limits are not validated
-                because T depends on the cooling sizing, not the P number.
+            ''' Finds the battery state for the requested power. The battery class raises an
+                exception if any of its parameters exceed the allowed limits or there are
+                unphysical values. This is taken as a sign that the P number is invalid. The
+                exception may be caught into a global variable so that the last constraint
+                driving the battery sizing may be printed to the user. Temperature limits
+                are not validated because T depends on the cooling sizing, not the P number.
             '''
             try:
                 self.aircraft.battery.T = y[4] # assign a temperature, battery class validates temp
                 self.aircraft.battery.it = y[3]/3600 # assign spent charge, battery validates SOC
                 self.aircraft.battery.i  = self.aircraft.battery.Power_2_current(PElectric) # assign current, also validated here by the class
                 dEdt_bat = self.aircraft.battery.i * self.aircraft.battery.Vout # calculate power, this causes Vout to be generated and validated
-                # WIP TODO make this take in the atmosphere class instead of a hardcoded air temp value:
-                dTdt, _ = self.aircraft.battery.heatLoss(300) 
+                
+                alt = self.profile.Altitude(t)
+                Mach = Speed.TAS2Mach(self.profile.Velocity(t),alt,DISA=self.DISA)
+                Tamb = ISA.atmosphere.T0std(alt,Mach)
+                rho = ISA.atmosphere.RHO0std(alt,Mach,self.DISA)
+                dTdt, _ = self.aircraft.battery.heatLoss(Tamb,rho)
             except BatteryError as err:
                 print(err)
                 self.valid_solution = False
@@ -226,8 +228,8 @@ class Mission:
                 print(err)
                 self.valid_solution = False
                 return self.valid_solution
-            except Exception as e:
-                print(f"Unexpected error: {e}")
+            except Exception as err:
+                print(f"Unexpected error: {err}")
                 raise
             
             # integrate sequentially

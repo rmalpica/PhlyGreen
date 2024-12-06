@@ -44,13 +44,13 @@ class Atmosphere:
         return (1 + self.delta * Mach**2) ** -(1/(self.gammaair - 1))
 
     def T0std(self,h,Mach):
-        return self.Tstd(h) * self.ToT0**-1
+        return self.Tstd(h) * self.ToT0(Mach)**-1
    
     def P0std(self,h,Mach):
-        return self.Pstd(h) * self.PoP0**-1
+        return self.Pstd(h) * self.PoP0(Mach)**-1
 
-    def RHO0std(self,h,Mach):
-        return self.RHOstd(h) * self.RHOoRHO0**-1
+    def RHO0std(self,h,Mach,DISA):
+        return self.RHOstd(h,DISA) * self.RHOoRHO0(Mach)**-1
     
 
 atmosphere = Atmosphere()
