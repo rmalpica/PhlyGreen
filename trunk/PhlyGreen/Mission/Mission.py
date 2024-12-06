@@ -211,7 +211,12 @@ class Mission:
                 self.valid_solution = False
                 return self.valid_solution
 
-            self.aircraft.battery.Configure(P_number) #changes the configuration every cycle
+            self.aircraft.battery.Configure(P_number)
+            ''' short verification step to validate the takeoff power
+                uses it = 0 and constant T.  Takeoff is considered to
+                be too short to matter, and there's no good model for
+                the takeoff dynamics anyway.
+            '''
             try:
                 self.aircraft.battery.T = 300 # battery T TODO FIX THIS
                 self.aircraft.battery.it = 0
@@ -241,10 +246,13 @@ class Mission:
                     break
 
                 self.integral_solution.append(sol)
+                '''To avoid importing the mission class with the model into the plotting script,
+                   this is added to store the variables when the integration finishes each part.
+                   The plottingVars array can then be accessed in the script to plot the things.
+                '''
                 for k in range(len(sol.t)):
                     yy0 = [sol.y[0][k],sol.y[1][k],sol.y[2][k],sol.y[3][k],sol.y[4][k]]
                     model(sol.t[k],yy0)
-
                     self.plottingVars.append([sol.t[k],
                                               self.aircraft.battery.SOC,
                                               self.aircraft.battery.Voc,

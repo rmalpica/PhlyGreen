@@ -53,7 +53,7 @@ aL={'ArchList'     :{'Hybrid'},
     'CellsList'    :{'ThermalModel-Cell-Mega'},
     'RangesList'   :{1200},
     'PayloadsList' :{1200},
-    'PhisList'     :{0.3}}
+    'PhisList'     :{0.2}}
 
 varsOfInterest={}
 

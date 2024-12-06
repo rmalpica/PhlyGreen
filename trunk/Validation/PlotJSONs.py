@@ -128,6 +128,17 @@ def plotData(data, X , Y, title, foldername):
     print('||>- Saved \'',title,'\' to',filename)
     plt.close()  # Close the plot
 
+    # create json of just the data used, so that this plot can be manually
+    # retrieved and easily replotted in a prettier way if desired
+    filenamejson = os.path.join(foldername, title+".json")
+    dictjson = {'title':title,
+                'x_units':'',
+                'y_units':'',
+                X:x_data,
+                Y:y_data}
+    writeJSON(dictjson,filenamejson)
+    print('||>+ Wrote \'',title,'\' to',filename)
+
 # function to plot graphs with three variables at once
 # receives a list of dictionaries where each dictionary
 # has the keys X Y Z corresponding to a single value
@@ -171,6 +182,17 @@ def heatMap(dictList,X,Y,Z,title,foldername):
     plt.savefig(filename)
     print(']]=> Saved \'',title,'\' to',filename)
     plt.close()  # Close the plot
+    
+    # create json of just the data used, so that this plot can be manually
+    # retrieved and easily replotted in a prettier way if desired
+    filenamejson = os.path.join(foldername, title+".json")
+    dictjson = {'title':title,
+                'x_units':'',
+                'y_units':'',
+                'z_units':'',
+                'data':df}
+    writeJSON(dictjson,filenamejson)
+    print(']]$> Wrote \'',title,'\' to',filename)
 
 # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = # = = #
 # here begins the chatgpt code hell:

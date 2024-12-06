@@ -52,10 +52,10 @@ def runAndPlot(aL,runName,varsOfInterest={}):
 
 aL={'ArchList'     :{'Hybrid','Traditional'},
     'MissionList'  :{'Mission-FelixFinger'},# "HybridCruiseOnly","HybridTOClimbOnly"
-    'CellsList'    :{'FELIX_FINGER'},
-    'RangesList'   :np.linspace(400,2000,21,dtype=int),
+    'CellsList'    :{'ThermalModel-Cell-Mega'},
+    'RangesList'   :np.linspace(400,2000,2,dtype=int),
     'PayloadsList' :{1200},
-    'PhisList'     :np.linspace(5,100,21,dtype=int)/100}
+    'PhisList'     :np.linspace(5,100,2,dtype=int)/100}
 
 # define which values from the output json should be multiplotted,
 # and which should be considered the TWO inputs that were swept
@@ -83,9 +83,9 @@ runAndPlot(aL,'ForThesis-phi',varsOfInterest=varsOfInterest)
 
 aL={'ArchList'     :{'Hybrid','Traditional'},
     'MissionList'  :{'Mission-FelixFinger'},# "HybridCruiseOnly","HybridTOClimbOnly"
-    'CellsList'    :{'FELIX_FINGER'},
-    'RangesList'   :np.linspace(400,2000,21,dtype=int),
-    'PayloadsList' :np.linspace(400,2000,21,dtype=int),
+    'CellsList'    :{'ThermalModel-Cell-Mega'},
+    'RangesList'   :np.linspace(400,2000,2,dtype=int),
+    'PayloadsList' :np.linspace(400,2000,2,dtype=int),
     'PhisList'     :{0.2}}
 
 # define which values from the output json should be multiplotted,

@@ -147,14 +147,16 @@ Payload = {argPayload}kg
 
     #run the actual maths that configures the aircraft
     myaircraft.constraint.FindDesignPoint()
-    '''try:
+    try:
         Converged = True
         myaircraft.weight.WeightEstimation()
-    except Exception as err:
-        print(err)
-        Converged = False'''
-    Converged = True
-    myaircraft.weight.WeightEstimation()
+    except ValueError as err:
+        errmsg = 'f(a) and f(b) must have different signs'
+        if errmsg == str(err):
+            #print(err)
+            Converged = False
+        else:
+            raise
     # only run the output calculations if the calculation converged
     if Converged:
 
@@ -292,7 +294,7 @@ def main(ArchList, MissionList, RangesList, PayloadsList, CellsList, PhisList):
                                     param_list.append((Arch, Mission, Range, Payload, Cell, Phi))
                     else:
                         # Assign dummy values for Cell and Phi when not using Hybrid
-                        param_list.append((Arch, Mission, Range, Payload, 'FELIX_FINGER', 0.1))
+                        param_list.append((Arch, Mission, Range, Payload, 'ThermalModel-Cell-Mega', 0.1))
 
     # Multiprocessing setup
     num_workers = multiprocessing.cpu_count()  # Use all available CPU cores

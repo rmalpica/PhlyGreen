@@ -262,7 +262,7 @@ class Powertrain:
     @WThermal.setter
     def WThermal(self,value):
         self._WThermal = value
-        if(isinstance(value, numbers.Number) and (value <= 0)):
+        if(isinstance(value, numbers.Number) and (value < 0)):
             raise ValueError("Error: Illegal Thermal powertrain Weight: %e. Exiting" %value)
 
     @property
