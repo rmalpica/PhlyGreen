@@ -28,7 +28,7 @@ def debugscatterplot(P_n_history, foldername):
     foldername = os.path.join(foldername, pnfolder)
     try:
         os.makedirs(foldername)
-    except:  # if it already exists, ignore the error
+    except Exception:  # if it already exists, ignore the error
         pass
 
     def scatterplot(X, Y, xLabel, yLabel, foldername, i=""):
@@ -245,6 +245,8 @@ Payload = {argPayload}kg
 
             toplot = np.array(mission.plottingVars)
             Time = toplot[:, 0]  # must be equal to 'times' i think?
+            if not (Time == times):
+                raise Exception(f"something broke badly and the two time vectors are not equal:{Time} vs {times}")
             soc = toplot[:, 1]
             Voc = toplot[:, 2]
             Vout = toplot[:, 3]
@@ -386,7 +388,7 @@ def main(ArchList, MissionList, RangesList, PayloadsList, CellsList, PhisList):
     pool = multiprocessing.Pool(processes=num_workers)
 
     # Execute in parallel
-    results = pool.map(calculate_single_flight, param_list)
+    pool.map(calculate_single_flight, param_list)
 
     # Close the pool
     pool.close()

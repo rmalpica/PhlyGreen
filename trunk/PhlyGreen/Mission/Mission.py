@@ -33,7 +33,7 @@ class Mission:
 
     @property
     def beta0(self):
-        if self._beta0 == None:
+        if self._beta0 is None:
             raise ValueError("Initial weight fraction beta0 unset. Exiting")
         return self._beta0
       
@@ -45,7 +45,7 @@ class Mission:
 
     @property
     def ef(self):
-        if self._ef == None:
+        if self._ef is None:
             raise ValueError("Fuel specific energy unset. Exiting")
         return self._ef
       
@@ -304,7 +304,7 @@ class Mission:
             n_min = n_max-1
             # print('**********************************')
             # print(f'using {n_max} and {n_min} from optimal {self.optimal_n} at ratio {ratio}')
-        except Exception as err:
+        except Exception: # as err:
             # print('**********************************')
             # print(f'optimal not found because of:\n {err}')
             n_max = 128  # hardcoding a value that is anecdotally known to be ok for a first guess

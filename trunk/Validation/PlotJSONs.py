@@ -1,6 +1,5 @@
 from pathlib import Path
 import os
-import sys
 import json
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -14,7 +13,7 @@ def createDir(dirname):
     outdir = os.path.join(srcdir, dirname)  # new relative directory
     try:
         os.makedirs(outdir)
-    except:  # if it already exists, ignore the error
+    except Exception:  # if it already exists, ignore the error
         pass
     return outdir
 
@@ -275,8 +274,6 @@ def process_mission_powerplant(mission, powerplant, db, voi, outfolder):
 
 def extraPlots(json, voi, outfolder):
     print("Plotting Extras")
-    X = voi["In"][0]
-    Z = voi["In"][1]
     db = loadJSON(json)
 
     # Prepare list of tasks (mission, powerplant combinations)
