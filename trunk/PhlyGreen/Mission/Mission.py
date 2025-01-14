@@ -27,6 +27,8 @@ class Mission:
         self.EBat = None
         self.Beta = None
 
+        self.Past_P_n=[]
+        self.P_n_arr =[]
     """ Properties """
 
     @property
@@ -151,10 +153,9 @@ class Mission:
     
     
     def HybridConfiguration(self,WTO):
-        
+ 
         self.WTO = WTO
-        
-        
+
         def PowerPropulsive(Beta,t):
             PPoWTO = self.aircraft.performance.PoWTO(self.aircraft.DesignWTOoS,Beta,self.profile.PowerExcess(t),1,self.profile.Altitude(t),self.DISA,self.profile.Velocity(t),'TAS')
           
@@ -176,13 +177,12 @@ class Mission:
             dbetadt = - dEFdt/(self.ef*self.WTO) #change in mass due to fuel consumption
             PElectric = Ppropulsive * PRatio[5] #propulsive power required for the electric motors
 
-            ''' Finds the battery state for the requested power. The battery class raises an
-                exception if any of its parameters exceed the allowed limits or there are
-                unphysical values. This is taken as a sign that the P number is invalid. The
-                exception may be caught into a global variable so that the last constraint
-                driving the battery sizing may be printed to the user. Temperature limits
-                are not validated because T depends on the cooling sizing, not the P number.
-            '''
+            # Finds the battery state for the requested power. The battery class raises an
+            # exception if any of its parameters exceed the allowed limits or there are
+            # unphysical values. This is taken as a sign that the P number is invalid. The
+            # exception may be caught into a global variable so that the last constraint
+            # driving the battery sizing may be printed to the user. Temperature limits
+            # are not validated because T depends on the cooling sizing, not the P number.
             try:
                 self.aircraft.battery.T = y[4] # assign a temperature, battery class validates temp
                 self.aircraft.battery.it = y[3]/3600 # assign spent charge, battery validates SOC
@@ -206,7 +206,10 @@ class Mission:
 
 
         def evaluate_P_nr(P_number):
+            
             print(f"pnumber {P_number}")
+            self.P_n_arr.append(P_number)
+
             self.valid_solution = True
             #no maths needed to know nothing will work without a battery
             if P_number == 0:
@@ -295,24 +298,30 @@ class Mission:
         # it grabs the n value from the previous iteration and tries to find an nmax and nmin from there 
         optimal = False
         try:
-            n_max = self.optimal_n
-            n_min = self.optimal_n-1
-            #print(f'using {n_max} and {n_min} from optimal {self.optimal_n}')
+            #ratio = 1 # use this line to disable linear scaling of the P_n for debug purposes
+            ratio = self.WTO/self.last_weight
+            n_max = round(self.optimal_n*ratio)
+            n_min = n_max-1
+            # print('**********************************')
+            # print(f'using {n_max} and {n_min} from optimal {self.optimal_n} at ratio {ratio}')
         except Exception as err:
-            #print(f'optimal not found because of:\n {err}')
+            # print('**********************************')
+            # print(f'optimal not found because of:\n {err}')
             n_max = 128  # hardcoding a value that is anecdotally known to be ok for a first guess
-            n_min = 64
+            n_min = n_max-1
 
         #lower the min p number until its valid
+        #nmin_ran=False
         while evaluate_P_nr(n_min): 
-            print("n_min overestimated:",n_min, "; halving.")
+            # print("n_min overestimated:",n_min, "; halving.")
+            #nmin_ran=True
             n_max = n_min   #if the n_min guess is too large it can be the new n_max to save iterations since it has already been tried
             n_min = math.floor(n_min/2) #halve n_min until it fails
 
         #raise the max p number until its valid
-        while not evaluate_P_nr(n_max): 
+        while not evaluate_P_nr(n_max):# and not nmin_ran: 
             #print(evaluate_P_nr(n_max))
-            print("n_max underestimated:",n_max, "; doubling.")
+            # print("n_max underestimated:",n_max, "; doubling.")
             n_min = n_max   #if the nmax guess is too small it can be the new nmin to save iterations since it has already been tried
             n_max = n_max*2 #double n_max until it works
 
@@ -322,9 +331,9 @@ class Mission:
         if n_max - n_min == 1: 
             optimal = True
             n = n_max
-            valid_result = evaluate_P_nr(n)
-            if not valid_result:
-                raise Exception("Impossible n value somehow?")
+            #valid_result = evaluate_P_nr(n)
+            #if not valid_result:
+            #    raise Exception("Impossible n value somehow?")
             print("Optimal P: ",n)
             self.optimal_n = n
 
@@ -350,4 +359,7 @@ class Mission:
                 n_min=n
                 n=math.ceil((n_max+n_min)/2)
         
+        self.Past_P_n.append(self.P_n_arr)
+        self.P_n_arr = []
+        self.last_weight = self.WTO
         return self.Ef[-1], self.EBat[-1]

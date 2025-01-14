@@ -2,7 +2,6 @@
 import FlightSweeps
 import PlotJSONs
 import os
-import numpy as np
 import time
 
 # This will configure run and plot everything relating to a single sweep
@@ -51,7 +50,7 @@ def runAndPlot(aL,runName,varsOfInterest={}):
 aL={'ArchList'     :{'Hybrid'},
     'MissionList'  :{'Mission-FelixFinger'},
     'CellsList'    :{'ThermalModel-Cell-Mega'},
-    'RangesList'   :{1200},
+    'RangesList'   :{700},
     'PayloadsList' :{1200},
     'PhisList'     :{0.2}}
 

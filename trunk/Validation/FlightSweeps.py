@@ -1,3 +1,15 @@
+import multiprocessing
+from datetime import datetime
+import sys
+import os
+sys.path.insert(0,'../')
+import seaborn as sns
+import matplotlib.pyplot as plt
+import PhlyGreen as pg
+import numpy as np
+import FlightProfiles
+import WriteLog
+
 logo=r"""
 -------------------------------------------------
     ____  __    __      ______
@@ -8,21 +20,37 @@ logo=r"""
               /____/
 -------------------------------------------------
 """
-from datetime import datetime
-import time
-import sys
-import os
-sys.path.insert(0,'../')
-import PhlyGreen as pg
-import numpy as np
-import json
-import FlightProfiles
-import WriteLog
-import multiprocessing
-from scipy import integrate
-from itertools import product
+def debugscatterplot(P_n_history,foldername):
+    pnfolder ='Pn'
+    foldername = os.path.join(foldername,pnfolder)
+    try:
+        os.makedirs(foldername)
+    except: #if it already exists, ignore the error
+        pass
+    def scatterplot(X , Y, xLabel, yLabel, foldername,i=''):
+        # Create a plot using Seaborn
+        sns.barplot(x=X, y=Y)
 
+        # Add labels and title
+        plt.xlabel(xLabel)
+        plt.ylabel(yLabel)
+        title=f"{xLabel}-vs-{yLabel}"
+        plt.title(title)
 
+        # Save the plot as a PDF
+        filename = os.path.join(foldername, title+i+".pdf") #create file inside the output directory
+        plt.savefig(filename)
+        print('||>- Saved \'',title,'\' to',filename)
+        plt.close()  # Close the plot
+    lengths=[]
+    ii = 0
+    for array in P_n_history:
+        ii+=1
+        lengths.append(len(array))
+        evaluations = range(len(array))
+        scatterplot(evaluations,array,'Evaluation','P_n',foldername,' iter-'+str(ii))
+    iters = range(len(P_n_history))
+    scatterplot(iters,lengths,'Iteration','Number of Evaluations',foldername)
 # Function for creating these global variables
 # so that directories can be configured externally
 # kind of a quick hack, i should make the functions
@@ -161,6 +189,8 @@ Payload = {argPayload}kg
     if Converged:
 
         myaircraft.WingSurface = myaircraft.weight.WTO / myaircraft.DesignWTOoS * 9.81
+
+        debugscatterplot(myaircraft.mission.Past_P_n,dirOutput)
 
         if argArch == 'Hybrid' : 
             times = np.array([])

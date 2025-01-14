@@ -26,8 +26,8 @@ class Battery:
     @i.setter
     def i(self,value):
         self._i = value
-        if value == None:
-            raise BatteryError(f'No real valued solution found for battery current.\nBattery underpowered.')
+        if value is None:
+            raise BatteryError('No real valued solution found for battery current.\nBattery underpowered.')
 
     @property
     def it(self):
@@ -43,7 +43,7 @@ class Battery:
 
     @property
     def T(self):
-        if self._T == None:
+        if self._T is None:
             raise BatteryError("Fail_Condition_2\nBattery temperature unset.")
         return self._T
 
@@ -55,7 +55,7 @@ class Battery:
 
     @property
     def SOC_min(self):
-        if self._SOC_min == None:
+        if self._SOC_min is None:
             raise BatteryError("Fail_Condition_4\nMinimum SOC unset.")
         return self._SOC_min
 
@@ -136,7 +136,7 @@ class Battery:
         E0 , R , K , Q = self.E0 , self.R , self.K , self.Q
         A  , B  = self.exp_amplitude ,self.exp_time_ctt
 
-        V = E0 -i*K*(Q/(Q-it)) -it*K*(Q/(Q-it)) +A*np.exp(-B * it) -i*R
+        V = E0 -(i+it)*K*(Q/(Q-it)) +A*np.exp(-B * it) -i*R
         return V
 
 # Set inputs from cell model chosen
@@ -168,7 +168,7 @@ class Battery:
         self.cell_height       = cell['Cell Height']                    # in m
 
         if not (self.cell_Vmax > self.cell_Vmin):
-            raise ValueError(f"Fail_Condition_10\nIllegal cell voltages: Vmax must be greater than Vmin")
+            raise ValueError("Fail_Condition_10\nIllegal cell voltages: Vmax must be greater than Vmin")
         self.S_number = math.floor(self.controller_Vmax/self.cell_Vmax) #number of cells in series to achieve desired voltage. max voltage is preferred as it minimizes losses due to lower current being needed for a larger portion of the flight
 
 #determine battery configuration
@@ -250,9 +250,9 @@ class Battery:
         P = (Voc-V)*i + dEdT*i*T
         area_surface = 0.4
         area_section = 0.05
-        mdot = 2
+        mdot = 5
         h = 30*((area_section*mdot/rho)/5) ** 0.8 # taken from http://dx.doi.org/10.1016/j.jpowsour.2013.10.052
         Rth = 1/(h * area_surface)
-        Cth = 1300*self.cell_mass
+        Cth = 700*self.cell_mass
         dTdt = P/Cth + (Ta - T)/(Rth*Cth) 
         return dTdt,P
