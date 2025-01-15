@@ -76,6 +76,9 @@ def run_all(arg_list, batch_name, vars_of_interest=None):
         flight_plots_dir = aux.make_cat_dir(plots_d, fr.arg_str)
         plots.plot_flight(fr.outputs, flight_plots_dir)
 
+        # also plot profiling data
+        plots.perf_profile(fr.perf_profiling, flight_plots_dir)
+
     # Start by defining the directories
     print("SETTING DIRECTORIES")
     out_d = aux.make_cat_dir("Outputs", batch_name)  # OUTPUT DIRECTORY

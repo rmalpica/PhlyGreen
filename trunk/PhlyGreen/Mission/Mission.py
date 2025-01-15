@@ -29,6 +29,8 @@ class Mission:
 
         self.Past_P_n=[]
         self.P_n_arr =[]
+        self.last_weight=None
+        self.optimal_n=None
     """ Properties """
 
     @property
@@ -217,16 +219,16 @@ class Mission:
                 return self.valid_solution
 
             self.aircraft.battery.Configure(P_number)
-            ''' short verification step to validate the takeoff power
-                uses it = 0 and constant T.  Takeoff is considered to
-                be too short to matter, and there's no good model for
-                the takeoff dynamics anyway.
-            '''
+
+            # short verification step to validate the takeoff power
+            # uses it = 0 and constant T.  Takeoff is considered to
+            # be too short to matter, and there's no good model for
+            # the takeoff dynamics anyway.
             try:
                 self.aircraft.battery.T = 300 # battery T TODO FIX THIS
                 self.aircraft.battery.it = 0
                 self.aircraft.battery.i  = self.aircraft.battery.Power_2_current(self.TO_PBat) #convert output power to volts and amps
-                self.aircraft.battery.Vout
+                self.aircraft.battery.Vout # necessary for the battery class to validate Vout
             except BatteryError as err:
                 print(err)
                 self.valid_solution = False
@@ -251,11 +253,11 @@ class Mission:
                     break
 
                 self.integral_solution.append(sol)
-                '''To avoid importing the mission class with the model into the plotting script,
-                   this is added to store the variables when the integration finishes each part.
-                   The plottingVars array can then be accessed in the script to plot the things.
-                '''
-                for k in range(len(sol.t)):
+
+                # To avoid importing the mission class with the model into the plotting script,
+                # this is added to store the variables when the integration finishes each part.
+                # The plottingVars array can then be accessed in the script to plot the things.
+                for k , _ in enumerate(sol.t):
                     yy0 = [sol.y[0][k],sol.y[1][k],sol.y[2][k],sol.y[3][k],sol.y[4][k]]
                     model(sol.t[k],yy0)
                     self.plottingVars.append([sol.t[k],
@@ -272,7 +274,8 @@ class Mission:
             return self.valid_solution
 
 
-        # Takeoff condition, calculated before anything else as it does not depend on the battery size, just the aircraft
+        # Takeoff condition, calculated before anything else as
+        # it does not depend on the battery size, just the aircraft
 
         #calculates the total propulsive power required for takeoff
         Ppropulsive_TO = self.WTO * self.aircraft.performance.TakeOff(self.aircraft.DesignWTOoS,
@@ -295,7 +298,7 @@ class Mission:
         # as the brent search converges the binary search algorithm needs to do more pointless iterations to reach the same value
         # the old method used a simplified model to initialize a first guess of the p number
         # this proved slow and cumbersome, so i came up with a new method that uses the previous result to initialize the search
-        # it grabs the n value from the previous iteration and tries to find an nmax and nmin from there 
+        # it grabs the n value from the previous iteration and tries to find an nmax and nmin from there
         optimal = False
         try:
             #ratio = 1 # use this line to disable linear scaling of the P_n for debug purposes
@@ -304,9 +307,9 @@ class Mission:
             n_min = n_max-1
             # print('**********************************')
             # print(f'using {n_max} and {n_min} from optimal {self.optimal_n} at ratio {ratio}')
-        except Exception: # as err:
-            # print('**********************************')
-            # print(f'optimal not found because of:\n {err}')
+        except TypeError as err:
+            print('**********************************')
+            print(f'optimal not found because of:\n {err}')
             n_max = 128  # hardcoding a value that is anecdotally known to be ok for a first guess
             n_min = n_max-1
 
@@ -359,7 +362,11 @@ class Mission:
                 n_min=n
                 n=math.ceil((n_max+n_min)/2)
         
+        # save weight across iterations
+        self.last_weight = self.WTO
+
+        # Save history for performance profiling
         self.Past_P_n.append(self.P_n_arr)
         self.P_n_arr = []
-        self.last_weight = self.WTO
+
         return self.Ef[-1], self.EBat[-1]

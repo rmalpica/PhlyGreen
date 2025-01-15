@@ -7,8 +7,8 @@ a flight configuration and export its data to be plotted
 from datetime import datetime
 import sys
 import numpy as np
-sys.path.insert(0, "../") # otherwise FlightProfiles and PhlyGreen cant be found
 import FlightProfiles
+sys.path.insert(0, "../")
 import PhlyGreen as pg
 
 
@@ -42,6 +42,7 @@ class FlightRun:
         }
         self.outputs = {}
         self.aircraft_parameters = {}
+        self.perf_profiling={}
         # print everything to the console
         print(
             f"--------------------------------------------------<||\n"
@@ -247,7 +248,7 @@ class FlightRun:
             "Wing Surface": self.myaircraft.WingSurface,
             "TakeOff Engine Shaft PP": self.myaircraft.mission.TO_PP / 1000,  # PP = Peak Power
             "Climb Cruise Engine Shaft PP": self.myaircraft.mission.Max_PEng / 1000,
-        }  # PP = Peak Power
+        }
 
         self.aircraft_parameters.update(dic_outputs)
 
@@ -289,10 +290,20 @@ class FlightRun:
 
         self.aircraft_parameters.update(dic_outputs)
 
+    def _process_profiling(self):
+        ppn = self.myaircraft.mission.Past_P_n
+        iterations = len(ppn)
+        evaluations = list(map(len, ppn))
+        self.perf_profiling = {
+            "Total Iterations": iterations,
+            "P_n Evaluations per iteration": evaluations,
+            "Past_P_n": ppn,
+        }
+
     def process_data(self):
         """
-            Pick between hybrid and combustion data
-            processing then write results to memory
+        Pick between hybrid and combustion data
+        processing then write results to memory
         """
         if self.myaircraft.Configuration == "Hybrid":
             self.process_hybrid_data()
@@ -301,9 +312,15 @@ class FlightRun:
             self.process_fuel_data()
             self.get_fuel_parameters()
 
+        # Extras for performance profiling purposes, comment out if not needed
+        self._process_profiling()
+
     def results(self):
         """Neatly condenses the relevant information into a dictionary"""
-        out = { 'Inputs': self.inputs,
-                'Outputs': self.outputs,
-                'Parameters': self.aircraft_parameters}
+        out = {
+            "Inputs": self.inputs,
+            "Outputs": self.outputs,
+            "Parameters": self.aircraft_parameters,
+            "Meta Performance": self.perf_profiling, #optional, saves algorithm performance data
+        }
         return out
