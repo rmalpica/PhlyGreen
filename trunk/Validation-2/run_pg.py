@@ -1,13 +1,15 @@
 """
-Size and save data for a single flight
+Module containing all the code of a pre configured PhlyGreen setup in
+a single class that has the functions that may be used to validate
+a flight configuration and export its data to be plotted
 """
 
 from datetime import datetime
 import sys
 import numpy as np
+sys.path.insert(0, "../") # otherwise FlightProfiles and PhlyGreen cant be found
 import FlightProfiles
 import PhlyGreen as pg
-sys.path.insert(0, "../") # REMOVE THIS AND SEE IF IT BREAKS ANYTHING, I HAVE NO IDEA WHAT THIS DOES
 
 
 class FlightRun:
@@ -42,16 +44,16 @@ class FlightRun:
         self.aircraft_parameters = {}
         # print everything to the console
         print(
-            f"--------------------------------------------------<||"
-            f"{datetime.now().isoformat()}"
-            f"Starting with configuration:"
-            f"{arg_arch} Powerplant"
-            f"Mission Profile: {arg_mission}"
-            f"{arg_cell} Cell Model"
-            f"Phi = {arg_phi}"
-            f"Range = {arg_range}km"
-            f"Payload = {arg_payload}kg"
-            f"Flight Name: {self.arg_str}"
+            f"--------------------------------------------------<||\n"
+            f"{datetime.now().isoformat()}\n"
+            f"Starting with configuration:\n"
+            f"{arg_arch} Powerplant\n"
+            f"Mission Profile: {arg_mission}\n"
+            f"{arg_cell} Cell Model\n"
+            f"Phi = {arg_phi}\n"
+            f"Range = {arg_range}km\n"
+            f"Payload = {arg_payload}kg\n"
+            f"Flight Name: {self.arg_str}\n"
             f"- - - - - - - - - - - - - - - - - - - - - - - - - -\n"
         )
 
@@ -131,7 +133,7 @@ class FlightRun:
         times = np.array([])
         e_f = np.array([])
         beta = np.array([])
-        for array in self.myaircraft.mission.integral_solution:  # IF THIS IS BREAKING HERE, CREATE AND CHANGE TO self.mission, CROSS REF WITH THE ORIGINAL CODE
+        for array in self.myaircraft.mission.integral_solution:
             times = np.concatenate([times, array.t])
             e_f = np.concatenate([e_f, array.y[0]])
             beta = np.concatenate([beta, array.y[1]])
@@ -157,17 +159,18 @@ class FlightRun:
                 "Beta": beta.tolist(),
                 "Total Power": power_propulsive,
                 "Altitude": self.myaircraft.mission.profile.Altitude(times).tolist(),
-                "Parameters": self.aircraft_parameters,
             }
 
     def process_hybrid_data(self):
         """Data processing for hybrid aircraft"""
+        self.myaircraft.WingSurface = (
+            self.myaircraft.weight.WTO / self.myaircraft.DesignWTOoS * 9.81
+        )
         times = np.array([])
         e_f   = np.array([])
         e_bat = np.array([])
         beta  = np.array([])
-
-        for array in self.myaircraft.mission.integral_solution:  # IF THIS IS BREAKING HERE, CREATE AND CHANGE TO self.mission, CROSS REF WITH THE ORIGINAL CODE
+        for array in self.myaircraft.mission.integral_solution:
             times = np.concatenate([times, array.t])
             e_f   = np.concatenate([e_f  , array.y[0]])
             e_bat = np.concatenate([e_bat, array.y[1]])
@@ -177,7 +180,7 @@ class FlightRun:
 
         toplot = np.array(self.myaircraft.mission.plottingVars)
         arrtime = toplot[:, 0]  # must be equal to 'times'
-        if not arrtime == times:
+        if not all(arrtime == times):
             raise ValueError(
                 f"something broke badly and the two time vectors are not equal:{arrtime} vs {times}"
             )
@@ -217,7 +220,6 @@ class FlightRun:
                 "Battery Voltage": v_out.tolist(),
                 "Battery OC Voltage": v_oc.tolist(),
                 "Battery Temperature": temp.tolist(),
-                "Parameters": self.aircraft_parameters,
                 "Battery Spent Power": spent_pwr.tolist(),
                 "Battery Efficiency": batt_efficiency.tolist(),
                 "Battery Delivered Power": delivered_pwr.tolist(),
@@ -229,48 +231,61 @@ class FlightRun:
         conveniently pack together all the parameters 
         of interest for the conventional aircarft
         """
-        dic_outputs={
-            'Fuel Mass':self.myaircraft.weight.Wf,
-            'Block Fuel Mass':self.myaircraft.weight.Wf + self.myaircraft.weight.final_reserve,
-            'Structure Mass': self.myaircraft.weight.WStructure,
-            'Powertrain Mass': self.myaircraft.weight.WPT,
-            'Empty Weight': self.myaircraft.weight.WPT + self.myaircraft.weight.WStructure + self.myaircraft.weight.WCrew,
-            'Zero Fuel Weight': self.myaircraft.weight.WPT + self.myaircraft.weight.WStructure + self.myaircraft.weight.WCrew + self.myaircraft.weight.WPayload,
-            'Takeoff Weight':self.myaircraft.weight.WTO,
-            'Wing Surface':self.myaircraft.WingSurface,
-            'TakeOff Engine Shaft PP': self.myaircraft.mission.TO_PP/1000, # PP = Peak Power
-            'Climb Cruise Engine Shaft PP':self.myaircraft.mission.Max_PEng/1000} # PP = Peak Power
-        
+        dic_outputs = {
+            "Fuel Mass": self.myaircraft.weight.Wf,
+            "Block Fuel Mass": self.myaircraft.weight.Wf + self.myaircraft.weight.final_reserve,
+            "Structure Mass": self.myaircraft.weight.WStructure,
+            "Powertrain Mass": self.myaircraft.weight.WPT,
+            "Empty Weight": self.myaircraft.weight.WPT
+            + self.myaircraft.weight.WStructure
+            + self.myaircraft.weight.WCrew,
+            "Zero Fuel Weight": self.myaircraft.weight.WPT
+            + self.myaircraft.weight.WStructure
+            + self.myaircraft.weight.WCrew
+            + self.myaircraft.weight.WPayload,
+            "Takeoff Weight": self.myaircraft.weight.WTO,
+            "Wing Surface": self.myaircraft.WingSurface,
+            "TakeOff Engine Shaft PP": self.myaircraft.mission.TO_PP / 1000,  # PP = Peak Power
+            "Climb Cruise Engine Shaft PP": self.myaircraft.mission.Max_PEng / 1000,
+        }  # PP = Peak Power
+
         self.aircraft_parameters.update(dic_outputs)
 
     def get_hybrid_parameters(self):
         """
-        conveniently pack together all the parameters 
+        conveniently pack together all the parameters
         of interest for the hybrid aircarft
         """
-        dic_outputs={
-            'Fuel Mass':self.myaircraft.weight.Wf,
-            'Block Fuel Mass':self.myaircraft.weight.Wf + self.myaircraft.weight.final_reserve,
-            'Structure Mass': self.myaircraft.weight.WStructure,
-            'Powertrain Mass': self.myaircraft.weight.WPT,
-            'Empty Weight': self.myaircraft.weight.WPT + self.myaircraft.weight.WStructure + self.myaircraft.weight.WCrew,
-            'Zero Fuel Weight': self.myaircraft.weight.WPT + self.myaircraft.weight.WStructure + self.myaircraft.weight.WCrew + self.myaircraft.weight.WPayload,
-            'Takeoff Weight':self.myaircraft.weight.WTO,
-            'Wing Surface':self.myaircraft.WingSurface,
-            'TakeOff Engine Shaft PP': self.myaircraft.mission.TO_PP/1000, # PP = Peak Power
-            'Climb Cruise Engine Shaft PP':self.myaircraft.mission.Max_PEng/1000, # PP = Peak Power
-            'Battery Mass': self.myaircraft.weight.WBat,
-            'TakeOff Battery PP': self.myaircraft.mission.TO_PBat/1000, # PP = Peak Power
-            'Climb Cruise Battery PP': self.myaircraft.mission.Max_PBat/1000, # PP = Peak Power
-            'Battery Pack Energy': self.myaircraft.battery.pack_energy/3600000,
-            'Battery Pack Max Power': self.myaircraft.battery.pack_power_max/1000,
-            'Battery Pack Specific Energy':(self.myaircraft.battery.pack_energy/3600)/self.myaircraft.weight.WBat,
-            'Battery Pack Specific Power':(self.myaircraft.battery.pack_power_max/1000)/self.myaircraft.weight.WBat,
-            'Battery P number': self.myaircraft.battery.P_number,
-            'Battery S number': self.myaircraft.battery.S_number,
-            'Battery Pack Charge': self.myaircraft.battery.pack_charge,
-            'Battery Pack Max Current': self.myaircraft.battery.pack_current,
-            'Battery Pack Resistance': self.myaircraft.battery.pack_resistance}
+        dic_outputs = {
+            "Fuel Mass": self.myaircraft.weight.Wf,
+            "Block Fuel Mass": self.myaircraft.weight.Wf + self.myaircraft.weight.final_reserve,
+            "Structure Mass": self.myaircraft.weight.WStructure,
+            "Powertrain Mass": self.myaircraft.weight.WPT,
+            "Empty Weight": self.myaircraft.weight.WPT
+            + self.myaircraft.weight.WStructure
+            + self.myaircraft.weight.WCrew,
+            "Zero Fuel Weight": self.myaircraft.weight.WPT
+            + self.myaircraft.weight.WStructure
+            + self.myaircraft.weight.WCrew
+            + self.myaircraft.weight.WPayload,
+            "Takeoff Weight": self.myaircraft.weight.WTO,
+            "Wing Surface": self.myaircraft.WingSurface,
+            "TakeOff Engine Shaft PP": self.myaircraft.mission.TO_PP / 1000,  # PP = Peak Power
+            "Climb Cruise Engine Shaft PP": self.myaircraft.mission.Max_PEng
+            / 1000,  # PP = Peak Power
+            "Battery Mass": self.myaircraft.weight.WBat,
+            "TakeOff Battery PP": self.myaircraft.mission.TO_PBat / 1000,  # PP = Peak Power
+            "Climb Cruise Battery PP": self.myaircraft.mission.Max_PBat / 1000,  # PP = Peak Power
+            "Battery Pack Energy": self.myaircraft.battery.pack_energy / 3600000,
+            "Battery Pack Max Power": self.myaircraft.battery.pack_power_max / 1000,
+            "Battery Pack Specific Energy": (self.myaircraft.battery.pack_energy / 3600)
+            / self.myaircraft.weight.WBat,
+            "Battery Pack Specific Power": (self.myaircraft.battery.pack_power_max / 1000)
+            / self.myaircraft.weight.WBat,
+            "Battery P number": self.myaircraft.battery.P_number,
+            "Battery S number": self.myaircraft.battery.S_number,
+            "Battery Pack Charge": self.myaircraft.battery.pack_charge,
+        }
 
         self.aircraft_parameters.update(dic_outputs)
 

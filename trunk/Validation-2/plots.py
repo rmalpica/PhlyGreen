@@ -5,6 +5,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import extras as ex
 
+
 def single_plot(x_data, y_data, x_label, y_label, directory):
     """
     plot a single value from the flight and write
@@ -31,13 +32,13 @@ def single_plot(x_data, y_data, x_label, y_label, directory):
     filename_json = os.path.join(directory, title + ".json")
     dictjson = {"title": title, "x_units": "", "y_units": "", x_label: x_data, y_label: y_data}
     ex.dump_json(dictjson, filename_json)
-    print("||>+ Wrote '", title, "' to", filename)
+    print("||>+ Wrote '", title, "' to", filename_json)
 
 
 def plot_flight(flight, directory):
     """processes and plots all the data from a given flight"""
     # Run the appropriate plots depending on the powerplant
-    data = flight["Outputs"]
-    for key, _ in data.items():
-        if not key == "Time":
-            single_plot(data["Time"], data[key], "Time", key, directory)
+    for key, _ in flight.items():
+        if key != "Time":
+            print(f"GOING TO PLOT {key}")
+            single_plot(flight["Time"], flight[key], "Time", key, directory)

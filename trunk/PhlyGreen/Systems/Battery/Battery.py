@@ -1,6 +1,6 @@
 import math
 import numpy as np
-import PhlyGreen.Systems.Battery.Cell_Models as Cell_Models
+from PhlyGreen.Systems.Battery import Cell_Models
 
 
 class BatteryError(Exception):
@@ -18,7 +18,7 @@ class Battery:
         self._SOC_min = None
         self._it = 0
         self._i = None
-        self._T = None
+        self._T = 300
 
     @property
     def i(self):
@@ -183,6 +183,8 @@ class Battery:
         self.cell_mass         = cell['Cell Mass']                      # in kg
         self.cell_radius       = cell['Cell Radius']                    # in m
         self.cell_height       = cell['Cell Height']                    # in m
+        self.cell_energy_nom   = 42                                     # in joules TODO actually add this to the cell dict
+
 
         if not (self.cell_Vmax > self.cell_Vmin):
             raise ValueError(
@@ -213,6 +215,13 @@ class Battery:
         self.pack_volume = self.cell_height * self.stack_width * self.stack_length
         self.pack_weight = self.cell_mass * self.cells_total
 
+        # nominal pack values
+        self.pack_energy = self.cell_energy_nom * self.cells_total
+        self.pack_power_max = (
+            self.cell_max_current * self._voltageModel(0, self.cell_max_current) * self.cells_total
+        )
+        self.pack_charge = self.cell_capacity * self.P_number
+
         self.pack_config = f"S{self.S_number} P{self.P_number}"
 
     def Power_2_current(self, P):
@@ -229,13 +238,13 @@ class Battery:
         if P == 0:  # skips all the math if power is zero
             return 0
 
-        """ V = E0 - I*R - I*K*(Q/(Q-it)) - it*K*(Q/(Q-it)) + A*exp(-B * it)
-            V = E0 - I*R - I*Qr - it*Qr + ee <- with substitutions to make shorter
-            P = V*I = E0*I - I^2*R - I^2*Qr - I*it*Qr + I*ee 
-            P = I^2 *(-R-Qr) + I *(E0+ee-it*Qr)
-            quadratic solve: 
-            a*I^2 + b*I - P = 0
-        """
+        # V = E0 - I*R - I*K*(Q/(Q-it)) - it*K*(Q/(Q-it)) + A*exp(-B * it)
+        # V = E0 - I*R - I*Qr - it*Qr + ee <- with substitutions to make shorter
+        # P = V*I = E0*I - I^2*R - I^2*Qr - I*it*Qr + I*ee 
+        # P = I^2 *(-R-Qr) + I *(E0+ee-it*Qr)
+        # quadratic solve: 
+        # a*I^2 + b*I - P = 0
+        
         E0, R, K, Q = self.E0, self.R, self.K, self.Q
         A, B = self.exp_amplitude, self.exp_time_ctt
         it = self.cell_it
