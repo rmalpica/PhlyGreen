@@ -34,7 +34,7 @@ def single_plot(x_data, y_data, x_label, y_label, directory, title=None, style="
     # Save the plot as a PDF
     filename = os.path.join(directory, title + ".pdf")  # create file inside the output directory
     plt.savefig(filename)
-    print("||>- Saved '", title, "' to", filename)
+    print(f"||>- Saved '{title}' to '{filename}'")
     plt.close()  # Close the plot
 
     # create json of just the data used, so that this plot can be manually
@@ -42,7 +42,7 @@ def single_plot(x_data, y_data, x_label, y_label, directory, title=None, style="
     filename_json = os.path.join(directory, title + ".json")
     dictjson = {"title": title, "x_units": "", "y_units": "", x_label: x_data, y_label: y_data}
     ex.dump_json(dictjson, filename_json)
-    print("||>+ Wrote '", title, "' to", filename_json)
+    print(f"||>+ Wrote '{title}' to '{filename_json}'")
 
 
 def plot_flight(flight, directory):

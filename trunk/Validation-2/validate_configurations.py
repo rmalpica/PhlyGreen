@@ -1,5 +1,6 @@
 # main script for running sweeps in an ordered manner
 import os
+import multiprocessing
 from itertools import product
 from run_pg import FlightRun
 import extras as aux
@@ -17,14 +18,18 @@ LOGO = r"""
 """
 
 
-def run_all(arg_list, batch_name, vars_of_interest=None):
-    """
-    Coordinate the whole process of running the multiple flights
-    and plotting the data that is relevant across them
-    """
-    print(LOGO)
+class RunAll:
+    """class that contains the things needed to run all the flight evaluations"""
 
-    def unpack_arg_list(a):
+    def __init__(self, batch_name):
+        # Start by defining the directories
+        print("SETTING DIRECTORIES")
+        self.out_d = aux.make_cat_dir("Outputs", batch_name)  # OUTPUT DIRECTORY
+        self.json_d = aux.make_cat_dir(self.out_d, "JSON")  # JSON DIRECTORY
+        self.plots_d = aux.make_cat_dir(self.out_d, "FLIGHT_PLOTS")  # PLOTS DIRECTORY
+        # extra_d = aux.make_cat_dir(self.out_d, "EXTRA")  # EXTRA DIRECTORY
+
+    def _unpack_arg_list(self, a):
         """
         Unpack the arguments list using itertools.product()
         to avoid having 7 nested loops.
@@ -55,12 +60,12 @@ def run_all(arg_list, batch_name, vars_of_interest=None):
 
         return configs
 
-    def run_and_plot(flightargs):
+    def run_and_plot(self, flightargs):
         """Run and plot a single flight"""
         print("BEGIN RUN")
         fr = FlightRun(flightargs)
 
-        flight_json = os.path.join(json_d, fr.arg_str + ".json")
+        flight_json = os.path.join(self.json_d, fr.arg_str + ".json")
 
         converged = fr.run_and_validate()
 
@@ -73,29 +78,22 @@ def run_all(arg_list, batch_name, vars_of_interest=None):
         # organize all the data if the flight is valid, and then plot it
         fr.process_data()
         aux.dump_json(fr.results(), flight_json)
-        flight_plots_dir = aux.make_cat_dir(plots_d, fr.arg_str)
+        flight_plots_dir = aux.make_cat_dir(self.plots_d, fr.arg_str)
         plots.plot_flight(fr.outputs, flight_plots_dir)
 
         # also plot profiling data
         plots.perf_profile(fr.perf_profiling, flight_plots_dir)
 
-    # Start by defining the directories
-    print("SETTING DIRECTORIES")
-    out_d = aux.make_cat_dir("Outputs", batch_name)  # OUTPUT DIRECTORY
-    json_d = aux.make_cat_dir(out_d, "JSON")  # JSON DIRECTORY
-    plots_d = aux.make_cat_dir(out_d, "FLIGHT_PLOTS")  # PLOTS DIRECTORY
-    # extra_d = aux.make_cat_dir(out_d, "EXTRA")  # EXTRA DIRECTORY
-
-    # unpack the arguments list that was received into a list of possible configurations
-    print("UNPACKING")
-    configs_to_run = unpack_arg_list(arg_list)
-    print(f"UNPACKED:{configs_to_run}")
-    # use map() to iteratively process every config with the run_and_plot() function
-    for config in configs_to_run:
-        run_and_plot(config)
+    def run_parallel(self, arg_list):
+        """
+        Execute all the flight sims in parallel
+        """
+        print(LOGO)
+        configs_to_run = self._unpack_arg_list(arg_list)
+        num_threads = multiprocessing.cpu_count()
+        with multiprocessing.Pool(processes=num_threads) as pool:
+            pool.map(self.run_and_plot, configs_to_run)
 
 
 # TODO:
-#     MAKE THIS SCRIPT ABLE TO COMPUTE LOOSE ARGUMENT INTO PLOTS
-#     IMPLEMENT MULTI PROCESSING OF THE FLIGHTS FROM LISTS OF ARGUMENTS
 #     IMPLEMENT THE CROSS REF GRAPHS AND HEATMAPS
