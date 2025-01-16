@@ -78,3 +78,60 @@ def perf_profile(data, directory):
             title=f"P_n values evaluated during iteration {i + 1} until the optimum was found",
             style="bar",
         )
+
+
+############################# multi flight relations
+
+
+def multiPlot(dictList, X, Y, Z, title, foldername):
+    # searches in the data for flights with the same Z
+    # puts them all in a dictionary grouped by Z
+    # plots Y against X multiple times with a different line for each Z
+    data = []
+    for d in dictList:
+        data.append(
+            {X: d[X], Y: d[Y], Z: d[Z]}
+        )  # reorganize the data so that it can go into pandas
+    df = pd.DataFrame(data)  # convert to pandas dataframe for easier use with seaborn
+    sns.scatterplot(data=df, x=X, y=Y, hue=Z)
+    # Add labels and title
+    plt.xlabel(X)
+    plt.ylabel(Y)
+    plt.title(title)
+
+    # Save the plot as a PDF
+    filename = os.path.join(foldername, title + ".pdf")  # create file inside the output directory
+    plt.savefig(filename)
+    print("]]=> Saved '", title, "' to", filename)
+    plt.close()  # Close the plot
+
+
+def heatMap(dictList, X, Y, Z, title, foldername):
+    # searches in the data for flights with the same Z
+    # puts them all in a dictionary grouped by Z
+    # plots Y against X multiple times with a different line for each Z
+    data = []
+    for d in dictList:
+        data.append(
+            {X: d[X], Y: d[Y], Z: d[Z]}
+        )  # reorganize the data so that it can go into pandas
+    df = pd.DataFrame(data)  # convert to pandas dataframe for easier use with seaborn
+    df = df.pivot(index=Y, columns=X, values=Z)
+    sns.heatmap(data=df)
+    # Add labels and title
+    plt.xlabel(X)
+    plt.ylabel(Y)
+    plt.title(title)
+
+    # Save the plot as a PDF
+    filename = os.path.join(foldername, title + ".pdf")  # create file inside the output directory
+    plt.savefig(filename)
+    print("]]=> Saved '", title, "' to", filename)
+    plt.close()  # Close the plot
+
+    # create json of just the data used, so that this plot can be manually
+    # retrieved and easily replotted in a prettier way if desired
+    filenamejson = os.path.join(foldername, title + ".json")
+    dictjson = {"title": title, "x_units": "", "y_units": "", "z_units": "", "data": df}
+    writeJSON(dictjson, filenamejson)
+    print("]]$> Wrote '", title, "' to", filename)

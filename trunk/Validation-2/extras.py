@@ -21,7 +21,14 @@ def make_cat_dir(*args):
     return directory
 
 
-def dump_json(dicts, jsonfn):
+def dump_json(data, jsonfn):
     """Given a dictionary, this will dump it to a json file"""
-    with open(jsonfn, "w", encoding="utf-8") as json_file:
-        json.dump(dicts, json_file, indent=4)
+    with open(jsonfn, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=4)
+
+
+def load_json(jsonfn):
+    """Load a json file to a dictionary"""
+    with open(jsonfn, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    return data

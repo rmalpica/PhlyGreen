@@ -1,6 +1,9 @@
-# main script for running sweeps in an ordered manner
+"""main script for running sweeps in an ordered manner"""
+
 import os
 import multiprocessing
+from pathlib import Path
+from collections import defaultdict
 from itertools import product
 from run_pg import FlightRun
 import extras as aux
@@ -94,6 +97,46 @@ class RunAll:
         with multiprocessing.Pool(processes=num_threads) as pool:
             pool.map(self.run_and_plot, configs_to_run)
 
+    def _compile_flights(self):
+        """
+        Collect and compile the data of the various
+        flights from their json files into a dictionary
+        """
+        # This works by loading each json into a dictionary, removing whats useless,
+        # flattening the dictionary and then loading it to a list of the flattened dictionaries
+        # then this list is converted into a dictionary of lists, rather than a list of dictionaries
+        # This is a very jank way to do this and should be a lot better
+        data = defaultdict(list)
+        for json_f in Path(self.json_d).glob("*.json"):  # returns every json file in directory
+            d = aux.load_json(json_f)
+            del d["Outputs"]
+            del d["Inputs"]["Mission Profile"]
+            # optional: save the performance profiling
+            d["Parameters"]["Total Iterations"] = d["Meta Performance"]["Total Iterations"]
+            del d["Meta Performance"]
+
+            for item in d:
+                for key , value in item.items():
+                    data[key].append(value)
+
+        return data
+
+    def correlate_flights(self,voi):
+        """
+        Plot the data that is obtained across flights, such as
+        relation between battery size and range or payload, etc
+        """
+        dataset = self._compile_flights()
+        #TODO make this detect which input parameters are being swept over and use those as the X Y axis
+        # for example, if only the range and payload change in the input args list, make the scatter plots plus the heatmaps
+        # but if it detects that only one value is changing, like the cell, or the phi, or the architecture, make bar plots instead
+        # if three or more are swept return an error
+        # the previous code could only do stuff like a chart of weight vs range for different payloads, and it would break the different 
+        # missions and profiles and architectures into folders. No more. it goes all in the same folder, you specify up to two things to sweep
+        # theres no logic to handling more than that in this part of the code anyway.
+        # for key, _ in dataset.items():
+        #     Z = dataset
+        # plots.multiPlot
 
 # TODO:
 #     IMPLEMENT THE CROSS REF GRAPHS AND HEATMAPS
