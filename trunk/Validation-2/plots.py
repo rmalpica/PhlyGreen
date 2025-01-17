@@ -12,13 +12,13 @@ def single_plot(x_data, y_data, x_label, y_label, directory, title=None, style="
     the data used to a json file so that it can be
     retrieved and plotted manually easily if needed
     """
-    # Create a plot using Seaborn
-    if style == "line":
-        sns.lineplot(x=x_data, y=y_data)
-    elif style == "bar":
-        sns.barplot(x=x_data, y=y_data)
-    else:
-        raise ValueError(f"Undefined plotting style:{style}")
+    # # Create a plot using Seaborn
+    # if style == "line":
+    #     sns.lineplot(x=x_data, y=y_data)
+    # elif style == "bar":
+    #     sns.barplot(x=x_data, y=y_data)
+    # else:
+    #     raise ValueError(f"Undefined plotting style:{style}")
 
     plts = {"line": sns.lineplot, "bar": sns.barplot}
     f = plts[style]
@@ -79,59 +79,11 @@ def perf_profile(data, directory):
             style="bar",
         )
 
-
-############################# multi flight relations
-
-
-def multiPlot(dictList, X, Y, Z, title, foldername):
-    # searches in the data for flights with the same Z
-    # puts them all in a dictionary grouped by Z
-    # plots Y against X multiple times with a different line for each Z
-    data = []
-    for d in dictList:
-        data.append(
-            {X: d[X], Y: d[Y], Z: d[Z]}
-        )  # reorganize the data so that it can go into pandas
-    df = pd.DataFrame(data)  # convert to pandas dataframe for easier use with seaborn
-    sns.scatterplot(data=df, x=X, y=Y, hue=Z)
-    # Add labels and title
-    plt.xlabel(X)
-    plt.ylabel(Y)
-    plt.title(title)
-
-    # Save the plot as a PDF
-    filename = os.path.join(foldername, title + ".pdf")  # create file inside the output directory
-    plt.savefig(filename)
-    print("]]=> Saved '", title, "' to", filename)
-    plt.close()  # Close the plot
+def multiplot_1(data, i, o, output_d):
+    print("Successfully used multiplot_1")
+    print(data, i, o, output_d)
 
 
-def heatMap(dictList, X, Y, Z, title, foldername):
-    # searches in the data for flights with the same Z
-    # puts them all in a dictionary grouped by Z
-    # plots Y against X multiple times with a different line for each Z
-    data = []
-    for d in dictList:
-        data.append(
-            {X: d[X], Y: d[Y], Z: d[Z]}
-        )  # reorganize the data so that it can go into pandas
-    df = pd.DataFrame(data)  # convert to pandas dataframe for easier use with seaborn
-    df = df.pivot(index=Y, columns=X, values=Z)
-    sns.heatmap(data=df)
-    # Add labels and title
-    plt.xlabel(X)
-    plt.ylabel(Y)
-    plt.title(title)
-
-    # Save the plot as a PDF
-    filename = os.path.join(foldername, title + ".pdf")  # create file inside the output directory
-    plt.savefig(filename)
-    print("]]=> Saved '", title, "' to", filename)
-    plt.close()  # Close the plot
-
-    # create json of just the data used, so that this plot can be manually
-    # retrieved and easily replotted in a prettier way if desired
-    filenamejson = os.path.join(foldername, title + ".json")
-    dictjson = {"title": title, "x_units": "", "y_units": "", "z_units": "", "data": df}
-    writeJSON(dictjson, filenamejson)
-    print("]]$> Wrote '", title, "' to", filename)
+def multiplot_2(data, i, o, output_d):
+    print("Successfully used multiplot_2")
+    print(data, i, o, output_d)

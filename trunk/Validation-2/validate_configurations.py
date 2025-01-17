@@ -30,7 +30,8 @@ class RunAll:
         self.out_d = aux.make_cat_dir("Outputs", batch_name)  # OUTPUT DIRECTORY
         self.json_d = aux.make_cat_dir(self.out_d, "JSON")  # JSON DIRECTORY
         self.plots_d = aux.make_cat_dir(self.out_d, "FLIGHT_PLOTS")  # PLOTS DIRECTORY
-        # extra_d = aux.make_cat_dir(self.out_d, "EXTRA")  # EXTRA DIRECTORY
+        self.extra_d = aux.make_cat_dir(self.out_d, "EXTRA")  # EXTRA DIRECTORY
+        self.output_data = None
 
     def _unpack_arg_list(self, a):
         """
@@ -38,27 +39,31 @@ class RunAll:
         to avoid having 7 nested loops.
         The parameters are ordered like this because this is
         the order they are input into the mission inputs of
-        the aircraft class
+        the aircraft class.
+        To avoid creating dozens of repeated Traditional
+        configurations (iterations of Cell and Phi) this is
+        done to unpack the arguments first instead of simply
+        using starmap() on the processing stage.
         """
         configs = []
-        if "Traditional" in a["ArchList"]:
+        if "Traditional" in a["Powerplant"]:
             configs += product(
-                a["RangesList"],
-                a["PayloadsList"],
+                a["Range"],
+                a["Payload"],
                 ["Traditional"],
-                [a["CellsList"][0]],  # use the first cell and phi to prevent the aircraft
-                [a["PhisList"][0]],  # setup code from breaking due to not having these values
-                a["MissionList"],
+                [a["Cell"][0]],  # use the first cell and phi to prevent the aircraft
+                [a["Base Phi"][0]],  # setup code from breaking due to not having these values
+                a["Mission Name"],
             )
 
-        if "Hybrid" in a["ArchList"]:
+        if "Hybrid" in a["Powerplant"]:
             configs += product(
-                a["RangesList"],
-                a["PayloadsList"],
+                a["Range"],
+                a["Payload"],
                 ["Hybrid"],
-                a["CellsList"],
-                a["PhisList"],
-                a["MissionList"],
+                a["Cell"],
+                a["Base Phi"],
+                a["Mission Name"],
             )
 
         return configs
@@ -76,7 +81,7 @@ class RunAll:
         # writing the json with the inputs and empty outputs
         if not converged:
             aux.dump_json(fr.results(), flight_json)
-            return
+            return None
 
         # organize all the data if the flight is valid, and then plot it
         fr.process_data()
@@ -86,57 +91,88 @@ class RunAll:
 
         # also plot profiling data
         plots.perf_profile(fr.perf_profiling, flight_plots_dir)
+        return fr.summary()
 
-    def run_parallel(self, arg_list):
+    def run_parallel(self, arg_list, ooi):
         """
         Execute all the flight sims in parallel
         """
         print(LOGO)
         configs_to_run = self._unpack_arg_list(arg_list)
         num_threads = multiprocessing.cpu_count()
-        with multiprocessing.Pool(processes=num_threads) as pool:
-            pool.map(self.run_and_plot, configs_to_run)
 
-    def _compile_flights(self):
+        with multiprocessing.Pool(processes=num_threads) as pool:
+            results = pool.map(self.run_and_plot, configs_to_run)
+        output_data = self._compile_flights(results)
+
+        self.correlate_flights(output_data, arg_list, ooi)
+
+    def _compile_flights(self,dd):
         """
         Collect and compile the data of the various
-        flights from their json files into a dictionary
+        flights files into a dictionary of lists
         """
-        # This works by loading each json into a dictionary, removing whats useless,
-        # flattening the dictionary and then loading it to a list of the flattened dictionaries
-        # then this list is converted into a dictionary of lists, rather than a list of dictionaries
-        # This is a very jank way to do this and should be a lot better
         data = defaultdict(list)
-        for json_f in Path(self.json_d).glob("*.json"):  # returns every json file in directory
-            d = aux.load_json(json_f)
-            del d["Outputs"]
-            del d["Inputs"]["Mission Profile"]
-            # optional: save the performance profiling
-            d["Parameters"]["Total Iterations"] = d["Meta Performance"]["Total Iterations"]
-            del d["Meta Performance"]
-
-            for item in d:
-                for key , value in item.items():
-                    data[key].append(value)
-
+        # for d in dd:
+        for item in dd:
+            for key, value in item.items():
+                data[key].append(value)
         return data
 
-    def correlate_flights(self,voi):
+    def _determine_ioi(self, arg_list):
         """
-        Plot the data that is obtained across flights, such as
-        relation between battery size and range or payload, etc
+        ioi - inputs of interest
+        grabs the dictionary key of all the inputs that were passed
+        as a range of values so that the plots can be made over them
         """
-        dataset = self._compile_flights()
-        #TODO make this detect which input parameters are being swept over and use those as the X Y axis
+        ioi = []
+        for k, v in arg_list.items():
+            if len(v) > 1:
+                ioi.append(k)
+        return ioi
+
+    def correlate_flights(self, data, arg_list, ooi):
+        """
+        Plot the data that is obtained across flights, such as relation
+        between battery size and range or payload, etc by reading all the
+        JSON files that were generated and plotting their data.
+        It receives the list of outputs that are interesting to plot (ooi)
+        because there are dozens of possible outputs, most useless
+        it receives the list of inputs originally given to the code
+        because otherwise the inputs of interest (ioi) for the outputs
+        to be plotted against would need to be rebuilt from the jsons,
+        which adds completely needless overhead. Its not very elegant,
+        but it works fine
+        """
+        # dataset = self._compile_flights()
+        ioi = self._determine_ioi(arg_list)
+
+        n = len(ioi)
+        if n == 1:
+            # plot the outputs against the singe ioi both as bar plots and as scatter plots
+            ioi = ioi[0]
+            plots.multiplot_1(data, ioi, ooi,self.extra_d)
+
+        elif n == 2:
+            # plot both as heatmaps and scatter plots
+            ioi = (ioi[0], ioi[1])
+            plots.multiplot_2(data, ioi, ooi,self.extra_d)
+
+        else:
+            # implement 3D viz plots one day?
+            print("Too many inputs to plot over!")
+
+        # TODO make this detect which input parameters are being swept over and use those as the X Y axis
         # for example, if only the range and payload change in the input args list, make the scatter plots plus the heatmaps
         # but if it detects that only one value is changing, like the cell, or the phi, or the architecture, make bar plots instead
         # if three or more are swept return an error
-        # the previous code could only do stuff like a chart of weight vs range for different payloads, and it would break the different 
+        # the previous code could only do stuff like a chart of weight vs range for different payloads, and it would break the different
         # missions and profiles and architectures into folders. No more. it goes all in the same folder, you specify up to two things to sweep
         # theres no logic to handling more than that in this part of the code anyway.
         # for key, _ in dataset.items():
         #     Z = dataset
         # plots.multiPlot
+
 
 # TODO:
 #     IMPLEMENT THE CROSS REF GRAPHS AND HEATMAPS

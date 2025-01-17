@@ -321,6 +321,15 @@ class FlightRun:
             "Inputs": self.inputs,
             "Outputs": self.outputs,
             "Parameters": self.aircraft_parameters,
-            "Meta Performance": self.perf_profiling, #optional, saves algorithm performance data
+            "Meta Performance": self.perf_profiling,  # optional, saves algorithm performance data
         }
+        return out
+
+    def summary(self):
+        """summarize the data that is interesting to plot across flights"""
+        out = {}
+        out.update(self.inputs)
+        del out["Mission Profile"] # not needed for plotting
+        out.update(self.aircraft_parameters)
+        out["Total Iterations"] = self.perf_profiling["Total Iterations"]
         return out
