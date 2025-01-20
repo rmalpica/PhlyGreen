@@ -2,9 +2,9 @@
 
 import os
 import multiprocessing
-from pathlib import Path
 from collections import defaultdict
 from itertools import product
+# import pandas as pd
 from run_pg import FlightRun
 import extras as aux
 import plots
@@ -81,7 +81,7 @@ class RunAll:
         # writing the json with the inputs and empty outputs
         if not converged:
             aux.dump_json(fr.results(), flight_json)
-            return None
+            return {}
 
         # organize all the data if the flight is valid, and then plot it
         fr.process_data()
@@ -161,18 +161,3 @@ class RunAll:
         else:
             # implement 3D viz plots one day?
             print("Too many inputs to plot over!")
-
-        # TODO make this detect which input parameters are being swept over and use those as the X Y axis
-        # for example, if only the range and payload change in the input args list, make the scatter plots plus the heatmaps
-        # but if it detects that only one value is changing, like the cell, or the phi, or the architecture, make bar plots instead
-        # if three or more are swept return an error
-        # the previous code could only do stuff like a chart of weight vs range for different payloads, and it would break the different
-        # missions and profiles and architectures into folders. No more. it goes all in the same folder, you specify up to two things to sweep
-        # theres no logic to handling more than that in this part of the code anyway.
-        # for key, _ in dataset.items():
-        #     Z = dataset
-        # plots.multiPlot
-
-
-# TODO:
-#     IMPLEMENT THE CROSS REF GRAPHS AND HEATMAPS
