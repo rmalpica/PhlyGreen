@@ -5,6 +5,7 @@ import seaborn as sns
 import pandas as pd
 import matplotlib.pyplot as plt
 import extras as ex
+import pprint
 
 
 def single_plot(x_data, y_data, x_label, y_label, directory, title=None, style="line"):
@@ -45,7 +46,7 @@ def plot_flight(flight, directory):
     # Run the appropriate plots depending on the powerplant
     for key, _ in flight.items():
         if key != "Time":
-            print(f"GOING TO PLOT {key}")
+            # print(f"GOING TO PLOT {key}")
             single_plot(flight["Time"], flight[key], "Time", key, directory)
 
 
@@ -97,33 +98,44 @@ def multiplot_2(data, i, oo, output_d):
     being swept. A scatter plot is useful if something like the powerplant and
     one numerical value are being swept over.
     """
-    print("Successfully used multiplot_2")
-    print(data, i, oo, output_d)
-
+    # print("Successfully used multiplot_2")
+    # pprint.pp(data)
+    # pprint.pp(i)
+    # pprint.pp(oo)
+    # pprint.pp(output_d)
     for o in oo:
         heatmap(data, i[0], i[1], o, output_d)
+        iter_plot(data, i[0], i[1], o, output_d)
+        iter_plot(data, i[1], i[0], o, output_d)
+
+
+def iter_plot(data, x, z, y, directory, title=None):
+    """Make scatter plots of the data"""
+    # df = pd.DataFrame(data)  # convert to pandas dataframe for use with seaborn
+    # pivot = df.pivot_table(values=z, index=y, columns=x)
+    sns.scatterplot(data=data, x=x, y=y, hue=z)
+
+    plt.xlabel(x)
+    plt.ylabel(y)
+    if title is None:
+        title = f"Scatterplot of {y} vs {x} for different {z}"
+    plt.title(title)
+
+    # Save the plot as a PDF
+    filename = os.path.join(directory, title + ".pdf")  # create file inside the output directory
+    plt.savefig(filename)
+    print("]]=> Saved '", title, "' to", filename)
+    plt.close()  # Close the plot
 
 
 def heatmap(dictlist, x, y, z, directory, title=None):
     """jank method of plotting the data into a heatmap"""
-    print(dictlist)
-    # data = []
-    # for d in dictlist:
-    #     data.append(
-    #         {x: d[x], y: d[y], z: d[z]}
-    #     )  # reorganize the data so that it can go into pandas
 
-
- # Create pivot table
+    # Create pivot table and plot heatmap
     df = pd.DataFrame(dictlist)  # convert to pandas dataframe for use with seaborn
-    pivot = df.pivot_table(values=z, index=y, columns=x, aggfunc='mean')
+    pivot = df.pivot_table(values=z, index=y, columns=x)
     sns.heatmap(pivot)
 
-
-    # df = pd.DataFrame(dictlist)  # convert to pandas dataframe for use with seaborn
-    # df = df.pivot(index=y, columns=x, values=z)
-    # sns.heatmap(data=df)
-    # # Add labels and title
     plt.xlabel(x)
     plt.ylabel(y)
     if title is None:
@@ -135,7 +147,6 @@ def heatmap(dictlist, x, y, z, directory, title=None):
     plt.savefig(filename)
     print("]]=> Saved '", title, "' to", filename)
     plt.close()  # Close the plot
-
 
     # BROKEN, DOES NOT WORK RIGHT NOW, FIGURE OUT HOW TO SAVE PIVOT TABLE TO JSON/DICT
     # # create json of just the data used, so that this plot can be manually

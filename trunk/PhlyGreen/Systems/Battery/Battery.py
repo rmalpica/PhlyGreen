@@ -6,8 +6,6 @@ from PhlyGreen.Systems.Battery import Cell_Models
 class BatteryError(Exception):
     """Create a custom exception to be caught when the battery is invalid"""
 
-    pass
-
 
 class Battery:
     def __init__(self, aircraft):
@@ -40,7 +38,7 @@ class Battery:
     def it(self, value):
         self._it = value
         _soc = 1 - value / (self.cell_capacity * self.P_number)
-        _socmax = 2.000009
+        _socmax = 1
         if not (self.SOC_min <= _soc <= _socmax):
             raise BatteryError(
                 f"Fail_Condition_1\nSOC outside of allowed range:\nSOC:{_soc:.17f} Range: {self.SOC_min:.17f} ~ {_socmax:.17f}"
@@ -77,7 +75,7 @@ class Battery:
     @property
     def cell_Vout(self) -> float:
         _value = self._voltageModel(self.cell_it, self.cell_i)
-        if not (self.cell_Vmin <= _value <= self.cell_Vmax):
+        if not (self.cell_Vmin <= _value):# <= self.cell_Vmax):
             raise BatteryError(
                 f"Fail_Condition_6\nCell voltage outside of allowed range:\nVoltage:{_value} Range: {self.cell_Vmin} ~ {self.cell_Vmax}"
             )
@@ -90,7 +88,7 @@ class Battery:
     @property
     def Vout(self) -> float:
         _value = self.cell_Vout * self.S_number
-        if not (self.controller_Vmin <= _value <= self.controller_Vmax):
+        if not (self.controller_Vmin <= _value):# <= self.controller_Vmax):
             raise BatteryError(
                 f"Fail_Condition_7\nPack voltage outside of allowed range:\nVoltage:{_value} Range: {self.controller_Vmin} ~ {self.controller_Vmax}"
             )
@@ -116,7 +114,7 @@ class Battery:
     @property
     def SOC(self) -> float:
         _value = 1 - self.cell_it / self.cell_capacity
-        _socmax = 1.1
+        _socmax = 1
         if not (self.SOC_min <= _value <= _socmax):
             raise BatteryError(
                 f"Fail_Condition_9\nSOC outside of allowed range:\nSOC:{_value!r} Range:{self.SOC_min!r} ~ {_socmax!r}"
@@ -195,7 +193,7 @@ class Battery:
         # losses due to lower current being needed 
         self.S_number = math.floor(
             self.controller_Vmax / self.cell_Vmax
-        )  
+        )
 
     # determine battery configuration
     # must receive the number of cells in parallel

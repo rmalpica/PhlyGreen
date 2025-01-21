@@ -247,7 +247,19 @@ class FlightRun:
             "Takeoff Weight": self.myaircraft.weight.WTO,
             "Wing Surface": self.myaircraft.WingSurface,
             "TakeOff Engine Shaft PP": self.myaircraft.mission.TO_PP / 1000,  # PP = Peak Power
-            "Climb Cruise Engine Shaft PP": self.myaircraft.mission.Max_PEng / 1000,
+            "Climb Cruise Engine Shaft PP": self.myaircraft.mission.Max_PEng
+            / 1000,  # PP = Peak Power
+            "Battery Mass": 0,
+            "TakeOff Battery PP": 0,  # PP = Peak Power
+            "Climb Cruise Battery PP": 0,  # PP = Peak Power
+            "Battery Pack Energy": 0,
+            "Battery Pack Max Power": 0,
+            "Battery Pack Specific Energy": 0,
+            "Battery Pack Specific Power": 0,
+            "Battery P number": 0,
+            "Battery S number": 0,
+            "Battery Pack Charge": 0,
+            "Total Iterations": 0, # needed to be compatible with the old phlygreen code
         }
 
         self.aircraft_parameters.update(dic_outputs)
@@ -286,6 +298,7 @@ class FlightRun:
             "Battery P number": self.myaircraft.battery.P_number,
             "Battery S number": self.myaircraft.battery.S_number,
             "Battery Pack Charge": self.myaircraft.battery.pack_charge,
+            "Total Iterations": 0, # needed to be compatible with the old phlygreen code
         }
 
         self.aircraft_parameters.update(dic_outputs)

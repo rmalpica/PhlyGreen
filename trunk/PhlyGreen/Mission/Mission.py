@@ -209,7 +209,7 @@ class Mission:
 
         def evaluate_P_nr(P_number):
             
-            print(f"pnumber {P_number}")
+            # print(f"pnumber {P_number}")
             self.P_n_arr.append(P_number)
 
             self.valid_solution = True
@@ -230,7 +230,7 @@ class Mission:
                 self.aircraft.battery.i  = self.aircraft.battery.Power_2_current(self.TO_PBat) #convert output power to volts and amps
                 self.aircraft.battery.Vout # necessary for the battery class to validate Vout
             except BatteryError as err:
-                print(err)
+                # print(err)
                 self.valid_solution = False
                 return self.valid_solution
             except Exception as err:
@@ -308,8 +308,8 @@ class Mission:
             # print('**********************************')
             # print(f'using {n_max} and {n_min} from optimal {self.optimal_n} at ratio {ratio}')
         except TypeError as err:
-            print('**********************************')
-            print(f'optimal not found because of:\n {err}')
+            # print('**********************************')
+            # print(f'optimal not found because of:\n {err}')
             n_max = 128  # hardcoding a value that is anecdotally known to be ok for a first guess
             n_min = n_max-1
 
@@ -331,13 +331,13 @@ class Mission:
         # if nmax and nmin are just 1 apart then the optimal n is nmax
         # all checks can be skipped and we jump right into evaluating n to configure the flight
         # print(f"nmax ({n_max}) validity is {all(evaluate_P_nr(n_max))} and nmin ({n_min}) validity is {all(evaluate_P_nr(n_min))}") # debug only
-        if n_max - n_min == 1: 
+        if n_max - n_min == 1:
             optimal = True
             n = n_max
             #valid_result = evaluate_P_nr(n)
             #if not valid_result:
             #    raise Exception("Impossible n value somehow?")
-            print("Optimal P: ",n)
+            # print("Optimal P: ",n)
             self.optimal_n = n
 
         n=math.ceil((n_max+n_min)/2) #start from the middle to make it one iteration shorter
@@ -350,7 +350,7 @@ class Mission:
             # print("[iter",j,"] [P",n,"] [min",n_min,"] [max",n_max,"] valid?",valid_result) #uncomment for debug
 
             if valid_result and (n-n_min)==1: #n is optimal
-                print("Optimal P: ",n)
+                # print("Optimal P: ",n)
                 self.optimal_n = n
                 optimal = True
 

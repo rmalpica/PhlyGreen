@@ -1,5 +1,5 @@
 """main script for running sweeps in an ordered manner"""
-
+import copy
 import os
 import multiprocessing
 from collections import defaultdict
@@ -33,7 +33,7 @@ class RunAll:
         self.extra_d = aux.make_cat_dir(self.out_d, "EXTRA")  # EXTRA DIRECTORY
         self.output_data = None
 
-    def _unpack_arg_list(self, a):
+    def _unpack_arg_list(self, aa):
         """
         Unpack the arguments list using itertools.product()
         to avoid having 7 nested loops.
@@ -45,14 +45,30 @@ class RunAll:
         done to unpack the arguments first instead of simply
         using starmap() on the processing stage.
         """
+        a=copy.deepcopy(aa)
         configs = []
+        # Forces traditional configuration if phi = 0, this enables
+        # plotting of the traditional config next to the hybrid
+        # one when evaluationg the effect of phi without having to
+        # iterate the powerplant explicitly
+        if 0 in a["Base Phi"]:
+            a["Base Phi"].remove(0)
+            configs += product(
+                a["Range"],
+                a["Payload"],
+                ["Traditional"],
+                a["Cell"],  # This will still iterate the cells, unlike the traditional config,
+                [0],  # which allows comparisons of phi down to 0 using different cells if desired.
+                a["Mission Name"],
+            )
+
         if "Traditional" in a["Powerplant"]:
             configs += product(
                 a["Range"],
                 a["Payload"],
                 ["Traditional"],
-                [a["Cell"][0]],  # use the first cell and phi to prevent the aircraft
-                [a["Base Phi"][0]],  # setup code from breaking due to not having these values
+                [a["Cell"][0]],  # use the first cell and phi=0 to prevent the aircraft
+                [0],  # setup code from breaking due to not having these values
                 a["Mission Name"],
             )
 
@@ -65,6 +81,16 @@ class RunAll:
                 a["Base Phi"],
                 a["Mission Name"],
             )
+        # print(*configs, sep ='\n')
+        # This removes duplicates from the list that may
+        # have been caused by the zero phi special case
+        for i,_ in enumerate(configs):
+            # print(f"I NUMBER:{i}")
+            for j,_ in enumerate(configs):
+                # print(f"J NUMBER:{j}")
+                if i != j:
+                    if configs[i] == configs[j]:
+                        del configs[j]
 
         return configs
 
@@ -104,7 +130,8 @@ class RunAll:
         with multiprocessing.Pool(processes=num_threads) as pool:
             results = pool.map(self.run_and_plot, configs_to_run)
         output_data = self._compile_flights(results)
-
+        print("EVALUATING INPUT ARGUMENT LIST")
+        # print(arg_list)
         self.correlate_flights(output_data, arg_list, ooi)
 
     def _compile_flights(self,dd):
@@ -148,6 +175,9 @@ class RunAll:
         ioi = self._determine_ioi(arg_list)
 
         n = len(ioi)
+        if n == 0:
+            return
+
         if n == 1:
             # plot the outputs against the singe ioi both as bar plots and as scatter plots
             ioi = ioi[0]
