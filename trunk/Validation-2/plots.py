@@ -5,7 +5,7 @@ import seaborn as sns
 import pandas as pd
 import matplotlib.pyplot as plt
 import extras as ex
-import pprint
+# import pprint
 
 
 def single_plot(x_data, y_data, x_label, y_label, directory, title=None, style="line"):
@@ -14,8 +14,7 @@ def single_plot(x_data, y_data, x_label, y_label, directory, title=None, style="
     the data used to a json file so that it can be
     retrieved and plotted manually easily if needed
     """
-    # Quick n dirty way to pick the kind of plot to plot
-    # print(f"DEBUUUUUGGG------------\n{x_label}:\n{x_data} \n\n\n\n {y_label}:\n{y_data}\n ---- fini\n")
+
     plts = {"line": sns.lineplot, "bar": sns.barplot, "scatter": sns.scatterplot}
     f = plts[style]
     f(x=x_data, y=y_data)
@@ -98,11 +97,6 @@ def multiplot_2(data, i, oo, output_d):
     being swept. A scatter plot is useful if something like the powerplant and
     one numerical value are being swept over.
     """
-    # print("Successfully used multiplot_2")
-    # pprint.pp(data)
-    # pprint.pp(i)
-    # pprint.pp(oo)
-    # pprint.pp(output_d)
     for o in oo:
         heatmap(data, i[0], i[1], o, output_d)
         iter_plot(data, i[0], i[1], o, output_d)
@@ -111,8 +105,6 @@ def multiplot_2(data, i, oo, output_d):
 
 def iter_plot(data, x, z, y, directory, title=None):
     """Make scatter plots of the data"""
-    # df = pd.DataFrame(data)  # convert to pandas dataframe for use with seaborn
-    # pivot = df.pivot_table(values=z, index=y, columns=x)
     sns.scatterplot(data=data, x=x, y=y, hue=z)
 
     plt.xlabel(x)
