@@ -119,6 +119,22 @@ class RunAll:
         plots.perf_profile(fr.perf_profiling, flight_plots_dir)
         return fr.summary()
 
+
+    def run_single(self,a):
+        """
+        Execute a single flight
+        """
+        # convert to tuple
+        config = (
+                a["Range"],
+                a["Payload"],
+                a["Powerplant"],
+                a["Cell"],
+                a["Base Phi"],
+                a["Mission Name"],
+            )
+        self.run_and_plot(config)
+
     def run_parallel(self, arg_list, ooi):
         """
         Execute all the flight sims in parallel
@@ -134,13 +150,24 @@ class RunAll:
         # print(arg_list)
         self.correlate_flights(output_data, arg_list, ooi)
 
-    def _compile_flights(self,dd):
+    def run_config(self, arg_list, ooi=None):
+        """Determine if it should run in parallel or not"""
+        j = 1
+        for i in arg_list:
+            j = max(len(i), j)
+        if j > 1:
+            if ooi is None:
+                ooi=[]
+            self.run_parallel(arg_list, ooi)
+        else:
+            self.run_single(arg_list)
+
+    def _compile_flights(self, dd):
         """
         Collect and compile the data of the various
         flights files into a dictionary of lists
         """
         data = defaultdict(list)
-        # for d in dd:
         for item in dd:
             for key, value in item.items():
                 data[key].append(value)

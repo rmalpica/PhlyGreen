@@ -26,4 +26,4 @@ outputs_of_interest = [
     "Total Iterations",
 ]
 r = RunAll("TESTING")
-r.run_parallel(configurations_list, outputs_of_interest)
+r.run_config(configurations_list, outputs_of_interest)
