@@ -1,8 +1,7 @@
 import math
-import numbers
-import numpy as np
-import scipy.integrate as integrate
 import os
+import numpy as np
+from scipy import integrate
 import seaborn as sns
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -188,6 +187,7 @@ def load_csv():
 
 def plotData(dataset):
     to_plot = ["soc", "vout", "i", "T", "dTdt"]
+    sns.set_palette("Set2")  # Distinct, high-contrast colors
 
     for variable in to_plot:
         sns.scatterplot(data=dataset, x="time", y=variable, hue="Ta")
@@ -205,58 +205,15 @@ def plotData(dataset):
         plt.close()  # Close the plot
 
 
-def ePlot(time, err, title):
-    sns.scatterplot(x=time, y=err)
-    # Add labels and title
-    plt.xlabel("Time")
-    plt.ylabel("Error")
-    plt.title(title)
-    # Save the plot as a PDF
-    filename = os.path.join(foldername, title + ".pdf")  # create file inside the output directory
-    plt.savefig(filename)
-    print("||>- Saved '", title, "' to", filename)
-    plt.close()  # Close the plot
-
-
 def plotErrors(simDataset, realDataset, which):
-    err_dataset = {}
-    for key, data in simDataset.items():
-        sim = simDataset[key][which]
-        sim = np.array(sim)
-        real = realDataset[key][which]
-        real = np.array(real)
-        if which == "temperature":
-            real = real + 273.15
-        time = simDataset[key]["time"]
-        absolute_err = sim - real
-        relative_err = 100 * absolute_err / real
-        err_dataset[key] = {"time": time, "abs": absolute_err, "rel": relative_err}
-        title = f"{which}_comparison_at_{key}C"
-        ePlot(time, absolute_err, title + "-err_abs")
-        ePlot(time, relative_err, title + "-err_rel")
-        sns.scatterplot(x=time, y=real)
-        sns.scatterplot(x=time, y=sim)
-        plt.xlabel("time")
-        plt.ylabel(which)
-        plt.title(title)
-        filename = os.path.join(
-            foldername, title + "-compare.pdf"
-        )  # create file inside the output directory
-        plt.savefig(filename)
-        print("||>- Saved '", title, "' to", filename)
-        plt.close()
+    # Load the paired color palette and assign matching pairs of colors
+    palette = sns.color_palette("Paired", len(simDataset) * 2)
 
-
-def GPTplotErrors(simDataset, realDataset, which):
-    # Use Seaborn's default theme for clean plots
-    sns.set_theme(style="whitegrid")
-
-    # Combined comparison plot
     fig, ax = plt.subplots()
     fig_error, ax_error = plt.subplots()
 
-    # Iterate and plot data
-    for key, data in simDataset.items():
+    # Iterate and plot with paired colors
+    for idx, (key, data) in enumerate(simDataset.items()):
         sim = np.array(data[which])
         real = np.array(realDataset[key][which])
 
@@ -266,12 +223,29 @@ def GPTplotErrors(simDataset, realDataset, which):
         time = simDataset[key]["time"]
         absolute_error = np.abs(sim - real)
 
-        # Plot with Seaborn-like styling for cleaner visuals
-        sns.lineplot(x=time, y=real, ax=ax, label=f"Ref {key}°C", linewidth=1.2)
-        sns.scatterplot(x=time, y=sim, ax=ax, label=f"Calc {key}°C", s=10, marker='o')
+        # Use color pairs: even for reference, odd for calculated
+        sns.lineplot(
+            x=time, y=real, ax=ax, color=palette[2 * idx], label=f"Ref {key}°C", linewidth=1.2
+        )
+        sns.scatterplot(
+            x=time,
+            y=sim,
+            ax=ax,
+            color=palette[2 * idx + 1],
+            label=f"Calc {key}°C",
+            s=10,
+            marker="o",
+        )
 
-        # Plot absolute errors on error plot
-        sns.lineplot(x=time, y=absolute_error, ax=ax_error, label=f"Err {key}°C", linewidth=1.2)
+        # Plot absolute errors using distinct colors
+        sns.lineplot(
+            x=time,
+            y=absolute_error,
+            ax=ax_error,
+            color=palette[2 * idx],
+            label=f"Err {key}°C",
+            linewidth=1.2,
+        )
 
     # Temperature comparison plot settings
     ax.set_xlim(0, 8000)
@@ -303,7 +277,7 @@ def GPTplotErrors(simDataset, realDataset, which):
 def getData(results, evaluator):
     out = {"time": [], "soc": [], "vout": [], "i": [], "T": [], "dTdt": [], "Ta": []}
     outerr = {"time": [], "voltage": [], "temperature": []}
-    for k in range(len(results.t)):
+    for k , _ in enumerate(results.t):
         yy0 = [results.y[0][k], results.y[1][k]]
         sol = evaluator.model(results.t[k], yy0)
         out["time"].append(results.t[k])
@@ -335,14 +309,14 @@ def validate(realdata):
 
 
 def validate_all():
-    temp_data, _ = load_csv()
+    temp_data, volt_data = load_csv()
     results, forerrors = validate(temp_data)
     plotData(results)
-    GPTplotErrors(forerrors, temp_data, "temperature")
+    plotErrors(forerrors, temp_data, "temperature")
 
-    # results, forerrors = validate(volt_data)
-    # plotData(results)
-    # plotErrors(forerrors, volt_data, "voltage")
+    results, forerrors = validate(volt_data)
+    plotData(results)
+    plotErrors(forerrors, volt_data, "voltage")
 
 
 bat = Battery()
