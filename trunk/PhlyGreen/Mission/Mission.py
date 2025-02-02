@@ -300,6 +300,19 @@ class Mission:
         # this proved slow and cumbersome, so i came up with a new method that uses the previous result to initialize the search
         # it grabs the n value from the previous iteration and tries to find an nmax and nmin from there
         optimal = False
+        """
+        P=0
+        while not optimal:
+            P+=1
+            a=evaluate_P_nr(P)
+            b=evaluate_P_nr(P-1)
+            if a and not b:
+                optimal=True
+                self.optimal_n = P
+
+        self.Past_P_n.append(self.P_n_arr)
+        self.P_n_arr = []
+        """
         try:
             #ratio = 1 # use this line to disable linear scaling of the P_n for debug purposes
             ratio = self.WTO/self.last_weight
@@ -364,7 +377,7 @@ class Mission:
         
         # save weight across iterations
         self.last_weight = self.WTO
-
+        # """
         # Save history for performance profiling
         self.Past_P_n.append(self.P_n_arr)
         self.P_n_arr = []
