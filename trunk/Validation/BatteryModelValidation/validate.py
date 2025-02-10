@@ -1,3 +1,10 @@
+"""
+Hacky script to validate the temperature and voltage curves of the model
+from two .csv files obtained from webplotdigitizer. Each .csv is created
+by digitizing the desired plot from the images extracted from the og pdf
+and then the script reads them, calculates the outputs of the model over
+each extracted time point, and plots them all, alongside the total error 
+"""
 import math
 import os
 from dataclasses import dataclass
@@ -329,7 +336,7 @@ def main():
     """Main execution function"""
     # Initialize components
     battery = Battery()
-    visualizer = DataVisualizer("testingoutputs")
+    visualizer = DataVisualizer("outputs")
     temp_data, volt_data = DataProcessor.load_data()
 
     # Process and visualize temperature data

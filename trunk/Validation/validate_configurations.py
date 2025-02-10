@@ -1,4 +1,4 @@
-"""main script for running sweeps in an ordered manner"""
+"""main script for running validation sweeps in an ordered manner"""
 import copy
 import os
 import multiprocessing

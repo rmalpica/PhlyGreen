@@ -1,4 +1,4 @@
-"""main script for running sweeps in an ordered manner"""
+"""Run parametric sweeps on the aircraft configurations in parallel"""
 
 from validate_configurations import RunAll
 from numpy import linspace
@@ -7,14 +7,14 @@ configurations_list = {
     "Powerplant": ["Hybrid"],
     "Mission Name": ["Mission-FelixFinger"],  # "HybridCruiseOnly","HybridTOClimbOnly"
     "Cell": [
-        "ThermalModel-Cell-Mega",
-        "ThermalModel-Cell",
-        "ThermalModel-Cell-Super",
-        "ThermalModel-Cell-Ultra",
+        "Finger-Cell-Thermal",
+        # "ThermalModel-Cell",
+        # "ThermalModel-Cell-Super",
+        # "ThermalModel-Cell-Ultra",
     ],
-    "Range": linspace(4000, 3000, 1, dtype=int).tolist(),
-    "Payload": linspace(4000, 5000, 1, dtype=int).tolist(),
-    "Base Phi": (linspace(5, 50, 16, dtype=int) / 100.0).tolist(),
+    "Range": linspace(396 / 1.852, 2361 / 1.852, 11, dtype=int).tolist(),
+    "Payload": [1960],  # linspace(550, 1960, 11, dtype=int).tolist(),
+    "Base Phi": (linspace(0, 100, 11, dtype=int) / 100.0).tolist(),
 }
 # print(configurations_list)
 outputs_of_interest = [

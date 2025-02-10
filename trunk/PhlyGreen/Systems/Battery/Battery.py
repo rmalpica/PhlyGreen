@@ -4,15 +4,18 @@ from PhlyGreen.Systems.Battery import Cell_Models
 
 
 class BatteryError(Exception):
-    """Create a custom exception to be caught when the battery is invalid"""
+    """Custom exception to be caught when the battery is invalid"""
 
 
 class Battery:
     def __init__(self, aircraft):
         self.aircraft = aircraft
 
+        # this range of voltages should be defined in the model of the motor controller,
+        # for now its hardcoded. Create voltage controller in the future? Integrate this
+        # into the powerplant spec?
         self.controller_Vmax = 740
-        self.controller_Vmin = 420  # this range of voltages should be defined in the model of the motor controller, but ill do that later, for now its hardcoded
+        self.controller_Vmin = 420 
         self._SOC_min = None
         self._it = 0
         self._i = None
@@ -120,21 +123,25 @@ class Battery:
                 f"Fail_Condition_9\nSOC outside of allowed range:\nSOC:{_value!r} Range:{self.SOC_min!r} ~ {_socmax!r}"
             )
         return _value
-
+    # Set all the discharge curve parameters to already be corrected with temperature
     @property
     def E0(self) -> float:
+        "Voltage constant"
         return self.voltage_ctt + self.E_slope * (self.T - self.Tref)
 
     @property
     def Q(self) -> float:
+        "Nominal capacity"
         return self.cell_capacity + self.Q_slope * (self.T - self.Tref)
 
     @property
     def K(self) -> float:
+        "Polarization constant"
         return self.polarization_ctt * math.exp(self.K_arrhenius * (1 / self.T - 1 / self.Tref))
 
     @property
     def R(self) -> float:
+        "Internal resistance"
         return self.cell_resistance * math.exp(self.R_arrhenius * (1 / self.T - 1 / self.Tref))
 
     # Thermal electric model of the voltage
@@ -181,16 +188,16 @@ class Battery:
         self.cell_mass         = cell['Cell Mass']                      # in kg
         self.cell_radius       = cell['Cell Radius']                    # in m
         self.cell_height       = cell['Cell Height']                    # in m
-        self.cell_energy_nom   = 42                                     # in joules TODO actually add this to the cell dict
+        self.cell_energy_nom   = cell['Cell Nominal Energy']            # in Wh
 
 
         if not (self.cell_Vmax > self.cell_Vmin):
             raise ValueError(
                 "Fail_Condition_10\nIllegal cell voltages: Vmax must be greater than Vmin"
             )
-        # number of cells in series to achieve desired voltage. 
-        # max voltage is preferred as it minimizes
-        # losses due to lower current being needed 
+        # Number of cells in series to achieve desired voltage.
+        # max voltage is preferred as it minimizes losses
+        # due to lower current being needed.
         self.S_number = math.floor(
             self.controller_Vmax / self.cell_Vmax
         )
@@ -208,9 +215,10 @@ class Battery:
         self.cells_total = self.P_number * self.S_number
 
         # physical characteristics of the whole pack:
-        self.stack_length = self.cell_radius * math.ceil(self.S_number / 2)
-        self.stack_width = self.cell_radius * (2 + np.sqrt(3))
-        self.pack_volume = self.cell_height * self.stack_width * self.stack_length
+        stack_length = self.cell_radius * math.ceil(self.S_number / 2)
+        # stack_width = self.cell_radius * (2 + np.sqrt(3))
+        stack_width = self.cell_radius * 2
+        self.pack_volume = self.cell_height * stack_width * stack_length
         self.pack_weight = self.cell_mass * self.cells_total
 
         # nominal pack values
@@ -220,7 +228,7 @@ class Battery:
         )
         self.pack_charge = self.cell_capacity * self.P_number
 
-        self.pack_config = f"S{self.S_number} P{self.P_number}"
+        # self.pack_config = f"S{self.S_number} P{self.P_number}"
 
     def Power_2_current(self, P):
         """Calculates the current output from the battery. The calculations are for a single
@@ -286,6 +294,6 @@ class Battery:
             30 * ((area_section * mdot / rho) / 5) ** 0.8
         )
         Rth = 1 / (h * area_surface)
-        Cth = 700 * self.cell_mass
+        Cth = 1200 * self.cell_mass
         dTdt = P / Cth + (Ta - T) / (Rth * Cth)
         return dTdt, P
