@@ -196,8 +196,8 @@ class Mission:
                 Tamb = ISA.atmosphere.T0std(alt,Mach)
                 rho = ISA.atmosphere.RHO0std(alt,Mach,self.DISA)
                 dTdt, _ = self.aircraft.battery.heatLoss(Tamb,rho)
-            except BatteryError as err:
-                print(err)
+            except BatteryError: # as err:
+                # print(err)
                 self.valid_solution = False
                 return [0,0,0,0,0]
             except Exception as e:
@@ -229,7 +229,7 @@ class Mission:
                 self.aircraft.battery.it = 0
                 self.aircraft.battery.i  = self.aircraft.battery.Power_2_current(self.TO_PBat) #convert output power to volts and amps
                 self.aircraft.battery.Vout # necessary for the battery class to validate Vout
-            except BatteryError as err:
+            except BatteryError: # as err:
                 # print(err)
                 self.valid_solution = False
                 return self.valid_solution
@@ -320,7 +320,7 @@ class Mission:
             n_min = n_max-1
             # print('**********************************')
             # print(f'using {n_max} and {n_min} from optimal {self.optimal_n} at ratio {ratio}')
-        except TypeError as err:
+        except TypeError:# as err:
             # print('**********************************')
             # print(f'optimal not found because of:\n {err}')
             n_max = 128  # hardcoding a value that is anecdotally known to be ok for a first guess

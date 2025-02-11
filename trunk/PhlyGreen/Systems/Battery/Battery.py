@@ -19,7 +19,7 @@ class Battery:
         self._SOC_min = None
         self._it = 0
         self._i = None
-        self._T = 300
+        self._T = None
 
     @property
     def i(self):
@@ -168,9 +168,15 @@ class Battery:
         The chosen battery is read from the aircraft class and is defined by the user elsewhere
         the parameters are all input and some extra ones are calculated right away for later convenience
         """
-        cell = Cell_Models[self.aircraft.CellModel]
-        # Get all parameters of the cell
+        bat_inputs = self.aircraft.CellModel
+        if bat_inputs['Model'] is None:
+            model = 'Default'
+        else:
+            model = bat_inputs['Model']
+        cell = Cell_Models[model]
+
         self.Tref              = cell['Reference Temperature']     # in kelvin
+        self.T = self.Tref
         self.exp_amplitude     = cell['Exp Amplitude']                  # in volts
         self.exp_time_ctt      = cell['Exp Time constant']              # in Ah^-1 
         self.cell_resistance   = cell['Internal Resistance']            # in ohms
@@ -184,11 +190,33 @@ class Battery:
         self.cell_Vmax         = self.exp_amplitude + self.voltage_ctt  # in volts
         self.cell_Vmin         = cell['Cell Voltage Min']               # in volts
         self.cell_rate         = cell['Cell C rating']                  # dimensionless
-        self.cell_max_current  = self.cell_rate * self.cell_capacity    # in amperes
+        
         self.cell_mass         = cell['Cell Mass']                      # in kg
         self.cell_radius       = cell['Cell Radius']                    # in m
         self.cell_height       = cell['Cell Height']                    # in m
         self.cell_energy_nom   = cell['Cell Nominal Energy']            # in Wh
+        self.Vnom = self.cell_energy_nom/self.cell_capacity # ????? should i do it this way or should i have a separate nominal voltage in the dic?
+
+
+        # Modify the cell according to the user specified energy and power densities
+        if bat_inputs['SpecificEnergy'] is not None:
+            ecell = bat_inputs['SpecificEnergy'] * self.cell_mass   # cell energy in Wh
+            capcell = ecell/self.Vnom                               # cell charge in Ah
+            eratio = capcell/self.cell_capacity                     # ratio between model charge and new charge
+
+            self.cell_capacity = capcell
+            self.cell_energy_nom = ecell
+            self.Q_slope *= eratio # the slope is a fraction of the capacity, so it scales with the ratio of capacities
+            self.exp_time_ctt /= eratio # divides by the ratio because its the INVERSE of the exponential zone charge
+        self.cell_max_current  = self.cell_rate * self.cell_capacity    # in amperes
+
+        if bat_inputs['SpecificPower'] is not None:
+            pcell = bat_inputs['SpecificPower'] * self.cell_mass # cell power in W
+
+            # this will reduce the cell internal resistance and polarization constants if needed
+            # to make the current have a solution for the requested power
+            self.cell_max_current = self._find_peak_current(pcell)
+            self.cell_rate =  self.cell_capacity / self.cell_max_current
 
 
         if not (self.cell_Vmax > self.cell_Vmin):
@@ -271,6 +299,40 @@ class Battery:
             I_out = (-b + math.sqrt(Disc)) / (2 * a)  # just the quadratic formula
 
         return I_out * self.P_number
+
+    def _find_peak_current(self, P):
+        """
+        Auxiliary function to determine what the maximum current needs to be
+        in order for the cell to have the desired power density
+        """
+        warn = False
+        while True:
+            E0, R, K = self.E0, self.R, self.K
+            A = self.exp_amplitude
+
+            a = -R - K  # Resistive terms of the model
+            b = E0 + A  # Voltage terms of the model
+            c = -P
+            Disc = b**2 - 4 * a * c  # quadratic formula discriminant
+
+            if Disc >= 0:
+                break  # dont do anything else if the discriminant is already valid
+
+            # Reduce all resistive terms by 10% until there is a real valued solution for the current
+            self.polarization_ctt *= 0.9
+            self.K_arrhenius *= 0.9
+            self.cell_resistance *= 0.9
+            self.R_arrhenius *= 0.9
+            warn = True
+
+        if warn:
+            print(
+                "WARNING: the chosen specific power and cell model result in a complex valued peak current. ",
+                "The model's resistive terms have been reduced from their original values in order to find a valid solution.",
+            )
+        I_peak = (-b + math.sqrt(Disc)) / (2 * a)  # just the quadratic formula
+
+        return I_peak
 
     def heatLoss(self, Ta, rho):
         """WIP Simple differential equation describing a
