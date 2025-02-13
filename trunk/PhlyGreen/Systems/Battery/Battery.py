@@ -164,17 +164,24 @@ class Battery:
     # Set inputs from cell model chosen
     def SetInput(self):
         """
-        This gathers all the battery parameters from the cell_models.py file for the chosen battery.
-        The chosen battery is read from the aircraft class and is defined by the user elsewhere
-        the parameters are all input and some extra ones are calculated right away for later convenience
+        This grabs the CellModel object from the aircraft class where a
+        dictionary defines some inputs set by the user.
+        Then according to the inputs it defines the battery model to use.
+        The constants come from the cell_models.py module and are modified
+        according to the user input.
         """
+
         bat_inputs = self.aircraft.CellModel
-        if bat_inputs['Model'] is None:
+        if bat_inputs['Model'] is None: # Fallback to a default model if none is given
             model = 'Default'
         else:
             model = bat_inputs['Model']
-        cell = Cell_Models[model]
 
+        # input minimum SOC to consider
+        self.SOC_min = bat_inputs['Minimum SOC']
+
+        # Get all the cell parameters
+        cell = Cell_Models[model]
         self.Tref              = cell['Reference Temperature']     # in kelvin
         self.T = self.Tref
         self.exp_amplitude     = cell['Exp Amplitude']                  # in volts
@@ -190,7 +197,6 @@ class Battery:
         self.cell_Vmax         = self.exp_amplitude + self.voltage_ctt  # in volts
         self.cell_Vmin         = cell['Cell Voltage Min']               # in volts
         self.cell_rate         = cell['Cell C rating']                  # dimensionless
-        
         self.cell_mass         = cell['Cell Mass']                      # in kg
         self.cell_radius       = cell['Cell Radius']                    # in m
         self.cell_height       = cell['Cell Height']                    # in m
@@ -223,12 +229,14 @@ class Battery:
             raise ValueError(
                 "Fail_Condition_10\nIllegal cell voltages: Vmax must be greater than Vmin"
             )
+
         # Number of cells in series to achieve desired voltage.
         # max voltage is preferred as it minimizes losses
         # due to lower current being needed.
         self.S_number = math.floor(
             self.controller_Vmax / self.cell_Vmax
         )
+
 
     # determine battery configuration
     # must receive the number of cells in parallel
@@ -303,10 +311,23 @@ class Battery:
     def _find_peak_current(self, P):
         """
         Auxiliary function to determine what the maximum current needs to be
-        in order for the cell to have the desired power density
+        in order for the cell to have the desired power density.
+        The code for the current calculation is reused, but the SOC is set to 100%
+        so some terms can be removed because they evaluate to 1 or 0.
+        Due to the resistive terms, there are power values that are physically
+        impossible to reach regardless of the current limits because the voltage
+        itself will drop to zero.
+        To get around this, the loop will reduce the resistive terms of the battery
+        model - the internal resistance and the polarization constant - by 10%
+        until there is a valid solution for the current.
+        This should roughly keep the shape of the discharge curve.
+        The choice of 10% is arbitrary.
+        A root finding algorithm could be used isntead, but that is excessive for
+        the task at hand since such precision is not needed.
         """
         warn = False
         while True:
+            # Calculate and get all the model terms
             E0, R, K = self.E0, self.R, self.K
             A = self.exp_amplitude
 
@@ -323,12 +344,12 @@ class Battery:
             self.K_arrhenius *= 0.9
             self.cell_resistance *= 0.9
             self.R_arrhenius *= 0.9
-            warn = True
+            warn = True # set flag to print the warning at the end of the loop
 
         if warn:
             print(
-                "WARNING: the chosen specific power and cell model result in a complex valued peak current. ",
-                "The model's resistive terms have been reduced from their original values in order to find a valid solution.",
+                "WARNING: the chosen specific power and cell model result in a non physical current limit. ",
+                "The model's resistive terms have been scaled down from their original values in order to find a valid solution.",
             )
         I_peak = (-b + math.sqrt(Disc)) / (2 * a)  # just the quadratic formula
 

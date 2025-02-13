@@ -63,7 +63,6 @@ class Mission:
 
         self.beta0 = self.aircraft.MissionInput['Beta start']
         self.ef = self.aircraft.EnergyInput['Ef']
-        self.aircraft.battery.SOC_min = self.aircraft.MissionInput['Minimum SOC']
 
     def InitializeProfile(self):
         
