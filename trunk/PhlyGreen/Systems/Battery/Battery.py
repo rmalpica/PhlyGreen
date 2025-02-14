@@ -20,6 +20,7 @@ class Battery:
         self._it = 0
         self._i = None
         self._T = None
+        self._cell_max_current = None
 
     @property
     def i(self):
@@ -73,6 +74,23 @@ class Battery:
         if not (0 <= value <= 1):
             raise BatteryError(
                 f"Fail_Condition_5\nMinimum SOC outside of allowed range:\nSOC:{value} Range: 0 ~ 1"
+            )
+
+    @property
+    def cell_max_current(self):
+        if self._cell_max_current is None:
+            raise ValueError("Fail_Condition_10\nMax current unset.")
+        return self._cell_max_current
+
+    @cell_max_current.setter
+    def cell_max_current(self, value):
+        self._cell_max_current = value
+        v = self._voltageModel(0, value)
+        if not self.cell_Vmax >= v >= self.cell_Vmin:
+            raise ValueError(
+                f"Reevaluate the max cell current of the chosen model.({value}A)\n",
+                f"The input value results in an invalid voltage: {v}V\n",
+                f"Limits are {self.cell_Vmin}V ~ {self.cell_Vmax}V"
             )
 
     @property
@@ -196,47 +214,55 @@ class Battery:
         self.E_slope           = cell['Voltage Thermal Slope']          # in volts per kelvin
         self.cell_Vmax         = self.exp_amplitude + self.voltage_ctt  # in volts
         self.cell_Vmin         = cell['Cell Voltage Min']               # in volts
-        self.cell_rate         = cell['Cell C rating']                  # dimensionless
+        self.cell_max_current  = cell['Cell Current Max']                  # dimensionless
         self.cell_mass         = cell['Cell Mass']                      # in kg
         self.cell_radius       = cell['Cell Radius']                    # in m
         self.cell_height       = cell['Cell Height']                    # in m
-        self.cell_energy_nom   = cell['Cell Nominal Energy']            # in Wh
-        self.Vnom = self.cell_energy_nom/self.cell_capacity # ????? should i do it this way or should i have a separate nominal voltage in the dic?
+        self.Vnom              = cell['Cell Voltage Nominal']  # in volts
+        self.cell_energy_nom   = self.Vnom * self.cell_capacity
 
+        # Verify that the voltages are correctly set
+        if not (self.cell_Vmax > self.cell_Vmin):
+            raise ValueError(
+                "Fail_Condition_11\nIllegal cell voltages: Vmax must be greater than Vmin"
+            )
 
         # Modify the cell according to the user specified energy and power densities
-        if bat_inputs['SpecificEnergy'] is not None:
-            ecell = bat_inputs['SpecificEnergy'] * self.cell_mass   # cell energy in Wh
-            capcell = ecell/self.Vnom                               # cell charge in Ah
-            eratio = capcell/self.cell_capacity                     # ratio between model charge and new charge
+        # Modify the capacity of the cell
+        if bat_inputs["SpecificEnergy"] is not None:
+            ecell = bat_inputs["SpecificEnergy"] * self.cell_mass   # cell energy in Wh
+            capcell = ecell / self.Vnom                             # cell charge in Ah
+            eratio = capcell / self.cell_capacity # ratio between model charge and new charge
 
             self.cell_capacity = capcell
             self.cell_energy_nom = ecell
-            self.Q_slope *= eratio # the slope is a fraction of the capacity, so it scales with the ratio of capacities
-            self.exp_time_ctt /= eratio # divides by the ratio because its the INVERSE of the exponential zone charge
-        self.cell_max_current  = self.cell_rate * self.cell_capacity    # in amperes
+            self.Q_slope *= eratio  # the slope is a fraction of the capacity, so it scales with the ratio of capacities
+            self.exp_time_ctt /= eratio  # divides by the ratio because its the INVERSE of the exponential zone charge
 
-        if bat_inputs['SpecificPower'] is not None:
-            pcell = bat_inputs['SpecificPower'] * self.cell_mass # cell power in W
+        # Modify the internal resistance and current limit to adjust power
+        if bat_inputs["SpecificPower"] is not None:
+            pcell = bat_inputs["SpecificPower"] * self.cell_mass  # cell power in W
+            pcellnow = self.cell_max_current * self._voltageModel(0, self.cell_max_current)
+            pratio = pcell / pcellnow
+            print(f"Current ratio:{pratio}")
+            print(f"peak power old:{pcellnow}")
 
-            # this will reduce the cell internal resistance and polarization constants if needed
-            # to make the current have a solution for the requested power
-            self.cell_max_current = self._find_peak_current(pcell)
-            self.cell_rate =  self.cell_capacity / self.cell_max_current
+            # Dividing the internal resistance by a ratio increases
+            # the maximum deliverable power by the same ratio
+            self.polarization_ctt /= pratio
+            self.K_arrhenius /= pratio
+            self.cell_resistance /= pratio
+            self.R_arrhenius /= pratio
 
-
-        if not (self.cell_Vmax > self.cell_Vmin):
-            raise ValueError(
-                "Fail_Condition_10\nIllegal cell voltages: Vmax must be greater than Vmin"
-            )
-
+            # Note: the cell max current needs to be the last thing
+            # to be calculated because its setter verifies its
+            # validity against the cell properties
+            self.cell_max_current *= pratio
+        print(f"peak power new:{self.cell_max_current*self._voltageModel(0, self.cell_max_current)}")
         # Number of cells in series to achieve desired voltage.
         # max voltage is preferred as it minimizes losses
         # due to lower current being needed.
-        self.S_number = math.floor(
-            self.controller_Vmax / self.cell_Vmax
-        )
-
+        self.S_number = math.floor(self.controller_Vmax / self.cell_Vmax)
 
     # determine battery configuration
     # must receive the number of cells in parallel
@@ -308,52 +334,6 @@ class Battery:
 
         return I_out * self.P_number
 
-    def _find_peak_current(self, P):
-        """
-        Auxiliary function to determine what the maximum current needs to be
-        in order for the cell to have the desired power density.
-        The code for the current calculation is reused, but the SOC is set to 100%
-        so some terms can be removed because they evaluate to 1 or 0.
-        Due to the resistive terms, there are power values that are physically
-        impossible to reach regardless of the current limits because the voltage
-        itself will drop to zero.
-        To get around this, the loop will reduce the resistive terms of the battery
-        model - the internal resistance and the polarization constant - by 10%
-        until there is a valid solution for the current.
-        This should roughly keep the shape of the discharge curve.
-        The choice of 10% is arbitrary.
-        A root finding algorithm could be used isntead, but that is excessive for
-        the task at hand since such precision is not needed.
-        """
-        warn = False
-        while True:
-            # Calculate and get all the model terms
-            E0, R, K = self.E0, self.R, self.K
-            A = self.exp_amplitude
-
-            a = -R - K  # Resistive terms of the model
-            b = E0 + A  # Voltage terms of the model
-            c = -P
-            Disc = b**2 - 4 * a * c  # quadratic formula discriminant
-
-            if Disc >= 0:
-                break  # dont do anything else if the discriminant is already valid
-
-            # Reduce all resistive terms by 10% until there is a real valued solution for the current
-            self.polarization_ctt *= 0.9
-            self.K_arrhenius *= 0.9
-            self.cell_resistance *= 0.9
-            self.R_arrhenius *= 0.9
-            warn = True # set flag to print the warning at the end of the loop
-
-        if warn:
-            print(
-                "WARNING: the chosen specific power and cell model result in a non physical current limit. ",
-                "The model's resistive terms have been scaled down from their original values in order to find a valid solution.",
-            )
-        I_peak = (-b + math.sqrt(Disc)) / (2 * a)  # just the quadratic formula
-
-        return I_peak
 
     def heatLoss(self, Ta, rho):
         """WIP Simple differential equation describing a
