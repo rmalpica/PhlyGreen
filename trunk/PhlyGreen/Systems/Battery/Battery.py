@@ -239,6 +239,15 @@ class Battery:
             self.Q_slope *= eratio  # the slope is a fraction of the capacity, so it scales with the ratio of capacities
             self.exp_time_ctt /= eratio  # divides by the ratio because its the INVERSE of the exponential zone charge
 
+            # Scale the specific power accordingly, unless a fixed one is requested
+            if bat_inputs["SpecificPower"] is None:
+                self.polarization_ctt /= eratio
+                self.K_arrhenius /= eratio
+                self.cell_resistance /= eratio
+                self.R_arrhenius /= eratio
+                self.cell_max_current *= eratio
+
+
         # Modify the internal resistance and current limit to adjust power
         if bat_inputs["SpecificPower"] is not None:
             pcell = bat_inputs["SpecificPower"] * self.cell_mass  # cell power in W
@@ -352,7 +361,7 @@ class Battery:
         P = (Voc - V) * i + dEdT * i * T
         area_surface = 0.4
         area_section = 0.05
-        mdot = 5
+        mdot = 1
         h = ( # taken from http://dx.doi.org/10.1016/j.jpowsour.2013.10.052
             30 * ((area_section * mdot / rho) / 5) ** 0.8
         )

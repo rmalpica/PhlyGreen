@@ -12,6 +12,8 @@ configurations_list = {
         # "ThermalModel-Cell-Super",
         # "ThermalModel-Cell-Ultra",
     ],
+    "Cell Specific Energy":[1500],
+    "Cell Specific Power":[8000], # if set to None the program will scale it with the specific energy
     "Range": linspace(396 / 1.852, 2361 / 1.852, 11, dtype=int).tolist(),
     "Payload": [1960],  # linspace(550, 1960, 11, dtype=int).tolist(),
     "Base Phi": (linspace(0, 100, 11, dtype=int) / 100.0).tolist(),

@@ -42,33 +42,48 @@ class RunAll:
         the aircraft class.
         To avoid creating dozens of repeated Traditional
         configurations (iterations of Cell and Phi) this is
-        done to unpack the arguments first instead of simply
+        done to unpack the arguments first while separating
+        the traditional configurations instead of blindly
         using starmap() on the processing stage.
+        Returns a list of tuples.
         """
+        # Create copy of the inputs since the inputs are still
+        # used as is elsewhere in the code and it is easier
+        # to edit the dictionary directly like this
         a=copy.deepcopy(aa)
         configs = []
+
         # Forces traditional configuration if phi = 0, this enables
         # plotting of the traditional config next to the hybrid
         # one when evaluationg the effect of phi without having to
-        # iterate the powerplant explicitly
+        # iterate the powerplant explicitly.
+        # This preserves cell type iterations so that they all
+        # show up in the graphs without gaps even when making
+        # comparisons that start at Phi = 0
         if 0 in a["Base Phi"]:
             a["Base Phi"].remove(0)
             configs += product(
                 a["Range"],
                 a["Payload"],
                 ["Traditional"],
-                a["Cell"],  # This will still iterate the cells, unlike the traditional config,
-                [0],  # which allows comparisons of phi down to 0 using different cells if desired.
+                a["Cell"],
+                a["Cell Specific Energy"],
+                a["Cell Specific Power"],
+                [0],
                 a["Mission Name"],
             )
 
+        # Remove the references to the Cell parameters in
+        # traditional configurations to avoid repeats
         if "Traditional" in a["Powerplant"]:
             configs += product(
                 a["Range"],
                 a["Payload"],
                 ["Traditional"],
-                [a["Cell"][0]],  # use the first cell and phi=0 to prevent the aircraft
-                [0],  # setup code from breaking due to not having these values
+                [None],
+                [None],
+                [None],
+                [0],
                 a["Mission Name"],
             )
 
@@ -78,6 +93,8 @@ class RunAll:
                 a["Payload"],
                 ["Hybrid"],
                 a["Cell"],
+                a["Cell Specific Energy"],
+                a["Cell Specific Power"],
                 a["Base Phi"],
                 a["Mission Name"],
             )
@@ -130,6 +147,8 @@ class RunAll:
                 a["Payload"],
                 a["Powerplant"],
                 a["Cell"],
+                a["Cell Specific Energy"],
+                a["Cell Specific Power"],
                 a["Base Phi"],
                 a["Mission Name"],
             )

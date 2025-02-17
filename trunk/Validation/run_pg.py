@@ -23,8 +23,8 @@ class FlightRun:
         Prints to console data about the flight and
         creates some metadata for the logs
         """
-        arg_range, arg_payload, arg_arch, arg_cell, arg_phi, arg_mission = flightargs
-        self.arg_str = f"{arg_range}-{arg_payload}-{arg_arch}-{arg_cell}-{arg_phi}-{arg_mission}"
+        arg_range, arg_payload, arg_arch, arg_cell, arg_s_energy, arg_s_power, arg_phi, arg_mission = flightargs
+        self.arg_str = f"{arg_range}-{arg_payload}-{arg_arch}-{arg_cell}-{arg_s_energy}-{arg_s_power}-{arg_phi}-{arg_mission}"
 
         # load the flight profile
         flight_profile = FlightProfiles.MissionParameters(
@@ -37,20 +37,29 @@ class FlightRun:
             "Range": arg_range,
             "Payload": arg_payload,
             "Cell": arg_cell,
+            "Cell Specific Energy": arg_s_energy,
+            "Cell Specific Power": arg_s_power,
             "Base Phi": arg_phi,
             "Mission Profile": flight_profile,
         }
         self.outputs = {}
         self.aircraft_parameters = {}
         self.perf_profiling={}
-        # print everything to the console
+
+        # Prettify the cell parameters so they dont all 
+        # come out as "None" if the defaults are used
+        profile_cell   = "default" if arg_cell is None else f"{arg_cell}"
+        profile_energy = "default energy" if arg_s_energy is None else f"{arg_s_energy}Wh/kg"
+        profile_power  = "default power" if arg_s_power is None else f"{arg_s_power}W/kg"
+
+        # Print the inputs to the console
         print(
             f"--------------------------------------------------<||\n"
             f"{datetime.now().isoformat()}\n"
             f"Starting with configuration:\n"
             f"{arg_arch} Powerplant\n"
             f"Mission Profile: {arg_mission}\n"
-            f"{arg_cell} Cell Model\n"
+            f"{profile_cell} Cell Model @ {profile_energy} & {profile_power} \n"
             f"Phi = {arg_phi}\n"
             f"Range = {arg_range}km\n"
             f"Payload = {arg_payload}kg\n"
@@ -98,10 +107,16 @@ class FlightRun:
         self.myaircraft.DiversionStages     = flight_profile["DiversionStages"]
         self.myaircraft.EnergyInput         = flight_profile["EnergyInput"]
 
-        self.myaircraft.CellModel       = arg_cell
-        self.myaircraft.Configuration   = arg_arch
-        self.myaircraft.HybridType      = "Parallel"
-        self.myaircraft.AircraftType    = "ATR"
+        self.myaircraft.CellModel = {
+            "Model": arg_cell,
+            "SpecificPower": arg_s_power,
+            "SpecificEnergy": arg_s_energy,
+            "Minimum SOC": 0.2,
+        }
+
+        self.myaircraft.Configuration = arg_arch
+        self.myaircraft.HybridType    = "Parallel"
+        self.myaircraft.AircraftType  = "ATR"
 
         self.myaircraft.constraint.SetInput()
         self.myaircraft.mission.InitializeProfile()
