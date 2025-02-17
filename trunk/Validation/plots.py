@@ -23,7 +23,7 @@ def single_plot(x_data, y_data, x_label, y_label, directory, title=None, style="
     plt.xlabel(x_label)
     plt.ylabel(y_label)
     if title is None:
-        title = f"{x_label} vs {y_label} - {style}plot"
+        title = f"{y_label} vs {x_label} - {style}plot"
     plt.title(title)
 
     # Save the plot as a PDF
