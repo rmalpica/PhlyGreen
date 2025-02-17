@@ -243,7 +243,7 @@ class Mission:
             rtol = 1e-5
             method= 'BDF'
             #initial fuel energy, battery energy, mass fraction, spent charge, and battery T TODO FIX THIS
-            y0 = [0,0,self.beta0,0,300] 
+            y0 = [0,0,self.beta0,0,300]
             
             for i in range(len(times)-1):
 
@@ -256,19 +256,28 @@ class Mission:
                 # To avoid importing the mission class with the model into the plotting script,
                 # this is added to store the variables when the integration finishes each part.
                 # The plottingVars array can then be accessed in the script to plot the things.
-                for k , _ in enumerate(sol.t):
-                    yy0 = [sol.y[0][k],sol.y[1][k],sol.y[2][k],sol.y[3][k],sol.y[4][k]]
-                    model(sol.t[k],yy0)
-                    self.plottingVars.append([sol.t[k],
-                                              self.aircraft.battery.SOC,
-                                              self.aircraft.battery.Voc,
-                                              self.aircraft.battery.Vout,
-                                              self.aircraft.battery.i,
-                                              self.aircraft.battery.T])
+                for k, _ in enumerate(sol.t):
+                    yy0 = [sol.y[0][k], sol.y[1][k], sol.y[2][k], sol.y[3][k], sol.y[4][k]]
+                    model(sol.t[k], yy0)
+                    alt = self.profile.Altitude(sol.t[k])
+                    Mach = Speed.TAS2Mach(self.profile.Velocity(sol.t[k]), alt, DISA=self.DISA)
+                    Tamb = ISA.atmosphere.T0std(alt, Mach)
+                    self.plottingVars.append(
+                        [
+                            sol.t[k],
+                            self.aircraft.battery.SOC,
+                            self.aircraft.battery.Voc,
+                            self.aircraft.battery.Vout,
+                            self.aircraft.battery.i,
+                            self.aircraft.battery.T,
+                            Tamb,
+                            alt,
+                        ],
+                    )
                 self.Ef = sol.y[0]
                 self.EBat = sol.y[1]
                 self.Beta = sol.y[2]
-                y0 = [sol.y[0][-1],sol.y[1][-1],sol.y[2][-1],sol.y[3][-1],sol.y[4][-1]]
+                y0 = [sol.y[0][-1], sol.y[1][-1], sol.y[2][-1], sol.y[3][-1], sol.y[4][-1]]
 
             return self.valid_solution
 

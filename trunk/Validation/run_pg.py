@@ -205,6 +205,8 @@ class FlightRun:
         v_out = toplot[:, 3]
         curr  = toplot[:, 4]
         temp  = toplot[:, 5]
+        atemp = toplot[:, 6]
+        alt   = toplot[:, 7]
         spent_pwr = v_oc * curr
         delivered_pwr = v_out * curr
         batt_efficiency = v_out / v_oc
@@ -229,17 +231,18 @@ class FlightRun:
                 "SOC": soc.tolist(),
                 "Beta": beta.tolist(),
                 "Time": times.tolist(),
+                "Altitude": alt.tolist(),
                 "Fuel Energy": e_f.tolist(),
                 "Total Power": power_propulsive,
                 "Battery Energy": e_bat.tolist(),
                 "Battery current": curr.tolist(),
+                "Air Temperature": atemp.tolist(),
                 "Battery Voltage": v_out.tolist(),
                 "Battery OC Voltage": v_oc.tolist(),
                 "Battery Temperature": temp.tolist(),
                 "Battery Spent Power": spent_pwr.tolist(),
                 "Battery Efficiency": batt_efficiency.tolist(),
                 "Battery Delivered Power": delivered_pwr.tolist(),
-                "Altitude": self.myaircraft.mission.profile.Altitude(times).tolist(),
             }
 
     def get_fuel_parameters(self):
