@@ -333,21 +333,24 @@ class Mission:
             # print(f'optimal not found because of:\n {err}')
             n_max = 128  # hardcoding a value that is anecdotally known to be ok for a first guess
             n_min = n_max-1
-
+        # print(f"1 - nmax {n_max}; nmin {n_min}")
         #lower the min p number until its valid
-        #nmin_ran=False
-        while evaluate_P_nr(n_min): 
+        nmin_ran=False
+        while evaluate_P_nr(n_min):
+            # print(f"22 - nmax {n_max}; nmin {n_min}")
             # print("n_min overestimated:",n_min, "; halving.")
-            #nmin_ran=True
+            nmin_ran=True
             n_max = n_min   #if the n_min guess is too large it can be the new n_max to save iterations since it has already been tried
             n_min = math.floor(n_min/2) #halve n_min until it fails
 
         #raise the max p number until its valid
-        while not evaluate_P_nr(n_max):# and not nmin_ran: 
-            #print(evaluate_P_nr(n_max))
-            # print("n_max underestimated:",n_max, "; doubling.")
-            n_min = n_max   #if the nmax guess is too small it can be the new nmin to save iterations since it has already been tried
-            n_max = n_max*2 #double n_max until it works
+        if not nmin_ran:
+            while not evaluate_P_nr(n_max):
+                # print(f"333 - nmax {n_max}; nmin {n_min}")
+                #print(evaluate_P_nr(n_max))
+                # print("n_max underestimated:",n_max, "; doubling.")
+                n_min = n_max   #if the nmax guess is too small it can be the new nmin to save iterations since it has already been tried
+                n_max = n_max*2 #double n_max until it works
 
         # if nmax and nmin are just 1 apart then the optimal n is nmax
         # all checks can be skipped and we jump right into evaluating n to configure the flight
@@ -363,9 +366,10 @@ class Mission:
 
         n=math.ceil((n_max+n_min)/2) #start from the middle to make it one iteration shorter
         #j=0
-
+        # print(f"4444 - nmax {n_max}; n {n}; nmin {n_min}")
         #find optimal P number using bisection search
         while not optimal:
+            # print(f"nmax {n_max}; n {n}; nmin {n_min}")
             #j=j+1
             valid_result = evaluate_P_nr(n)
             # print("[iter",j,"] [P",n,"] [min",n_min,"] [max",n_max,"] valid?",valid_result) #uncomment for debug
