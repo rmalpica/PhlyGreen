@@ -1,5 +1,3 @@
-import sys
-sys.path.insert(0,'../..')
 import PhlyGreen as pg
 import sys
 import os
@@ -53,7 +51,7 @@ class MyProblem(ElementwiseProblem):
                 'Payload Weight': 4560,  #Kg
                 'Crew Weight': 500}  #Kg
 
-        AerodynamicsInput = {'NumericalPolar': {'type': 'ATR42','input': {'AR': 11, 'e_osw': 0.8}},
+        AerodynamicsInput = {'NumericalPolar': {'type': 'ATR42'},
                     'Take Off Cl': 1.9,
                      'Landing Cl': 1.9,
                      'Minimum Cl': 0.20,
@@ -135,7 +133,7 @@ if __name__ == '__main__':
 
 
     # # Creating mediator and associating with subsystems
-    myaircraft = pg.Aircraft(powertrain, structures, aerodynamics, performance, mission, weight, constraint, welltowake = welltowake)
+    myaircraft = pg.Aircraft(powertrain, structures, aerodynamics, performance, mission, weight, constraint, welltowake)
 
 
 

@@ -102,6 +102,8 @@ class ClimateImpact:
             self.H = self.aircraft.ClimateImpactInput.get("H")
             self.N = self.aircraft.ClimateImpactInput.get("N")
             self.Y = self.aircraft.ClimateImpactInput.get("Y")
+            self.Grid_CO2 = self.aircraft.ClimateImpactInput.get("Grid_CO2")
+            self.WTW_CO2 = self.aircraft.ClimateImpactInput.get("WTW_CO2")
             self.EINOx_model = self.aircraft.ClimateImpactInput.get("EINOx_model")
             if self.EINOx_model == 'GasTurb':
                 file_path = os.path.join(os.path.dirname(__file__), 'EINOx_gasturb.joblib')
@@ -159,7 +161,11 @@ class ClimateImpact:
         
         # CO2
         EI_co2 = 3.16 # [kg/kg]
-        self.mission_emissions['co2'] = EI_co2*Wf
+        self.mission_emissions['co2'] = EI_co2*Wf + self.WTW_CO2*43.5*Wf
+        if self.aircraft.Configuration == 'Hybrid':
+            SourceBattery = self.aircraft.weight.TotalEnergies[1] * 1e-6 / self.aircraft.welltowake.EtaSourceToBattery
+            self.mission_emissions['co2'] += self.Grid_CO2*SourceBattery
+
 
         # H2O
         EI_h2o = 1.26 # [kg/kg]
@@ -184,7 +190,10 @@ class ClimateImpact:
                         if self.aircraft.Configuration == 'Traditional':
                             beta = np.concatenate([beta, array.y[1]])
                         elif self.aircraft.Configuration == 'Hybrid':
-                            beta = np.concatenate([beta, array.y[2]]) 
+                            beta = np.concatenate([beta, array.y[2]])
+
+                    # times = self.aircraft.mission.MissionTimes
+                    # beta = self.aircraft.mission.Beta_Output 
                     
                     v0 = self.aircraft.mission.profile.Velocity(times)  # [m/s]
                     alt = self.aircraft.mission.profile.Altitude(times)  # [m]
@@ -809,11 +818,10 @@ class ClimateImpact:
     
 
     def rf_AIC(self,year):
-
         if ISA.atmosphere.Tstd(self.media_pesata_quote) < 235. :
             c_AIC = 2.21e-12
             s_AIC = np.interp(self.media_pesata_quote,self.Altitudes_for_forcing,self.s_aic_data)
-            rf = s_AIC * c_AIC * self.aircraft.mission.profile.MissionRange * self.U(year) /3
+            rf = s_AIC * c_AIC * self.aircraft.mission.profile.MissionRange * self.U(year) 
         else:
             rf = 0
         return rf
@@ -869,6 +877,6 @@ class ClimateImpact:
         integrand = lambda k: self.DeltaT(k)
         ATR, _ = integrate.quad(integrand, 0, self.H, epsabs=1e-2, epsrel=1e-1)   
 
-        print(ATR/self.H)
+        # print(ATR/self.H)
 
         return ATR/self.H

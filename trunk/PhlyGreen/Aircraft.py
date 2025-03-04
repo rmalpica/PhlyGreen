@@ -1,5 +1,5 @@
 class Aircraft:
-    def __init__(self, powertrain, structures, aerodynamics, performance, mission, weight, constraint, **kwargs):
+    def __init__(self, powertrain, structures, aerodynamics, performance, mission, weight, constraint, welltowake, battery, climateimpact):
         #subsystems
         self.powertrain = powertrain
         self.structures = structures
@@ -8,26 +8,22 @@ class Aircraft:
         self.mission = mission
         self.weight = weight
         self.constraint = constraint
-        # self.welltowake = welltowake
-        self.welltowake = kwargs.get('welltowake', None)
-        self.climateimpact = kwargs.get('climateimpact', None)
-
-        # self.climateimpact = climateimpact
+        self.welltowake = welltowake
+        self.battery = battery
+        self.climateimpact = climateimpact
         #input dictionaries
         self.AerodynamicsInput = None 
         self.ConstraintsInput = None 
         self.MissionInput = None 
         self.EnergyInput = None 
+        self.CellModel = None
         self.MissionStages = None 
         self.DiversionStages = None 
         self.LoiterStages = None
         self.WellToTankInput = None
-        self.ClimateImpactInput = None
         #aircraft design
         self.DesignPW = None
         self.DesignWTOoS = None
-
-        self.MissionType = 'Continue'
 
     """ Properties """
 
@@ -54,7 +50,7 @@ class Aircraft:
 
     """ Methods """
 
-    def ReadInput(self,AerodynamicsInput,ConstraintsInput,MissionInput,EnergyInput,MissionStages,DiversionStages, LoiterStages=None, WellToTankInput=None, ClimateImpactInput = None):
+    def ReadInput(self,AerodynamicsInput,ConstraintsInput,MissionInput,EnergyInput,MissionStages,DiversionStages, LoiterStages=None, WellToTankInput=None, CellInput=None):
         
         self.AerodynamicsInput = AerodynamicsInput
         self.ConstraintsInput = ConstraintsInput
@@ -71,20 +67,12 @@ class Aircraft:
             self.WellToTankInput = WellToTankInput
             self.welltowake.SetInput()
 
-
-        if ClimateImpactInput is not None:
-
-            self.ClimateImpactInput = ClimateImpactInput
-            self.climateimpact.SetInput()
-
         # Initialize Aerodynamics subsystem
         self.aerodynamics.SetInput()
 
         # Initialize Constraint Analysis
         self.constraint.SetInput()
-
-        self.constraint.FindDesignPoint()
-
+        
         # Initialize Mission profile and Analysis
         self.mission.InitializeProfile()
         self.mission.SetInput()
@@ -95,13 +83,18 @@ class Aircraft:
         # Initialize Weight Estimator
         self.weight.SetInput()
 
+        if CellInput is not None:
+            
+            self.CellInput = CellInput
+            self.battery.SetInput()
+
     def DesignAircraft(self,AerodynamicsInput,ConstraintsInput, MissionInput, EnergyInput, MissionStages, DiversionStages, **kwargs):
         WellToTankInput = kwargs.get('WellToTankInput', None)
         LoiterStages = kwargs.get('LoiterStages', None)
-        ClimateImpactInput = kwargs.get('ClimateImpactInput', None)
+        CellInput = kwargs.get('CellInput', None)
         PrintOutput = kwargs.get('PrintOutput', False)
         # print("Initializing aircraft...")
-        self.ReadInput(AerodynamicsInput,ConstraintsInput, MissionInput, EnergyInput, MissionStages, DiversionStages,LoiterStages, WellToTankInput, ClimateImpactInput)
+        self.ReadInput(AerodynamicsInput,ConstraintsInput, MissionInput, EnergyInput, MissionStages, DiversionStages,LoiterStages, WellToTankInput,CellInput)
 
         if PrintOutput: print("Finding Design Point...")
         self.constraint.FindDesignPoint()

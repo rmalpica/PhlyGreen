@@ -2,7 +2,7 @@ import numpy as np
 import sys
 
 
-sys.path.insert(0, '../../')
+#sys.path.insert(0, '../')
 import PhlyGreen as pg
 
 def model_solver(parameters):
@@ -48,7 +48,7 @@ def model_solver(parameters):
                      'Cruise': {'type': 'ConstantMachCruise', 'input':{ 'Mach': 0.2, 'Altitude': 3100}, 'Supplied Power Ratio':{'phi_start': 0.0, 'phi_end':0.0}},
                      'Descent1': {'type': 'ConstantRateDescent', 'input':{'CB': -0.04, 'Speed': 90, 'StartAltitude': 3100, 'EndAltitude': 200}, 'Supplied Power Ratio':{'phi_start': 0.0, 'phi_end':0.0 }}}
 
-    AerodynamicsInput = {'NumericalPolar': {'type': 'ATR42','input': {'AR': 11, 'e_osw': 0.8}},
+    AerodynamicsInput = {'NumericalPolar': {'type': 'ATR42'},
                     'Take Off Cl': 1.9,
                      'Landing Cl': 1.9,
                      'Minimum Cl': 0.20,
@@ -85,7 +85,7 @@ def model_solver(parameters):
 
 
     # # Creating mediator and associating with subsystems
-    myaircraft = pg.Aircraft(powertrain, structures, aerodynamics, performance, mission, weight, constraint, welltowake=welltowake)
+    myaircraft = pg.Aircraft(powertrain, structures, aerodynamics, performance, mission, weight, constraint, welltowake)
 
 
 
