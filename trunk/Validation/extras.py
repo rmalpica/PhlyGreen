@@ -20,6 +20,16 @@ def make_cat_dir(*args):
     Path(directory).mkdir(parents=True, exist_ok=True)
     return directory
 
+def load_dir(*args):
+    """
+    Concatenate and create directories at the same time
+    If directory already exists, append numbers to it
+    """
+    base_directory = os.path.join(*args)
+    directory = base_directory
+    Path(directory).mkdir(parents=True, exist_ok=True)
+    return directory
+
 
 def dump_json(data, jsonfn):
     """Given a dictionary, this will dump it to a json file"""

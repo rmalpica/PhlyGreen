@@ -5,7 +5,6 @@ import seaborn as sns
 import pandas as pd
 import matplotlib.pyplot as plt
 import extras as ex
-# import pprint
 
 
 def single_plot(x_data, y_data, x_label, y_label, directory, title=None, style="line"):
@@ -35,7 +34,18 @@ def single_plot(x_data, y_data, x_label, y_label, directory, title=None, style="
     # create json of just the data used, so that this plot can be manually
     # retrieved and easily replotted in a prettier way if desired
     filename_json = os.path.join(directory, title + ".json")
-    dictjson = {"title": title, "x_units": "", "y_units": "", x_label: x_data, y_label: y_data}
+    dictjson = {
+        "type": style,
+        "title": title,
+        "x_units": "",
+        "y_units": "",
+        "x_label": x_label,
+        "y_label": y_label,
+        "data": {
+            "x": x_data,
+            "y": y_data,
+        },
+    }
     ex.dump_json(dictjson, filename_json)
     print(f"||>+ Wrote '{title}' to '{filename_json}'")
 
@@ -140,10 +150,22 @@ def heatmap(dictlist, x, y, z, directory, title=None):
     print("]]=> Saved '", title, "' to", filename)
     plt.close()  # Close the plot
 
-    # BROKEN, DOES NOT WORK RIGHT NOW, FIGURE OUT HOW TO SAVE PIVOT TABLE TO JSON/DICT
-    # # create json of just the data used, so that this plot can be manually
-    # # retrieved and easily replotted in a prettier way if desired
-    # filename_json = os.path.join(directory, title + ".json")
-    # dictjson = {"title": title, "x_units": "", "y_units": "", "z_units": "", "data": df}
-    # ex.dump_json(dictjson, filename_json)
-    # print("]]$> Wrote '", title, "' to", filename_json)
+    # Export data to json file
+    filename_json = os.path.join(directory, title + ".json")
+    dfout = df[[x, y, z]]
+    dictjson = {
+        "type": "heatmap",
+        "title": title,
+        "x_units": "",
+        "y_units": "",
+        "z_units": "",
+        "x_label": x,
+        "y_label": y,
+        "z_label": z,
+        "x": x,
+        "y": y,
+        "z": z,
+        "data": dfout.to_dict("records"),
+    }
+    ex.dump_json(dictjson, filename_json)
+    print(f"||>+ Wrote '{title}' to '{filename_json}'")
