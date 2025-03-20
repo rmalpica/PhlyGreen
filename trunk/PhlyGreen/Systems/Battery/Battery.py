@@ -343,7 +343,6 @@ class Battery:
 
         return I_out * self.P_number
 
-
     def heatLoss(self, Ta, rho):
         """WIP Simple differential equation describing a
             simplified lumped element thermal model of the cells
@@ -362,10 +361,14 @@ class Battery:
         area_surface = 0.4
         area_section = 0.05
         mdot = 1
-        h = ( # taken from http://dx.doi.org/10.1016/j.jpowsour.2013.10.052
+        h = (  # taken from http://dx.doi.org/10.1016/j.jpowsour.2013.10.052
             30 * ((area_section * mdot / rho) / 5) ** 0.8
         )
-        Rth = 1 / (h * area_surface)
+        Rith = 9
+        Rth = 1 / (h * area_surface) + Rith
         Cth = 1200 * self.cell_mass
+        # dTsdt = (Ta - Ts) / (Cth * (Rith + Rth)) + (P * Rth) / (Cth * (Rith + Rth))
+        # dTdt = (Rith + Rth) / (Rth) * dTsdt
+        # dTdt = P / Cth + (Ta - T) / (Rth * Cth)
         dTdt = P / Cth + (Ta - T) / (Rth * Cth)
         return dTdt, P
