@@ -5,7 +5,6 @@ import seaborn as sns
 import pandas as pd
 import matplotlib.pyplot as plt
 import extras as ex
-from pathlib import Path  # import Path from pathlib module
 
 OUTDIR = ex.load_dir("PrettyOutputs")
 INDIR = ex.load_dir("PrettyInputs")
@@ -37,9 +36,9 @@ def single_plot(d):
     f(x=data["x"], y=data["y"])
 
     # Add labels and title
-    plt.xlabel(f"{d["x_label"]} {d["x_units"]}")
-    plt.ylabel(f"{d["y_label"]}  {d["y_units"]}")
-    title = f"y-{d["y_label"]}_x-{d["x_label"]}_{d["type"]}"
+    plt.xlabel(f"{d['x_label']} {d['x_units']}")
+    plt.ylabel(f"{d['y_label']}  {d['y_units']}")
+    title = f"y-{d['y_label']}_x-{d['x_label']}_{d['type']}"
 
     # Save the plot as a PDF
     filename = os.path.join(OUTDIR, title + ".pdf")
@@ -49,13 +48,13 @@ def single_plot(d):
 
 
 def main():
-    for file in os.scandir("PrettyInputs"):  
+    for file in os.scandir(INDIR):
         if file.is_file():  # Check if it's a file
-            print(file)
             f = ex.load_json(file)
             if f["type"] == "heatmap":
                 heatmap(f)
             else:
                 single_plot(f)
+
 
 main()
