@@ -1,4 +1,4 @@
-import math
+
 import numpy as np
 from PhlyGreen.Systems.Battery import Cell_Models
 
@@ -15,12 +15,17 @@ class Battery:
         # for now its hardcoded. Create voltage controller in the future? Integrate this
         # into the powerplant spec?
         self.controller_Vmax = 740
-        self.controller_Vmin = 420 
+        self.controller_Vmin = 420
         self._SOC_min = None
         self._it = 0
         self._i = None
         self._T = None
         self._cell_max_current = None
+
+        # mass flow rate per cell, in kg/s
+        # this number is pretty arbitrary since air cooling 
+        # such a high poewr battery pack is unrealistic anyway
+        self.mdot =  0.0007
 
     @property
     def i(self):
@@ -155,12 +160,12 @@ class Battery:
     @property
     def K(self) -> float:
         "Polarization constant"
-        return self.polarization_ctt * math.exp(self.K_arrhenius * (1 / self.T - 1 / self.Tref))
+        return self.polarization_ctt * np.exp(self.K_arrhenius * (1 / self.T - 1 / self.Tref))
 
     @property
     def R(self) -> float:
         "Internal resistance"
-        return self.cell_resistance * math.exp(self.R_arrhenius * (1 / self.T - 1 / self.Tref))
+        return self.cell_resistance * np.exp(self.R_arrhenius * (1 / self.T - 1 / self.Tref))
 
     # Thermal electric model of the voltage
     def _voltageModel(self, it, i):
@@ -271,7 +276,14 @@ class Battery:
         # Number of cells in series to achieve desired voltage.
         # max voltage is preferred as it minimizes losses
         # due to lower current being needed.
-        self.S_number = math.floor(self.controller_Vmax / self.cell_Vmax)
+        self.S_number = np.floor(self.controller_Vmax / self.cell_Vmax)
+
+        self.cell_area_surface = 2*np.pi*self.cell_radius*self.cell_height
+        self.module_area_section = (2*self.cell_radius)**2-np.pi*self.cell_radius**2
+        # self.Rith = 7*np.sqrt(self.cell_radius/0.022) # probably need a citation for this one
+        self.Rith = 3.3*(self.cell_radius/0.022)**2
+        self.Cth = 1200 * self.cell_mass
+
 
     # determine battery configuration
     # must receive the number of cells in parallel
@@ -286,7 +298,7 @@ class Battery:
         self.cells_total = self.P_number * self.S_number
 
         # physical characteristics of the whole pack:
-        stack_length = self.cell_radius * math.ceil(self.S_number / 2)
+        stack_length = self.cell_radius * np.ceil(self.S_number / 2)
         # stack_width = self.cell_radius * (2 + np.sqrt(3))
         stack_width = self.cell_radius * 2
         self.pack_volume = self.cell_height * stack_width * stack_length
@@ -339,7 +351,7 @@ class Battery:
             return I_out
 
         else:
-            I_out = (-b + math.sqrt(Disc)) / (2 * a)  # just the quadratic formula
+            I_out = (-b + np.sqrt(Disc)) / (2 * a)  # just the quadratic formula
 
         return I_out * self.P_number
 
@@ -356,19 +368,15 @@ class Battery:
         V, Voc = self.cell_Vout, self.cell_Voc
         i = self.cell_i
         T, dEdT = self.T, self.E_slope
-
+        Rith = self.Rith
+        Cth = self.Cth
         P = (Voc - V) * i + dEdT * i * T
-        area_surface = 0.4
-        area_section = 0.05
-        mdot = 1
+
         h = (  # taken from http://dx.doi.org/10.1016/j.jpowsour.2013.10.052
-            30 * ((area_section * mdot / rho) / 5) ** 0.8
+            30* ( ((self.mdot) / (self.module_area_section * rho)) / 5) ** 0.8
         )
-        Rith = 9
-        Rth = 1 / (h * area_surface) + Rith
-        Cth = 1200 * self.cell_mass
-        # dTsdt = (Ta - Ts) / (Cth * (Rith + Rth)) + (P * Rth) / (Cth * (Rith + Rth))
-        # dTdt = (Rith + Rth) / (Rth) * dTsdt
-        # dTdt = P / Cth + (Ta - T) / (Rth * Cth)
+
+        Rth = 1 / (h * self.cell_area_surface ) + Rith
         dTdt = P / Cth + (Ta - T) / (Rth * Cth)
+        # print(f"h: {h}   R:{Rth}     surface:{self.cell_area_surface}    crosssec:{self.module_area_section}")
         return dTdt, P

@@ -59,6 +59,8 @@ Cell_Models = {
         'Cell Height': 0.07015,                 # in m  *
     },
         'Finger-Cell-Thermal':{
+        # created by combining values from https://doi.org/10.1109%2FTIE.2016.2618363
+        # with values from the Molicel INR-21700-P50B datasheet
         'Reference Temperature': 275.15+23,     # in kelvin
         'Exp Amplitude': 0.3,                   # in volts
         'Exp Time constant': 1.5213,            # in Ah^-1 
@@ -66,12 +68,12 @@ Cell_Models = {
         'Resistance Arrhenius Constant': 2836,  # dimensionless
         'Polarization Constant': 0.03,          # in Volts over amp hour
         'Polarization Arrhenius Constant': 1225,# dimensionless
-        'Cell Capacity': 6,                    # in Ah
+        'Cell Capacity': 6,                     # in Ah
         'Capacity Thermal Slope': 0.1766,       # in UNCLEAR per kelvin
         'Voltage Constant':4.2-0.3,             # in volts
         'Voltage Thermal Slope': 0.00004918,    # in volts per kelvin
         'Cell Voltage Min': 2.5,                # in volts
-        'Cell Current Max': 12,               # dimensionless
+        'Cell Current Max': 12,                 # dimensionless
         'Cell Voltage Nominal': 3.7,            # in V
         'Cell Mass': 0.071,                     # in kg
         'Cell Radius': 0.02155/2,               # in m

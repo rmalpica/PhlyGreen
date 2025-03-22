@@ -10,11 +10,11 @@ configurations_list = {
         "Finger-Cell-Thermal",
          "ThermalModel-Cell"
     ],
-    "Cell Specific Energy":[1500],
+    "Cell Specific Energy":linspace(100, 2000, 20, dtype=int).tolist(),
     "Cell Specific Power":[8000], # if set to None the program will scale it with the specific energy
-    "Range": linspace(396 / 1.852, 2361 / 1.852, 2, dtype=int).tolist(),
-    "Payload": [550],  # linspace(550, 1960, 11, dtype=int).tolist(),
-    "Base Phi": [0.1]#(linspace(0, 100, 3, dtype=int) / 100.0).tolist(),
+    "Range": linspace(100 / 1.852, 2500 / 1.852, 25, dtype=int).tolist(),
+    "Payload": [1960], #linspace(550, 1960, 11, dtype=int).tolist(),
+    "Base Phi": [0.1]#(linspace(0, 100, 11, dtype=int) / 100.0).tolist(),
 }
 # print(configurations_list)
 outputs_of_interest = [
@@ -25,5 +25,5 @@ outputs_of_interest = [
     "Battery Mass",
     "Total Iterations",
 ]
-r = RunAll("TESTING")
+r = RunAll("SweepOf")
 r.run_config(configurations_list, outputs_of_interest)
