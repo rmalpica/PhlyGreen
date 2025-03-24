@@ -103,7 +103,7 @@ class Battery:
         _value = self._voltageModel(self.cell_it, self.cell_i)
         if not (self.cell_Vmin <= _value):# <= self.cell_Vmax):
             raise BatteryError(
-                f"Fail_Condition_6\nCell voltage outside of allowed range:\nVoltage:{_value} Range: {self.cell_Vmin} ~ {self.cell_Vmax}"
+                f"Fail_Condition_6\nCell voltage outside of allowed range:\nVoltage:{_value} Range: {self.cell_Vmin} ~ {self.cell_Vmax}\nPnum is {self.P_number}"
             )
         return _value
 

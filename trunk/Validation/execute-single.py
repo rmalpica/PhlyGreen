@@ -9,9 +9,9 @@ configurations_list = {
     "Powerplant": ["Hybrid"],
     "Mission Name": ["Mission-FelixFinger"],  # "HybridCruiseOnly","HybridTOClimbOnly"
     "Cell": ["Finger-Cell-Thermal"],
-    "Cell Specific Energy":[2000],
+    "Cell Specific Energy":[1500],
     "Cell Specific Power":[8000], # if set to None the program will scale it with the specific energy
-    "Range": [round(100)], # in km
+    "Range": [1363], # in km
     "Payload": [1960],
     "Base Phi": [0.1],
 }

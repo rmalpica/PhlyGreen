@@ -195,8 +195,9 @@ class Mission:
                 Tamb = ISA.atmosphere.T0std(alt,Mach)
                 rho = ISA.atmosphere.RHO0std(alt,Mach,self.DISA)
                 dTdt, _ = self.aircraft.battery.heatLoss(Tamb,rho)
-            except BatteryError: # as err:
-                # print(err)
+            except BatteryError as err:
+                print(f"P num at error: {self.aircraft.battery.P_number}")
+                print(err)
                 self.valid_solution = False
                 return [0,0,0,0,0]
             except Exception as e:
@@ -224,12 +225,14 @@ class Mission:
             # be too short to matter, and there's no good model for
             # the takeoff dynamics anyway.
             try:
+                print(f"P num during try: {P_number}")
                 self.aircraft.battery.T = 300 # battery T TODO FIX THIS
                 self.aircraft.battery.it = 0
                 self.aircraft.battery.i  = self.aircraft.battery.Power_2_current(self.TO_PBat) #convert output power to volts and amps
                 self.aircraft.battery.Vout # necessary for the battery class to validate Vout
-            except BatteryError: # as err:
-                # print(err)
+            except BatteryError as err:
+                print(f"P num at error: {P_number}")
+                print(err)
                 self.valid_solution = False
                 return self.valid_solution
             except Exception as err:
@@ -256,8 +259,11 @@ class Mission:
                 # To avoid importing the mission class with the model into the plotting script,
                 # this is added to store the variables when the integration finishes each part.
                 # The plottingVars array can then be accessed in the script to plot the things.
-                for k, _ in enumerate(sol.t):
-                    yy0 = [sol.y[0][k], sol.y[1][k], sol.y[2][k], sol.y[3][k], sol.y[4][k]]
+                for k in range(len(sol.t)-1):
+                    # there is a problem somewhere here with the temperature that is used for plotting
+                    # doing the whole k+1 thing fixes it but brings the issue of not using the full 
+                    # flight integration for the plot, so this needs to be fixed
+                    yy0 = [sol.y[0][k], sol.y[1][k], sol.y[2][k], sol.y[3][k], sol.y[4][k+1]]
                     model(sol.t[k], yy0)
                     alt = self.profile.Altitude(sol.t[k])
                     Mach = Speed.TAS2Mach(self.profile.Velocity(sol.t[k]), alt, DISA=self.DISA)
@@ -308,19 +314,7 @@ class Mission:
         # this proved slow and cumbersome, so i came up with a new method that uses the previous result to initialize the search
         # it grabs the n value from the previous iteration and tries to find an nmax and nmin from there
         optimal = False
-        """
-        P=0
-        while not optimal:
-            P+=1
-            a=evaluate_P_nr(P)
-            b=evaluate_P_nr(P-1)
-            if a and not b:
-                optimal=True
-                self.optimal_n = P
 
-        self.Past_P_n.append(self.P_n_arr)
-        self.P_n_arr = []
-        """
         try:
             #ratio = 1 # use this line to disable linear scaling of the P_n for debug purposes
             ratio = self.WTO/self.last_weight

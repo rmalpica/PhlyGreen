@@ -113,30 +113,34 @@ class RunAll:
 
     def run_and_plot(self, flightargs):
         """Run and plot a single flight"""
-        print("BEGIN RUN")
-        fr = FlightRun(flightargs)
+        print(f"\nBEGIN RUN FOR\n {flightargs}\n\n")
+        try:
+            fr = FlightRun(flightargs)
 
-        flight_json = os.path.join(self.json_d, fr.arg_str + ".json")
+            flight_json = os.path.join(self.json_d, fr.arg_str + ".json")
 
-        converged = fr.run_and_validate()
+            converged = fr.run_and_validate()
 
-        # exit at this point if the flight did not converge,
-        # writing the json with the inputs and empty outputs
-        if not converged:
+            # exit at this point if the flight did not converge,
+            # writing the json with the inputs and empty outputs
+            if not converged:
+                aux.dump_json(fr.results(), flight_json)
+                return {}
+
+            # organize all the data if the flight is valid, and then plot it
+            fr.process_data()
             aux.dump_json(fr.results(), flight_json)
-            return {}
+            flight_plots_dir = aux.make_cat_dir(self.plots_d, fr.arg_str)
+            plots.plot_flight(fr.outputs, flight_plots_dir)
 
-        # organize all the data if the flight is valid, and then plot it
-        fr.process_data()
-        aux.dump_json(fr.results(), flight_json)
-        flight_plots_dir = aux.make_cat_dir(self.plots_d, fr.arg_str)
-        plots.plot_flight(fr.outputs, flight_plots_dir)
+            # also plot profiling data
+            plots.perf_profile(fr.perf_profiling, flight_plots_dir)
+            print(f"\nFINISHED RUN FOR\n {flightargs}\n\n")
+            return fr.summary()
 
-        # also plot profiling data
-        plots.perf_profile(fr.perf_profiling, flight_plots_dir)
-        return fr.summary()
-
-
+        except Exception as e:
+            print(f"\n\nUNKNOWN EXCEPTION DURING FLIGHT{flightargs}\nORIGINAL ERROR MESSAGE:\n\n{e}\n\n")
+            raise
     def run_single(self,a):
         """
         Execute a single flight
