@@ -7,9 +7,9 @@ configurations_list = {
     "Powerplant": ["Hybrid"],
     "Mission Name": ["Mission-FelixFinger"],  # "HybridCruiseOnly","HybridTOClimbOnly"
     "Cell": ["Finger-Cell-Thermal",],
-    "Cell Specific Energy":[1490,1499,1501,1510],#linspace(100, 2000, 20, dtype=int).tolist(),
+    "Cell Specific Energy": linspace(100, 2000, 20, dtype=int).tolist(),
     "Cell Specific Power":[8000], # if set to None the program will scale it with the specific energy
-    "Range": [1363],#linspace(100, 2500, 20 , dtype=int).tolist(), # in km
+    "Range": linspace(100, 2500, 25 , dtype=int).tolist(), # in km
     "Payload": [1960], #linspace(550, 1960, 11, dtype=int).tolist(),
     "Base Phi": [0.1]#(linspace(0, 100, 11, dtype=int) / 100.0).tolist(),
 }

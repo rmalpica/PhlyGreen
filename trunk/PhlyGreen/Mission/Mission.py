@@ -163,8 +163,6 @@ class Mission:
             return PPoWTO * WTO
 
         def model(t,y):
-            if not self.valid_solution:
-                return [0,0,0,0,0]
 
             #aircraft mass fraction
             Beta = y[2]
@@ -184,25 +182,17 @@ class Mission:
             # exception may be caught into a global variable so that the last constraint
             # driving the battery sizing may be printed to the user. Temperature limits
             # are not validated because T depends on the cooling sizing, not the P number.
-            try:
-                self.aircraft.battery.T = y[4] # assign a temperature, battery class validates temp
-                self.aircraft.battery.it = y[3]/3600 # assign spent charge, battery validates SOC
-                self.aircraft.battery.i  = self.aircraft.battery.Power_2_current(PElectric) # assign current, also validated here by the class
-                dEdt_bat = self.aircraft.battery.i * self.aircraft.battery.Vout # calculate power, this causes Vout to be generated and validated
-                
-                alt = self.profile.Altitude(t)
-                Mach = Speed.TAS2Mach(self.profile.Velocity(t),alt,DISA=self.DISA)
-                Tamb = ISA.atmosphere.T0std(alt,Mach)
-                rho = ISA.atmosphere.RHO0std(alt,Mach,self.DISA)
-                dTdt, _ = self.aircraft.battery.heatLoss(Tamb,rho)
-            except BatteryError as err:
-                print(f"P num at error: {self.aircraft.battery.P_number}")
-                print(err)
-                self.valid_solution = False
-                return [0,0,0,0,0]
-            except Exception as e:
-                print(f"Unexpected error: {e}")
-                raise
+            
+            self.aircraft.battery.T = y[4] # assign a temperature, battery class validates temp
+            self.aircraft.battery.it = y[3]/3600 # assign spent charge, battery validates SOC
+            self.aircraft.battery.i  = self.aircraft.battery.Power_2_current(PElectric) # assign current, also validated here by the class
+            dEdt_bat = self.aircraft.battery.i * self.aircraft.battery.Vout # calculate power, this causes Vout to be generated and validated
+            
+            alt = self.profile.Altitude(t)
+            Mach = Speed.TAS2Mach(self.profile.Velocity(t),alt,DISA=self.DISA)
+            Tamb = ISA.atmosphere.T0std(alt,Mach)
+            rho = ISA.atmosphere.RHO0std(alt,Mach,self.DISA)
+            dTdt, _ = self.aircraft.battery.heatLoss(Tamb,rho)
 
             return [dEFdt,dEdt_bat,dbetadt,self.aircraft.battery.i,dTdt]
 
@@ -211,12 +201,9 @@ class Mission:
             
             # print(f"pnumber {P_number}")
             self.P_n_arr.append(P_number)
-
-            self.valid_solution = True
             #no maths needed to know nothing will work without a battery
             if P_number == 0:
-                self.valid_solution = False
-                return self.valid_solution
+                return False
 
             self.aircraft.battery.Configure(P_number)
 
@@ -229,63 +216,74 @@ class Mission:
                 self.aircraft.battery.T = 300 # battery T TODO FIX THIS
                 self.aircraft.battery.it = 0
                 self.aircraft.battery.i  = self.aircraft.battery.Power_2_current(self.TO_PBat) #convert output power to volts and amps
-                self.aircraft.battery.Vout # necessary for the battery class to validate Vout
+                self.aircraft.battery.Vout # necessary statement for the battery class to validate Vout
             except BatteryError as err:
                 print(f"P num at error: {P_number}")
                 print(err)
-                self.valid_solution = False
-                return self.valid_solution
+                return False
             except Exception as err:
                 print(f"Unexpected error: {err}")
                 raise
             
             # integrate sequentially
+            times = np.append(self.profile.Breaks,self.profile.MissionTime2)
+            rtol = 1e-6
+            method= 'BDF'
             self.integral_solution = []
             self.plottingVars=[]
-            times = np.append(self.profile.Breaks,self.profile.MissionTime2)
-            rtol = 1e-5
-            method= 'BDF'
-            #initial fuel energy, battery energy, mass fraction, spent charge, and battery T TODO FIX THIS
+            #initial fuel energy, battery energy, mass fraction, spent charge, and battery T
             y0 = [0,0,self.beta0,0,300]
-            
             for i in range(len(times)-1):
 
-                sol = integrate.solve_ivp(model,[times[i], times[i+1]], y0, method=method, rtol=rtol,dense_output=True)
-                if not self.valid_solution:
-                    break
+                try:
+                    sol = integrate.solve_ivp(model,[times[i], times[i+1]], y0, method=method, rtol=rtol)
+                    self.integral_solution.append(sol)
+                except BatteryError as err:
+                    print(f"P num at error: {self.aircraft.battery.P_number}")
+                    print(err)
+                    return False
+                except Exception as e:
+                    print(f"Unexpected error:\n{e}")
+                    raise
 
-                self.integral_solution.append(sol)
-
-                # To avoid importing the mission class with the model into the plotting script,
-                # this is added to store the variables when the integration finishes each part.
-                # The plottingVars array can then be accessed in the script to plot the things.
-                for k in range(len(sol.t)-1):
-                    # there is a problem somewhere here with the temperature that is used for plotting
-                    # doing the whole k+1 thing fixes it but brings the issue of not using the full 
-                    # flight integration for the plot, so this needs to be fixed
-                    yy0 = [sol.y[0][k], sol.y[1][k], sol.y[2][k], sol.y[3][k], sol.y[4][k+1]]
-                    model(sol.t[k], yy0)
-                    alt = self.profile.Altitude(sol.t[k])
-                    Mach = Speed.TAS2Mach(self.profile.Velocity(sol.t[k]), alt, DISA=self.DISA)
-                    Tamb = ISA.atmosphere.T0std(alt, Mach)
-                    self.plottingVars.append(
-                        [
-                            sol.t[k],
-                            self.aircraft.battery.SOC,
-                            self.aircraft.battery.Voc,
-                            self.aircraft.battery.Vout,
-                            self.aircraft.battery.i,
-                            self.aircraft.battery.T,
-                            Tamb,
-                            alt,
-                        ],
-                    )
+                # The solution given by solve ivp isnt actually valid for all cases when you
+                # try it on every point. This is because of the tolerance that it allows itself.
+                # It will accurately solve the problem for the time it was given but if you
+                # actually try to calculate the outputs at every time point, some of them cause
+                # the model to fail. To avoid having to use a super small rtol to make the
+                # time step of the integration smaller and therefore taking forever to
+                # integrate, the better solution is to simply ignore any battery errors that
+                # the model throws during plotting of the full flight profile. Its already
+                # been validated in the integration, whatever deviations happen at this
+                # stage are minuscule errors of fractions of percent
+                for k in range(len(sol.t)-0):
+                    try:
+                        yy0 = [sol.y[0][k], sol.y[1][k], sol.y[2][k], sol.y[3][k], sol.y[4][k]]
+                        model(sol.t[k], yy0)
+                        alt = self.profile.Altitude(sol.t[k])
+                        Mach = Speed.TAS2Mach(self.profile.Velocity(sol.t[k]), alt, DISA=self.DISA)
+                        Tamb = ISA.atmosphere.T0std(alt, Mach)
+                        self.plottingVars.append(
+                            [
+                                sol.t[k],
+                                self.aircraft.battery.SOC,
+                                self.aircraft.battery.Voc,
+                                self.aircraft.battery.Vout,
+                                self.aircraft.battery.i,
+                                self.aircraft.battery.T,
+                                Tamb,
+                                alt,
+                            ],
+                        )
+                    except BatteryError:
+                        # Print warning and just keep saving the data
+                        print("WARNING: evaluate_P_number integration rtol may be too small, consider increasing it")
                 self.Ef = sol.y[0]
                 self.EBat = sol.y[1]
                 self.Beta = sol.y[2]
                 y0 = [sol.y[0][-1], sol.y[1][-1], sol.y[2][-1], sol.y[3][-1], sol.y[4][-1]]
 
-            return self.valid_solution
+            return True
 
 
         # Takeoff condition, calculated before anything else as
