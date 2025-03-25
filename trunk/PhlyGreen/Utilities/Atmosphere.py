@@ -4,6 +4,7 @@ class Atmosphere:
     def __init__(self):
         self.p_sls = 101325  #Pa
         self.T_sls = 288.15 #K
+        self.Rho_sls = 1.225 #kg/m3 
         self.Rair = 287 #J/(Kg k)
         self.gammaair = 1.4
         self.delta = (self.gammaair - 1)/self.gammaair
@@ -52,6 +53,8 @@ class Atmosphere:
     def RHO0std(self,h,Mach,DISA):
         return self.RHOstd(h,DISA) * self.RHOoRHO0(Mach)**-1
     
+    def astd(self,h):
+        return np.sqrt(self.gammaair * self.Rair * self.Tstd(h)) #m/s
 
 atmosphere = Atmosphere()
 

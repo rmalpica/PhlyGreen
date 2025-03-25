@@ -1,9 +1,10 @@
 import numpy as np
 import PhlyGreen.Utilities.Atmosphere as ISA
 import PhlyGreen.Utilities.Speed as Speed
+import PhlyGreen.Utilities.Units as Units
 from scipy.optimize import brentq, brenth, ridder, newton
 from pprint import pprint
-
+from .FLOPS_model import FLOPS_model
 
 class Weight:
   
@@ -11,6 +12,7 @@ class Weight:
         self.aircraft = aircraft
         self.tol = 0.1
         self.final_reserve = None  
+        self.Class = 'I'
         
             
         
@@ -21,6 +23,9 @@ class Weight:
         self.ef = self.aircraft.EnergyInput['Ef']
         self.final_reserve = self.aircraft.EnergyInput['Contingency Fuel']
 
+        if self.Class == 'II':
+            self.AircraftComponents = FLOPS_model(self.aircraft)
+
         return None
         
     def WeightEstimation(self):
@@ -28,8 +33,7 @@ class Weight:
 
         if self.aircraft.Configuration == 'Traditional':     
              
-        
-                 
+              
                  return self.Traditional()
              
              
@@ -52,13 +56,32 @@ class Weight:
             
                 self.Wf = self.aircraft.mission.EvaluateMission(WTO)/self.ef
                 self.WPT = self.aircraft.powertrain.WeightPowertrain(WTO)
-                self.WStructure = self.aircraft.structures.StructuralWeight(WTO)  
+
+                if self.Class == 'I':
+
+                    self.WStructure = self.aircraft.structures.StructuralWeight(WTO) 
+
+                elif self.Class == 'II':
+
+                    self.aircraft.FLOPSInput['GROSS_WEIGHT'] = WTO # UNITS KG 
+
+                    self.AircraftComponents.SetInput()
+
+                    self.AircraftComponents.CalculateComponentMasses()
+
+                    self.WStructure =  Units.lbTokg(self.AircraftComponents.Wing.wingmass + self.AircraftComponents.Fuselage.fuselagemass
+                                                    + self.AircraftComponents.Tail.HTailmass + self.AircraftComponents.Tail.VTailmass 
+                                                    + self.AircraftComponents.LandingGear.Landing_gearmass + self.AircraftComponents.Nacelle.nacellemass
+                                                    + self.AircraftComponents.Paint.paintmass + self.AircraftComponents.SystemEquipment.system_equipment_mass
+                                                    + self.AircraftComponents.Propeller.propellermass) 
+
+
                 if self.final_reserve == 0:
                     self.final_reserve = 0.05*self.Wf
                 
                 return (self.Wf + self.final_reserve + self.WPT + self.WStructure + self.WPayload + self.WCrew - WTO)
         
-        self.WTO = brenth(func, 1000, 300000, xtol=0.1)
+        self.WTO = brenth(func, 10000, 300000, xtol=0.1)
 
 
     def Hybrid(self):
@@ -75,10 +98,28 @@ class Weight:
                     self.WBat = WBat[self.WBatidx] 
 
                 self.WPT = self.aircraft.powertrain.WeightPowertrain(WTO)
-                self.WStructure = self.aircraft.structures.StructuralWeight(WTO) 
+
+                if self.Class == 'I':
+
+                    self.WStructure = self.aircraft.structures.StructuralWeight(WTO) 
+
+                elif self.Class == 'II':
+
+                    self.aircraft.FLOPSInput['GROSS_WEIGHT'] = WTO # UNITS KG 
+
+                    self.AircraftComponents.SetInput()
+
+                    self.AircraftComponents.CalculateComponentMasses()
+
+                    self.WStructure =  Units.lbTokg(self.AircraftComponents.Wing.wingmass + self.AircraftComponents.Fuselage.fuselagemass
+                                                    + self.AircraftComponents.Tail.HTailmass + self.AircraftComponents.Tail.VTailmass 
+                                                    + self.AircraftComponents.LandingGear.Landing_gearmass + self.AircraftComponents.Nacelle.nacellemass
+                                                    + self.AircraftComponents.Paint.paintmass + self.AircraftComponents.SystemEquipment.system_equipment_mass
+                                                    + self.AircraftComponents.Propeller.propellermass) 
+
                 if self.final_reserve == 0:
                     self.final_reserve = 0.05*self.Wf
 
                 return (self.Wf + self.final_reserve + self.WBat + self.WPT + self.WStructure + self.WPayload + self.WCrew - WTO)
         # this iterates the weight estimator function with the brent method until it converges on a value of takeoff weight
-        self.WTO = brenth(func, 1000, 300000, xtol=0.1) 
+        self.WTO = brenth(func, 10000, 300000, xtol=0.1) 

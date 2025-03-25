@@ -196,7 +196,7 @@ class Performance:
 
     def TakeOff_Finger(self,WTOoS,beta,altitudeTO,kTO,sTO,DISA,speed,speedtype):
         self.set_speed(altitudeTO, speed, speedtype, DISA)
-        PW = self.TAS  * (1.21 * WTOoS / (sTO * ISA.atmosphere.RHOstd(altitudeTO,DISA * self.aircraft.aerodynamics.ClTO * self.g_acc)) + 
+        PW = self.TAS  * (1.21 * WTOoS / (sTO * ISA.atmosphere.RHOstd(altitudeTO,DISA) * self.aircraft.aerodynamics.ClTO * self.g_acc) + 
                          1.21*self.aircraft.aerodynamics.Cd(self.aircraft.aerodynamics.ClTO,self.Mach)/self.aircraft.aerodynamics.ClTO + 
                          0.21 * 0.04)
         return PW

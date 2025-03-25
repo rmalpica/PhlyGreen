@@ -1,8 +1,10 @@
 import numpy as np
 import numbers
 import math
+import warnings
 import PhlyGreen.Utilities.Atmosphere as ISA
 import PhlyGreen.Utilities.Speed as Speed
+import PhlyGreen.Utilities.Units as Units
 import scipy.integrate as integrate
 from .Profile import Profile
 from PhlyGreen.Systems.Battery.Battery import BatteryError
@@ -59,6 +61,13 @@ class Mission:
 
     """Methods """
 
+    def check_PP(self,PP):
+        if PP < 0:
+            warnings.warn(". Setting Propulsive power to 0.", RuntimeWarning)
+            PP = 0
+        return PP
+
+
     def SetInput(self):
 
         self.beta0 = self.aircraft.MissionInput['Beta start']
@@ -103,7 +112,8 @@ class Mission:
         
         def model(t,y):
             Beta = y[1]
-            PP = PowerPropulsive(Beta,t) 
+            PP = PowerPropulsive(Beta,t)
+            self.check_PP(PP)
             PRatio = self.aircraft.powertrain.Traditional(self.profile.Altitude(t),self.profile.Velocity(t),PP)
             dEdt = PP * PRatio[0]
             dbetadt = - dEdt/(self.ef*self.WTO)
@@ -170,6 +180,7 @@ class Mission:
                 
                 Beta = y[2]
                 Ppropulsive = PowerPropulsive(Beta,t)
+                self.check_PP(Ppropulsive)
                 PRatio = self.aircraft.powertrain.Hybrid(self.aircraft.mission.profile.SuppliedPowerRatio(t),self.profile.Altitude(t),self.profile.Velocity(t),Ppropulsive)
 
                 # if self.aircraft.mission.profile.SuppliedPowerRatio(t) > 0.:
@@ -201,7 +212,6 @@ class Mission:
             # integrate all phases together
             # sol = integrate.solve_ivp(model,[0, self.profile.MissionTime2],y0,method='BDF',rtol=1e-6)
             # print(sol)
-            print(self.profile.Breaks)
 
             # integrate sequentially
             self.integral_solution = []
@@ -253,6 +263,7 @@ class Mission:
             #aircraft mass fraction
             Beta = y[2]
             Ppropulsive = PowerPropulsive(Beta,t)
+            self.check_PP(Ppropulsive)
             #takes in all the mission segments and finds the required power ratio for the current time of the mission
             PRatio = self.aircraft.powertrain.Hybrid(self.aircraft.mission.profile.SuppliedPowerRatio(t),
                                                      self.profile.Altitude(t),

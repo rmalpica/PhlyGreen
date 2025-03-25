@@ -21,6 +21,8 @@ class Aircraft:
         self.DiversionStages = None 
         self.LoiterStages = None
         self.WellToTankInput = None
+        self.FLOPSInput = None
+        self.PropellerInput = None
         #aircraft design
         self.DesignPW = None
         self.DesignWTOoS = None
