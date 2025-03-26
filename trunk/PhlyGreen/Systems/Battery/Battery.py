@@ -372,10 +372,11 @@ class Battery:
         Cth = self.Cth
         P = (Voc - V) * i + dEdT * i * T
 
-        h = (  # taken from http://dx.doi.org/10.1016/j.jpowsour.2013.10.052
-            30* ( ((self.mdot) / (self.module_area_section * rho)) / 5) ** 0.8
-        )
 
+        h = (  # taken from http://dx.doi.org/10.1016/j.jpowsour.2013.10.052
+                30* ( ((self.mdot) / (self.module_area_section * rho)) / 5) ** 0.8
+            )
+        
         Rth = 1 / (h * self.cell_area_surface ) + Rith
         dTdt = P / Cth + (Ta - T) / (Rth * Cth)
         # print(f"h: {h}   R:{Rth}     surface:{self.cell_area_surface}    crosssec:{self.module_area_section}")

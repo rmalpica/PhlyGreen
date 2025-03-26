@@ -226,6 +226,7 @@ class Mission:
                 raise
             
             # integrate sequentially
+            np.seterr(over="raise")
             times = np.append(self.profile.Breaks,self.profile.MissionTime2)
             rtol = 1e-6
             method= 'BDF'
