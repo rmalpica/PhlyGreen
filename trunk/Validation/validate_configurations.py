@@ -147,14 +147,14 @@ class RunAll:
         """
         # convert to tuple
         config = (
-                a["Range"],
-                a["Payload"],
-                a["Powerplant"],
-                a["Cell"],
-                a["Cell Specific Energy"],
-                a["Cell Specific Power"],
-                a["Base Phi"],
-                a["Mission Name"],
+                a["Range"][0],
+                a["Payload"][0],
+                a["Powerplant"][0],
+                a["Cell"][0],
+                a["Cell Specific Energy"][0],
+                a["Cell Specific Power"][0],
+                a["Base Phi"][0],
+                a["Mission Name"][0],
             )
         self.run_and_plot(config)
 
@@ -176,7 +176,7 @@ class RunAll:
     def run_config(self, arg_list, ooi=None):
         """Determine if it should run in parallel or not"""
         j = 1
-        for i in arg_list:
+        for _,i in arg_list.items():
             j = max(len(i), j)
         if j > 1:
             if ooi is None:
