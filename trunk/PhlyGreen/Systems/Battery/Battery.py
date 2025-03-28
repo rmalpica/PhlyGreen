@@ -15,7 +15,7 @@ class Battery:
         # for now its hardcoded. Create voltage controller in the future? Integrate this
         # into the powerplant spec?
         self.controller_Vmax = 740
-        self.controller_Vmin = 420
+        # self.controller_Vmin = 420
         self._SOC_min = None
         self._it = 0
         self._i = None
@@ -25,7 +25,7 @@ class Battery:
         # mass flow rate per cell, in kg/s
         # this number is pretty arbitrary since air cooling 
         # such a high poewr battery pack is unrealistic anyway
-        self.mdot =  0.0007
+        
 
     @property
     def i(self):
@@ -114,9 +114,13 @@ class Battery:
     @property
     def Vout(self) -> float:
         _value = self.cell_Vout * self.S_number
-        if not (self.controller_Vmin <= _value):# <= self.controller_Vmax):
+        # if not (self.controller_Vmin <= _value):# <= self.controller_Vmax):
+        #     raise BatteryError(
+        #         f"Fail_Condition_7\nPack voltage outside of allowed range:\nVoltage:{_value} Range: {self.controller_Vmin} ~ {self.controller_Vmax}"
+        #     )
+        if not ( _value <= self.controller_Vmax):
             raise BatteryError(
-                f"Fail_Condition_7\nPack voltage outside of allowed range:\nVoltage:{_value} Range: {self.controller_Vmin} ~ {self.controller_Vmax}"
+                f"Fail_Condition_7\nPack voltage too high:\nVoltage:{_value} Max: {self.controller_Vmax}"
             )
         return _value
 
@@ -282,7 +286,7 @@ class Battery:
         self.module_area_section = (2*self.cell_radius)**2-np.pi*self.cell_radius**2
         # self.Rith = 7*np.sqrt(self.cell_radius/0.022) # probably need a citation for this one
         self.Rith = 3.3*(self.cell_radius/0.022)**2
-        self.Cth = 1200 * self.cell_mass
+        self.Cth = 700 * self.cell_mass
 
 
     # determine battery configuration
@@ -372,9 +376,9 @@ class Battery:
         Cth = self.Cth
         P = (Voc - V) * i + dEdT * i * T
 
-
+        mdot =  min(0.0002*P,0.0001)
         h = (  # taken from http://dx.doi.org/10.1016/j.jpowsour.2013.10.052
-                30* ( ((self.mdot) / (self.module_area_section * rho)) / 5) ** 0.8
+                30* ( ((mdot) / (self.module_area_section * rho)) / 5) ** 0.8
             )
         
         Rth = 1 / (h * self.cell_area_surface ) + Rith

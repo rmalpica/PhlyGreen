@@ -7,11 +7,11 @@ configurations_list = {
     "Powerplant": ["Hybrid"],
     "Mission Name": ["Mission-FelixFinger"],  # "HybridCruiseOnly","HybridTOClimbOnly"
     "Cell": ["Finger-Cell-Thermal",],
-    "Cell Specific Energy": linspace(100, 2000, 4, dtype=int).tolist(),
+    "Cell Specific Energy": linspace(100, 2000, 20, dtype=int).tolist(),
     "Cell Specific Power":[8000], # if set to None the program will scale it with the specific energy
-    "Range": [396],#linspace(100, 2500, 25 , dtype=int).tolist(), # in km
+    "Range": [1500],#linspace(100, 2500, 25 , dtype=int).tolist(), # in km
     "Payload": [1960], #linspace(550, 1960, 11, dtype=int).tolist(),
-    "Base Phi": [0.1]#(linspace(0, 100, 11, dtype=int) / 100.0).tolist(),
+    "Base Phi": (linspace(0, 100, 21, dtype=int) / 100.0).tolist(),
 }
 # print(configurations_list)
 outputs_of_interest = [
@@ -22,5 +22,5 @@ outputs_of_interest = [
     "Battery Mass",
     "Total Iterations",
 ]
-r = RunAll("Fingerfixrange")
+r = RunAll("PhiExperiment")
 r.run_config(configurations_list, outputs_of_interest)

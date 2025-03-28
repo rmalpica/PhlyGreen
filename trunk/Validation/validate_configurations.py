@@ -156,7 +156,11 @@ class RunAll:
                 a["Base Phi"][0],
                 a["Mission Name"][0],
             )
-        self.run_and_plot(config)
+        results=self.run_and_plot(config)
+        if not results:
+            print("Flight Is Not Viable, Check Logs For Info")
+        else:
+            print(results)
 
     def run_parallel(self, arg_list, ooi):
         """
