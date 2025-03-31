@@ -69,6 +69,7 @@ class RunAll:
                 a["Cell"],
                 a["Cell Specific Energy"],
                 a["Cell Specific Power"],
+                a["Pack Voltage"],
                 [0],
                 a["Mission Name"],
             )
@@ -80,6 +81,7 @@ class RunAll:
                 a["Range"],
                 a["Payload"],
                 ["Traditional"],
+                [None],
                 [None],
                 [None],
                 [None],
@@ -95,6 +97,7 @@ class RunAll:
                 a["Cell"],
                 a["Cell Specific Energy"],
                 a["Cell Specific Power"],
+                a["Pack Voltage"],
                 a["Base Phi"],
                 a["Mission Name"],
             )
@@ -153,6 +156,7 @@ class RunAll:
                 a["Cell"][0],
                 a["Cell Specific Energy"][0],
                 a["Cell Specific Power"][0],
+                a["Pack Voltage"][0],
                 a["Base Phi"][0],
                 a["Mission Name"][0],
             )

@@ -15,7 +15,7 @@ class Aircraft:
         self.ConstraintsInput = None 
         self.MissionInput = None 
         self.EnergyInput = None 
-        self.CellModel = None
+        self.BatteryInput = None
         self.MissionStages = None 
         self.DiversionStages = None 
         self.LoiterStages = None

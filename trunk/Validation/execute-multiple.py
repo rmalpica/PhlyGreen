@@ -9,9 +9,10 @@ configurations_list = {
     "Cell": ["Finger-Cell-Thermal",],
     "Cell Specific Energy": linspace(100, 2000, 20, dtype=int).tolist(),
     "Cell Specific Power":[8000], # if set to None the program will scale it with the specific energy
-    "Range": [1500],#linspace(100, 2500, 25 , dtype=int).tolist(), # in km
+    "Range": linspace(100, 2500, 25 , dtype=int).tolist(), # in km
     "Payload": [1960], #linspace(550, 1960, 11, dtype=int).tolist(),
-    "Base Phi": (linspace(0, 100, 21, dtype=int) / 100.0).tolist(),
+    "Base Phi": [0.1],#(linspace(0, 100, 21, dtype=int) / 100.0).tolist(),
+    "Pack Voltage": [740]
 }
 # print(configurations_list)
 outputs_of_interest = [
@@ -21,6 +22,17 @@ outputs_of_interest = [
     "Takeoff Weight",
     "Battery Mass",
     "Total Iterations",
+    "Wing Surface",
+    "TakeOff Engine Shaft PP",
+    "TakeOff Battery PP",
+    "Battery Pack Energy",
+    "Battery Pack Max Power",
+    "Battery Pack Specific Energy",
+    "Battery Pack Specific Power",
+    "Battery P number",
+    "Battery S number",
+    "Battery Pack Charge",
 ]
-r = RunAll("PhiExperiment")
+
+r = RunAll("fingerFinal")
 r.run_config(configurations_list, outputs_of_interest)

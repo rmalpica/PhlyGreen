@@ -11,11 +11,7 @@ class Battery:
     def __init__(self, aircraft):
         self.aircraft = aircraft
 
-        # this range of voltages should be defined in the model of the motor controller,
-        # for now its hardcoded. Create voltage controller in the future? Integrate this
-        # into the powerplant spec?
-        self.controller_Vmax = 740
-        # self.controller_Vmin = 420
+        self.pack_Vmax = 740
         self._SOC_min = None
         self._it = 0
         self._i = None
@@ -114,13 +110,9 @@ class Battery:
     @property
     def Vout(self) -> float:
         _value = self.cell_Vout * self.S_number
-        # if not (self.controller_Vmin <= _value):# <= self.controller_Vmax):
-        #     raise BatteryError(
-        #         f"Fail_Condition_7\nPack voltage outside of allowed range:\nVoltage:{_value} Range: {self.controller_Vmin} ~ {self.controller_Vmax}"
-        #     )
-        if not ( _value <= self.controller_Vmax):
+        if not ( _value <= self.pack_Vmax):
             raise BatteryError(
-                f"Fail_Condition_7\nPack voltage too high:\nVoltage:{_value} Max: {self.controller_Vmax}"
+                f"Fail_Condition_7\nPack voltage too high:\nVoltage:{_value} Max: {self.pack_Vmax}"
             )
         return _value
 
@@ -198,7 +190,7 @@ class Battery:
         according to the user input.
         """
 
-        bat_inputs = self.aircraft.CellModel
+        bat_inputs = self.aircraft.BatteryInput
         if bat_inputs['Model'] is None: # Fallback to a default model if none is given
             model = 'Default'
         else:
@@ -277,10 +269,16 @@ class Battery:
             # validity against the cell properties
             self.cell_max_current *= pratio
         print(f"peak power new:{self.cell_max_current*self._voltageModel(0, self.cell_max_current)}")
+
+
         # Number of cells in series to achieve desired voltage.
-        # max voltage is preferred as it minimizes losses
+        # Higher voltage is preferred as it minimizes losses
         # due to lower current being needed.
-        self.S_number = np.floor(self.controller_Vmax / self.cell_Vmax)
+        if bat_inputs["Pack Voltage"] is not None:
+            self.pack_Vmax = bat_inputs["Pack Voltage"]
+        else:
+            self.pack_Vmax = 740
+        self.S_number = np.floor(self.pack_Vmax / self.cell_Vmax)
 
         self.cell_area_surface = 2*np.pi*self.cell_radius*self.cell_height
         self.module_area_section = (2*self.cell_radius)**2-np.pi*self.cell_radius**2

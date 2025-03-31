@@ -23,8 +23,8 @@ class FlightRun:
         Prints to console data about the flight and
         creates some metadata for the logs
         """
-        arg_range, arg_payload, arg_arch, arg_cell, arg_s_energy, arg_s_power, arg_phi, arg_mission = flightargs
-        self.arg_str = f"{arg_range}-{arg_payload}-{arg_arch}-{arg_cell}-{arg_s_energy}-{arg_s_power}-{arg_phi}-{arg_mission}"
+        arg_range, arg_payload, arg_arch, arg_cell, arg_s_energy, arg_s_power, arg_pack_v, arg_phi, arg_mission = flightargs
+        self.arg_str = f"{arg_range}-{arg_payload}-{arg_arch}-{arg_cell}-{arg_s_energy}-{arg_s_power}-{arg_pack_v}-{arg_phi}-{arg_mission}"
 
         # load the flight profile
         flight_profile = FlightProfiles.MissionParameters(
@@ -39,6 +39,7 @@ class FlightRun:
             "Cell": arg_cell,
             "Cell Specific Energy": arg_s_energy,
             "Cell Specific Power": arg_s_power,
+            "Pack Voltage": arg_pack_v,
             "Base Phi": arg_phi,
             "Mission Profile": flight_profile,
         }
@@ -60,6 +61,7 @@ class FlightRun:
             f"{arg_arch} Powerplant\n"
             f"Mission Profile: {arg_mission}\n"
             f"{profile_cell} Cell Model @ {profile_energy} & {profile_power} \n"
+            f"Pack Voltage {arg_pack_v}V"
             f"Phi = {arg_phi}\n"
             f"Range = {arg_range}km\n"
             f"Payload = {arg_payload}kg\n"
@@ -107,11 +109,12 @@ class FlightRun:
         self.myaircraft.DiversionStages     = flight_profile["DiversionStages"]
         self.myaircraft.EnergyInput         = flight_profile["EnergyInput"]
 
-        self.myaircraft.CellModel = {
+        self.myaircraft.BatteryInput = {
             "Model": arg_cell,
             "SpecificPower": arg_s_power,
             "SpecificEnergy": arg_s_energy,
             "Minimum SOC": 0.2,
+            "Pack Voltage": arg_pack_v
         }
 
         self.myaircraft.Configuration = arg_arch

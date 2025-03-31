@@ -13,7 +13,8 @@ configurations_list = {
     "Cell Specific Power":[8000], # if set to None the program will scale it with the specific energy
     "Range": [1500],#linspace(100, 2500, 25 , dtype=int).tolist(), # in km
     "Payload": [1960], #linspace(550, 1960, 11, dtype=int).tolist(),
-    "Base Phi": [0.1]#(linspace(0, 100, 11, dtype=int) / 100.0).tolist(),
+    "Base Phi": [0.1],#(linspace(0, 100, 11, dtype=int) / 100.0).tolist(),
+    "Pack Voltage":[740]
 }
 
 # Pick the name under which to save the plots and then run the flight
