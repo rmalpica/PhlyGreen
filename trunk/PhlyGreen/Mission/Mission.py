@@ -212,14 +212,14 @@ class Mission:
             # be too short to matter, and there's no good model for
             # the takeoff dynamics anyway.
             try:
-                print(f"P num during try: {P_number}")
+                #print(f"P num during try: {P_number}")
                 self.aircraft.battery.T = 300 # battery T TODO FIX THIS
                 self.aircraft.battery.it = 0
                 self.aircraft.battery.i  = self.aircraft.battery.Power_2_current(self.TO_PBat) #convert output power to volts and amps
                 self.aircraft.battery.Vout # necessary statement for the battery class to validate Vout
             except BatteryError as err:
-                print(f"P num at error: {P_number}")
-                print(err)
+                #print(f"P num at error: {P_number}")
+                #print(err)
                 return False
             except Exception as err:
                 print(f"Unexpected error: {err}")
@@ -240,8 +240,8 @@ class Mission:
                     sol = integrate.solve_ivp(model,[times[i], times[i+1]], y0, method=method, rtol=rtol)
                     self.integral_solution.append(sol)
                 except BatteryError as err:
-                    print(f"P num at error: {self.aircraft.battery.P_number}")
-                    print(err)
+                    # print(f"P num at error: {self.aircraft.battery.P_number}")
+                    # print(err)
                     return False
                 except Exception as e:
                     print(f"Unexpected error:\n{e}")
@@ -274,6 +274,7 @@ class Mission:
                                 self.aircraft.battery.T,
                                 Tamb,
                                 alt,
+                                self.aircraft.battery.mdot,
                             ],
                         )
                     except BatteryError:

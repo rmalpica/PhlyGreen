@@ -100,8 +100,8 @@ def multiplot_1(data, i, oo, output_d):
         try:
             single_plot(data[i], data[o], i, o, output_d, style="bar")
             single_plot(data[i], data[o], i, o, output_d, style="scatter")
-        except ValueError as err:
-            print(f"Failed to plot {o}:\n{err}")
+        except Exception as err:
+            print(f"Failed to plot [{o}] over [{i}]:\n{err}")
 
 
 def multiplot_2(data, i, oo, output_d):
@@ -112,9 +112,12 @@ def multiplot_2(data, i, oo, output_d):
     one numerical value are being swept over.
     """
     for o in oo:
-        heatmap(data, i[0], i[1], o, output_d)
-        iter_plot(data, i[0], i[1], o, output_d)
-        iter_plot(data, i[1], i[0], o, output_d)
+        try:
+            heatmap(data, i[0], i[1], o, output_d)
+            iter_plot(data, i[0], i[1], o, output_d)
+            iter_plot(data, i[1], i[0], o, output_d)
+        except Exception as err:
+            print(f"WARNING! FAILED TO PLOT  [{o}] over [{i[0]}] and [{i[1]}]\nObtained error:\n{err}")
 
 
 def iter_plot(data, x, z, y, directory, title=None):
@@ -134,11 +137,17 @@ def iter_plot(data, x, z, y, directory, title=None):
     plt.close()  # Close the plot
 
 
+def clean_dictlist(dictlist):
+
+    max_length = max(len(lst) for lst in dictlist.values())
+    filtered_data = {key: lst for key, lst in dictlist.items() if len(lst) == max_length}
+    return filtered_data
+
 def heatmap(dictlist, x, y, z, directory, title=None):
     """jank method of plotting the data into a heatmap"""
-
     # Create pivot table and plot heatmap
-    df = pd.DataFrame(dictlist)  # convert to pandas dataframe for use with seaborn
+    dicts = clean_dictlist(dictlist)
+    df = pd.DataFrame(dicts)  # convert to pandas dataframe for use with seaborn
     pivot = df.pivot_table(values=z, index=y, columns=x)
     sns.heatmap(pivot)
 
@@ -147,7 +156,8 @@ def heatmap(dictlist, x, y, z, directory, title=None):
     if title is None:
         title = f"Heatmap of {z} over {x} and {y}"
     plt.title(title)
-
+    
+    plt.tight_layout()
     # Save the plot as a PDF
     filename = os.path.join(directory, title + ".pdf")  # create file inside the output directory
     plt.savefig(filename)

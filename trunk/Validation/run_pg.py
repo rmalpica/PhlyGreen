@@ -44,6 +44,8 @@ class FlightRun:
             "Mission Profile": flight_profile,
         }
         self.outputs = {}
+        self.outputs_max = {}
+        self.outputs_min = {}
         self.aircraft_parameters = {}
         self.perf_profiling={}
 
@@ -210,6 +212,7 @@ class FlightRun:
         temp  = toplot[:, 5]
         atemp = toplot[:, 6]
         alt   = toplot[:, 7]
+        mdot   = toplot[:, 8]
         spent_pwr = v_oc * curr
         delivered_pwr = v_out * curr
         batt_efficiency = v_out / v_oc
@@ -241,12 +244,16 @@ class FlightRun:
                 "Battery current": curr.tolist(),
                 "Air Temperature": atemp.tolist(),
                 "Battery Voltage": v_out.tolist(),
+                "Cooling Flow Rate": mdot.tolist(),
                 "Battery OC Voltage": v_oc.tolist(),
                 "Battery Temperature": temp.tolist(),
                 "Battery Spent Power": spent_pwr.tolist(),
                 "Battery Efficiency": batt_efficiency.tolist(),
                 "Battery Delivered Power": delivered_pwr.tolist(),
             }
+        for k, v in self.outputs.items():
+            self.outputs_max[f"Max {k}"] = max(v)
+            self.outputs_min[f"Min {k}"] = min(v)
 
     def get_fuel_parameters(self):
         """
@@ -356,6 +363,8 @@ class FlightRun:
             "Outputs": self.outputs,
             "Parameters": self.aircraft_parameters,
             "Meta Performance": self.perf_profiling,  # optional, saves algorithm performance data
+            "Max":self.outputs_max,
+            "Min":self.outputs_min,
         }
         return out
 
@@ -363,7 +372,10 @@ class FlightRun:
         """summarize the data that is interesting to plot across flights"""
         out = {}
         out.update(self.inputs)
-        del out["Mission Profile"] # not needed for plotting
+        del out["Mission Profile"]  # not needed for plotting
         out.update(self.aircraft_parameters)
+        out.update(self.outputs_max)
+        out.update(self.outputs_min)
         out["Total Iterations"] = self.perf_profiling["Total Iterations"]
+
         return out

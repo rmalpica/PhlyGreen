@@ -21,7 +21,7 @@ class Battery:
         # mass flow rate per cell, in kg/s
         # this number is pretty arbitrary since air cooling 
         # such a high poewr battery pack is unrealistic anyway
-        
+        self.mdot = 0
 
     @property
     def i(self):
@@ -373,10 +373,9 @@ class Battery:
         Rith = self.Rith
         Cth = self.Cth
         P = (Voc - V) * i + dEdT * i * T
-
-        mdot =  min(0.0002*P,0.0001)
+        self.mdot = 0.0001*P
         h = (  # taken from http://dx.doi.org/10.1016/j.jpowsour.2013.10.052
-                30* ( ((mdot) / (self.module_area_section * rho)) / 5) ** 0.8
+                30* ( ((self.mdot) / (self.module_area_section * rho)) / 5) ** 0.8
             )
         
         Rth = 1 / (h * self.cell_area_surface ) + Rith

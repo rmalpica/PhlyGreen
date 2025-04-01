@@ -166,12 +166,11 @@ class RunAll:
         else:
             print(results)
 
-    def run_parallel(self, arg_list, ooi):
+    def run_parallel(self, configs_to_run, ooi, ioi):
         """
         Execute all the flight sims in parallel
         """
         print(LOGO)
-        configs_to_run = self._unpack_arg_list(arg_list)
         num_threads = multiprocessing.cpu_count()
 
         with multiprocessing.Pool(processes=num_threads) as pool:
@@ -179,17 +178,19 @@ class RunAll:
         output_data = self._compile_flights(results)
         print("EVALUATING INPUT ARGUMENT LIST")
         # print(arg_list)
-        self.correlate_flights(output_data, arg_list, ooi)
+        self.correlate_flights(output_data, ooi, ioi)
 
     def run_config(self, arg_list, ooi=None):
         """Determine if it should run in parallel or not"""
         j = 1
-        for _,i in arg_list.items():
+        for _, i in arg_list.items():
             j = max(len(i), j)
         if j > 1:
             if ooi is None:
-                ooi=[]
-            self.run_parallel(arg_list, ooi)
+                ooi = []
+            configs_to_run = self._unpack_arg_list(arg_list)
+            ioi = self._determine_ioi(arg_list)
+            self.run_parallel(configs_to_run, ooi, ioi)
         else:
             self.run_single(arg_list)
 
@@ -216,22 +217,11 @@ class RunAll:
                 ioi.append(k)
         return ioi
 
-    def correlate_flights(self, data, arg_list, ooi):
+    def correlate_flights(self, data, ooi, ioi):
         """
-        Plot the data that is obtained across flights, such as relation
-        between battery size and range or payload, etc by reading all the
-        JSON files that were generated and plotting their data.
-        It receives the list of outputs that are interesting to plot (ooi)
-        because there are dozens of possible outputs, most useless
-        it receives the list of inputs originally given to the code
-        because otherwise the inputs of interest (ioi) for the outputs
-        to be plotted against would need to be rebuilt from the jsons,
-        which adds completely needless overhead. Its not very elegant,
-        but it works fine
+        Plots the outputs of interest (ooi) against the different
+        inputs of interest (ioi).
         """
-        # dataset = self._compile_flights()
-        ioi = self._determine_ioi(arg_list)
-
         n = len(ioi)
         if n == 0:
             return
