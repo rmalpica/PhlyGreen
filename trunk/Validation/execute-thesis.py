@@ -98,7 +98,7 @@ configs = {
     "Powerplant": ["Hybrid"],
     "Mission Name": ["Mission-FelixFinger"],
     "Cell": ["Finger-Cell-Thermal"],
-    "Cell Specific Energy": linspace(100, 2000, 2 , dtype=int).tolist(),
+    "Cell Specific Energy": linspace(100, 2000, 20 , dtype=int).tolist(),
     "Cell Specific Power": [8000],
     "Range": [396],  # linspace(100, 2500, 2, dtype=int).tolist(),  # in km
     "Payload": [1960],  # linspace(550, 1960, 11, dtype=int).tolist(),
