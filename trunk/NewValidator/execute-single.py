@@ -4,14 +4,14 @@ from validate_configurations import RunAll
 
 configurations_list = {
     "Powerplant": ["Hybrid"],
-    "Mission Name": ["Mission-FelixFinger"],  # "HybridCruiseOnly","HybridTOClimbOnly"
-    "Cell Specific Energy": [2000], #[100, 1366, 2000],
-    "Cell Specific Power":[8000], # if set to None the program will scale it with the specific energy
-    "Range": [1280],#linspace(100, 2500, 25 , dtype=int).tolist(), # in km
-    "Payload": [1325], #linspace(550, 1960, 11, dtype=int).tolist(),
-    "Base Phi": [0.1],#(linspace(0, 100, 11, dtype=int) / 100.0).tolist(),
+    "Mission Name": ["Mission-FelixFinger"],
+    "Cell Specific Energy": [1500*3600],
+    "Cell Specific Power":[6000],
+    "Range": [1280],
+    "Payload": [1325],
+    "Base Phi": [0.1],
 }
 
 # Pick the name under which to save the plots and then run the flight
-r = RunAll("ThreeFinger")
+r = RunAll("OldTest")
 r.run_config(configurations_list)

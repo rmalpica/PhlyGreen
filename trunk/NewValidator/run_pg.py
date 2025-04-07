@@ -45,7 +45,7 @@ class FlightRun:
         self.outputs_max = {}
         self.outputs_min = {}
         self.aircraft_parameters = {}
-        self.perf_profiling={}
+        # self.perf_profiling={}
 
         # Prettify the cell parameters so they dont all 
         # come out as "None" if the defaults are used
@@ -103,7 +103,7 @@ class FlightRun:
 
         self.myaircraft.EnergyInput["pbat"] = arg_s_power
         self.myaircraft.EnergyInput["Ebat"] = arg_s_energy
-
+        self.myaircraft.CellModel = {'Energy':arg_s_energy,'Power':arg_s_power}
 
         self.myaircraft.Configuration = arg_arch
         self.myaircraft.HybridType    = "Parallel"
@@ -126,6 +126,7 @@ class FlightRun:
             self.myaircraft.weight.WeightEstimation()
             return True
         except ValueError as err:
+            raise
             errmsg = "f(a) and f(b) must have different signs"
             if errmsg == str(err):
                 return False
@@ -184,23 +185,23 @@ class FlightRun:
 
         phi = [self.myaircraft.mission.profile.SuppliedPowerRatio(t) for t in times]
 
-        toplot = np.array(self.myaircraft.mission.plottingVars)
-        arrtime = toplot[:, 0]  # must be equal to 'times'
-        if not all(arrtime == times):
-            raise ValueError(
-                f"something broke badly and the two time vectors are not equal:{arrtime} vs {times}"
-            )
-        soc   = toplot[:, 1]
-        v_oc  = toplot[:, 2]
-        v_out = toplot[:, 3]
-        curr  = toplot[:, 4]
-        temp  = toplot[:, 5]
-        atemp = toplot[:, 6]
-        alt   = toplot[:, 7]
-        mdot   = toplot[:, 8]
-        spent_pwr = v_oc * curr
-        delivered_pwr = v_out * curr
-        batt_efficiency = v_out / v_oc
+        # toplot = np.array(self.myaircraft.mission.plottingVars)
+        # arrtime = toplot[:, 0]  # must be equal to 'times'
+        # if not all(arrtime == times):
+        #     raise ValueError(
+        #         f"something broke badly and the two time vectors are not equal:{arrtime} vs {times}"
+        #     )
+        # soc   = toplot[:, 1]
+        # v_oc  = toplot[:, 2]
+        # v_out = toplot[:, 3]
+        # curr  = toplot[:, 4]
+        # temp  = toplot[:, 5]
+        # atemp = toplot[:, 6]
+        # alt   = toplot[:, 7]
+        # mdot   = toplot[:, 8]
+        # spent_pwr = v_oc * curr
+        # delivered_pwr = v_out * curr
+        # batt_efficiency = v_out / v_oc
 
         power_propulsive = [
             (self.myaircraft.weight.WTO / 1000)
@@ -219,22 +220,22 @@ class FlightRun:
 
         self.outputs = {
                 "Phi": phi,
-                "SOC": soc.tolist(),
+                # "SOC": soc.tolist(),
                 "Beta": beta.tolist(),
                 "Time": times.tolist(),
-                "Altitude": alt.tolist(),
+                # "Altitude": alt.tolist(),
                 "Fuel Energy": e_f.tolist(),
                 "Total Power": power_propulsive,
                 "Battery Energy": e_bat.tolist(),
-                "Battery current": curr.tolist(),
-                "Air Temperature": atemp.tolist(),
-                "Battery Voltage": v_out.tolist(),
-                "Cooling Flow Rate": mdot.tolist(),
-                "Battery OC Voltage": v_oc.tolist(),
-                "Battery Temperature": temp.tolist(),
-                "Battery Spent Power": spent_pwr.tolist(),
-                "Battery Efficiency": batt_efficiency.tolist(),
-                "Battery Delivered Power": delivered_pwr.tolist(),
+                # "Battery current": curr.tolist(),
+                # "Air Temperature": atemp.tolist(),
+                # "Battery Voltage": v_out.tolist(),
+                # "Cooling Flow Rate": mdot.tolist(),
+                # "Battery OC Voltage": v_oc.tolist(),
+                # "Battery Temperature": temp.tolist(),
+                # "Battery Spent Power": spent_pwr.tolist(),
+                # "Battery Efficiency": batt_efficiency.tolist(),
+                # "Battery Delivered Power": delivered_pwr.tolist(),
             }
         for k, v in self.outputs.items():
             self.outputs_max[f"Max {k}"] = max(v)
@@ -323,7 +324,7 @@ class FlightRun:
             self.get_fuel_parameters()
 
         # Extras for performance profiling purposes, comment out if not needed
-        self._process_profiling()
+        # self._process_profiling()
 
     def results(self):
         """Neatly condenses the relevant information into a dictionary"""
@@ -331,9 +332,6 @@ class FlightRun:
             "Inputs": self.inputs,
             "Outputs": self.outputs,
             "Parameters": self.aircraft_parameters,
-            "Meta Performance": self.perf_profiling,  # optional, saves algorithm performance data
-            "Max":self.outputs_max,
-            "Min":self.outputs_min,
         }
         return out
 
@@ -345,6 +343,6 @@ class FlightRun:
         out.update(self.aircraft_parameters)
         out.update(self.outputs_max)
         out.update(self.outputs_min)
-        out["Total Iterations"] = self.perf_profiling["Total Iterations"]
+        # out["Total Iterations"] = self.perf_profiling["Total Iterations"]
 
         return out

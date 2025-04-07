@@ -133,7 +133,7 @@ class RunAll:
             plots.plot_flight(fr.outputs, flight_plots_dir)
 
             # also plot profiling data
-            plots.perf_profile(fr.perf_profiling, flight_plots_dir)
+            # plots.perf_profile(fr.perf_profiling, flight_plots_dir)
             print(f"\nFINISHED RUN FOR\n {flightargs}\n\n")
             return fr.summary()
 

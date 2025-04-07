@@ -125,7 +125,7 @@ Payload = {argPayload}kg
     myaircraft.DiversionStages   = flight_profile['DiversionStages']
     myaircraft.EnergyInput       = flight_profile['EnergyInput']
 
-    myaircraft.CellModel =      argCell
+    #myaircraft.CellModel =      argCell
     myaircraft.Configuration =  argArch
     myaircraft.HybridType =     'Parallel'
     myaircraft.AircraftType =   'ATR'
