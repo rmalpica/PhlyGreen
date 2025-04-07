@@ -25,6 +25,9 @@ class FlightRun:
         """
         arg_range, arg_payload, arg_arch, arg_s_energy, arg_s_power, arg_phi, arg_mission = flightargs
         self.arg_str = f"{arg_range}-{arg_payload}-{arg_arch}-{arg_s_energy}-{arg_s_power}-{arg_phi}-{arg_mission}"
+        
+        if arg_s_power is None:
+            arg_s_power = arg_s_energy * 8/1.5
 
         # load the flight profile
         flight_profile = FlightProfiles.MissionParameters(
@@ -102,8 +105,8 @@ class FlightRun:
         self.myaircraft.EnergyInput         = flight_profile["EnergyInput"]
 
         self.myaircraft.EnergyInput["pbat"] = arg_s_power
-        self.myaircraft.EnergyInput["Ebat"] = arg_s_energy
-        self.myaircraft.CellModel = {'Energy':arg_s_energy,'Power':arg_s_power}
+        self.myaircraft.EnergyInput["Ebat"] = arg_s_energy*3600
+        self.myaircraft.CellModel = {'Energy':arg_s_energy*3600,'Power':arg_s_power}
 
         self.myaircraft.Configuration = arg_arch
         self.myaircraft.HybridType    = "Parallel"
@@ -125,11 +128,11 @@ class FlightRun:
         try:
             self.myaircraft.weight.WeightEstimation()
             return True
-        except ValueError as err:
-            raise
+        except Exception as err:
             errmsg = "f(a) and f(b) must have different signs"
             if errmsg == str(err):
                 return False
+            print(f"UNEXPECTED EXCEPTION OCCURRED IN FLIGHT {self.arg_str}")
             raise
 
     def process_fuel_data(self):

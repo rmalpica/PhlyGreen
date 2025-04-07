@@ -57,10 +57,10 @@ def runAndPlot(aL, runName, varsOfInterest={}):
 aL = {
     "ArchList": {"Hybrid"},  # ,'Traditional'},
     "MissionList": {"Mission-FelixFinger"},  # "HybridCruiseOnly","HybridTOClimbOnly"
-    "CellsList": [{"Energy": 1500, "Power": 6000}],
-    "RangesList": np.linspace(500, 1500, 3, dtype=int),
-    "PayloadsList": np.linspace(500, 1500, 3, dtype=int),
-    "PhisList": {0.1},
+    "CellsList": [{"Energy": 1500, "Power": 8000}],
+    "RangesList": {396},
+    "PayloadsList": {1960},
+    "PhisList": {1.0},
 }
 
 varsOfInterest = {

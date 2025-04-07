@@ -6,7 +6,7 @@ from numpy import linspace
 configurations_list = {
     "Powerplant": ["Hybrid"],
     "Mission Name": ["Mission-FelixFinger"],  # "HybridCruiseOnly","HybridTOClimbOnly"
-    "Cell Specific Energy": [1500*3600],  # linspace(100, 2000, 2 , dtype=int).tolist(),
+    "Cell Specific Energy": [1500],  # linspace(100, 2000, 2 , dtype=int).tolist(),
     "Cell Specific Power": [6000],
     "Range": linspace(500, 1500, 3, dtype=int).tolist(),  # in km
     "Payload": linspace(500, 1500, 3, dtype=int).tolist(),
