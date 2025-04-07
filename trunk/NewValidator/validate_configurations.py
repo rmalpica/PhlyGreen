@@ -79,10 +79,8 @@ class RunAll:
                 a["Range"],
                 a["Payload"],
                 ["Traditional"],
-                [None],
-                [None],
-                [None],
-                [None],
+                [1000],
+                [1000],
                 [0],
                 a["Mission Name"],
             )

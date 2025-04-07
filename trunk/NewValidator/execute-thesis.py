@@ -21,9 +21,9 @@ ooi = [
 # # # # # # Run the three example flights that should have the same mtow
 ioi = ["Range", "Payload"]
 configs = [
-    (396, 1960, "Hybrid", 1500, 8000, 0.1, "Mission-FelixFinger"),
-    (1280, 1325, "Hybrid", 1500, 8000, 0.1, "Mission-FelixFinger"),
-    (2361, 547, "Hybrid", 1500, 8000, 0.1, "Mission-FelixFinger"),
+    (396, 1960, "Hybrid", 1500, 6000, 0.1, "Mission-FelixFinger"),
+    (1280, 1325, "Hybrid", 1500, 6000, 0.1, "Mission-FelixFinger"),
+    (2361, 547, "Hybrid", 1500, 6000, 0.1, "Mission-FelixFinger"),
 ]
 r = RunAll("Thesis-Sample")
 r.run_parallel(configs, ooi, ioi)
@@ -34,7 +34,7 @@ configs = {
     "Powerplant": ["Hybrid"],
     "Mission Name": ["Mission-FelixFinger"],
     "Cell Specific Energy": [1500],  # linspace(100, 2000, 2 , dtype=int).tolist(),
-    "Cell Specific Power": [8000],
+    "Cell Specific Power": [6000],
     "Range": [396],  # linspace(100, 2500, 2, dtype=int).tolist(),  # in km
     "Payload": [1960],  # linspace(550, 1960, 11, dtype=int).tolist(),
     "Base Phi": [0.1],  # (linspace(0, 100, 21, dtype=int) / 100.0).tolist(),
@@ -61,7 +61,7 @@ r.run_config(configs, ooi)
 
 
 configs["Cell Specific Energy"] = [1500]
-configs["Cell Specific Power"] = [8000]
+configs["Cell Specific Power"] = [6000]
 configs["Range"] = [396]
 configs["Base Phi"] = (linspace(0, 100, 11, dtype=int) / 100.0).tolist()
 r = RunAll("Thesis-Sweep-Phi")
@@ -73,7 +73,7 @@ configs = {
     "Powerplant": ["Hybrid"],
     "Mission Name": ["Mission-FelixFinger"],
     "Cell Specific Energy": linspace(100, 2000, 50, dtype=int).tolist(),
-    "Cell Specific Power": [8000],
+    "Cell Specific Power": [6000],
     "Range": [396],  # linspace(100, 2500, 2, dtype=int).tolist(),  # in km
     "Payload": [1960],  # linspace(550, 1960, 11, dtype=int).tolist(),
     "Base Phi": (linspace(1, 100, 50, dtype=int) / 100.0).tolist(),
@@ -101,7 +101,7 @@ configs = {
     "Powerplant": ["Hybrid"],
     "Mission Name": ["Mission-FelixFinger"],
     "Cell Specific Energy": [1500],  # linspace(100, 2000, 2 , dtype=int).tolist(),
-    "Cell Specific Power": [8000],
+    "Cell Specific Power": [6000],
     "Range": linspace(100, 2500, 50, dtype=int).tolist(),  # in km
     "Payload": linspace(500, 2500, 40, dtype=int).tolist(),
     "Base Phi": [0.1],  # (linspace(0, 100, 21, dtype=int) / 100.0).tolist(),
