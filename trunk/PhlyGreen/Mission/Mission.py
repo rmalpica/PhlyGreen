@@ -1,8 +1,10 @@
 import numpy as np
 import numbers
 import math
+import warnings
 import PhlyGreen.Utilities.Atmosphere as ISA
 import PhlyGreen.Utilities.Speed as Speed
+import PhlyGreen.Utilities.Units as Units
 import scipy.integrate as integrate
 from .Profile import Profile
 from PhlyGreen.Systems.Battery.Battery import BatteryError
@@ -59,6 +61,13 @@ class Mission:
 
     """Methods """
 
+    def check_PP(self,PP):
+        if PP < 0:
+            warnings.warn(". Setting Propulsive power to 0.", RuntimeWarning)
+            PP = 0
+        return PP
+
+
     def SetInput(self):
 
         self.beta0 = self.aircraft.MissionInput['Beta start']
@@ -78,8 +87,11 @@ class Mission:
         if self.aircraft.Configuration == 'Traditional':     
             return self.TraditionalConfiguration(WTO)
             
-        elif self.aircraft.Configuration == 'Hybrid':     
-            return self.HybridConfiguration(WTO)
+        elif self.aircraft.Configuration == 'Hybrid':    
+            if self.aircraft.battery.BatteryClass == 'II': 
+                return self.HybridConfigurationClassII(WTO)
+            elif self.aircraft.battery.BatteryClass == 'I': 
+                return self.HybridConfigurationClassI(WTO)
 
         else:
             raise Exception("Unknown aircraft configuration: %s" %self.aircraft.Configuration)
@@ -100,7 +112,8 @@ class Mission:
         
         def model(t,y):
             Beta = y[1]
-            PP = PowerPropulsive(Beta,t) 
+            PP = PowerPropulsive(Beta,t)
+            self.check_PP(PP)
             PRatio = self.aircraft.powertrain.Traditional(self.profile.Altitude(t),self.profile.Velocity(t),PP)
             dEdt = PP * PRatio[0]
             dbetadt = - dEdt/(self.ef*self.WTO)
@@ -152,8 +165,89 @@ class Mission:
         return self.Ef[-1]
     
     
+    def HybridConfigurationClassI(self,WTO):
+            
+            self.WTO = WTO
+            
+            def PowerPropulsive(Beta,t):
+
+                PPoWTO = self.aircraft.performance.PoWTO(self.aircraft.DesignWTOoS,Beta,self.profile.PowerExcess(t),1,self.profile.Altitude(t),self.DISA,self.profile.Velocity(t),'TAS')
+            
+                return PPoWTO * WTO
+
+            
+            def model(t,y):
+                
+                Beta = y[2]
+                Ppropulsive = PowerPropulsive(Beta,t)
+                self.check_PP(Ppropulsive)
+                PRatio = self.aircraft.powertrain.Hybrid(self.aircraft.mission.profile.SuppliedPowerRatio(t),self.profile.Altitude(t),self.profile.Velocity(t),Ppropulsive)
+
+                # if self.aircraft.mission.profile.SuppliedPowerRatio(t) > 0.:
+                    # print(self.aircraft.mission.profile.SuppliedPowerRatio(t))
+                    # print(self.profile.Velocity(t))
+                    # print(Ppropulsive)
+                dEFdt = Ppropulsive * PRatio[0]
+                dEBatdt = Ppropulsive * PRatio[5]
+
+                dbetadt = - dEFdt/(self.ef*self.WTO)  
+                return [dEFdt,dEBatdt,dbetadt]
+
+            # Takeoff condition
+            Ppropulsive = self.WTO * self.aircraft.performance.TakeOff(self.aircraft.DesignWTOoS,self.aircraft.constraint.TakeOffConstraints['Beta'], self.aircraft.constraint.TakeOffConstraints['Altitude'], self.aircraft.constraint.TakeOffConstraints['kTO'], self.aircraft.constraint.TakeOffConstraints['sTO'], self.aircraft.constraint.DISA, self.aircraft.constraint.TakeOffConstraints['Speed'], self.aircraft.constraint.TakeOffConstraints['Speed Type'])
+            PRatio = self.aircraft.powertrain.Hybrid(self.aircraft.mission.profile.SPW[0][0],self.aircraft.constraint.TakeOffConstraints['Altitude'],self.aircraft.constraint.TakeOffConstraints['Speed'],Ppropulsive)
+            self.TO_PBat = Ppropulsive * PRatio[5]
+            self.TO_PP = Ppropulsive * PRatio[1]  
+
+            #set/reset max values
+            self.Max_PBat = -1
+            self.Max_PEng = -1
+
+            y0 = [0,0,self.beta0]
+            
+            rtol = 1e-5
+            atol = 1e-7
+            method= 'BDF'
+
+            # integrate all phases together
+            # sol = integrate.solve_ivp(model,[0, self.profile.MissionTime2],y0,method='BDF',rtol=1e-6)
+            # print(sol)
+
+            # integrate sequentially
+            self.integral_solution = []
+            times = np.append(self.profile.Breaks,self.profile.MissionTime2)
+            for i in range(len(times)-1):
+                sol = integrate.solve_ivp(model,[times[i], times[i+1]],y0,method=method,rtol=rtol, dense_output=True)
+                self.integral_solution.append(sol) 
+                y0 = [sol.y[0][-1],sol.y[1][-1],sol.y[2][-1]]
+                if times[i+1] == self.aircraft.mission.profile.BreaksDescent:
+                    self.Ef_mission = sol.y[0][-1]
     
-    def HybridConfiguration(self,WTO):
+            self.Ef = sol.y[0]
+            self.EBat = sol.y[1]
+            self.Beta = sol.y[2]
+    
+            self.Ef_diversion = self.Ef[-1] - self.Ef_mission
+
+            # compute peak Propulsive power along mission
+            times = []
+            beta = []
+            for array in self.integral_solution:
+                times = np.concatenate([times, array.t])
+                beta = np.concatenate([beta, array.y[2]])
+
+            self.MissionTimes = times 
+            
+            PP = np.array([WTO * self.aircraft.performance.PoWTO(self.aircraft.DesignWTOoS,beta[i],self.profile.PowerExcess(times[i]),1,self.profile.Altitude(times[i]),self.DISA,self.profile.Velocity(times[i]),'TAS') for i in range(len(times))])
+            PRatio = np.array([self.aircraft.powertrain.Hybrid(self.aircraft.mission.profile.SuppliedPowerRatio(times[i]),self.profile.Altitude(times[i]),self.profile.Velocity(times[i]),PP[i]) for i in range(len(times))] )
+            self.Max_PEng = np.max(np.multiply(PP,PRatio[:,1]))
+            self.Max_PBat = np.max(np.multiply(PP,PRatio[:,5]))
+
+            return self.Ef[-1], self.EBat[-1]
+        
+
+    
+    def HybridConfigurationClassII(self,WTO):
  
         self.WTO = WTO
 

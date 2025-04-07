@@ -17,10 +17,6 @@ class Battery:
         self._i = None
         self._T = None
         self._cell_max_current = None
-
-        # mass flow rate per cell, in kg/s
-        # this number is pretty arbitrary since air cooling 
-        # such a high poewr battery pack is unrealistic anyway
         self.mdot = 0
 
     @property
@@ -191,12 +187,22 @@ class Battery:
         """
 
         bat_inputs = self.aircraft.BatteryInput
+                # set the battery model class
+        self.BatteryClass = bat_inputs['Class']
+
+        if self.BatteryClass == 'I':
+            self.Ebat = bat_inputs['SpecificEnergy']*3600
+            self.pbat = bat_inputs['SpecificPower']
+            return
+
+        if self.BatteryClass != 'II':
+            raise Exception(f"Unrecognized model class: {self.BatteryClass}")
+
         if bat_inputs['Model'] is None: # Fallback to a default model if none is given
             model = 'Default'
         else:
             model = bat_inputs['Model']
 
-        # input minimum SOC to consider
         self.SOC_min = bat_inputs['Minimum SOC']
 
         # Get all the cell parameters
@@ -282,8 +288,8 @@ class Battery:
 
         self.cell_area_surface = 2*np.pi*self.cell_radius*self.cell_height
         self.module_area_section = (2*self.cell_radius)**2-np.pi*self.cell_radius**2
-        # self.Rith = 7*np.sqrt(self.cell_radius/0.022) # probably need a citation for this one
-        self.Rith = 3.3*(self.cell_radius/0.022)**2
+
+        self.Rith = 3.3*(self.cell_radius/0.022)**2 # probably need a citation for this one
         self.Cth = 700 * self.cell_mass
 
 
@@ -358,7 +364,7 @@ class Battery:
         return I_out * self.P_number
 
     def heatLoss(self, Ta, rho):
-        """WIP Simple differential equation describing a
+        """ Simple differential equation describing a
             simplified lumped element thermal model of the cells
         Receives:
             - Ta   - temperature of the ambient cooling air

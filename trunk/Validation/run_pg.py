@@ -10,6 +10,7 @@ import numpy as np
 import FlightProfiles
 sys.path.insert(0, "../")
 import PhlyGreen as pg
+from FLOPS_input import FLOPS_input
 
 
 class FlightRun:
@@ -81,6 +82,7 @@ class FlightRun:
         constraint      = pg.Constraint.Constraint(None)
         welltowake      = pg.WellToWake.WellToWake(None)
         battery         = pg.Systems.Battery.Battery(None)
+        climateimpact   = pg.ClimateImpact.ClimateImpact(None)
 
         self.myaircraft = pg.Aircraft(
             powertrain,
@@ -92,6 +94,7 @@ class FlightRun:
             constraint,
             welltowake,
             battery,
+            climateimpact,
         )
 
         powertrain.aircraft     = self.myaircraft
@@ -103,6 +106,7 @@ class FlightRun:
         constraint.aircraft     = self.myaircraft
         welltowake.aircraft     = self.myaircraft
         battery.aircraft        = self.myaircraft
+        climateimpact.aircraft  = self.myaircraft
 
         self.myaircraft.ConstraintsInput    = flight_profile["ConstraintsInput"]
         self.myaircraft.AerodynamicsInput   = flight_profile["AerodynamicsInput"]
@@ -116,7 +120,8 @@ class FlightRun:
             "SpecificPower": arg_s_power,
             "SpecificEnergy": arg_s_energy,
             "Minimum SOC": 0.2,
-            "Pack Voltage": arg_pack_v
+            "Pack Voltage": arg_pack_v,
+            "Class":"II"
         }
 
         self.myaircraft.Configuration = arg_arch
@@ -128,6 +133,11 @@ class FlightRun:
         self.myaircraft.mission.SetInput()
         self.myaircraft.aerodynamics.SetInput()
         self.myaircraft.powertrain.SetInput()
+
+        # Initialize Weight Estimator
+        self.myaircraft.weight.Class = 'I'
+        self.myaircraft.FLOPSInput = FLOPS_input
+
         self.myaircraft.weight.SetInput()
         self.myaircraft.battery.SetInput()
 

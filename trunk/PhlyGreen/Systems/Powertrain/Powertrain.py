@@ -2,9 +2,12 @@ import numpy as np
 import numbers
 import PhlyGreen.Utilities.Atmosphere as ISA
 import PhlyGreen.Utilities.Speed as Speed
+import PhlyGreen.Utilities.Units as Units
 import joblib
 import os
 from sklearn.preprocessing import PolynomialFeatures
+from .Propeller import Propeller
+from scipy.optimize import brentq, brenth, ridder, newton
 
 class Powertrain:
     def __init__(self, aircraft):
@@ -55,7 +58,7 @@ class Powertrain:
       
     @EtaPPmodelType.setter
     def EtaPPmodelType(self,value):
-        if value == 'PW127' or value == 'constant':
+        if value == 'PW127' or value == 'constant' or value == 'Hamilton':
             self._EtaPPmodelType = value
         else:
             raise ValueError("Error: %s Eta PP model not implemented. Exiting" %value)
@@ -317,6 +320,9 @@ class Powertrain:
         else: 
             self.EtaPPmodelType = self.aircraft.EnergyInput['Eta Propulsive Model'] 
 
+        if self.EtaPPmodelType == 'Hamilton':
+            self.Propeller = Propeller(self.aircraft)
+            self.Propeller.SetInput()
 
         self.EtaGB = self.aircraft.EnergyInput['Eta Gearbox']
         self.SPowerPT = self.aircraft.EnergyInput['Specific Power Powertrain']
@@ -370,12 +376,55 @@ class Powertrain:
 
         return eta
     
+    def EtaPPHamiltonModel(self,alt,vel,PP):
+        
+        def func(Pgb):
+
+            eta_PP = self.Propeller.ComputePropEfficiency(alt,vel,Pgb)
+            if eta_PP > 1. or eta_PP < 0.4:
+                eta_PP = 0.4
+
+            A, b = self.DefinePowertrainSystem(alt,vel,PP,eta_PP)
+
+            PR = np.linalg.solve(A,b)
+
+            if self.aircraft.Configuration == 'Traditional':
+                PDiff = PR[2] - Pgb/PP
+            elif self.aircraft.Configuration == 'Hybrid': 
+                # if self.aircraft.HybridType == 'Parallel':
+                PDiff = PR[3] - Pgb/PP
+            
+            # print('Pgb/PP: ', PR[3])
+            # print('Pgb solution of the linear system: ', PR[3]*PP)
+            # print('Pgb guess: ', Pgb)
+            # print('Difference: ', PDiff)
+            # print('-'*40)
+            return PDiff
+            
+        try:
+            Pgb_Hamilton = brenth(func,PP, PP/0.4, xtol=0.001)
+        except ValueError as e:
+            if "must have different signs" in str(e):
+                Pgb_Hamilton = 0.4
+            else:
+                raise
+
+        Eta_Hamilton = self.Propeller.ComputePropEfficiency(alt,vel,Pgb_Hamilton) 
+        if Eta_Hamilton > 1. or Eta_Hamilton < 0.4:
+            Eta_Hamilton = 0.4
+
+        # print('Propeller Efficiency: ', Eta_Hamilton)
+
+        return Eta_Hamilton
+    
     def EtaPPmodel(self,alt,vel,pwr):
 
         if self.EtaPPmodelType == 'constant':
             return self.EtaPPconstModel(alt,vel,pwr)
         elif self.EtaPPmodelType == 'PW127':
             return self.EtaPPpw127Model(alt,vel,pwr) 
+        elif self.EtaPPmodelType == 'Hamilton':
+            return self.EtaPPHamiltonModel(alt,vel,pwr)
         else:
             raise Exception("Unknown EtaPPmodelType: %s" %self.EtaPPmodelType)
 
@@ -422,8 +471,7 @@ class Powertrain:
        
     def Traditional(self,alt,vel,pwr):
         
-        #self.ReadInput()
-        
+
         A = np.array([[- self.EtaGTmodel(alt,vel,pwr), 1, 0, 0],
                       [0, - self.EtaGB, 1, 0],
                       [0, 0, - self.EtaPPmodel(alt,vel,pwr), 1],
@@ -435,12 +483,13 @@ class Powertrain:
 
         #Ordine output   Pf/Pp  Pgt/Pp   Pgb/Pp  Pp/Pp 
         return PowerRatio
-    
+
     
     def Hybrid(self,phi,alt,vel,pwr):
         
         # phi = self.aircraft.mission.profile.SuppliedPowerRatio(t)
-        
+        self.phi = phi
+
         if (self.aircraft.HybridType == 'Parallel'):
         
             A = np.array([[- self.EtaGTmodel(alt,vel,pwr), 1, 0, 0, 0, 0, 0],
@@ -463,7 +512,7 @@ class Powertrain:
                       [0, 0, 0, -self.EtaPM, 1, -self.EtaPM, 0, 0],
                       [0, 0, 1, 0,  - self.EtaEM2, 0, 0, 0],
                       [0, 0, - self.EtaGB, 0, 0, 0, 1, 0],
-                      [0, 0, 0, 0, 0, 0, - self.EtaPP, 1],
+                      [0, 0, 0, 0, 0, 0, - self.EtaPPmodel(alt,vel,pwr), 1],
                       [phi, 0, 0, 0, 0, phi - 1, 0, 0],
                       [0, 0, 0, 0, 0, 0, 0, 1]])
        
@@ -494,6 +543,52 @@ class Powertrain:
     # #Ordine output   Pf/Pp  Pgt/Pp   Pgb/Pp  Ps1/Pp  Pe1/Pp   Pbat/Pp    Pp1/Pp 
     #     return PowerRatio
     
+
+    def DefinePowertrainSystem(self,alt,vel,PP,eta_PP):
+
+
+        if self.aircraft.Configuration == 'Traditional':
+            A = np.array([[- self.EtaGTmodel(alt,vel,PP), 1, 0, 0],
+                      [0, - self.EtaGB, 1, 0],
+                      [0, 0, - eta_PP, 1],
+                      [0, 0, 0, 1]])
+       
+            b = np.array([0, 0, 0, 1])
+
+        elif self.aircraft.Configuration == 'Hybrid':
+
+            if (self.aircraft.HybridType == 'Parallel'):
+            
+                A = np.array([[- self.EtaGTmodel(alt,vel,PP), 1, 0, 0, 0, 0, 0],
+                        [0, -self.EtaGB, -self.EtaGB, 1, 0, 0, 0],
+                        [0, 0, 0, 0, 1, -self.EtaPM, 0],
+                        [0, 0, 1, 0, - self.EtaEM, 0, 0],
+                        [0, 0, 0, - eta_PP, 0, 0, 1],
+                        [self.phi, 0, 0, 0, 0, self.phi - 1, 0],
+                        [0, 0, 0, 0, 0, 0, 1]])
+        
+                b = np.array([0, 0, 0, 0, 0, 0, 1])
+                
+                #Ordine output   Pf/Pp  Pgt/Pp   Pgb/Pp  Ps1/Pp  Pe1/Pp   Pbat/Pp    Pp1/Pp 
+
+            
+            elif (self.aircraft.HybridType == 'Serial'):
+                            
+                A = np.array([[- self.EtaGT, 1, 0, 0, 0, 0, 0, 0],
+                        [0, - self.EtaEM1, 0, 1, 0, 0, 0, 0],
+                        [0, 0, 0, -self.EtaPM, 1, -self.EtaPM, 0, 0],
+                        [0, 0, 1, 0,  - self.EtaEM2, 0, 0, 0],
+                        [0, 0, - self.EtaGB, 0, 0, 0, 1, 0],
+                        [0, 0, 0, 0, 0, 0, - eta_PP, 1],
+                        [self.phi, 0, 0, 0, 0, self.phi - 1, 0, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 1]])
+        
+                b = np.array([0, 0, 0, 0, 0, 0, 0, 1])
+
+        return A,b
+
+
+
     def WeightPowertrain(self,WTO):
         
         if self.aircraft.Configuration == 'Traditional':

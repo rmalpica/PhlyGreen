@@ -1,5 +1,5 @@
 class Aircraft:
-    def __init__(self, powertrain, structures, aerodynamics, performance, mission, weight, constraint, welltowake, battery):
+    def __init__(self, powertrain, structures, aerodynamics, performance, mission, weight, constraint, welltowake, battery, climateimpact):
         #subsystems
         self.powertrain = powertrain
         self.structures = structures
@@ -10,6 +10,7 @@ class Aircraft:
         self.constraint = constraint
         self.welltowake = welltowake
         self.battery = battery
+        self.climateimpact = climateimpact
         #input dictionaries
         self.AerodynamicsInput = None 
         self.ConstraintsInput = None 
@@ -20,6 +21,8 @@ class Aircraft:
         self.DiversionStages = None 
         self.LoiterStages = None
         self.WellToTankInput = None
+        self.FLOPSInput = None
+        self.PropellerInput = None
         #aircraft design
         self.DesignPW = None
         self.DesignWTOoS = None
@@ -49,7 +52,7 @@ class Aircraft:
 
     """ Methods """
 
-    def ReadInput(self,AerodynamicsInput,ConstraintsInput,MissionInput,EnergyInput,MissionStages,DiversionStages, LoiterStages=None, WellToTankInput=None):
+    def ReadInput(self,AerodynamicsInput,ConstraintsInput,MissionInput,EnergyInput,MissionStages,DiversionStages, LoiterStages=None, WellToTankInput=None, CellInput=None):
         
         self.AerodynamicsInput = AerodynamicsInput
         self.ConstraintsInput = ConstraintsInput
@@ -82,12 +85,18 @@ class Aircraft:
         # Initialize Weight Estimator
         self.weight.SetInput()
 
+        if CellInput is not None:
+            
+            self.CellInput = CellInput
+            self.battery.SetInput()
+
     def DesignAircraft(self,AerodynamicsInput,ConstraintsInput, MissionInput, EnergyInput, MissionStages, DiversionStages, **kwargs):
         WellToTankInput = kwargs.get('WellToTankInput', None)
         LoiterStages = kwargs.get('LoiterStages', None)
+        CellInput = kwargs.get('CellInput', None)
         PrintOutput = kwargs.get('PrintOutput', False)
         # print("Initializing aircraft...")
-        self.ReadInput(AerodynamicsInput,ConstraintsInput, MissionInput, EnergyInput, MissionStages, DiversionStages,LoiterStages, WellToTankInput)
+        self.ReadInput(AerodynamicsInput,ConstraintsInput, MissionInput, EnergyInput, MissionStages, DiversionStages,LoiterStages, WellToTankInput,CellInput)
 
         if PrintOutput: print("Finding Design Point...")
         self.constraint.FindDesignPoint()
