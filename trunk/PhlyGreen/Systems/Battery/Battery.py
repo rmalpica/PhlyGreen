@@ -199,7 +199,7 @@ class Battery:
             raise Exception(f"Unrecognized model class: {self.BatteryClass}")
 
         if bat_inputs['Model'] is None: # Fallback to a default model if none is given
-            model = 'Default'
+            model = 'Finger-Cell-Thermal'
         else:
             model = bat_inputs['Model']
 
@@ -383,8 +383,11 @@ class Battery:
         h = (  # taken from http://dx.doi.org/10.1016/j.jpowsour.2013.10.052
                 30* ( ((self.mdot) / (self.module_area_section * rho)) / 5) ** 0.8
             )
-        
-        Rth = 1 / (h * self.cell_area_surface ) + Rith
-        dTdt = P / Cth + (Ta - T) / (Rth * Cth)
+
+        if h == 0:  # avoid division by 0
+            dTdt = P / Cth
+        else:
+            Rth = 1 / (h * self.cell_area_surface) + Rith
+            dTdt = P / Cth + (Ta - T) / (Rth * Cth)
         # print(f"h: {h}   R:{Rth}     surface:{self.cell_area_surface}    crosssec:{self.module_area_section}")
         return dTdt, P

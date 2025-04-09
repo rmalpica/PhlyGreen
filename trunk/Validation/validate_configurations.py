@@ -148,6 +148,9 @@ class RunAll:
         """
         Execute a single flight
         """
+        if a["Base Phi"][0] == 0 and a["Powerplant"][0] == "Hybrid":
+            print("WARNING: ZERO PHI DETECTED IN HYBRID CONFIGURATION, CHANGING TO TRADITIONAL")
+            a["Powerplant"][0] = "Traditional"
         # convert to tuple
         config = (
                 a["Range"][0],
