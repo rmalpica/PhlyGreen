@@ -337,7 +337,7 @@ class Mission:
             # integrate the rest of the flight sequentially
             np.seterr(over="raise")
             times = np.append(self.profile.Breaks,self.profile.MissionTime2)
-            rtol = 1e-6
+            rtol = 1e-4
             method= 'BDF'
             self.integral_solution = []
             self.plottingVars=[]
@@ -396,90 +396,81 @@ class Mission:
 
             return True
 
+        def find_P_nr(n_guess, wto_ratio):
 
-        # as the brent search converges the binary search algorithm needs to do more pointless iterations to reach the same value
-        # the old method used a simplified model to initialize a first guess of the p number
-        # this proved slow and cumbersome, so i came up with a new method that uses the previous result to initialize the search
-        # it grabs the n value from the previous iteration and tries to find an nmax and nmin from there
-        optimal = False
-        nmin_is_bounded = False #used to prevent double checking the boundaries
-        nmax_is_bounded = False
-        try:
-            #ratio = 1  # use this line to disable linear scaling of the P_n for debug purposes
-            ratio = self.WTO / self.last_weight
-            n = round(self.optimal_n * ratio)
- 
-            if not evaluate_P_nr(n - 1): # check that the value before the initial guess is invalid
-                n_min = n-1
-                if evaluate_P_nr(n): # check that the guess is valid
-                    n_max=n
-                    optimal = True
+            # Flags used to prevent double checking the boundaries
+            nmin_is_bounded = False
+            nmax_is_bounded = False
+
+            if wto_ratio is not None:
+
+                # GAP SCALING METHOD
+                n = round(n_guess * wto_ratio)
+                # check that the value below the initial guess is invalid
+                if not evaluate_P_nr(n - 1):
+                    n_min = n - 1
+                    if evaluate_P_nr(n):  # check that the guess is valid
+                        return n  # Optimal found
+                    else:
+                        n_min = n  # if the guess is invalid, its the new minimum
+                        n_max = max(n_min + 1, round((n_guess + 1) * wto_ratio))
+                        nmin_is_bounded = True # nmin is a known invalid value, no need to reevaluate it
                 else:
-                    nmin_is_bounded = True
-                    n_min = n #if the guess is invalid, its the new minimum
-                    n_max = max(n_min+1,round((self.optimal_n + 1) * ratio)) #scale the guess range by the wto ratio
+                    n_max = n - 1
+                    n_min = min(n_max - 1, round((n_guess- 1) * wto_ratio))
+                    nmax_is_bounded = True # nmax is a known valid value, no need to reevaluate it
+                
+                """# REGULAR SCALING METHOD
+                n_max =  round((n_guess + 1) * wto_ratio)
+                n_min = math.floor(n_max/2)"""
 
-            else:
-                nmax_is_bounded = True
-                n_max = n-1 #if the value before the guess is valid its the new max
-                n_min = min(n_max - 1, round((self.optimal_n - 1) * ratio))  #scale the guess range by the wto ratio
+            else: # If its the first iteration theres no prev weight to scale off of yet
+                n_max = n_guess
+                n_min = math.floor(n_max / 2)
 
+            # If its the weight scaling fails (or is the first iteration), boundaries
+            # need to be calculated with the old doubling and halving method
+            if not nmin_is_bounded:
+                while evaluate_P_nr(n_min):
+                    n_max = n_min  # if the n_min guess is too large it can be the new n_max to save iterations since it has already been tried
+                    n_min = math.floor(n_min / 2)  # halve n_min until it fails
+                    nmax_is_bounded = True # nmax is set to a known valid value and does not need to be reevaluated
 
-        except TypeError:# as err:
-            # print('**********************************')
-            # print(f'optimal not found because of:\n {err}')
-            n_max = 128  # hardcoding a value that is anecdotally known to be ok for a first guess
-            n_min = n_max-1
+            # raise the max p number until its valid
+            if not nmax_is_bounded:
+                while not evaluate_P_nr(n_max):
+                    n_min = n_max  # if the nmax guess is too small it can be the new nmin to save iterations since it has already been tried
+                    n_max = n_max * 2  # double n_max until it works
 
-        if not nmin_is_bounded and not optimal:
-            while evaluate_P_nr(n_min):
-                # print(f"22 - nmax {n_max}; nmin {n_min}")
-                # print("n_min overestimated:",n_min, "; halving.")
-                nmax_is_bounded = True
-                n_max = n_min   #if the n_min guess is too large it can be the new n_max to save iterations since it has already been tried
-                n_min = math.floor(n_min/2) #halve n_min until it fails
-            nmin_is_bounded = True
+            # start from the middle
+            n = math.ceil((n_max + n_min) / 2)
 
-        #raise the max p number until its valid
-        if not nmax_is_bounded and not optimal:
-            while not evaluate_P_nr(n_max):
-                # print(f"333 - nmax {n_max}; nmin {n_min}")
-                #print(evaluate_P_nr(n_max))
-                # print("n_max underestimated:",n_max, "; doubling.")
-                n_min = n_max   #if the nmax guess is too small it can be the new nmin to save iterations since it has already been tried
-                n_max = n_max*2 #double n_max until it works
+            # find optimal P number using bisection search
+            while (n_max - n_min)>1:
+                valid_result = evaluate_P_nr(n)
 
-        # if nmax and nmin are just 1 apart then the optimal n is nmax
-        # all checks can be skipped and we jump right into evaluating n to configure the flight
-        # print(f"nmax ({n_max}) validity is {all(evaluate_P_nr(n_max))} and nmin ({n_min}) validity is {all(evaluate_P_nr(n_min))}") # debug only
-        if n_max - n_min == 1:
-            optimal = True
-            n = n_max
-            self.optimal_n = n
+                if valid_result:  # n is too big
+                    n_max = n
+                    n = math.floor((n_max + n_min) / 2)
 
-        n=math.ceil((n_max+n_min)/2) #start from the middle to make it one iteration shorter
-        #j=0
-        # print(f"4444 - nmax {n_max}; n {n}; nmin {n_min}")
-        #find optimal P number using bisection search
-        while not optimal:
-            # print(f"nmax {n_max}; n {n}; nmin {n_min}")
-            #j=j+1
-            valid_result = evaluate_P_nr(n)
-            # print("[iter",j,"] [P",n,"] [min",n_min,"] [max",n_max,"] valid?",valid_result) #uncomment for debug
+                else:  # n is too small
+                    n_min = n
+                    n = math.ceil((n_max + n_min) / 2)
+            # print(f"nmax ({n_max}) validity is {all(evaluate_P_nr(n_max))} and nmin ({n_min}) validity is {all(evaluate_P_nr(n_min))}") # debug only
+            return n_max
 
-            if valid_result and (n-n_min)==1: #n is optimal
-                # print("Optimal P: ",n)
-                self.optimal_n = n
-                optimal = True
-
-            elif valid_result:                #n is too big
-                n_max=n
-                n=math.floor((n_max+n_min)/2)
-
-            elif not valid_result :           #n is too small
-                n_min=n
-                n=math.ceil((n_max+n_min)/2)
+        if self.last_weight is None:
+            ratio = None
+        else:
+            ratio = self.WTO/self.last_weight
         
+        if self.optimal_n is None:
+            P_n_guess = 128 # Hardcoded first guess
+        else:
+            P_n_guess = self.optimal_n
+        
+        self.optimal_n = find_P_nr(P_n_guess,ratio)
+
         # save weight across iterations
         self.last_weight = self.WTO
         # """
