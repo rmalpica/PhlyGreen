@@ -292,7 +292,6 @@ class Mission:
 
 
         def evaluate_P_nr(P_number):
-            
             # print(f"pnumber {P_number}")
             self.P_n_arr.append(P_number)
             #no maths needed to know nothing will work without a battery
@@ -300,11 +299,27 @@ class Mission:
                 return False
 
             self.aircraft.battery.Configure(P_number)
+            
+            # Takeoff condition, calculated before anything else as
+            # it does not depend on the battery size, just the aircraft
+            #calculates the total propulsive power required for takeoff
+            Ppropulsive_TO = self.WTO * self.aircraft.performance.TakeOff(self.aircraft.DesignWTOoS,
+                                                                        self.aircraft.constraint.TakeOffConstraints['Beta'],
+                                                                        self.aircraft.constraint.TakeOffConstraints['Altitude'],
+                                                                        self.aircraft.constraint.TakeOffConstraints['kTO'],
+                                                                        self.aircraft.constraint.TakeOffConstraints['sTO'],
+                                                                        self.aircraft.constraint.DISA,
+                                                                        self.aircraft.constraint.TakeOffConstraints['Speed'],
+                                                                        self.aircraft.constraint.TakeOffConstraints['Speed Type'])
+            #hybrid power ratio for takeoff
+            PRatio = self.aircraft.powertrain.Hybrid(self.aircraft.mission.profile.SPW[0][0],
+                                                    self.aircraft.constraint.TakeOffConstraints['Altitude'],
+                                                    self.aircraft.constraint.TakeOffConstraints['Speed'],
+                                                    Ppropulsive_TO)
 
-            # short verification step to validate the takeoff power
-            # uses it = 0 and constant T.  Takeoff is considered to
-            # be too short to matter, and there's no good model for
-            # the takeoff dynamics anyway.
+            self.TO_PP = Ppropulsive_TO * PRatio[1]   #combustion engine power during takeoff
+            self.TO_PBat = Ppropulsive_TO * PRatio[5] #electric motor power during takeoff
+
             try:
                 #print(f"P num during try: {P_number}")
                 self.aircraft.battery.T = 300 # battery T TODO FIX THIS
@@ -318,8 +333,8 @@ class Mission:
             except Exception as err:
                 print(f"Unexpected error: {err}")
                 raise
-            
-            # integrate sequentially
+
+            # integrate the rest of the flight sequentially
             np.seterr(over="raise")
             times = np.append(self.profile.Breaks,self.profile.MissionTime2)
             rtol = 1e-6
@@ -372,8 +387,8 @@ class Mission:
                             ],
                         )
                     except BatteryError:
-                        # Print warning and just keep saving the data
-                        print("WARNING: evaluate_P_number integration rtol may be too small, consider increasing it")
+                        # Print warning and just keep saving the data, this sometimes happens if rtol is too loose
+                        print("WARNING: evaluate_P_number integration rtol may be too loose, consider lowering it")
                 self.Ef = sol.y[0]
                 self.EBat = sol.y[1]
                 self.Beta = sol.y[2]
@@ -381,27 +396,6 @@ class Mission:
 
             return True
 
-
-        # Takeoff condition, calculated before anything else as
-        # it does not depend on the battery size, just the aircraft
-
-        #calculates the total propulsive power required for takeoff
-        Ppropulsive_TO = self.WTO * self.aircraft.performance.TakeOff(self.aircraft.DesignWTOoS,
-                                                                      self.aircraft.constraint.TakeOffConstraints['Beta'],
-                                                                      self.aircraft.constraint.TakeOffConstraints['Altitude'],
-                                                                      self.aircraft.constraint.TakeOffConstraints['kTO'],
-                                                                      self.aircraft.constraint.TakeOffConstraints['sTO'],
-                                                                      self.aircraft.constraint.DISA,
-                                                                      self.aircraft.constraint.TakeOffConstraints['Speed'],
-                                                                      self.aircraft.constraint.TakeOffConstraints['Speed Type'])
-        #hybrid power ratio for takeoff
-        PRatio = self.aircraft.powertrain.Hybrid(self.aircraft.mission.profile.SPW[0][0],
-                                                 self.aircraft.constraint.TakeOffConstraints['Altitude'],
-                                                 self.aircraft.constraint.TakeOffConstraints['Speed'],
-                                                 Ppropulsive_TO)
-
-        self.TO_PP = Ppropulsive_TO * PRatio[1]   #combustion engine power during takeoff
-        self.TO_PBat = Ppropulsive_TO * PRatio[5] #electric motor power during takeoff
 
         # as the brent search converges the binary search algorithm needs to do more pointless iterations to reach the same value
         # the old method used a simplified model to initialize a first guess of the p number
