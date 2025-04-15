@@ -387,5 +387,5 @@ class FlightRun:
         out.update(self.outputs_max)
         out.update(self.outputs_min)
         out["Total Iterations"] = self.perf_profiling["Total Iterations"]
-
+        out["Total Evaluations"] = sum(self.perf_profiling["P_n Evaluations per iteration"])
         return out

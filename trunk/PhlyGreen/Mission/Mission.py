@@ -408,31 +408,46 @@ class Mission:
         # this proved slow and cumbersome, so i came up with a new method that uses the previous result to initialize the search
         # it grabs the n value from the previous iteration and tries to find an nmax and nmin from there
         optimal = False
-
+        nmin_is_bounded = False #used to prevent double checking the boundaries
+        nmax_is_bounded = False
         try:
-            #ratio = 1 # use this line to disable linear scaling of the P_n for debug purposes
-            ratio = self.WTO/self.last_weight
-            n_max = round(self.optimal_n*ratio)
-            n_min = n_max-1
-            # print('**********************************')
-            # print(f'using {n_max} and {n_min} from optimal {self.optimal_n} at ratio {ratio}')
+            #ratio = 1  # use this line to disable linear scaling of the P_n for debug purposes
+            ratio = self.WTO / self.last_weight
+            n = round(self.optimal_n * ratio)
+ 
+            if not evaluate_P_nr(n - 1): # check that the value before the initial guess is invalid
+                n_min = n-1
+                if evaluate_P_nr(n): # check that the guess is valid
+                    n_max=n
+                    optimal = True
+                else:
+                    nmin_is_bounded = True
+                    n_min = n #if the guess is invalid, its the new minimum
+                    n_max = max(n_min+1,round((self.optimal_n + 1) * ratio)) #scale the guess range by the wto ratio
+
+            else:
+                nmax_is_bounded = True
+                n_max = n-1 #if the value before the guess is valid its the new max
+                n_min = min(n_max - 1, round((self.optimal_n - 1) * ratio))  #scale the guess range by the wto ratio
+
+
         except TypeError:# as err:
             # print('**********************************')
             # print(f'optimal not found because of:\n {err}')
             n_max = 128  # hardcoding a value that is anecdotally known to be ok for a first guess
             n_min = n_max-1
-        # print(f"1 - nmax {n_max}; nmin {n_min}")
-        #lower the min p number until its valid
-        nmin_ran=False
-        while evaluate_P_nr(n_min):
-            # print(f"22 - nmax {n_max}; nmin {n_min}")
-            # print("n_min overestimated:",n_min, "; halving.")
-            nmin_ran=True
-            n_max = n_min   #if the n_min guess is too large it can be the new n_max to save iterations since it has already been tried
-            n_min = math.floor(n_min/2) #halve n_min until it fails
+
+        if not nmin_is_bounded and not optimal:
+            while evaluate_P_nr(n_min):
+                # print(f"22 - nmax {n_max}; nmin {n_min}")
+                # print("n_min overestimated:",n_min, "; halving.")
+                nmax_is_bounded = True
+                n_max = n_min   #if the n_min guess is too large it can be the new n_max to save iterations since it has already been tried
+                n_min = math.floor(n_min/2) #halve n_min until it fails
+            nmin_is_bounded = True
 
         #raise the max p number until its valid
-        if not nmin_ran:
+        if not nmax_is_bounded and not optimal:
             while not evaluate_P_nr(n_max):
                 # print(f"333 - nmax {n_max}; nmin {n_min}")
                 #print(evaluate_P_nr(n_max))
@@ -446,10 +461,6 @@ class Mission:
         if n_max - n_min == 1:
             optimal = True
             n = n_max
-            #valid_result = evaluate_P_nr(n)
-            #if not valid_result:
-            #    raise Exception("Impossible n value somehow?")
-            # print("Optimal P: ",n)
             self.optimal_n = n
 
         n=math.ceil((n_max+n_min)/2) #start from the middle to make it one iteration shorter
