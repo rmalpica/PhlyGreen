@@ -299,10 +299,11 @@ class Mission:
             return [dEFdt, dEdt_bat, dbetadt, self.aircraft.battery.i, dTdt]
 
         def evaluate_P_nr(P_number):
-            # print(f"pnumber {P_number}")
+            print(f"evaluating pnumber {P_number}")
             self.P_n_arr.append(P_number)
             # no maths needed to know nothing will work without a battery
             if P_number == 0:
+                print(f"{P_number} is False")
                 return False
 
             self.aircraft.battery.Configure(P_number)
@@ -342,6 +343,7 @@ class Mission:
             except BatteryError as err:
                 # print(f"P num at error: {P_number}")
                 # print(err)
+                print(f"{P_number} is False")
                 return False
             except Exception as err:
                 print(f"Unexpected error: {err}")
@@ -365,6 +367,7 @@ class Mission:
                 except BatteryError as err:
                     # print(f"P num at error: {self.aircraft.battery.P_number}")
                     # print(err)
+                    print(f"{P_number} is False")
                     return False
                 except Exception as e:
                     print(f"Unexpected error:\n{e}")
@@ -409,35 +412,44 @@ class Mission:
                 self.EBat = sol.y[1]
                 self.Beta = sol.y[2]
                 y0 = [sol.y[0][-1], sol.y[1][-1], sol.y[2][-1], sol.y[3][-1], sol.y[4][-1]]
-
+            print(f"{P_number} is True")
             return True
 
-        def find_P_nr(n_guess, wto_ratio):
+        def find_P_nr(n_guess, wto_ratio,bypass=True):
             # Flags used to prevent double checking the boundaries
             nmin_is_bounded = False
             nmax_is_bounded = False
-
-            if wto_ratio is not None:
-                n = round(n_guess * wto_ratio)
-                # check that the value below the initial guess is invalid
-                if not evaluate_P_nr(n - 1):
-                    n_min = n - 1
-                    if evaluate_P_nr(n):  # check that the guess is valid
-                        return n  # Optimal found
+            if not bypass: # for debugging
+                if wto_ratio is not None:
+                    n = round(n_guess * wto_ratio)
+                    # check that the value below the initial guess is invalid
+                    if not evaluate_P_nr(n - 1):
+                        n_min = n - 1
+                        if evaluate_P_nr(n):  # check that the guess is valid
+                            print(f"max={n} and min={n_min}")
+                            print(f"Optimal n {n}")
+                            return n  # Optimal found
+                        else:
+                            n_min = n  # if the guess is invalid, its the new minimum
+                            n_max = max(n_min + 1, math.ceil((n_guess + 1) * wto_ratio))
+                            # nmin is a known invalid value, no need to reevaluate it
+                            nmin_is_bounded = True
                     else:
-                        n_min = n  # if the guess is invalid, its the new minimum
-                        n_max = max(n_min + 1, round((n_guess + 1) * wto_ratio))
-                        # nmin is a known invalid value, no need to reevaluate it
-                        nmin_is_bounded = True
-                else:
-                    n_max = n - 1
-                    n_min = min(n_max - 1, round((n_guess - 1) * wto_ratio))
-                    # nmax is a known valid value, no need to reevaluate it
-                    nmax_is_bounded = True
+                        n_max = n - 1
+                        n_min = min(n_max - 1, math.floor((n_guess - 1) * wto_ratio))
+                        # nmax is a known valid value, no need to reevaluate it
+                        nmax_is_bounded = True
 
-            else:  # If its the first iteration theres no prev weight to scale off of yet
-                n_max = n_guess
-                n_min = math.floor(n_max / 2)
+                else:  # If its the first iteration theres no prev weight to scale off of yet
+                    n_max = n_guess
+                    n_min = math.floor(n_max / 2)
+            else:
+                if wto_ratio is not None:
+                    n_max = math.ceil(n_guess*wto_ratio)
+                    n_min = n_max-1
+                else:
+                    n_max = n_guess
+                    n_min = math.floor(n_max / 2)
 
             # If its the weight scaling fails (or is the first iteration), boundaries
             # need to be calculated with the doubling and halving method
@@ -459,18 +471,25 @@ class Mission:
             n = math.ceil((n_max + n_min) / 2)
 
             # find optimal P number using bisection search
-            while (n_max - n_min) > 1:
+            optimal = False
+            while not optimal:
                 valid_result = evaluate_P_nr(n)
 
-                if valid_result:  # n is too big
+                if valid_result and (n - n_min) == 1:
+                    optimal = True
+
+                elif valid_result:  # n is too big
                     n_max = n
                     n = math.floor((n_max + n_min) / 2)
 
                 else:  # n is too small
                     n_min = n
                     n = math.ceil((n_max + n_min) / 2)
-            # print(f"nmax ({n_max}) validity is {all(evaluate_P_nr(n_max))} and nmin ({n_min}) validity is {all(evaluate_P_nr(n_min))}") # debug only
-            return n_max
+
+
+            print(f"max={n_max} and min={n_min}")
+            print(f"Optimal n {n}")
+            return n
 
         if self.last_weight is None:
             ratio = None
@@ -482,7 +501,15 @@ class Mission:
         else:
             P_n_guess = self.optimal_n
 
-        self.optimal_n = find_P_nr(P_n_guess, ratio)
+        alg = "A"
+        if alg == "D":
+            self.optimal_n = find_P_nr(P_n_guess, ratio, bypass=False)  # algorithm D
+        if alg == "C":
+            self.optimal_n = find_P_nr(P_n_guess, ratio)  # algorithm C
+        if alg == "B":
+            self.optimal_n = find_P_nr(P_n_guess, 1)  # algorithm B
+        if alg == "A":
+            self.optimal_n = find_P_nr(128, None) # algorithm A
 
         # save weight across iterations
         self.last_weight = self.WTO

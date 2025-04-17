@@ -35,10 +35,11 @@ def single_plot(x_data, y_data, x_label, y_label, directory, title=None, style="
     # retrieved and easily replotted in a prettier way if desired
     filename_json = os.path.join(directory, title + ".json")
     dictjson = {
+        "class": "Class II",
         "type": style,
         "title": title,
-        "x_units": "()",
-        "y_units": "()",
+        "x_units": "",
+        "y_units": "",
         "x_label": x_label,
         "y_label": y_label,
         "x_scale": 1,
@@ -74,7 +75,7 @@ def perf_profile(data, directory):
         "Iteration",
         "Evaluations per iteration",
         directory,
-        title="Number of P_n evaluations per iteration of the Brent algorithm",
+        title="eval_per_iter",
         style="bar",
     )
     for i, p in enumerate(ppn):
@@ -84,7 +85,7 @@ def perf_profile(data, directory):
             "Evaluation",
             "Evaluated P_n",
             directory,
-            title=f"P_n values evaluated during iteration {i + 1} until the optimum was found",
+            title=f"P_at_iter_{i + 1}",
             style="bar",
         )
 
@@ -168,11 +169,12 @@ def heatmap(dictlist, x, y, z, directory, title=None):
     filename_json = os.path.join(directory, title + ".json")
     dfout = df[[x, y, z]]
     dictjson = {
+        "class": "Class II",
         "type": "heatmap",
         "title": title,
-        "x_units": "()",
-        "y_units": "()",
-        "z_units": "()",
+        "x_units": "",
+        "y_units": "",
+        "z_units": "",
         "x_scale": 1,
         "y_scale": 1,
         "z_scale": 1,
@@ -185,6 +187,7 @@ def heatmap(dictlist, x, y, z, directory, title=None):
         "x": x,
         "y": y,
         "z": z,
+        "z average":dfout[z].mean(),
         "data": dfout.to_dict("records"),
     }
     ex.dump_json(dictjson, filename_json)
