@@ -1,7 +1,7 @@
 from validate_configurations import RunAll
 from numpy import linspace
-program = "-DO228-class2new"
-#program = "-DO228-class1old"
+# program = "class2new"
+program = "-DO228-class1old"
 
 ooi = [
     "Fuel Mass",

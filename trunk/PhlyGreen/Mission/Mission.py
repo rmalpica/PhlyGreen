@@ -352,7 +352,7 @@ class Mission:
             # integrate the rest of the flight sequentially
             np.seterr(over="raise")
             times = np.append(self.profile.Breaks, self.profile.MissionTime2)
-            rtol = 1e-4
+            rtol = 1e-6
             method = "BDF"
             self.integral_solution = []
             self.plottingVars = []
