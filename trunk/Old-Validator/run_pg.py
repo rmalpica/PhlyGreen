@@ -28,10 +28,10 @@ class FlightRun:
         self.arg_str = f"{arg_range}-{arg_payload}-{arg_arch}-{arg_s_energy}-{arg_s_power}-{arg_phi}-{arg_mission}"
         
         if arg_s_energy is None:
-            arg_s_energy=6000
+            arg_s_energy=1500
 
         if arg_s_power is None:
-            arg_s_power = arg_s_energy * 8/1.5
+            arg_s_power = arg_s_energy * 6/1.5
             
 
         # load the flight profile
@@ -151,6 +151,8 @@ class FlightRun:
         brent algorithm can find a solution
         """
         self.myaircraft.constraint.FindDesignPoint()
+        self.myaircraft.DesignWTOoS=1957
+        self.myaircraft.DesignPW = 18.65
         try:
             self.myaircraft.weight.WeightEstimation()
             return True

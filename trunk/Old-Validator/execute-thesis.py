@@ -60,7 +60,7 @@ configs = [
     (396, 1960, "Hybrid", "Finger-Cell-Thermal", 1500, 6000, 800, 0.1, "Mission-FelixFinger"),
     (1280, 1325, "Hybrid", "Finger-Cell-Thermal", 1500, 6000, 800, 0.1, "Mission-FelixFinger"),
     (2361, 547, "Hybrid", "Finger-Cell-Thermal", 1500, 6000, 800, 0.1, "Mission-FelixFinger"),
-        (396, 1960, "Hybrid", "Finger-Cell-Thermal", 1500, 6000, 800, 1, "Mission-FelixFinger"),
+    (396, 1960, "Hybrid", "Finger-Cell-Thermal", 1500, 6000, 800, 1, "Mission-FelixFinger"),
     (1280, 1325, "Hybrid", "Finger-Cell-Thermal", 1500, 6000, 800, 1, "Mission-FelixFinger"),
     (2361, 547, "Hybrid", "Finger-Cell-Thermal", 1500, 6000, 800, 1, "Mission-FelixFinger"),
     (396, 1960, "Traditional", "Finger-Cell-Thermal", 1500, 6000, 800, 0, "Mission-FelixFinger"),
@@ -70,7 +70,7 @@ configs = [
 r = RunAll("HybTradEle-sample"+program)
 r.run_parallel(configs, ooi, ioi)
 
-# # # # # Traditional vs hybrid sweeps
+# # # # # # Traditional vs hybrid sweeps
 
 configs = {
     "Powerplant": ["Hybrid"],

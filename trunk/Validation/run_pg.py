@@ -29,7 +29,7 @@ class FlightRun:
 
         # load the flight profile
         flight_profile = FlightProfiles.MissionParameters(
-            arg_range, arg_payload, arg_arch, arg_cell, arg_phi, arg_mission
+            arg_range, arg_payload, arg_arch, arg_phi, arg_mission
         )
         # write all inputs to a dictionary for posteriority right away
         self.inputs = {
@@ -147,6 +147,8 @@ class FlightRun:
         brent algorithm can find a solution
         """
         self.myaircraft.constraint.FindDesignPoint()
+        self.myaircraft.DesignWTOoS=1957
+        self.myaircraft.DesignPW = 18.65
         try:
             self.myaircraft.weight.WeightEstimation()
             return True

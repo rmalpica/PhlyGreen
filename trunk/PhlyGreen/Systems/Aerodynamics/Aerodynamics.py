@@ -83,6 +83,8 @@ class Aerodynamics:
             return Cd
         elif self.polar == 'ATR42':
             return 0.021476 + 0.03037383 * Cl**2
+        elif self.polar == 'DO228':
+            return 0.029 + self.k1() * Cl**2
         else:
             raise ValueError("Polar model unset")
         
