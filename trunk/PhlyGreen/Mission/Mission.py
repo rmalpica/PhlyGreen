@@ -28,6 +28,7 @@ class Mission:
         self.Ef = None
         self.EBat = None
         self.Beta = None
+        self.startT = 300
 
         self.Past_P_n=[]
         self.P_n_arr =[]
@@ -334,7 +335,7 @@ class Mission:
 
             try:
                 # print(f"P num during try: {P_number}")
-                self.aircraft.battery.T = 300  # battery T TODO FIX THIS
+                self.aircraft.battery.T = self.startT  # battery T TODO FIX THIS
                 self.aircraft.battery.it = 0
                 self.aircraft.battery.i = self.aircraft.battery.Power_2_current(
                     self.TO_PBat
@@ -357,7 +358,7 @@ class Mission:
             self.integral_solution = []
             self.plottingVars = []
             # initial fuel energy, battery energy, mass fraction, spent charge, and battery T
-            y0 = [0, 0, self.beta0, 0, 300]
+            y0 = [0, 0, self.beta0, 0, self.startT]
             for i in range(len(times) - 1):
                 try:
                     sol = integrate.solve_ivp(
@@ -501,15 +502,16 @@ class Mission:
         else:
             P_n_guess = self.optimal_n
 
-        alg = "A"
-        if alg == "D":
-            self.optimal_n = find_P_nr(P_n_guess, ratio, bypass=False)  # algorithm D
-        if alg == "C":
-            self.optimal_n = find_P_nr(P_n_guess, ratio)  # algorithm C
-        if alg == "B":
-            self.optimal_n = find_P_nr(P_n_guess, 1)  # algorithm B
-        if alg == "A":
-            self.optimal_n = find_P_nr(128, None) # algorithm A
+        self.optimal_n = find_P_nr(P_n_guess, ratio, bypass=False)  # algorithm D
+        # alg = "D"
+        # if alg == "D":
+        #     self.optimal_n = find_P_nr(P_n_guess, ratio, bypass=False)  # algorithm D
+        # if alg == "C":
+        #     self.optimal_n = find_P_nr(P_n_guess, ratio)  # algorithm C
+        # if alg == "B":
+        #     self.optimal_n = find_P_nr(P_n_guess, 1)  # algorithm B
+        # if alg == "A":
+        #     self.optimal_n = find_P_nr(128, None) # algorithm A
 
         # save weight across iterations
         self.last_weight = self.WTO
@@ -517,5 +519,21 @@ class Mission:
         # Save history for performance profiling
         self.Past_P_n.append(self.P_n_arr)
         self.P_n_arr = []
+
+
+        # compute peak Propulsive power along mission
+        times = []
+        beta = []
+        for array in self.integral_solution:
+            times = np.concatenate([times, array.t])
+            beta = np.concatenate([beta, array.y[2]])
+
+        self.MissionTimes = times 
+        
+        PP = np.array([WTO * self.aircraft.performance.PoWTO(self.aircraft.DesignWTOoS,beta[i],self.profile.PowerExcess(times[i]),1,self.profile.Altitude(times[i]),self.DISA,self.profile.Velocity(times[i]),'TAS') for i in range(len(times))])
+        PRatio = np.array([self.aircraft.powertrain.Hybrid(self.aircraft.mission.profile.SuppliedPowerRatio(times[i]),self.profile.Altitude(times[i]),self.profile.Velocity(times[i]),PP[i]) for i in range(len(times))] )
+        self.Max_PEng = np.max(np.multiply(PP,PRatio[:,1]))
+        self.Max_PBat = np.max(np.multiply(PP,PRatio[:,5]))
+
 
         return self.Ef[-1], self.EBat[-1]

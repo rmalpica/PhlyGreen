@@ -11,7 +11,7 @@ class Battery:
     def __init__(self, aircraft):
         self.aircraft = aircraft
 
-        self.pack_Vmax = 740
+        self.pack_Vmax = 800
         self._SOC_min = None
         self._it = 0
         self._i = None
@@ -83,7 +83,8 @@ class Battery:
     def cell_max_current(self, value):
         self._cell_max_current = value
         v = self._voltageModel(0, value)
-        if not self.cell_Vmax >= v >= self.cell_Vmin:
+        # if not self.cell_Vmax >= v >= self.cell_Vmin:
+        if not v >= self.cell_Vmin:
             raise ValueError(
                 f"Reevaluate the max cell current of the chosen model.({value}A)\n",
                 f"The input value results in an invalid voltage: {v}V\n",
@@ -106,10 +107,10 @@ class Battery:
     @property
     def Vout(self) -> float:
         _value = self.cell_Vout * self.S_number
-        if not ( _value <= self.pack_Vmax):
-            raise BatteryError(
-                f"Fail_Condition_7\nPack voltage too high:\nVoltage:{_value} Max: {self.pack_Vmax}"
-            )
+        # if not ( _value <= self.pack_Vmax):
+        #     raise BatteryError(
+        #         f"Fail_Condition_7\nPack voltage too high:\nVoltage:{_value} Max: {self.pack_Vmax}"
+        #     )
         return _value
 
     @property
@@ -290,7 +291,7 @@ class Battery:
         self.module_area_section = (2*self.cell_radius)**2-np.pi*self.cell_radius**2
 
         self.Rith = 3.3*(self.cell_radius/0.022)**2 # probably need a citation for this one
-        self.Cth = 700 * self.cell_mass
+        self.Cth = 1000 * self.cell_mass
 
 
     # determine battery configuration
@@ -311,7 +312,8 @@ class Battery:
         stack_width = self.cell_radius * 2
         self.pack_volume = self.cell_height * stack_width * stack_length
         self.pack_weight = self.cell_mass * self.cells_total
-
+        if self.pack_weight > 3000000000000000:
+            raise BatteryError("OVERWEIGHT! SOMETHING IS VERY WRONG BECAUSE BATTERY IS NOT CONVERGING")
         # nominal pack values
         self.pack_energy = self.cell_energy_nom * self.cells_total
         self.pack_power_max = (
@@ -380,9 +382,11 @@ class Battery:
         Cth = self.Cth
         P = (Voc - V) * i + dEdT * i * T
         self.mdot = 0.0001*P
-        h = (  # taken from http://dx.doi.org/10.1016/j.jpowsour.2013.10.052
+        h = max(
+            (  # taken from http://dx.doi.org/10.1016/j.jpowsour.2013.10.052
                 30* ( ((self.mdot) / (self.module_area_section * rho)) / 5) ** 0.8
-            )
+            ),
+            2)
 
         if h == 0:  # avoid division by 0
             dTdt = P / Cth

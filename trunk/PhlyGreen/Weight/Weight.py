@@ -122,4 +122,4 @@ class Weight:
 
                 return (self.Wf + self.final_reserve + self.WBat + self.WPT + self.WStructure + self.WPayload + self.WCrew - WTO)
         # this iterates the weight estimator function with the brent method until it converges on a value of takeoff weight
-        self.WTO = brenth(func, 1000, 300000, xtol=0.1) 
+        self.WTO = brenth(func, 1000, 60000, xtol=0.1) 
