@@ -342,8 +342,8 @@ class Mission:
                 )  # convert output power to volts and amps
                 self.aircraft.battery.Vout  # necessary statement for the battery class to validate Vout
             except BatteryError as err:
-                # print(f"P num at error: {P_number}")
-                # print(err)
+                print(f"P num at error: {P_number}")
+                print(err)
                 print(f"{P_number} is False")
                 return False
             except Exception as err:
@@ -366,8 +366,8 @@ class Mission:
                     )
                     self.integral_solution.append(sol)
                 except BatteryError as err:
-                    # print(f"P num at error: {self.aircraft.battery.P_number}")
-                    # print(err)
+                    print(f"P num at error: {self.aircraft.battery.P_number}")
+                    print(err)
                     print(f"{P_number} is False")
                     return False
                 except Exception as e:

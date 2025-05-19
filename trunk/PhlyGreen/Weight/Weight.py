@@ -93,7 +93,7 @@ class Weight:
                 if self.aircraft.battery.BatteryClass == 'II':
                     self.WBat=self.aircraft.battery.pack_weight
                 elif self.aircraft.battery.BatteryClass == 'I':
-                    WBat  = [self.TotalEnergies[1]/self.aircraft.battery.Ebat , self.aircraft.mission.Max_PBat*(1/self.aircraft.battery.pbat), self.aircraft.mission.TO_PBat*(1/self.aircraft.battery.pbat)]
+                    WBat  = [(self.TotalEnergies[1]/(1-self.aircraft.battery.SOC_min))/self.aircraft.battery.Ebat , self.aircraft.mission.Max_PBat*(1/self.aircraft.battery.pbat), self.aircraft.mission.TO_PBat*(1/self.aircraft.battery.pbat)]
                     self.WBatidx = np.argmax(WBat)
                     self.WBat = WBat[self.WBatidx] 
 

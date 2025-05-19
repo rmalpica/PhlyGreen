@@ -26,6 +26,7 @@ class Battery:
     @i.setter
     def i(self, value):
         self._i = value
+        # print(f"cell_Iout{value}")
         if value is None:
             raise BatteryError(
                 "No real valued solution found for battery current.\nBattery underpowered."
@@ -38,6 +39,7 @@ class Battery:
     @it.setter
     def it(self, value):
         self._it = value
+        # print(f"it{self._it}")
         _soc = 1 - value / (self.cell_capacity * self.P_number)
         _socmax = 1
         if not (self.SOC_min <= _soc <= _socmax):
@@ -54,6 +56,7 @@ class Battery:
     @T.setter
     def T(self, value):
         self._T = value
+        # print(f"cell_T{value}")
         if value < 0:
             raise BatteryError(
                 f"Fail_Condition_3\nBattery temperature must be positive:\nTemperature: {value}"
@@ -94,6 +97,7 @@ class Battery:
     @property
     def cell_Vout(self) -> float:
         _value = self._voltageModel(self.cell_it, self.cell_i)
+        # print(f"cell_Vout{_value}")
         if not (self.cell_Vmin <= _value):# <= self.cell_Vmax):
             raise BatteryError(
                 f"Fail_Condition_6\nCell voltage outside of allowed range:\nVoltage:{_value} Range: {self.cell_Vmin} ~ {self.cell_Vmax}\nPnum is {self.P_number}"
@@ -134,6 +138,7 @@ class Battery:
     def SOC(self) -> float:
         _value = 1 - self.cell_it / self.cell_capacity
         _socmax = 1
+        # print(f"cell_SOC{_value}")
         if not (self.SOC_min <= _value <= _socmax):
             raise BatteryError(
                 f"Fail_Condition_9\nSOC outside of allowed range:\nSOC:{_value!r} Range:{self.SOC_min!r} ~ {_socmax!r}"
@@ -190,7 +195,7 @@ class Battery:
         bat_inputs = self.aircraft.BatteryInput
                 # set the battery model class
         self.BatteryClass = bat_inputs['Class']
-
+        self.SOC_min = bat_inputs['Minimum SOC']
         if self.BatteryClass == 'I':
             self.Ebat = bat_inputs['SpecificEnergy']*3600
             self.pbat = bat_inputs['SpecificPower']
@@ -204,7 +209,7 @@ class Battery:
         else:
             model = bat_inputs['Model']
 
-        self.SOC_min = bat_inputs['Minimum SOC']
+
 
         # Get all the cell parameters
         cell = Cell_Models[model]
@@ -241,6 +246,7 @@ class Battery:
             ecell = bat_inputs["SpecificEnergy"] * self.cell_mass   # cell energy in Wh
             capcell = ecell / self.Vnom                             # cell charge in Ah
             eratio = capcell / self.cell_capacity # ratio between model charge and new charge
+            #print(f"old{self.cell_capacity}    new{capcell}")
 
             self.cell_capacity = capcell
             self.cell_energy_nom = ecell
@@ -255,14 +261,28 @@ class Battery:
                 self.R_arrhenius /= eratio
                 self.cell_max_current *= eratio
 
+            # implement this properly later if needed
+            # make the specific power a ratio of the specific energy
+            # to be able to pick a certain C rating
+            # if bat_inputs["SpecificPower"] is None:
+            #     pcell = 4 * bat_inputs["SpecificEnergy"] * self.cell_mass  # cell power in W
+            #     pcellnow = self.cell_max_current * self._voltageModel(0, self.cell_max_current)
+            #     pratio = pcell / pcellnow
+
+            #     self.polarization_ctt /= pratio
+            #     self.K_arrhenius /= pratio
+            #     self.cell_resistance /= pratio
+            #     self.R_arrhenius /= pratio
+            #     self.cell_max_current *= pratio
+
 
         # Modify the internal resistance and current limit to adjust power
         if bat_inputs["SpecificPower"] is not None:
             pcell = bat_inputs["SpecificPower"] * self.cell_mass  # cell power in W
             pcellnow = self.cell_max_current * self._voltageModel(0, self.cell_max_current)
             pratio = pcell / pcellnow
-            print(f"Current ratio:{pratio}")
-            print(f"peak power old:{pcellnow}")
+            #print(f"Current ratio:{pratio}")
+            #print(f"peak power old:{pcellnow}")
 
             # Dividing the internal resistance by a ratio increases
             # the maximum deliverable power by the same ratio
@@ -275,7 +295,7 @@ class Battery:
             # to be calculated because its setter verifies its
             # validity against the cell properties
             self.cell_max_current *= pratio
-        print(f"peak power new:{self.cell_max_current*self._voltageModel(0, self.cell_max_current)}")
+        # print(f"peak power new:{self.cell_max_current*self._voltageModel(0, self.cell_max_current)}")
 
 
         # Number of cells in series to achieve desired voltage.
