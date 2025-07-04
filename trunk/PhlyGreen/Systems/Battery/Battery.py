@@ -1,4 +1,4 @@
-import math
+
 import numpy as np
 from PhlyGreen.Systems.Battery import Cell_Models
 
@@ -11,16 +11,13 @@ class Battery:
     def __init__(self, aircraft):
         self.aircraft = aircraft
 
-        # this range of voltages should be defined in the model of the motor controller,
-        # for now its hardcoded. Create voltage controller in the future? Integrate this
-        # into the powerplant spec?
-        self.controller_Vmax = 740
-        self.controller_Vmin = 420 
+        self.pack_Vmax = 800
         self._SOC_min = None
         self._it = 0
         self._i = None
         self._T = None
         self._cell_max_current = None
+        self.mdot = 0
 
     @property
     def i(self):
@@ -29,6 +26,7 @@ class Battery:
     @i.setter
     def i(self, value):
         self._i = value
+        # print(f"cell_Iout{value}")
         if value is None:
             raise BatteryError(
                 "No real valued solution found for battery current.\nBattery underpowered."
@@ -41,6 +39,7 @@ class Battery:
     @it.setter
     def it(self, value):
         self._it = value
+        # print(f"it{self._it}")
         _soc = 1 - value / (self.cell_capacity * self.P_number)
         _socmax = 1
         if not (self.SOC_min <= _soc <= _socmax):
@@ -57,6 +56,7 @@ class Battery:
     @T.setter
     def T(self, value):
         self._T = value
+        # print(f"cell_T{value}")
         if value < 0:
             raise BatteryError(
                 f"Fail_Condition_3\nBattery temperature must be positive:\nTemperature: {value}"
@@ -86,7 +86,8 @@ class Battery:
     def cell_max_current(self, value):
         self._cell_max_current = value
         v = self._voltageModel(0, value)
-        if not self.cell_Vmax >= v >= self.cell_Vmin:
+        # if not self.cell_Vmax >= v >= self.cell_Vmin:
+        if not v >= self.cell_Vmin:
             raise ValueError(
                 f"Reevaluate the max cell current of the chosen model.({value}A)\n",
                 f"The input value results in an invalid voltage: {v}V\n",
@@ -96,9 +97,10 @@ class Battery:
     @property
     def cell_Vout(self) -> float:
         _value = self._voltageModel(self.cell_it, self.cell_i)
+        # print(f"cell_Vout{_value}")
         if not (self.cell_Vmin <= _value):# <= self.cell_Vmax):
             raise BatteryError(
-                f"Fail_Condition_6\nCell voltage outside of allowed range:\nVoltage:{_value} Range: {self.cell_Vmin} ~ {self.cell_Vmax}"
+                f"Fail_Condition_6\nCell voltage outside of allowed range:\nVoltage:{_value} Range: {self.cell_Vmin} ~ {self.cell_Vmax}\nPnum is {self.P_number}"
             )
         return _value
 
@@ -109,10 +111,10 @@ class Battery:
     @property
     def Vout(self) -> float:
         _value = self.cell_Vout * self.S_number
-        if not (self.controller_Vmin <= _value):# <= self.controller_Vmax):
-            raise BatteryError(
-                f"Fail_Condition_7\nPack voltage outside of allowed range:\nVoltage:{_value} Range: {self.controller_Vmin} ~ {self.controller_Vmax}"
-            )
+        # if not ( _value <= self.pack_Vmax):
+        #     raise BatteryError(
+        #         f"Fail_Condition_7\nPack voltage too high:\nVoltage:{_value} Max: {self.pack_Vmax}"
+        #     )
         return _value
 
     @property
@@ -136,6 +138,7 @@ class Battery:
     def SOC(self) -> float:
         _value = 1 - self.cell_it / self.cell_capacity
         _socmax = 1
+        # print(f"cell_SOC{_value}")
         if not (self.SOC_min <= _value <= _socmax):
             raise BatteryError(
                 f"Fail_Condition_9\nSOC outside of allowed range:\nSOC:{_value!r} Range:{self.SOC_min!r} ~ {_socmax!r}"
@@ -155,12 +158,12 @@ class Battery:
     @property
     def K(self) -> float:
         "Polarization constant"
-        return self.polarization_ctt * math.exp(self.K_arrhenius * (1 / self.T - 1 / self.Tref))
+        return self.polarization_ctt * np.exp(self.K_arrhenius * (1 / self.T - 1 / self.Tref))
 
     @property
     def R(self) -> float:
         "Internal resistance"
-        return self.cell_resistance * math.exp(self.R_arrhenius * (1 / self.T - 1 / self.Tref))
+        return self.cell_resistance * np.exp(self.R_arrhenius * (1 / self.T - 1 / self.Tref))
 
     # Thermal electric model of the voltage
     def _voltageModel(self, it, i):
@@ -177,6 +180,7 @@ class Battery:
         A, B = self.exp_amplitude, self.exp_time_ctt
 
         V = E0 - (i + it) * K * (Q / (Q - it)) + A * np.exp(-B * it) - i * R
+        # print('_voltage returns: ', V)
         return V
 
     # Set inputs from cell model chosen
@@ -188,107 +192,138 @@ class Battery:
         The constants come from the cell_models.py module and are modified
         according to the user input.
         """
-        # Importing input data
-        bat_inputs = self.aircraft.CellModel
 
-        # set the battery model class
+        bat_inputs = self.aircraft.CellInput
+                # set the battery model class
         self.BatteryClass = bat_inputs['Class']
 
 
-        if self.BatteryClass == 'I':
-            self.Ebat = bat_inputs['Ebat']
-            self.pbat = bat_inputs['pbat']
-
-        elif self.BatteryClass == 'II':
-
-            if bat_inputs['Model'] is None: # Fallback to a default model if none is given
-                model = 'Default'
-            else:
-                model = bat_inputs['Model']
-
-            # input minimum SOC to consider
+        if self.BatteryClass == 'II':
             self.SOC_min = bat_inputs['Minimum SOC']
+            self.aircraft.mission.startT = bat_inputs['Initial temperature'] 
+            self.aircraft.mission.T_battery_limit = bat_inputs['Max operative temperature'] 
+
+        if self.BatteryClass == 'I':
+            self.Ebat = bat_inputs['SpecificEnergy']*3600
+            self.pbat = bat_inputs['SpecificPower']
+            self.SOC_min = bat_inputs['Minimum SOC'] 
+            return
+
+        if self.BatteryClass != 'II':
+            raise Exception(f"Unrecognized model class: {self.BatteryClass}")
+
+        if bat_inputs['Model'] is None: # Fallback to a default model if none is given
+            model = 'Finger-Cell-Thermal'
+        else:
+            model = bat_inputs['Model']
 
 
 
-            # Get all the cell parameters
-            cell = Cell_Models[model]
-            self.Tref              = cell['Reference Temperature']     # in kelvin
-            self.T = self.Tref
-            self.exp_amplitude     = cell['Exp Amplitude']                  # in volts
-            self.exp_time_ctt      = cell['Exp Time constant']              # in Ah^-1 
-            self.cell_resistance   = cell['Internal Resistance']            # in ohms
-            self.R_arrhenius       = cell['Resistance Arrhenius Constant']  # dimensionless
-            self.polarization_ctt  = cell['Polarization Constant']          # in Volts over amp hour
-            self.K_arrhenius       = cell['Polarization Arrhenius Constant']# dimensionless
-            self.cell_capacity     = cell['Cell Capacity']                  # in Ah
-            self.Q_slope           = cell['Capacity Thermal Slope']         # in Ah per kelvin
-            self.voltage_ctt       = cell['Voltage Constant']               # in volts
-            self.E_slope           = cell['Voltage Thermal Slope']          # in volts per kelvin
-            self.cell_Vmax         = self.exp_amplitude + self.voltage_ctt  # in volts
-            self.cell_Vmin         = cell['Cell Voltage Min']               # in volts
-            self.cell_max_current  = cell['Cell Current Max']                  # dimensionless
-            self.cell_mass         = cell['Cell Mass']                      # in kg
-            self.cell_radius       = cell['Cell Radius']                    # in m
-            self.cell_height       = cell['Cell Height']                    # in m
-            self.Vnom              = cell['Cell Voltage Nominal']  # in volts
-            self.cell_energy_nom   = self.Vnom * self.cell_capacity
+        # Get all the cell parameters
+        cell = Cell_Models[model]
+        self.Tref              = cell['Reference Temperature']     # in kelvin
+        self.T = self.Tref
+        self.exp_amplitude     = cell['Exp Amplitude']                  # in volts
+        self.exp_time_ctt      = cell['Exp Time constant']              # in Ah^-1 
+        self.cell_resistance   = cell['Internal Resistance']            # in ohms
+        self.R_arrhenius       = cell['Resistance Arrhenius Constant']  # dimensionless
+        self.polarization_ctt  = cell['Polarization Constant']          # in Volts over amp hour
+        self.K_arrhenius       = cell['Polarization Arrhenius Constant']# dimensionless
+        self.cell_capacity     = cell['Cell Capacity']                  # in Ah
+        self.Q_slope           = cell['Capacity Thermal Slope']         # in Ah per kelvin
+        self.voltage_ctt       = cell['Voltage Constant']               # in volts
+        self.E_slope           = cell['Voltage Thermal Slope']          # in volts per kelvin
+        self.cell_Vmax         = self.exp_amplitude + self.voltage_ctt  # in volts
+        self.cell_Vmin         = cell['Cell Voltage Min']               # in volts
+        self.cell_max_current  = cell['Cell Current Max']                  # dimensionless
+        self.cell_mass         = cell['Cell Mass']                      # in kg
+        self.cell_radius       = cell['Cell Radius']                    # in m
+        self.cell_height       = cell['Cell Height']                    # in m
+        self.Vnom              = cell['Cell Voltage Nominal']  # in volts
+        self.cell_energy_nom   = self.Vnom * self.cell_capacity
 
-            # Verify that the voltages are correctly set
-            if not (self.cell_Vmax > self.cell_Vmin):
-                raise ValueError(
-                    "Fail_Condition_11\nIllegal cell voltages: Vmax must be greater than Vmin"
-                )
+        # Verify that the voltages are correctly set
+        if not (self.cell_Vmax > self.cell_Vmin):
+            raise ValueError(
+                "Fail_Condition_11\nIllegal cell voltages: Vmax must be greater than Vmin"
+            )
 
-            # Modify the cell according to the user specified energy and power densities
-            # Modify the capacity of the cell
-            if bat_inputs["SpecificEnergy"] is not None:
-                ecell = bat_inputs["SpecificEnergy"] * self.cell_mass   # cell energy in Wh
-                capcell = ecell / self.Vnom                             # cell charge in Ah
-                eratio = capcell / self.cell_capacity # ratio between model charge and new charge
+        # Modify the cell according to the user specified energy and power densities
+        # Modify the capacity of the cell
+        if bat_inputs["SpecificEnergy"] is not None:
+            ecell = bat_inputs["SpecificEnergy"] * self.cell_mass   # cell energy in Wh
+            capcell = ecell / self.Vnom                             # cell charge in Ah
+            eratio = capcell / self.cell_capacity # ratio between model charge and new charge
+            #print(f"old{self.cell_capacity}    new{capcell}")
 
-                self.cell_capacity = capcell
-                self.cell_energy_nom = ecell
-                self.Q_slope *= eratio  # the slope is a fraction of the capacity, so it scales with the ratio of capacities
-                self.exp_time_ctt /= eratio  # divides by the ratio because its the INVERSE of the exponential zone charge
+            self.cell_capacity = capcell
+            self.cell_energy_nom = ecell
+            self.Q_slope *= eratio  # the slope is a fraction of the capacity, so it scales with the ratio of capacities
+            self.exp_time_ctt /= eratio  # divides by the ratio because its the INVERSE of the exponential zone charge
 
-                # Scale the specific power accordingly, unless a fixed one is requested
-                if bat_inputs["SpecificPower"] is None:
-                    self.polarization_ctt /= eratio
-                    self.K_arrhenius /= eratio
-                    self.cell_resistance /= eratio
-                    self.R_arrhenius /= eratio
-                    self.cell_max_current *= eratio
+            # Scale the specific power accordingly, unless a fixed one is requested
+            if bat_inputs["SpecificPower"] is None:
+                self.polarization_ctt /= eratio
+                self.K_arrhenius /= eratio
+                self.cell_resistance /= eratio
+                self.R_arrhenius /= eratio
+                self.cell_max_current *= eratio
+
+            # implement this properly later if needed
+            # make the specific power a ratio of the specific energy
+            # to be able to pick a certain C rating
+            # if bat_inputs["SpecificPower"] is None:
+            #     pcell = 4 * bat_inputs["SpecificEnergy"] * self.cell_mass  # cell power in W
+            #     pcellnow = self.cell_max_current * self._voltageModel(0, self.cell_max_current)
+            #     pratio = pcell / pcellnow
+
+            #     self.polarization_ctt /= pratio
+            #     self.K_arrhenius /= pratio
+            #     self.cell_resistance /= pratio
+            #     self.R_arrhenius /= pratio
+            #     self.cell_max_current *= pratio
 
 
-            # Modify the internal resistance and current limit to adjust power
-            if bat_inputs["SpecificPower"] is not None:
-                pcell = bat_inputs["SpecificPower"] * self.cell_mass  # cell power in W
-                pcellnow = self.cell_max_current * self._voltageModel(0, self.cell_max_current)
-                pratio = pcell / pcellnow
-                print(f"Current ratio:{pratio}")
-                print(f"peak power old:{pcellnow}")
+        # Modify the internal resistance and current limit to adjust power
+        if bat_inputs["SpecificPower"] is not None:
+            pcell = bat_inputs["SpecificPower"] * self.cell_mass  # cell power in W
+            pcellnow = self.cell_max_current * self._voltageModel(0, self.cell_max_current)
+            pratio = pcell / pcellnow
+            #print(f"Current ratio:{pratio}")
+            #print(f"peak power old:{pcellnow}")
 
-                # Dividing the internal resistance by a ratio increases
-                # the maximum deliverable power by the same ratio
-                self.polarization_ctt /= pratio
-                self.K_arrhenius /= pratio
-                self.cell_resistance /= pratio
-                self.R_arrhenius /= pratio
+            # Dividing the internal resistance by a ratio increases
+            # the maximum deliverable power by the same ratio
+            self.polarization_ctt /= pratio
+            self.K_arrhenius /= pratio
+            self.cell_resistance /= pratio
+            self.R_arrhenius /= pratio
 
-                # Note: the cell max current needs to be the last thing
-                # to be calculated because its setter verifies its
-                # validity against the cell properties
-                self.cell_max_current *= pratio
-                
-            print(f"peak power new:{self.cell_max_current*self._voltageModel(0, self.cell_max_current)}")
-            # Number of cells in series to achieve desired voltage.
-            # max voltage is preferred as it minimizes losses
-            # due to lower current being needed.
-            self.S_number = math.floor(self.controller_Vmax / self.cell_Vmax)
+            # Note: the cell max current needs to be the last thing
+            # to be calculated because its setter verifies its
+            # validity against the cell properties
+            self.cell_max_current *= pratio
+        # print(f"peak power new:{self.cell_max_current*self._voltageModel(0, self.cell_max_current)}")
 
-        # determine battery configuration
-        # must receive the number of cells in parallel
+
+        # Number of cells in series to achieve desired voltage.
+        # Higher voltage is preferred as it minimizes losses
+        # due to lower current being needed.
+        if bat_inputs["Pack Voltage"] is not None:
+            self.pack_Vmax = bat_inputs["Pack Voltage"]
+        else:
+            self.pack_Vmax = 740
+        self.S_number = np.floor(self.pack_Vmax / self.cell_Vmax)
+
+        self.cell_area_surface = 2*np.pi*self.cell_radius*self.cell_height
+        self.module_area_section = (2*self.cell_radius)**2-np.pi*self.cell_radius**2
+
+        self.Rith = 3.3*(self.cell_radius/0.022)**2 # probably need a citation for this one
+        self.Cth = 1000 * self.cell_mass
+
+
+    # determine battery configuration
+    # must receive the number of cells in parallel
     def Configure(self, parallel_cells):
         """WIP
             Configures the battery for the chosen P number
@@ -300,12 +335,13 @@ class Battery:
         self.cells_total = self.P_number * self.S_number
 
         # physical characteristics of the whole pack:
-        stack_length = self.cell_radius * math.ceil(self.S_number / 2)
+        stack_length = self.cell_radius * np.ceil(self.S_number / 2)
         # stack_width = self.cell_radius * (2 + np.sqrt(3))
         stack_width = self.cell_radius * 2
         self.pack_volume = self.cell_height * stack_width * stack_length
         self.pack_weight = self.cell_mass * self.cells_total
-
+        if self.pack_weight > 3000000000000000:
+            raise BatteryError("OVERWEIGHT! SOMETHING IS VERY WRONG BECAUSE BATTERY IS NOT CONVERGING")
         # nominal pack values
         self.pack_energy = self.cell_energy_nom * self.cells_total
         self.pack_power_max = (
@@ -353,13 +389,12 @@ class Battery:
             return I_out
 
         else:
-            I_out = (-b + math.sqrt(Disc)) / (2 * a)  # just the quadratic formula
+            I_out = (-b + np.sqrt(Disc)) / (2 * a)  # just the quadratic formula
 
         return I_out * self.P_number
 
-
     def heatLoss(self, Ta, rho):
-        """WIP Simple differential equation describing a
+        """ Simple differential equation describing a
             simplified lumped element thermal model of the cells
         Receives:
             - Ta   - temperature of the ambient cooling air
@@ -368,18 +403,35 @@ class Battery:
             - dTdt - battery temperature derivative
             - P    - dissipated waste power per cell
         """
+        Ta = max(Ta,273.15)
+        # print('T ambient: ', Ta)
+
         V, Voc = self.cell_Vout, self.cell_Voc
         i = self.cell_i
         T, dEdT = self.T, self.E_slope
-
+        # print('Battery temperature: ', T-273.15)
+        Rith = self.Rith
+        Cth = self.Cth
         P = (Voc - V) * i + dEdT * i * T
-        area_surface = 0.4
-        area_section = 0.05
-        mdot = 1
-        h = ( # taken from http://dx.doi.org/10.1016/j.jpowsour.2013.10.052
-            30 * ((area_section * mdot / rho) / 5) ** 0.8
-        )
-        Rth = 1 / (h * area_surface)
-        Cth = 1200 * self.cell_mass
-        dTdt = P / Cth + (Ta - T) / (Rth * Cth)
+        self.mdot = 0.0001*P
+        # if P<0:
+        #     self.mdot = 0
+        h = max(
+            (  # taken from http://dx.doi.org/10.1016/j.jpowsour.2013.10.052
+                30* ( ((self.mdot) / (self.module_area_section * rho)) / 5) ** 0.8
+            ),
+            2)
+
+        if (self.phi > 0.) & (T < 273.15 + self.aircraft.mission.T_battery_limit):
+            h = 0.            
+
+
+        # print(self.mdot)
+
+        if h == 0:  # avoid division by 0
+            dTdt = P / Cth
+        else:
+            Rth = 1 / (h * self.cell_area_surface) + Rith
+            dTdt = P / Cth + (Ta - T) / (Rth * Cth)
+        # print(f"h: {h}   R:{Rth}     surface:{self.cell_area_surface}    crosssec:{self.module_area_section}")
         return dTdt, P

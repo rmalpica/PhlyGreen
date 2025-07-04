@@ -81,7 +81,7 @@ class Weight:
                 
                 return (self.Wf + self.final_reserve + self.WPT + self.WStructure + self.WPayload + self.WCrew - WTO)
         
-        self.WTO = brenth(func, 10000, 300000, xtol=0.1)
+        self.WTO = brenth(func, 1000, 300000, xtol=0.1)
 
 
     def Hybrid(self):
@@ -93,7 +93,7 @@ class Weight:
                 if self.aircraft.battery.BatteryClass == 'II':
                     self.WBat=self.aircraft.battery.pack_weight
                 elif self.aircraft.battery.BatteryClass == 'I':
-                    WBat  = [self.TotalEnergies[1]/self.aircraft.battery.Ebat , self.aircraft.mission.Max_PBat*(1/self.aircraft.battery.pbat), self.aircraft.mission.TO_PBat*(1/self.aircraft.battery.pbat)]
+                    WBat  = [(self.TotalEnergies[1]/(1-self.aircraft.battery.SOC_min))/self.aircraft.battery.Ebat , self.aircraft.mission.Max_PBat*(1/self.aircraft.battery.pbat), self.aircraft.mission.TO_PBat*(1/self.aircraft.battery.pbat)]
                     self.WBatidx = np.argmax(WBat)
                     self.WBat = WBat[self.WBatidx] 
 
@@ -101,7 +101,8 @@ class Weight:
 
                 if self.Class == 'I':
 
-                    self.WStructure = self.aircraft.structures.StructuralWeight(WTO) 
+                    self.WStructure = self.aircraft.structures.StructuralWeight(WTO)
+                    # print('Structural weight: ', self.WStructure) 
 
                 elif self.Class == 'II':
 
@@ -122,4 +123,4 @@ class Weight:
 
                 return (self.Wf + self.final_reserve + self.WBat + self.WPT + self.WStructure + self.WPayload + self.WCrew - WTO)
         # this iterates the weight estimator function with the brent method until it converges on a value of takeoff weight
-        self.WTO = brenth(func, 10000, 300000, xtol=0.1) 
+        self.WTO = brenth(func, 10000, 60000, xtol=0.1) 

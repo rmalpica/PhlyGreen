@@ -16,7 +16,7 @@ class Aircraft:
         self.ConstraintsInput = None 
         self.MissionInput = None 
         self.EnergyInput = None 
-        self.CellModel = None
+        self.BatteryInput = None
         self.MissionStages = None 
         self.DiversionStages = None 
         self.LoiterStages = None
@@ -52,7 +52,7 @@ class Aircraft:
 
     """ Methods """
 
-    def ReadInput(self,AerodynamicsInput,ConstraintsInput,MissionInput,EnergyInput,MissionStages,DiversionStages, LoiterStages=None, WellToTankInput=None, CellInput=None):
+    def ReadInput(self,AerodynamicsInput,ConstraintsInput,MissionInput,EnergyInput,MissionStages,DiversionStages, LoiterStages=None, WellToTankInput=None, CellInput=None, ClimateImpactInput=None, PropellerInput=None):
         
         self.AerodynamicsInput = AerodynamicsInput
         self.ConstraintsInput = ConstraintsInput
@@ -79,6 +79,9 @@ class Aircraft:
         self.mission.InitializeProfile()
         self.mission.SetInput()
         
+        if PropellerInput is not None:
+            self.PropellerInput = PropellerInput
+            
         # Initialize Powertrain
         self.powertrain.SetInput()
         
@@ -89,14 +92,21 @@ class Aircraft:
             
             self.CellInput = CellInput
             self.battery.SetInput()
+        
+        if ClimateImpactInput is not None:
+            self.ClimateImpactInput = ClimateImpactInput
+            self.climateimpact.SetInput()
+
 
     def DesignAircraft(self,AerodynamicsInput,ConstraintsInput, MissionInput, EnergyInput, MissionStages, DiversionStages, **kwargs):
         WellToTankInput = kwargs.get('WellToTankInput', None)
         LoiterStages = kwargs.get('LoiterStages', None)
         CellInput = kwargs.get('CellInput', None)
+        ClimateImpactInput = kwargs.get('ClimateImpactInput', None)
+        PropellerInput = kwargs.get('PropellerInput', None)
         PrintOutput = kwargs.get('PrintOutput', False)
         # print("Initializing aircraft...")
-        self.ReadInput(AerodynamicsInput,ConstraintsInput, MissionInput, EnergyInput, MissionStages, DiversionStages,LoiterStages, WellToTankInput,CellInput)
+        self.ReadInput(AerodynamicsInput,ConstraintsInput, MissionInput, EnergyInput, MissionStages, DiversionStages,LoiterStages, WellToTankInput,CellInput,ClimateImpactInput,PropellerInput)
 
         if PrintOutput: print("Finding Design Point...")
         self.constraint.FindDesignPoint()

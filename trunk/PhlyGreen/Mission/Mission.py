@@ -28,6 +28,8 @@ class Mission:
         self.Ef = None
         self.EBat = None
         self.Beta = None
+        self.startT = 25
+        self.T_battery_limit = 40. # Celsius
 
         self.Past_P_n=[]
         self.P_n_arr =[]
@@ -256,22 +258,20 @@ class Mission:
           
             return PPoWTO * WTO
 
-        def model(t,y):
-            if not self.valid_solution:
-                return [0,0,0,0,0]
-
-            #aircraft mass fraction
+        def model(t, y):
+            # aircraft mass fraction
             Beta = y[2]
-            Ppropulsive = PowerPropulsive(Beta,t)
-            self.check_PP(Ppropulsive)
-            #takes in all the mission segments and finds the required power ratio for the current time of the mission
-            PRatio = self.aircraft.powertrain.Hybrid(self.aircraft.mission.profile.SuppliedPowerRatio(t),
-                                                     self.profile.Altitude(t),
-                                                     self.profile.Velocity(t),
-                                                     Ppropulsive) 
-            dEFdt = Ppropulsive * PRatio[0] #fuel power output
-            dbetadt = - dEFdt/(self.ef*self.WTO) #change in mass due to fuel consumption
-            PElectric = Ppropulsive * PRatio[5] #propulsive power required for the electric motors
+            Ppropulsive = PowerPropulsive(Beta, t)
+            # takes in all the mission segments and finds the required power ratio for the current time of the mission
+            PRatio = self.aircraft.powertrain.Hybrid(
+                self.aircraft.mission.profile.SuppliedPowerRatio(t),
+                self.profile.Altitude(t),
+                self.profile.Velocity(t),
+                Ppropulsive,
+            )
+            dEFdt = Ppropulsive * PRatio[0]  # fuel power output
+            dbetadt = -dEFdt / (self.ef * self.WTO)  # change in mass due to fuel consumption
+            PElectric = Ppropulsive * PRatio[5]  # propulsive power required for the electric motors
 
             # Finds the battery state for the requested power. The battery class raises an
             # exception if any of its parameters exceed the allowed limits or there are
@@ -279,229 +279,281 @@ class Mission:
             # exception may be caught into a global variable so that the last constraint
             # driving the battery sizing may be printed to the user. Temperature limits
             # are not validated because T depends on the cooling sizing, not the P number.
-            try:
-                self.aircraft.battery.T = y[4] # assign a temperature, battery class validates temp
-                self.aircraft.battery.it = y[3]/3600 # assign spent charge, battery validates SOC
-                self.aircraft.battery.i  = self.aircraft.battery.Power_2_current(PElectric) # assign current, also validated here by the class
-                dEdt_bat = self.aircraft.battery.i * self.aircraft.battery.Vout # calculate power, this causes Vout to be generated and validated
-                
-                alt = self.profile.Altitude(t)
-                Mach = Speed.TAS2Mach(self.profile.Velocity(t),alt,DISA=self.DISA)
-                Tamb = ISA.atmosphere.T0std(alt,Mach)
-                rho = ISA.atmosphere.RHO0std(alt,Mach,self.DISA)
-                dTdt, _ = self.aircraft.battery.heatLoss(Tamb,rho)
-            except BatteryError: # as err:
-                # print(err)
-                self.valid_solution = False
-                return [0,0,0,0,0]
-            except Exception as e:
-                print(f"Unexpected error: {e}")
-                raise
 
-            # print([dEFdt,dEdt_bat,dbetadt,self.aircraft.battery.i,dTdt])
+            # assign a temperature, battery class validates temp
+            self.aircraft.battery.T = y[4]
+            self.aircraft.battery.phi = self.aircraft.mission.profile.SuppliedPowerRatio(t) 
 
-            return [dEFdt,dEdt_bat,dbetadt,self.aircraft.battery.i,dTdt]
+            # assign spent charge, battery validates SOC
+            self.aircraft.battery.it = y[3] / 3600
 
+            # assign current, also validated here by the class
+            self.aircraft.battery.i = self.aircraft.battery.Power_2_current(PElectric)
+
+            # calculate power, this causes Vout to be generated and validated
+            dEdt_bat = self.aircraft.battery.i * self.aircraft.battery.Vout
+
+            alt = self.profile.Altitude(t)
+            Mach = Speed.TAS2Mach(self.profile.Velocity(t), alt, DISA=self.DISA)
+            Tamb = ISA.atmosphere.T0std(alt, Mach)
+            rho = ISA.atmosphere.RHO0std(alt, Mach, self.DISA)
+
+            dTdt, _ = self.aircraft.battery.heatLoss(Tamb, rho)
+
+            if self.aircraft.mission.profile.SuppliedPowerRatio(t) > 0.:
+                if y[4] < 273.15 + self.aircraft.mission.T_battery_limit: 
+                    dTdt = max(dTdt,0.)
+                else:
+                    dTdt = 0.
+            else:
+                dTdt = min(dTdt,0)
+
+
+            # print('Altitude: ', alt)
+            # print('Time: ', t)
+            # print('dTdt: ', dTdt)
+            # print([dEFdt, dEdt_bat, dbetadt, self.aircraft.battery.i, dTdt])
+
+            return [dEFdt, dEdt_bat, dbetadt, self.aircraft.battery.i, dTdt]
 
         def evaluate_P_nr(P_number):
-            
-            print('P_number: ',P_number)
+            # print(f"evaluating pnumber {P_number}")
             self.P_n_arr.append(P_number)
-
-            self.valid_solution = True
-            #no maths needed to know nothing will work without a battery
+            # no maths needed to know nothing will work without a battery
             if P_number == 0:
-
-                print('no math gnegnegne')
-                # P_number = 1
-                self.valid_solution = False
-                return self.valid_solution
+                # print(f"{P_number} is False")
+                return False
 
             self.aircraft.battery.Configure(P_number)
 
-            # short verification step to validate the takeoff power
-            # uses it = 0 and constant T.  Takeoff is considered to
-            # be too short to matter, and there's no good model for
-            # the takeoff dynamics anyway.
+            # Takeoff condition, calculated before anything else as
+            # it does not depend on the battery size, just the aircraft
+            # calculates the total propulsive power required for takeoff
+            Ppropulsive_TO = self.WTO * self.aircraft.performance.TakeOff(
+                self.aircraft.DesignWTOoS,
+                self.aircraft.constraint.TakeOffConstraints["Beta"],
+                self.aircraft.constraint.TakeOffConstraints["Altitude"],
+                self.aircraft.constraint.TakeOffConstraints["kTO"],
+                self.aircraft.constraint.TakeOffConstraints["sTO"],
+                self.aircraft.constraint.DISA,
+                self.aircraft.constraint.TakeOffConstraints["Speed"],
+                self.aircraft.constraint.TakeOffConstraints["Speed Type"],
+            )
+            # hybrid power ratio for takeoff
+            PRatio = self.aircraft.powertrain.Hybrid(
+                self.aircraft.mission.profile.SPW[0][0],
+                self.aircraft.constraint.TakeOffConstraints["Altitude"],
+                self.aircraft.constraint.TakeOffConstraints["Speed"],
+                Ppropulsive_TO,
+            )
+
+            self.TO_PP = Ppropulsive_TO * PRatio[1]  # combustion engine power during takeoff
+            self.TO_PBat = Ppropulsive_TO * PRatio[5]  # electric motor power during takeoff
+
             try:
-                self.aircraft.battery.T = 300 # battery T TODO FIX THIS
+                # print(f"P num during try: {P_number}")
+                self.aircraft.battery.T = self.startT + 273.15 # battery T TODO FIX THIS
                 self.aircraft.battery.it = 0
-                self.aircraft.battery.i  = self.aircraft.battery.Power_2_current(self.TO_PBat) #convert output power to volts and amps
-                self.aircraft.battery.Vout # necessary for the battery class to validate Vout
-            except BatteryError: # as err:
-                print(err)
-                self.valid_solution = False
-                return self.valid_solution
+                self.aircraft.battery.i = self.aircraft.battery.Power_2_current(
+                    self.TO_PBat
+                )  # convert output power to volts and amps
+                self.aircraft.battery.Vout  # necessary statement for the battery class to validate Vout
+            except BatteryError as err:
+                # print(f"P num at error: {P_number}")
+                # print(err)
+                # print(f"{P_number} is False")
+                return False
             except Exception as err:
                 print(f"Unexpected error: {err}")
                 raise
-            
-            # integrate sequentially
+
+            # integrate the rest of the flight sequentially
+            np.seterr(over="raise")
+            times = np.append(self.profile.Breaks, self.profile.MissionTime2)
+            rtol = 1e-6
+            method = "BDF"
             self.integral_solution = []
-            self.plottingVars=[]
-            times = np.append(self.profile.Breaks,self.profile.MissionTime2)
-            rtol = 1e-5
-            method= 'BDF'
-            #initial fuel energy, battery energy, mass fraction, spent charge, and battery T TODO FIX THIS
-            y0 = [0,0,self.beta0,0,300]
-            
-
-            for i in range(len(times)-1):
-               
-                sol = integrate.solve_ivp(model,[times[i], times[i+1]], y0, method=method, rtol=rtol,dense_output=True)
-                if not self.valid_solution:
-                    break
-
-                self.integral_solution.append(sol)
-
-                # To avoid importing the mission class with the model into the plotting script,
-                # this is added to store the variables when the integration finishes each part.
-                # The plottingVars array can then be accessed in the script to plot the things.
-                for k, _ in enumerate(sol.t):
-                    yy0 = [sol.y[0][k], sol.y[1][k], sol.y[2][k], sol.y[3][k], sol.y[4][k]]
-                    model(sol.t[k], yy0)
-                    alt = self.profile.Altitude(sol.t[k])
-                    Mach = Speed.TAS2Mach(self.profile.Velocity(sol.t[k]), alt, DISA=self.DISA)
-                    Tamb = ISA.atmosphere.T0std(alt, Mach)
-                    self.plottingVars.append(
-                        [
-                            sol.t[k],
-                            self.aircraft.battery.SOC,
-                            self.aircraft.battery.Voc,
-                            self.aircraft.battery.Vout,
-                            self.aircraft.battery.i,
-                            self.aircraft.battery.T,
-                            Tamb,
-                            alt,
-                        ],
+            self.plottingVars = []
+            # initial fuel energy, battery energy, mass fraction, spent charge, and battery T
+            y0 = [0, 0, self.beta0, 0, self.startT + 273.15]
+            for i in range(len(times) - 1):
+                try:
+                    sol = integrate.solve_ivp(
+                        model, [times[i], times[i + 1]], y0, method=method, rtol=rtol
                     )
+                    self.integral_solution.append(sol)
+                except BatteryError as err:
+                    # print(f"P num at error: {self.aircraft.battery.P_number}")
+                    # print(err)
+                    # print(f"{P_number} is False")
+                    return False
+                except Exception as e:
+                    print(f"Unexpected error:\n{e}")
+                    raise
+
+                # The solution given by solve ivp isnt actually valid for all cases when you
+                # try it on every point. This is because of the tolerance that it allows itself.
+                # It will accurately solve the problem for the time it was given but if you
+                # actually try to calculate the outputs at every time point, some of them cause
+                # the model to fail. To avoid having to use a super small rtol to make the
+                # time step of the integration smaller and therefore taking forever to
+                # integrate, the better solution is to simply ignore any battery errors that
+                # the model throws during plotting of the full flight profile. Its already
+                # been validated in the integration, whatever deviations happen at this
+                # stage are minuscule errors of fractions of percent
+                for k in range(len(sol.t) - 0):
+                    try:
+                        yy0 = [sol.y[0][k], sol.y[1][k], sol.y[2][k], sol.y[3][k], sol.y[4][k]]
+                        model(sol.t[k], yy0)
+                        alt = self.profile.Altitude(sol.t[k])
+                        Mach = Speed.TAS2Mach(self.profile.Velocity(sol.t[k]), alt, DISA=self.DISA)
+                        Tamb = ISA.atmosphere.T0std(alt, Mach)
+                        self.plottingVars.append(
+                            [
+                                sol.t[k],
+                                self.aircraft.battery.SOC,
+                                self.aircraft.battery.Voc,
+                                self.aircraft.battery.Vout,
+                                self.aircraft.battery.i,
+                                self.aircraft.battery.T,
+                                Tamb,
+                                alt,
+                                self.aircraft.battery.mdot,
+                            ],
+                        )
+                    except BatteryError:
+                        # Print warning and just keep saving the data, this sometimes happens if rtol is too loose
+                        print(
+                            "WARNING: evaluate_P_number integration rtol may be too loose, consider lowering it"
+                        )
                 self.Ef = sol.y[0]
                 self.EBat = sol.y[1]
                 self.Beta = sol.y[2]
                 y0 = [sol.y[0][-1], sol.y[1][-1], sol.y[2][-1], sol.y[3][-1], sol.y[4][-1]]
+            # print(f"{P_number} is True")
+            return True
 
-            return self.valid_solution
+        def find_P_nr(n_guess, wto_ratio,bypass=True):
+            # Flags used to prevent double checking the boundaries
+            nmin_is_bounded = False
+            nmax_is_bounded = False
+            if not bypass: # for debugging
+                if wto_ratio is not None:
+                    n = round(n_guess * wto_ratio)
+                    # check that the value below the initial guess is invalid
+                    if not evaluate_P_nr(n - 1):
+                        n_min = n - 1
+                        if evaluate_P_nr(n):  # check that the guess is valid
+                            # print(f"max={n} and min={n_min}")
+                            # print(f"Optimal n {n}")
+                            return n  # Optimal found
+                        else:
+                            n_min = n  # if the guess is invalid, its the new minimum
+                            n_max = max(n_min + 1, math.ceil((n_guess + 1) * wto_ratio))
+                            # nmin is a known invalid value, no need to reevaluate it
+                            nmin_is_bounded = True
+                    else:
+                        n_max = n - 1
+                        n_min = min(n_max - 1, math.floor((n_guess - 1) * wto_ratio))
+                        # nmax is a known valid value, no need to reevaluate it
+                        nmax_is_bounded = True
 
-
-        # Takeoff condition, calculated before anything else as
-        # it does not depend on the battery size, just the aircraft
-
-        #calculates the total propulsive power required for takeoff
-        Ppropulsive_TO = self.WTO * self.aircraft.performance.TakeOff(self.aircraft.DesignWTOoS,
-                                                                      self.aircraft.constraint.TakeOffConstraints['Beta'],
-                                                                      self.aircraft.constraint.TakeOffConstraints['Altitude'],
-                                                                      self.aircraft.constraint.TakeOffConstraints['kTO'],
-                                                                      self.aircraft.constraint.TakeOffConstraints['sTO'],
-                                                                      self.aircraft.constraint.DISA,
-                                                                      self.aircraft.constraint.TakeOffConstraints['Speed'],
-                                                                      self.aircraft.constraint.TakeOffConstraints['Speed Type'])
-        #hybrid power ratio for takeoff
-        PRatio = self.aircraft.powertrain.Hybrid(self.aircraft.mission.profile.SPW[0][0],
-                                                 self.aircraft.constraint.TakeOffConstraints['Altitude'],
-                                                 self.aircraft.constraint.TakeOffConstraints['Speed'],
-                                                 Ppropulsive_TO)
-
-        self.TO_PP = Ppropulsive_TO * PRatio[1]   #combustion engine power during takeoff
-        self.TO_PBat = Ppropulsive_TO * PRatio[5] #electric motor power during takeoff
-
-        # as the brent search converges the binary search algorithm needs to do more pointless iterations to reach the same value
-        # the old method used a simplified model to initialize a first guess of the p number
-        # this proved slow and cumbersome, so i came up with a new method that uses the previous result to initialize the search
-        # it grabs the n value from the previous iteration and tries to find an nmax and nmin from there
-        optimal = False
-        """
-        P=0
-        while not optimal:
-            P+=1
-            a=evaluate_P_nr(P)
-            b=evaluate_P_nr(P-1)
-            if a and not b:
-                optimal=True
-                self.optimal_n = P
-
-        self.Past_P_n.append(self.P_n_arr)
-        self.P_n_arr = []
-        """
-        try:
-            #ratio = 1 # use this line to disable linear scaling of the P_n for debug purposes
-            ratio = self.WTO/self.last_weight
-            print(f'ratio is {ratio}')
-            n_max = round(self.optimal_n*ratio)
-
-            if n_max == 0:
-                n_min = 0
-                n_max = 1
+                else:  # If its the first iteration theres no prev weight to scale off of yet
+                    n_max = n_guess
+                    n_min = math.floor(n_max / 2)
             else:
+                if wto_ratio is not None:
+                    n_max = math.ceil(n_guess*wto_ratio)
+                    n_min = n_max-1
+                else:
+                    n_max = n_guess
+                    n_min = math.floor(n_max / 2)
 
-                n_min = n_max-1
-            # print('**********************************')
-            # print(f'using {n_max} and {n_min} from optimal {self.optimal_n} at ratio {ratio}')
-        except TypeError:# as err:
-            # print('**********************************')
-            # print(f'optimal not found because of:\n {err}')
-            n_max = 128  # hardcoding a value that is anecdotally known to be ok for a first guess
-            n_min = n_max-1
+            # If its the weight scaling fails (or is the first iteration), boundaries
+            # need to be calculated with the doubling and halving method
+
+            # lower the min p number until it is invalid
+            if not nmin_is_bounded:
+                while evaluate_P_nr(n_min):
+                    n_max = n_min  # if the n_min guess is too large it can be the new n_max to save iterations since it has already been tried
+                    n_min = math.floor(n_min / 2)  # halve n_min until it fails
+                    nmax_is_bounded = True  # nmax is set to a known valid value and does not need to be reevaluated
+
+            # raise the max p number until its valid
+            if not nmax_is_bounded:
+                while not evaluate_P_nr(n_max):
+                    n_min = n_max  # if the nmax guess is too small it can be the new nmin to save iterations since it has already been tried
+                    n_max = n_max * 2  # double n_max until it works
+
+            # start from the middle
+            n = math.ceil((n_max + n_min) / 2)
+
+            # find optimal P number using bisection search
+            optimal = False
+            while not optimal:
+                valid_result = evaluate_P_nr(n)
+
+                if valid_result and (n - n_min) == 1:
+                    optimal = True
+
+                elif valid_result:  # n is too big
+                    n_max = n
+                    n = math.floor((n_max + n_min) / 2)
+
+                else:  # n is too small
+                    n_min = n
+                    n = math.ceil((n_max + n_min) / 2)
 
 
-        #lower the min p number until its valid
-        #nmin_ran=False
-        while evaluate_P_nr(n_min): 
-            # print("n_min overestimated:",n_min, "; halving.")
-            #nmin_ran=True
-            n_max = n_min   #if the n_min guess is too large it can be the new n_max to save iterations since it has already been tried
-            n_min = math.floor(n_min/2) #halve n_min until it fails
+            print(f"max={n_max} and min={n_min}")
+            print(f"Optimal n {n}")
+            return n
+
+        if self.last_weight is None:
+            ratio = None
+        else:
+            ratio = self.WTO / self.last_weight
+
+        if self.optimal_n is None:
+            P_n_guess = 128  # Hardcoded first guess
+        else:
+            P_n_guess = self.optimal_n
 
 
-        #raise the max p number until its valid
-        while not evaluate_P_nr(n_max):# and not nmin_ran: 
-            #print(evaluate_P_nr(n_max))
-            # print("n_max underestimated:",n_max, "; doubling.")
-            n_min = n_max   #if the nmax guess is too small it can be the new nmin to save iterations since it has already been tried
-            n_max = n_max*2 #double n_max until it works
+        self.optimal_n = find_P_nr(P_n_guess, ratio, bypass=True)  # algorithm D
+        # alg = "D"
+        # if alg == "D":
+        #     self.optimal_n = find_P_nr(P_n_guess, ratio, bypass=False)  # algorithm D
+        # if alg == "C":
+        #     self.optimal_n = find_P_nr(P_n_guess, ratio)  # algorithm C
+        # if alg == "B":
+        #     self.optimal_n = find_P_nr(P_n_guess, 1)  # algorithm B
+        # if alg == "A":
+        #     self.optimal_n = find_P_nr(128, None) # algorithm A
 
-        # if nmax and nmin are just 1 apart then the optimal n is nmax
-        # all checks can be skipped and we jump right into evaluating n to configure the flight
-        # print(f"nmax ({n_max}) validity is {all(evaluate_P_nr(n_max))} and nmin ({n_min}) validity is {all(evaluate_P_nr(n_min))}") # debug only
-        if n_max - n_min == 1:
-            optimal = True
-            n = n_max
-            #valid_result = evaluate_P_nr(n)
-            #if not valid_result:
-            #    raise Exception("Impossible n value somehow?")
-            # print("Optimal P: ",n)
-            self.optimal_n = n
 
-        n=math.ceil((n_max+n_min)/2) #start from the middle to make it one iteration shorter
-        
-        
-        
-        j=0
 
-        #find optimal P number using bisection search
-        while not optimal:
-            j=j+1
-            valid_result = evaluate_P_nr(n)
-            print("[iter",j,"] [P",n,"] [min",n_min,"] [max",n_max,"] valid?",valid_result) #uncomment for debug
-
-            if valid_result and (n-n_min)==1: #n is optimal
-                # print("Optimal P: ",n)
-                self.optimal_n = n
-                optimal = True
-
-            elif valid_result:                #n is too big
-                n_max=n
-                n=math.floor((n_max+n_min)/2)
-
-            elif not valid_result :           #n is too small
-                n_min=n
-                n=math.ceil((n_max+n_min)/2)
-        
         # save weight across iterations
         self.last_weight = self.WTO
-        # """
+
         # Save history for performance profiling
         self.Past_P_n.append(self.P_n_arr)
         self.P_n_arr = []
-        print('ok with mission integration')
+
+
+        # compute peak Propulsive power along mission
+        times = []
+        beta = []
+        for array in self.integral_solution:
+            times = np.concatenate([times, array.t])
+            beta = np.concatenate([beta, array.y[2]])
+
+        self.MissionTimes = times 
+        
+        PP = np.array([WTO * self.aircraft.performance.PoWTO(self.aircraft.DesignWTOoS,beta[i],self.profile.PowerExcess(times[i]),1,self.profile.Altitude(times[i]),self.DISA,self.profile.Velocity(times[i]),'TAS') for i in range(len(times))])
+        PRatio = np.array([self.aircraft.powertrain.Hybrid(self.aircraft.mission.profile.SuppliedPowerRatio(times[i]),self.profile.Altitude(times[i]),self.profile.Velocity(times[i]),PP[i]) for i in range(len(times))] )
+        self.Max_PEng = np.max(np.multiply(PP,PRatio[:,1]))
+        self.Max_PBat = np.max(np.multiply(PP,PRatio[:,5]))
+
 
         return self.Ef[-1], self.EBat[-1]
