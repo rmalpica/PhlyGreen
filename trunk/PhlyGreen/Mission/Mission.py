@@ -123,7 +123,29 @@ class Mission:
             return [dEdt,dbetadt]
 
         # Takeoff condition
-        Ppropulsive = self.WTO * self.aircraft.performance.TakeOff(self.aircraft.DesignWTOoS,self.aircraft.constraint.TakeOffConstraints['Beta'], self.aircraft.constraint.TakeOffConstraints['Altitude'], self.aircraft.constraint.TakeOffConstraints['kTO'], self.aircraft.constraint.TakeOffConstraints['sTO'], self.aircraft.constraint.DISA, self.aircraft.constraint.TakeOffConstraints['Speed'], self.aircraft.constraint.TakeOffConstraints['Speed Type'])
+        Ppropulsive = self.WTO * self.aircraft.performance.TakeOff(
+            self.aircraft.DesignWTOoS,
+            self.aircraft.constraint.TakeOffConstraints['Beta'], 
+            self.aircraft.constraint.TakeOffConstraints['Altitude'], 
+            self.aircraft.constraint.TakeOffConstraints['kTO'], 
+            self.aircraft.constraint.TakeOffConstraints['sTO'], 
+            self.aircraft.constraint.DISA, 
+            self.aircraft.constraint.TakeOffConstraints['Speed'], 
+            self.aircraft.constraint.TakeOffConstraints['Speed Type'])
+
+        # Takeoff One Engine Inop condition 
+        PpropulsiveOEI = self.WTO * self.aircraft.performance.OEIClimb(
+            self.aircraft.DesignWTOoS, 
+            self.aircraft.constraint.OEIClimbConstraints['Beta'], 
+            self.aircraft.constraint.OEIClimbConstraints['Speed'] * self.aircraft.constraint.OEIClimbConstraints['Climb Gradient'], 
+            1., 
+            self.aircraft.constraint.OEIClimbConstraints['Altitude'], 
+            self.aircraft.constraint.DISA, 
+            self.aircraft.constraint.OEIClimbConstraints['Speed'], 
+            self.aircraft.constraint.OEIClimbConstraints['Speed Type'])
+        
+        Ppropulsive = max(Ppropulsive,PpropulsiveOEI) #consider worst case
+
         PRatio = self.aircraft.powertrain.Traditional(self.aircraft.constraint.TakeOffConstraints['Altitude'],self.aircraft.constraint.TakeOffConstraints['Speed'],Ppropulsive)
         self.TO_PP = Ppropulsive * PRatio[1] #shaft power 
 
@@ -196,7 +218,29 @@ class Mission:
                 return [dEFdt,dEBatdt,dbetadt]
 
             # Takeoff condition
-            Ppropulsive = self.WTO * self.aircraft.performance.TakeOff(self.aircraft.DesignWTOoS,self.aircraft.constraint.TakeOffConstraints['Beta'], self.aircraft.constraint.TakeOffConstraints['Altitude'], self.aircraft.constraint.TakeOffConstraints['kTO'], self.aircraft.constraint.TakeOffConstraints['sTO'], self.aircraft.constraint.DISA, self.aircraft.constraint.TakeOffConstraints['Speed'], self.aircraft.constraint.TakeOffConstraints['Speed Type'])
+            Ppropulsive = self.WTO * self.aircraft.performance.TakeOff(
+                self.aircraft.DesignWTOoS,
+                self.aircraft.constraint.TakeOffConstraints['Beta'], 
+                self.aircraft.constraint.TakeOffConstraints['Altitude'], 
+                self.aircraft.constraint.TakeOffConstraints['kTO'], 
+                self.aircraft.constraint.TakeOffConstraints['sTO'], 
+                self.aircraft.constraint.DISA, 
+                self.aircraft.constraint.TakeOffConstraints['Speed'], 
+                self.aircraft.constraint.TakeOffConstraints['Speed Type'])
+            
+            # Takeoff One Engine Inop condition 
+            PpropulsiveOEI = self.WTO * self.aircraft.performance.OEIClimb(
+                self.aircraft.DesignWTOoS, 
+                self.aircraft.constraint.OEIClimbConstraints['Beta'], 
+                self.aircraft.constraint.OEIClimbConstraints['Speed'] * self.aircraft.constraint.OEIClimbConstraints['Climb Gradient'], 
+                1., 
+                self.aircraft.constraint.OEIClimbConstraints['Altitude'], 
+                self.aircraft.constraint.DISA, 
+                self.aircraft.constraint.OEIClimbConstraints['Speed'], 
+                self.aircraft.constraint.OEIClimbConstraints['Speed Type'])
+            
+            Ppropulsive = max(Ppropulsive,PpropulsiveOEI) #consider worst case
+
             PRatio = self.aircraft.powertrain.Hybrid(self.aircraft.mission.profile.SPW[0][0],self.aircraft.constraint.TakeOffConstraints['Altitude'],self.aircraft.constraint.TakeOffConstraints['Speed'],Ppropulsive)
             self.TO_PBat = Ppropulsive * PRatio[5]
             self.TO_PP = Ppropulsive * PRatio[1]  
@@ -339,6 +383,19 @@ class Mission:
                 self.aircraft.constraint.TakeOffConstraints["Speed"],
                 self.aircraft.constraint.TakeOffConstraints["Speed Type"],
             )
+
+            PpropulsiveOEI = self.WTO * self.aircraft.performance.OEIClimb(
+                self.aircraft.DesignWTOoS, 
+                self.aircraft.constraint.OEIClimbConstraints['Beta'], 
+                self.aircraft.constraint.OEIClimbConstraints['Speed'] * self.aircraft.constraint.OEIClimbConstraints['Climb Gradient'], 
+                1., 
+                self.aircraft.constraint.OEIClimbConstraints['Altitude'], 
+                self.aircraft.constraint.DISA, self.aircraft.constraint.OEIClimbConstraints['Speed'], 
+                self.aircraft.constraint.OEIClimbConstraints['Speed Type'])
+            
+            Ppropulsive_TO = max(Ppropulsive_TO,PpropulsiveOEI) 
+
+
             # hybrid power ratio for takeoff
             PRatio = self.aircraft.powertrain.Hybrid(
                 self.aircraft.mission.profile.SPW[0][0],
