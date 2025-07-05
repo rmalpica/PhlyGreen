@@ -36,6 +36,9 @@ class Mission:
         self.P_n_arr =[]
         self.last_weight=None
         self.optimal_n=None
+
+        self.size_battery_pack = True
+
     """ Properties """
 
     @property
@@ -422,9 +425,9 @@ class Mission:
                 self.aircraft.battery.Vout  # necessary statement for the battery class to validate Vout
             except BatteryError as err:
                 # print(f"P num at error: {P_number}")
-                # print(err)
+                if not self.size_battery_pack: print(err)
                 # print(f"{P_number} is False")
-                return False
+                return False, err.code
             except Exception as err:
                 print(f"Unexpected error: {err}")
                 raise
@@ -446,9 +449,9 @@ class Mission:
                     self.integral_solution.append(sol)
                 except BatteryError as err:
                     # print(f"P num at error: {self.aircraft.battery.P_number}")
-                    # print(err)
+                    if not self.size_battery_pack: print(err)
                     # print(f"{P_number} is False")
-                    return False
+                    return False, err.code
                 except Exception as e:
                     print(f"Unexpected error:\n{e}")
                     raise
@@ -493,7 +496,7 @@ class Mission:
                 self.Beta = sol.y[2]
                 y0 = [sol.y[0][-1], sol.y[1][-1], sol.y[2][-1], sol.y[3][-1], sol.y[4][-1]]
             # print(f"{P_number} is True")
-            return True
+            return True, None
 
         def find_P_nr(n_guess, wto_ratio,bypass=True):
             # Flags used to prevent double checking the boundaries
@@ -503,9 +506,9 @@ class Mission:
                 if wto_ratio is not None:
                     n = round(n_guess * wto_ratio)
                     # check that the value below the initial guess is invalid
-                    if not evaluate_P_nr(n - 1):
+                    if not evaluate_P_nr(n - 1)[0]:
                         n_min = n - 1
-                        if evaluate_P_nr(n):  # check that the guess is valid
+                        if evaluate_P_nr(n)[0]:  # check that the guess is valid
                             # print(f"max={n} and min={n_min}")
                             # print(f"Optimal n {n}")
                             return n  # Optimal found
@@ -536,14 +539,14 @@ class Mission:
 
             # lower the min p number until it is invalid
             if not nmin_is_bounded:
-                while evaluate_P_nr(n_min):
+                while evaluate_P_nr(n_min)[0]:
                     n_max = n_min  # if the n_min guess is too large it can be the new n_max to save iterations since it has already been tried
                     n_min = math.floor(n_min / 2)  # halve n_min until it fails
                     nmax_is_bounded = True  # nmax is set to a known valid value and does not need to be reevaluated
 
             # raise the max p number until its valid
             if not nmax_is_bounded:
-                while not evaluate_P_nr(n_max):
+                while not evaluate_P_nr(n_max)[0]:
                     n_min = n_max  # if the nmax guess is too small it can be the new nmin to save iterations since it has already been tried
                     n_max = n_max * 2  # double n_max until it works
 
@@ -553,7 +556,7 @@ class Mission:
             # find optimal P number using bisection search
             optimal = False
             while not optimal:
-                valid_result = evaluate_P_nr(n)
+                valid_result = evaluate_P_nr(n)[0]
 
                 if valid_result and (n - n_min) == 1:
                     optimal = True
@@ -571,36 +574,43 @@ class Mission:
             print(f"Optimal n {n}")
             return n
 
-        if self.last_weight is None:
-            ratio = None
+
+        if self.size_battery_pack:
+            if self.last_weight is None:
+                ratio = None
+            else:
+                ratio = self.WTO / self.last_weight
+
+            if self.optimal_n is None:
+                P_n_guess = 128  # Hardcoded first guess
+            else:
+                P_n_guess = self.optimal_n
+
+
+            self.optimal_n = find_P_nr(P_n_guess, ratio, bypass=True)  # algorithm D
+            # alg = "D"
+            # if alg == "D":
+            #     self.optimal_n = find_P_nr(P_n_guess, ratio, bypass=False)  # algorithm D
+            # if alg == "C":
+            #     self.optimal_n = find_P_nr(P_n_guess, ratio)  # algorithm C
+            # if alg == "B":
+            #     self.optimal_n = find_P_nr(P_n_guess, 1)  # algorithm B
+            # if alg == "A":
+            #     self.optimal_n = find_P_nr(128, None) # algorithm A
+
+
+
+            # save weight across iterations
+            self.last_weight = self.WTO
+
+            # Save history for performance profiling
+            self.Past_P_n.append(self.P_n_arr)
+            self.P_n_arr = []
+        
         else:
-            ratio = self.WTO / self.last_weight
-
-        if self.optimal_n is None:
-            P_n_guess = 128  # Hardcoded first guess
-        else:
-            P_n_guess = self.optimal_n
-
-
-        self.optimal_n = find_P_nr(P_n_guess, ratio, bypass=True)  # algorithm D
-        # alg = "D"
-        # if alg == "D":
-        #     self.optimal_n = find_P_nr(P_n_guess, ratio, bypass=False)  # algorithm D
-        # if alg == "C":
-        #     self.optimal_n = find_P_nr(P_n_guess, ratio)  # algorithm C
-        # if alg == "B":
-        #     self.optimal_n = find_P_nr(P_n_guess, 1)  # algorithm B
-        # if alg == "A":
-        #     self.optimal_n = find_P_nr(128, None) # algorithm A
-
-
-
-        # save weight across iterations
-        self.last_weight = self.WTO
-
-        # Save history for performance profiling
-        self.Past_P_n.append(self.P_n_arr)
-        self.P_n_arr = []
+            success, code = evaluate_P_nr(self.aircraft.battery.P_number) 
+            if not success:
+                return 0, code
 
 
         # compute peak Propulsive power along mission

@@ -5,6 +5,9 @@ from PhlyGreen.Systems.Battery import Cell_Models
 
 class BatteryError(Exception):
     """Custom exception to be caught when the battery is invalid"""
+    def __init__(self, message, code=None):
+        super().__init__(message)
+        self.code = code
 
 
 class Battery:
@@ -29,7 +32,8 @@ class Battery:
         # print(f"cell_Iout{value}")
         if value is None:
             raise BatteryError(
-                "No real valued solution found for battery current.\nBattery underpowered."
+                "No real valued solution found for battery current.\nBattery underpowered.",
+                code = "BATT_UNDERPOWERED"
             )
 
     @property
@@ -44,7 +48,8 @@ class Battery:
         _socmax = 1
         if not (self.SOC_min <= _soc <= _socmax):
             raise BatteryError(
-                f"Fail_Condition_1\nSOC outside of allowed range:\nSOC:{_soc:.17f} Range: {self.SOC_min:.17f} ~ {_socmax:.17f}"
+                f"Fail_Condition_1\nSOC outside of allowed range:\nSOC:{_soc:.17f} Range: {self.SOC_min:.17f} ~ {_socmax:.17f}",
+                code = "SOC_OUTSIDE_LIMITS"
             )
 
     @property
@@ -59,7 +64,8 @@ class Battery:
         # print(f"cell_T{value}")
         if value < 0:
             raise BatteryError(
-                f"Fail_Condition_3\nBattery temperature must be positive:\nTemperature: {value}"
+                f"Fail_Condition_3\nBattery temperature must be positive:\nTemperature: {value}",
+                code = "NEG_BATT_TEMP"
             )
 
     @property
@@ -100,7 +106,8 @@ class Battery:
         # print(f"cell_Vout{_value}")
         if not (self.cell_Vmin <= _value):# <= self.cell_Vmax):
             raise BatteryError(
-                f"Fail_Condition_6\nCell voltage outside of allowed range:\nVoltage:{_value} Range: {self.cell_Vmin} ~ {self.cell_Vmax}\nPnum is {self.P_number}"
+                f"Fail_Condition_6\nCell voltage outside of allowed range:\nVoltage:{_value} Range: {self.cell_Vmin} ~ {self.cell_Vmax}\nPnum is {self.P_number}",
+                code = "VOLTAGE_OUTSIDE_LIMITS"
             )
         return _value
 
@@ -130,7 +137,8 @@ class Battery:
         _value = self.i / self.P_number
         if _value > self.cell_max_current:
             raise BatteryError(
-                f"Fail_Condition_8\nCell current outside of allowed range:\nCurrent:{_value} Range:- ~ {self.cell_max_current}"
+                f"Fail_Condition_8\nCell current outside of allowed range:\nCurrent:{_value} Range:- ~ {self.cell_max_current}",
+                code = "CURR_OUTSIDE_LIMITS"
             )
         return _value
 
@@ -141,7 +149,8 @@ class Battery:
         # print(f"cell_SOC{_value}")
         if not (self.SOC_min <= _value <= _socmax):
             raise BatteryError(
-                f"Fail_Condition_9\nSOC outside of allowed range:\nSOC:{_value!r} Range:{self.SOC_min!r} ~ {_socmax!r}"
+                f"Fail_Condition_9\nSOC outside of allowed range:\nSOC:{_value!r} Range:{self.SOC_min!r} ~ {_socmax!r}",
+                code = "SOC_OUTSIDE_LIMITS"
             )
         return _value
     # Set all the discharge curve parameters to already be corrected with temperature
