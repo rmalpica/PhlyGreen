@@ -19,6 +19,7 @@ class Mission:
         self.WTO = None
         self.Max_PBat = -1  
         self.Max_PEng = -1  
+        self.Max_PEng_alt = 0
         self.TO_PBat = 0  
         self.TO_PP = 0 
 
@@ -185,6 +186,7 @@ class Mission:
         PP = [WTO * self.aircraft.performance.PoWTO(self.aircraft.DesignWTOoS,beta[i],self.profile.PowerExcess(times[i]),1,self.profile.Altitude(times[i]),self.DISA,self.profile.Velocity(times[i]),'TAS') for i in range(len(times))]
         PRatio = np.array([self.aircraft.powertrain.Traditional(self.profile.Altitude(times[i]),self.profile.Velocity(times[i]),PP[i]) for i in range(len(times))] )
         self.Max_PEng = np.max(np.multiply(PP,PRatio[:,1])) #shaft power
+        self.Max_PEng_alt = self.profile.Altitude(times[np.argmax(np.multiply(PP,PRatio[:,1]))]) #altitude at which peak power occurs 
 
         return self.Ef[-1]
     
@@ -286,7 +288,10 @@ class Mission:
             
             PP = np.array([WTO * self.aircraft.performance.PoWTO(self.aircraft.DesignWTOoS,beta[i],self.profile.PowerExcess(times[i]),1,self.profile.Altitude(times[i]),self.DISA,self.profile.Velocity(times[i]),'TAS') for i in range(len(times))])
             PRatio = np.array([self.aircraft.powertrain.Hybrid(self.aircraft.mission.profile.SuppliedPowerRatio(times[i]),self.profile.Altitude(times[i]),self.profile.Velocity(times[i]),PP[i]) for i in range(len(times))] )
+
             self.Max_PEng = np.max(np.multiply(PP,PRatio[:,1]))
+            self.Max_PEng_alt = self.profile.Altitude(times[np.argmax(np.multiply(PP,PRatio[:,1]))]) #altitude at which peak power occurs 
+
             self.Max_PBat = np.max(np.multiply(PP,PRatio[:,5]))
 
             return self.Ef[-1], self.EBat[-1]
@@ -610,6 +615,7 @@ class Mission:
         PP = np.array([WTO * self.aircraft.performance.PoWTO(self.aircraft.DesignWTOoS,beta[i],self.profile.PowerExcess(times[i]),1,self.profile.Altitude(times[i]),self.DISA,self.profile.Velocity(times[i]),'TAS') for i in range(len(times))])
         PRatio = np.array([self.aircraft.powertrain.Hybrid(self.aircraft.mission.profile.SuppliedPowerRatio(times[i]),self.profile.Altitude(times[i]),self.profile.Velocity(times[i]),PP[i]) for i in range(len(times))] )
         self.Max_PEng = np.max(np.multiply(PP,PRatio[:,1]))
+        self.Max_PEng_alt = self.profile.Altitude(times[np.argmax(np.multiply(PP,PRatio[:,1]))]) #altitude at which peak power occurs 
         self.Max_PBat = np.max(np.multiply(PP,PRatio[:,5]))
 
 

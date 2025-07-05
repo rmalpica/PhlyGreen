@@ -37,6 +37,8 @@ class Powertrain:
         #components mass
         self.WThermal = None
         self.WElectric = None
+        #components rating
+        self.engineRating = None
 
 
     """ Properties """
@@ -593,26 +595,31 @@ class Powertrain:
         
         if self.aircraft.Configuration == 'Traditional':
         
-                PeakPwr = np.max([self.aircraft.mission.Max_PEng, self.aircraft.mission.TO_PP]) 
+                PeakPwr = np.max(
+                    [self.aircraft.mission.Max_PEng / self.PowerLapse(self.aircraft.mission.Max_PEng_alt,0), 
+                     self.aircraft.mission.TO_PP]
+                     ) #maximum among take-off shaft power and mission shaft-power (adjusted with power-lapse)
+
+                self.engineRating = PeakPwr #shaft power 
                 self.WThermal = PeakPwr /self.SPowerPT[0]
                 WPT = self.WThermal
                 
         elif self.aircraft.Configuration == 'Hybrid':
    
                 
-                PeakPwrEng = np.max([self.aircraft.mission.Max_PEng, self.aircraft.mission.TO_PP]) 
+                PeakPwrEng = np.max(
+                    [self.aircraft.mission.Max_PEng / self.PowerLapse(self.aircraft.mission.Max_PEng_alt,0), 
+                     self.aircraft.mission.TO_PP]
+                     ) #maximum among take-off shaft power and mission shaft-power (adjusted with power-lapse)
                 PeakPwrBat = np.max([self.aircraft.mission.Max_PBat, self.aircraft.mission.TO_PBat])
+
+                self.engineRating = PeakPwrEng #shaft power
 
                 self.WThermal = PeakPwrEng /self.SPowerPT[0]
                 self.WElectric = PeakPwrBat /self.SPowerPT[1] 
 
                 WPT = self.WThermal + self.WElectric 
 
-                #versione general purpose (mancano i rendimenti)
-                #PtWPT = [PtWFuel, PtWBattery]
-
-                ## WPT =  (np.sum(np.divide(PtWPT, self.SPowerPT)) + PtWPMAD  / self.SPowerPMAD[0]) * WTO  # Pesa un botto
-                #WPT =  np.sum(np.divide(PtWPT, self.SPowerPT)) 
         else:
              raise Exception("Unknown aircraft configuration: %s" %self.aircraft.Configuration)
                 
