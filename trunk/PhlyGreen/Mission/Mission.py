@@ -368,7 +368,7 @@ class Mission:
 
             return [dEFdt, dEdt_bat, dbetadt, self.aircraft.battery.i, dTdt]
 
-        def evaluate_P_nr(P_number):
+        def evaluate_mission_given_P(P_number):
             # print(f"evaluating pnumber {P_number}")
             self.P_n_arr.append(P_number)
             # no maths needed to know nothing will work without a battery
@@ -506,9 +506,9 @@ class Mission:
                 if wto_ratio is not None:
                     n = round(n_guess * wto_ratio)
                     # check that the value below the initial guess is invalid
-                    if not evaluate_P_nr(n - 1)[0]:
+                    if not evaluate_mission_given_P(n - 1)[0]:
                         n_min = n - 1
-                        if evaluate_P_nr(n)[0]:  # check that the guess is valid
+                        if evaluate_mission_given_P(n)[0]:  # check that the guess is valid
                             # print(f"max={n} and min={n_min}")
                             # print(f"Optimal n {n}")
                             return n  # Optimal found
@@ -539,14 +539,14 @@ class Mission:
 
             # lower the min p number until it is invalid
             if not nmin_is_bounded:
-                while evaluate_P_nr(n_min)[0]:
+                while evaluate_mission_given_P(n_min)[0]:
                     n_max = n_min  # if the n_min guess is too large it can be the new n_max to save iterations since it has already been tried
                     n_min = math.floor(n_min / 2)  # halve n_min until it fails
                     nmax_is_bounded = True  # nmax is set to a known valid value and does not need to be reevaluated
 
             # raise the max p number until its valid
             if not nmax_is_bounded:
-                while not evaluate_P_nr(n_max)[0]:
+                while not evaluate_mission_given_P(n_max)[0]:
                     n_min = n_max  # if the nmax guess is too small it can be the new nmin to save iterations since it has already been tried
                     n_max = n_max * 2  # double n_max until it works
 
@@ -556,7 +556,7 @@ class Mission:
             # find optimal P number using bisection search
             optimal = False
             while not optimal:
-                valid_result = evaluate_P_nr(n)[0]
+                valid_result = evaluate_mission_given_P(n)[0]
 
                 if valid_result and (n - n_min) == 1:
                     optimal = True
@@ -608,7 +608,7 @@ class Mission:
             self.P_n_arr = []
         
         else:
-            success, code = evaluate_P_nr(self.aircraft.battery.P_number) 
+            success, code = evaluate_mission_given_P(self.aircraft.battery.P_number) 
             if not success:
                 return 0, code
 
