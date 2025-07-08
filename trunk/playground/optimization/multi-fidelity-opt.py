@@ -23,7 +23,7 @@ def funcOffD(Wf, aircraft, WPayload, OEW, wbattery):
      #print(f"               -> funcOffD = {result:.6f}")
      return result
 
-def simulate_offdesign_mission(phi_vec, sized_aircraft, newrange, payload, fidelity='I'):
+def simulate_offdesign_mission(phi_vec, sized_aircraft, newrange, payload, fidelity='I', verbose=False):
     """
     Runs the typical-mission performance/energy model.
 
@@ -37,8 +37,8 @@ def simulate_offdesign_mission(phi_vec, sized_aircraft, newrange, payload, fidel
     soc_end   : float         # [-]
     violated  : bool          # True if any TLAR or power limit fails *during* the mission
     """
-    print('simulate mission with phi_vec: ', phi_vec)
-    print('Battery fidelity: ', fidelity)
+    if(verbose): print('simulate mission with phi_vec: ', phi_vec)
+    if(verbose): print('Battery fidelity: ', fidelity)
 
     aircraft = copy.deepcopy(sized_aircraft)
 
@@ -55,6 +55,10 @@ def simulate_offdesign_mission(phi_vec, sized_aircraft, newrange, payload, fidel
     wbattery = aircraft.weight.WBat
     batteryEnergy = aircraft.mission.EBat[-1]/(1-aircraft.battery.SOC_min)
     batteryPower = max(aircraft.mission.TO_PBat,aircraft.mission.Max_PBat)
+
+    # Define Class I limitations on power and energy
+    facPwr = 0.9
+    soc_min = 0.2
 
     # Define new (off-design) mission
     newmission = pg.Mission.Mission(aircraft)
@@ -104,7 +108,7 @@ def simulate_offdesign_mission(phi_vec, sized_aircraft, newrange, payload, fidel
             if wf > 0: break
 
         if len(allfuel) < 2:
-            print("No valid sub-interval found where the function crosses zero.")
+            if(verbose): print("No valid sub-interval found where the function crosses zero.")
             return 1e10, 0, True
         else:
             brackets = []
@@ -118,11 +122,11 @@ def simulate_offdesign_mission(phi_vec, sized_aircraft, newrange, payload, fidel
                     brackets.append((Wfs[i], Wfs[i + 1]))
 
             if not brackets:
-                print("No valid sub-interval found where the function crosses zero.")
+                if(verbose): print("No valid sub-interval found where the function crosses zero.")
                 return 1e10, 0, True
             else:
                 a, b = brackets[0]
-                print(f"Using bracket: [{a}, {b}]") 
+                if(verbose): print(f"Using bracket: [{a}, {b}]") 
     else:
         a, b = 0, wfuel
 
@@ -143,20 +147,20 @@ def simulate_offdesign_mission(phi_vec, sized_aircraft, newrange, payload, fidel
         soc_end = aircraft.battery.SOC
     else:
         soc_end = 1.0 - (newbatteryEnergy/batteryEnergy) 
-        if (soc_end < 0.2): 
-            print("Class I ERROR: not enough battery energy on-board")
+        if (soc_end < soc_min): 
+            if(verbose): print("Class I ERROR: not enough battery energy on-board")
             return 1e10, 0, True
 
-        elif (newbatteryPower > batteryPower):
-            print("CLass I ERROR: battery not capable of providing peak power")
+        elif (newbatteryPower > facPwr*batteryPower):
+            if(verbose): print("CLass I ERROR: battery not capable of providing peak power")
             return 1e10, 0, True
 
-    print("Battery energy consumed [%]: ", 100*(newbatteryEnergy/batteryEnergy))
+    if(verbose): print("Battery energy consumed [%]: ", 100*(newbatteryEnergy/batteryEnergy))
 
-    print("Battery peak power absorption wrt design [%]: ", 100*(newbatteryPower/batteryPower))
+    if(verbose): print("Battery peak power absorption wrt design [%]: ", 100*(newbatteryPower/batteryPower))
 
-    print("Fuel burn: ", fuel_burn)
-    print("SOC @ landing: ", soc_end)
+    if(verbose): print("Fuel burn: ", fuel_burn)
+    if(verbose): print("SOC @ landing: ", soc_end)
 
     return fuel_burn, soc_end, False
 
@@ -167,7 +171,7 @@ def obj_wrapped(args):
     try:
         fuel, soc_end, vio = simulate_offdesign_mission(phi, aircraft, typical_range, payload, fidelity)
     except Exception as e:
-        print(f"Simulation failed for phi={phi}: {e}")
+        #print(f"Simulation failed for phi={phi}: {e}")
         return (1e10, phi, 1e10, 1e4)  # dummy values
 
     penalty = 0.0
@@ -186,7 +190,8 @@ def optimise_phi_T_cma(aircraft, typical_range, payload, fidelity,
                        upper_bounds = [1.0, 1.0],
                        delta = 1,
                        maxiter = 50,
-                       popsize = 6
+                       popsize = 6,
+                       tolx = 1e-2
                        ):
 
     soc_min = aircraft.battery.SOC_min
@@ -200,6 +205,7 @@ def optimise_phi_T_cma(aircraft, typical_range, payload, fidelity,
         'bounds': [lower_bounds, upper_bounds],
         'popsize': popsize,
         'maxiter': maxiter,
+        'tolx': tolx,
         'verb_disp': 1,
     })
 
@@ -266,6 +272,10 @@ def adaptive_bounds(phi_low, delta=0.1, asym_scale=2.0):
     return np.clip(lower_bounds,0.0,1.0), np.clip(upper_bounds,0.0,1.0)
 
 def plot_cma_diagnostics(fitness_history,scatter_history,fidelity,id):
+
+    if fitness_history is None: 
+        print('NO DATA TO PLOT!')
+        return 
 
     output_dir = f'{image_folder}_{id}_fidelity_{fidelity}' 
     os.makedirs(output_dir, exist_ok=True)
@@ -335,7 +345,8 @@ def plot_cma_diagnostics(fitness_history,scatter_history,fidelity,id):
         plt.savefig(f'{output_dir}/CMA_fidelity_scatter_gen_{gen:03d}.png', dpi=300)
         plt.close()
 
-
+def is_close(phi1, phi2, tol=0.05):
+    return np.linalg.norm(np.array(phi1) - np.array(phi2), np.inf) < tol
 
 def main():
     powertrain = pg.Systems.Powertrain.Powertrain(None)
@@ -602,63 +613,64 @@ def main():
         (0.0, 0.7),   # Electric cruise only
     ]
 
-    best_solution = None
-    best_fuel = float('inf')
+    best_overall_phi = None
+    best_overall_fuel = float('inf')
+
+    previous_hi_fi_points = []  # to store phi vectors already explored at hi-fi
 
     for idx, x0 in enumerate(initial_guesses):
-        best_phi, fuelatlanding, fitness_history, scatter_history = optimise_phi_T_cma(myaircraft, typical_range, payload, fidelity,
-                       x0guess=x0,
-                       delta = 1,
-                       maxiter = 100,
-                       popsize = os.cpu_count()
-                       )
-        
-        plot_cma_diagnostics(fitness_history,scatter_history,fidelity,idx)
-        
-        if fuelatlanding is not None and fuelatlanding < best_fuel:
-            best_fuel = fuelatlanding
-            best_solution = best_phi
-    
-    print('best solution with Low-Fidelity: ', best_solution, best_fuel)
+        # --- LOW-FIDELITY OPTIMIZATION ---
+        fidelity = 'I'
+        print(f"Running Low-Fidelity optimization for guess #{idx}: {x0}")
+        lo_phi, lo_fuel, lo_fit_hist, lo_scat_hist = optimise_phi_T_cma(
+            myaircraft, typical_range, payload, fidelity,
+            x0guess=x0,
+            delta=1,
+            maxiter=100,
+            popsize=os.cpu_count(),
+            tolx = 5e-3
+        )
+        plot_cma_diagnostics(lo_fit_hist, lo_scat_hist, fidelity, idx)
 
-    fidelity = 'II'
+        if lo_phi is None:
+            continue  # skip failed low-fi
 
-    delta = 0.15 #this tells how far the optimizer will look from the low-fi best solution
-    phi_low =  best_solution
-    lower_bounds, upper_bounds = adaptive_bounds(phi_low, delta=delta, asym_scale=2.0)
-    #lower_bounds = np.clip(phi_low - 2*delta, 0.0, 1.0)
-    #upper_bounds = np.clip(phi_low + 0.5*delta, 0.0, 1.0)
+        # Check if this low-fidelity optimum is near any previously evaluated hi-fi point
+        too_close = any(is_close(lo_phi, prev_phi) for prev_phi in previous_hi_fi_points)
 
-    best_phi, fuelatlanding, fitness_history, scatter_history = optimise_phi_T_cma(sized_aircraft, typical_range, payload, fidelity,
-                       x0guess=phi_low,
-                       lower_bounds = lower_bounds,
-                       upper_bounds = upper_bounds,
-                       delta = delta,
-                       maxiter = 5,
-                       popsize = os.cpu_count()
-                       )
-    plot_cma_diagnostics(fitness_history,scatter_history,fidelity,0)
+        if too_close:
+            print(f"Skipping High-Fidelity optimization for guess #{idx} — similar to previous one.")
+            continue
 
-    print('best solution with High-Fidelity: ', best_phi, fuelatlanding)
+        # --- HIGH-FIDELITY OPTIMIZATION ---
+        fidelity = 'II'
+        print(f"Running High-Fidelity optimization for guess #{idx}: {lo_phi}")
 
-    if fuelatlanding > 9999:
-        delta = 0.15 #this tells how far the optimizer will look from the low-fi best solution
-        phi_low =  best_solution
-        lower_bounds, upper_bounds = adaptive_bounds(phi_low, delta=delta, asym_scale=4.0)
-        #lower_bounds = np.clip(phi_low - 2*delta, 0.0, 1.0)
-        #upper_bounds = np.clip(phi_low + 0.5*delta, 0.0, 1.0)
+        phi_low = lo_phi
+        delta = 0.15
+        lower_bounds, upper_bounds = adaptive_bounds(phi_low, delta=delta, asym_scale=2.0)
 
-        best_phi, fuelatlanding, fitness_history, scatter_history = optimise_phi_T_cma(sized_aircraft, typical_range, payload, fidelity,
-                           x0guess=phi_low,
-                           lower_bounds = lower_bounds,
-                           upper_bounds = upper_bounds,
-                           delta = delta,
-                           maxiter = 5,
-                           popsize = os.cpu_count()
-                           )
-        plot_cma_diagnostics(fitness_history,scatter_history,fidelity,0)
+        hi_phi, hi_fuel, hi_fit_hist, hi_scat_hist = optimise_phi_T_cma(
+            myaircraft, typical_range, payload, fidelity,
+            x0guess=phi_low,
+            lower_bounds=lower_bounds,
+            upper_bounds=upper_bounds,
+            delta=delta,
+            maxiter=5,
+            popsize=os.cpu_count()
+        )
+        plot_cma_diagnostics(hi_fit_hist, hi_scat_hist, fidelity, idx)
 
-        print('best solution with High-Fidelity: ', best_phi, fuelatlanding)
+        if hi_phi is not None:
+            previous_hi_fi_points.append(hi_phi)
+            if hi_fuel < best_overall_fuel:
+                best_overall_phi = hi_phi
+                best_overall_fuel = hi_fuel
+
+    # Final output
+    print('\nBest solution found with High-Fidelity:')
+    print('Best phi:', best_overall_phi)
+    print('Fuel burn:', best_overall_fuel) 
 
     
 
