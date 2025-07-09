@@ -9,6 +9,8 @@ import copy
 from collections import defaultdict
 from pathos.multiprocessing import ProcessingPool as Pool
 import os
+import sys
+from tqdm import tqdm
 
 image_folder = 'cma_scatter_frames'
 
@@ -348,6 +350,51 @@ def plot_cma_diagnostics(fitness_history,scatter_history,fidelity,id):
 def is_close(phi1, phi2, tol=0.05):
     return np.linalg.norm(np.array(phi1) - np.array(phi2), np.inf) < tol
 
+
+def plot_fuel_contour(aircraft, typical_range, payload, fidelity, resolution=40):
+
+    soc_min = aircraft.battery.SOC_min
+    # Grid of phi_CL and phi_CRZ
+    phi_CL_vals = np.linspace(0.0, 1.0, resolution)
+    phi_CRZ_vals = np.linspace(0.0, 1.0, resolution)
+
+    args_list = []
+    for phi_CRZ in phi_CRZ_vals:
+        for phi_CL in phi_CL_vals:
+            phi_vec = [phi_CL, phi_CRZ]
+            args_list.append((phi_vec, aircraft, typical_range, payload, fidelity, soc_min))
+
+    print(f"Launching parallel contour simulation with {len(args_list)} cases...")
+
+    # Run with progress bar
+    with Pool() as pool:
+        results = list(tqdm(pool.imap(obj_wrapped, args_list), total=len(args_list), desc="Evaluating grid"))
+
+    # Extract results
+    fuel_vals = np.array([r[3] for r in results]).reshape((resolution, resolution))
+    feasible_mask = np.array([r[2] for r in results]).reshape((resolution, resolution))
+
+    # Optional: mask infeasible points
+    fuel_vals_masked = np.where(feasible_mask, fuel_vals, np.nan)
+
+    # Plot
+    X, Y = np.meshgrid(phi_CL_vals, phi_CRZ_vals)
+    fig, ax = plt.subplots(figsize=(6, 5))
+    levels = np.linspace(np.nanmin(fuel_vals_masked), np.nanmax(fuel_vals_masked), 20)
+    contour = ax.contourf(X, Y, fuel_vals_masked, levels=levels, cmap='viridis')
+    plt.colorbar(contour, label="Fuel burn [kg]")
+
+    # Optional: outline feasibility
+    ax.contour(X, Y, feasible_mask, levels=[0.5], colors='red', linestyles='dashed', linewidths=1)
+    ax.set_xlabel("phi_CL")
+    ax.set_ylabel("phi_CRZ")
+    ax.set_title("Fuel Burn Contour (Fidelity I)")
+    ax.grid(True)
+    plt.tight_layout()
+    plt.savefig("fuel_contour_fidelity_I.png", dpi=300)
+
+
+
 def main():
     powertrain = pg.Systems.Powertrain.Powertrain(None)
     structures = pg.Systems.Structures.Structures(None)
@@ -604,7 +651,9 @@ def main():
     typical_range = 250
     fidelity = 'I'
 
-    sized_aircraft = copy.deepcopy(myaircraft)
+    # Draw a contour map of fuel burn on a grid of phiCL-phiCRZ
+    print('Evaluating ang plotting a contour map of fuel burn on a grid of phiCL-phiCRZ with fidelity I')
+    plot_fuel_contour(myaircraft, typical_range, payload, fidelity, resolution=40)
 
     # Deal with multiple minima by running multiple first guesses and selecting the best of the bests
     initial_guesses = [
