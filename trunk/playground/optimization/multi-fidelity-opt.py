@@ -185,6 +185,76 @@ def obj_wrapped(args):
     total = fuel + penalty
     return (total, phi, penalty == 0.0, fuel)
 
+def coarse_to_fine_parallel_search(aircraft, typical_range, payload, fidelity='I', soc_min=0.2, 
+                                    total_budget=200, coarse_points=10, fine_points=10, fine_delta=0.1):
+    """
+    Hierarchical grid search with parallel evaluation and coarse-to-fine refinement.
+
+    Returns:
+        best_phi (np.array): Optimal design point [phi_CL, phi_CRZ]
+        best_fuel (float): Corresponding fuel burn
+    """
+
+    def make_args(grid_phi):
+        return [(phi, aircraft, typical_range, payload, fidelity, soc_min) for phi in grid_phi]
+
+    # Step 1: Coarse grid over full [0, 1] domain
+    phi_vals = np.linspace(0, 1, coarse_points)
+    grid_coarse = np.array([[cl, crz] for cl in phi_vals for crz in phi_vals])
+
+    print(f"Evaluating {len(grid_coarse)} coarse points in parallel...")
+    with Pool(processes=os.cpu_count()) as pool:
+        results = list(tqdm(pool.imap(obj_wrapped, make_args(grid_coarse)), total=len(grid_coarse)))
+
+    # Filter feasible and get top K
+    feasible = [(t, phi, fuel) for t, phi, is_feas, fuel in results if is_feas]
+    if not feasible:
+        print("No feasible points found in coarse search.")
+        return None, None
+
+    feasible.sort(key=lambda x: x[2])  # sort by fuel burn
+    top_feasible = feasible[:min(5, len(feasible))]
+
+    print(f"Refining {len(top_feasible)} best regions with fine search...")
+
+    best_phi = None
+    best_fuel = float('inf')
+    all_fine_results = []
+
+    # Step 2: Fine local searches
+    evals_left = total_budget - len(grid_coarse)
+    fine_per_region = max(1, evals_left // len(top_feasible))
+    fine_grid_1d = np.linspace(-fine_delta, fine_delta, int(np.sqrt(fine_per_region)))
+    fine_offset = np.array([[dx, dy] for dx in fine_grid_1d for dy in fine_grid_1d])
+
+    for _, center_phi, _ in top_feasible:
+        local_grid = np.clip(center_phi + fine_offset, 0.0, 1.0)
+        with Pool(processes=os.cpu_count()) as pool:
+            results = list(tqdm(pool.imap(obj_wrapped, make_args(local_grid)), total=len(local_grid)))
+            all_fine_results.extend(results)
+
+    #    for t, phi, is_feas, fuel in results:
+    #        if is_feas and fuel < best_fuel:
+    #            best_phi = phi
+    #            best_fuel = fuel
+    # Filter all feasible fine results
+    feasible_fine = [(fuel, phi) for _, phi, is_feas, fuel in all_fine_results if is_feas]
+
+    if not feasible_fine:
+        print("No feasible solution found.")
+        return None, None
+
+    # Find minimum fuel value
+    min_fuel = min(f for f, _ in feasible_fine)
+    tol = 10  # Tolerance on fuel to consider equivalent solutions
+
+    # Select among those with min fuel ± tol, the one with lowest infinity norm
+    candidate_minima = [(phi, fuel) for fuel, phi in feasible_fine if abs(fuel - min_fuel) < tol]
+    best_phi, best_fuel = min(candidate_minima, key=lambda x: np.linalg.norm(x[0], ord=2))
+
+    print("  phi:", best_phi)
+    print("  Fuel burn:", best_fuel)
+    return best_phi, best_fuel
 
 def optimise_phi_T_cma(aircraft, typical_range, payload, fidelity,
                        x0guess=(0.3, 0.2),
@@ -647,10 +717,54 @@ def main():
     fig.savefig('beta.png', dpi=800, transparent=False, bbox_inches='tight')
 
 
+    # Now run off-design mission to find the optimal phi strategy that minimizes fuel burn
     payload = myaircraft.weight.WPayload
     typical_range = 250
+
+    # Best way so far: grid search with class I battery, then refine with class II battery using CMA with class I optimum as first guess
     fidelity = 'I'
 
+    lo_phi, lo_fuel = coarse_to_fine_parallel_search(
+    aircraft=myaircraft,
+    typical_range=250,
+    payload=myaircraft.weight.WPayload,
+    fidelity='I',
+    soc_min=myaircraft.battery.SOC_min,
+    total_budget=300
+    )
+
+    print('\nBest solution found with Low-Fidelity:')
+    print('Best phi:', lo_phi)
+    print('Fuel burn:', lo_fuel) 
+
+    # --- HIGH-FIDELITY OPTIMIZATION ---
+    fidelity = 'II'
+    print(f"Running High-Fidelity optimization for guess: {lo_phi}")
+
+    phi_low = lo_phi
+    delta = 0.15
+    lower_bounds, upper_bounds = adaptive_bounds(phi_low, delta=delta, asym_scale=2.0)
+
+    hi_phi, hi_fuel, hi_fit_hist, hi_scat_hist = optimise_phi_T_cma(
+        myaircraft, typical_range, payload, fidelity,
+        x0guess=phi_low,
+        lower_bounds=lower_bounds,
+        upper_bounds=upper_bounds,
+        delta=delta,
+        maxiter=5,
+        popsize=os.cpu_count()
+    )
+    plot_cma_diagnostics(hi_fit_hist, hi_scat_hist, fidelity, 999)
+
+    # Final output
+    print('\nBest solution found with High-Fidelity:')
+    print('Best phi:', hi_phi)
+    print('Fuel burn:', hi_fuel) 
+
+    sys.exit()
+
+    # What follows is a more expensive way of doing it: CMA also for the class I, run on many initial guesses to avoid minima with very high phi.
+    
     # Draw a contour map of fuel burn on a grid of phiCL-phiCRZ
     print('Evaluating ang plotting a contour map of fuel burn on a grid of phiCL-phiCRZ with fidelity I')
     plot_fuel_contour(myaircraft, typical_range, payload, fidelity, resolution=40)
