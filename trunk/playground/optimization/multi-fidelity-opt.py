@@ -2,6 +2,7 @@ import sys
 import PhlyGreen as pg
 import numpy as np
 from scipy.optimize import brenth 
+from scipy.interpolate import griddata
 import matplotlib.pyplot as plt
 import cma
 import pandas as pd
@@ -59,7 +60,7 @@ def simulate_offdesign_mission(phi_vec, sized_aircraft, newrange, payload, fidel
     batteryPower = max(aircraft.mission.TO_PBat,aircraft.mission.Max_PBat)
 
     # Define Class I limitations on power and energy
-    facPwr = 0.9
+    facPwr = 1.0
     soc_min = 0.2
 
     # Define new (off-design) mission
@@ -150,11 +151,11 @@ def simulate_offdesign_mission(phi_vec, sized_aircraft, newrange, payload, fidel
     else:
         soc_end = 1.0 - (newbatteryEnergy/batteryEnergy) 
         if (soc_end < soc_min): 
-            if(verbose): print("Class I ERROR: not enough battery energy on-board")
+            if(verbose): print(f"Class I ERROR: not enough battery energy on-board. SOC_min={soc_end:.2f}")
             return 1e10, 0, True
 
         elif (newbatteryPower > facPwr*batteryPower):
-            if(verbose): print("CLass I ERROR: battery not capable of providing peak power")
+            if(verbose): print(f"Class I ERROR: battery not capable of providing peak power ({facPwr*100:.2f}%). Peak is {100*newbatteryPower/batteryPower:.2f} %. ")
             return 1e10, 0, True
 
     if(verbose): print("Battery energy consumed [%]: ", 100*(newbatteryEnergy/batteryEnergy))
@@ -174,7 +175,7 @@ def obj_wrapped(args):
         fuel, soc_end, vio = simulate_offdesign_mission(phi, aircraft, typical_range, payload, fidelity)
     except Exception as e:
         #print(f"Simulation failed for phi={phi}: {e}")
-        return (1e10, phi, 1e10, 1e4)  # dummy values
+        return (1e10, phi, False, 1e4)  # dummy values
 
     penalty = 0.0
     if soc_end < soc_min:
@@ -244,6 +245,8 @@ def coarse_to_fine_parallel_search(aircraft, typical_range, payload, fidelity='I
         print("No feasible solution found.")
         return None, None
 
+    
+
     # Find minimum fuel value
     min_fuel = min(f for f, _ in feasible_fine)
     tol = 10  # Tolerance on fuel to consider equivalent solutions
@@ -254,6 +257,16 @@ def coarse_to_fine_parallel_search(aircraft, typical_range, payload, fidelity='I
 
     print("  phi:", best_phi)
     print("  Fuel burn:", best_fuel)
+
+    # PLOT the contour
+    # Combine coarse and fine results
+    all_results = results + all_fine_results  # 'results' is from coarse phase, 'all_fine_results' from fine phase
+    # Extract required data
+    evaluated_points = [phi for _, phi, _, _ in all_results]
+    fuel_vals = [fuel for _, _, _, fuel in all_results]
+    feasible_mask = [is_feas for _, _, is_feas, _ in all_results]
+    plot_adaptive_fuel_contour(evaluated_points, fuel_vals, feasible_mask, fidelity, resolution=100)
+
     return best_phi, best_fuel
 
 def optimise_phi_T_cma(aircraft, typical_range, payload, fidelity,
@@ -458,12 +471,53 @@ def plot_fuel_contour(aircraft, typical_range, payload, fidelity, resolution=40)
     ax.contour(X, Y, feasible_mask, levels=[0.5], colors='red', linestyles='dashed', linewidths=1)
     ax.set_xlabel("phi_CL")
     ax.set_ylabel("phi_CRZ")
-    ax.set_title("Fuel Burn Contour (Fidelity I)")
+    ax.set_title(f"Fuel Burn Contour (Class {fidelity})")
     ax.grid(True)
     plt.tight_layout()
-    plt.savefig("fuel_contour_fidelity_I.png", dpi=300)
+    plt.savefig(f"fuel_contour_fidelity_{fidelity}.png", dpi=300)
 
 
+
+def plot_adaptive_fuel_contour(evaluated_points, fuel_vals, feasible_mask, fidelity="I", resolution=100):
+    """
+    Plots a fuel burn contour using interpolated data from a coarse-to-fine adaptive evaluation.
+    """
+    evaluated_points = np.array(evaluated_points)
+    fuel_vals = np.array(fuel_vals)
+    feasible_mask = np.array(feasible_mask)
+
+    # Filter feasible data
+    feasible_points = evaluated_points[feasible_mask]
+    feasible_fuels = fuel_vals[feasible_mask]
+
+    if len(feasible_points) == 0:
+        print("No feasible points to plot.")
+        return
+
+    # Define regular grid
+    grid_x, grid_y = np.linspace(0, 1, resolution), np.linspace(0, 1, resolution)
+    X, Y = np.meshgrid(grid_x, grid_y)
+
+    # Interpolate fuel values (only feasible points)
+    Z = griddata(feasible_points, feasible_fuels, (X, Y), method='linear')
+
+    # Plot
+    fig, ax = plt.subplots(figsize=(6, 5))
+    levels = np.linspace(np.nanmin(Z), np.nanmax(Z), 20)
+    contour = ax.contourf(X, Y, Z, levels=levels, cmap='viridis')
+    cbar = plt.colorbar(contour, label="Fuel burn [kg]")
+
+    # Optional: scatter the actual evaluated points
+    ax.scatter(evaluated_points[:, 0], evaluated_points[:, 1], c='black', s=10, alpha=0.2, label='Evaluated Points')
+    ax.scatter(feasible_points[:, 0], feasible_points[:, 1], c='white', s=20, edgecolors='k', label='Feasible Points')
+
+    ax.set_xlabel("phi_CL")
+    ax.set_ylabel("phi_CRZ")
+    ax.set_title(f"Fuel Burn Contour (Fidelity {fidelity}) - Adaptive")
+    ax.legend()
+    ax.grid(True)
+    plt.tight_layout()
+    plt.savefig(f"fuel_contour_adaptive_fidelity_{fidelity}.png", dpi=300)
 
 def main():
     powertrain = pg.Systems.Powertrain.Powertrain(None)
@@ -721,7 +775,23 @@ def main():
     payload = myaircraft.weight.WPayload
     typical_range = 250
 
-    # Best way so far: grid search with class I battery, then refine with class II battery using CMA with class I optimum as first guess
+    # Best way so far: grid search with class II battery
+    lo_phi, lo_fuel = coarse_to_fine_parallel_search(
+    aircraft=myaircraft,
+    typical_range=250,
+    payload=myaircraft.weight.WPayload,
+    fidelity='II',
+    soc_min=myaircraft.battery.SOC_min,
+    total_budget=300
+    )
+
+    print('\nBest solution found with High-Fidelity:')
+    print('Best phi:', lo_phi)
+    print('Fuel burn:', lo_fuel)
+
+    sys.exit() 
+
+    # Previous Best way: grid search with class I battery, then refine with class II battery using CMA with class I optimum as first guess
     fidelity = 'I'
 
     lo_phi, lo_fuel = coarse_to_fine_parallel_search(
