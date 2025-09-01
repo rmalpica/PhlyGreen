@@ -69,7 +69,7 @@ Cell_Models = {
         'Polarization Constant': 0.03,          # in Volts over amp hour
         'Polarization Arrhenius Constant': 1225,# dimensionless
         'Cell Capacity': 6,                     # in Ah
-        'Capacity Thermal Slope': 0.1766,       # in UNCLEAR per kelvin
+        'Capacity Thermal Slope': 0.1766 *(6/42.82),       # in UNCLEAR per kelvin
         'Voltage Constant':4.2-0.3,             # in volts
         'Voltage Thermal Slope': 0.00004918,    # in volts per kelvin
         'Cell Voltage Min': 2.5,                # in volts
@@ -80,3 +80,5 @@ Cell_Models = {
         'Cell Height': 0.07015,                 # in m
     },
 }
+
+

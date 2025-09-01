@@ -414,4 +414,5 @@ class Battery:
             Rth = 1 / (h * self.cell_area_surface) + Rith
             dTdt = P / Cth + (Ta - T) / (Rth * Cth)
         # print(f"h: {h}   R:{Rth}     surface:{self.cell_area_surface}    crosssec:{self.module_area_section}")
-        return dTdt, P
+        #return dTdt, P
+        return 0,0

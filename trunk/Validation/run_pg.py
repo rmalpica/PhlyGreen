@@ -119,7 +119,7 @@ class FlightRun:
             "Model": arg_cell,
             "SpecificPower": arg_s_power,
             "SpecificEnergy": arg_s_energy,
-            "Minimum SOC": 0.2,
+            "Minimum SOC": 0.2, # change here
             "Pack Voltage": arg_pack_v,
             "Class":"II"
         }

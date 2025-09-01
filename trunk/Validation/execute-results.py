@@ -51,29 +51,29 @@ ooi = [
     #"Min Battery Delivered Power",
 ]
 
-# # # # # # #
-# ioi = ["Mission Name"]
-# configs = [
-#     # (200, 1960, "Hybrid", "Finger-Cell-Thermal", 1500, 3000, 800, 0.1, "Mission-Dip-Electric"),
-#     # (200, 1960, "Hybrid", "Finger-Cell-Thermal", 1500, 3000, 800, 0.1, "Mission-Dip-Half"),
-#     (400, 1960, "Hybrid", "Finger-Cell-Thermal", 1500, 3000, 800, 0.5, "Mission-Temperature-Test"),
-# ]
-# r = RunAll("Temp")
-# r.run_parallel(configs, ooi, ioi)
+# # # # # #
+ioi = ["Mission Name"]
+configs = [
+    (200, 1960, "Hybrid", "Finger-Cell-Thermal", 1500, 3000, 800, 0.1, "Mission-Dip-Electric"),
+    (200, 1960, "Hybrid", "Finger-Cell-Thermal", 1500, 3000, 800, 0.1, "Mission-Dip-Half"),
+    # (400, 1960, "Hybrid", "Finger-Cell-Thermal", 1500, 3000, 800, 0.5, "Mission-Temperature-Test"),
+]
+r = RunAll("Dip-20")
+r.run_parallel(configs, ooi, ioi)
 
 
-# Sweep PHI
-configs = {
-    "Powerplant": ["Hybrid"],
-    "Mission Name": ["Mission-FelixFinger"],
-    "Cell": ["Finger-Cell-Thermal"],
-    "Cell Specific Energy": [500], 
-    "Cell Specific Power": [1500],
-    "Range": [1000],
-    "Payload": [2000],
-    "Base Phi": [0.1],
-    "Pack Voltage": linspace(40, 800, 4, dtype=int).tolist(),
-}
+# # Sweep PHI
+# configs = {
+#     "Powerplant": ["Hybrid"],
+#     "Mission Name": ["Mission-FelixFinger"],
+#     "Cell": ["Finger-Cell-Thermal"],
+#     "Cell Specific Energy": [1500], 
+#     "Cell Specific Power": [6000],
+#     "Range": [2361],
+#     "Payload": [547],
+#     "Base Phi": [0.1],
+#     "Pack Voltage":[800],
+# }
 
-r = RunAll("Sweep-Voltage")
-r.run_config(configs,ooi=ooi)
+# r = RunAll("20SOC-OLD")
+# r.run_config(configs,ooi=ooi)

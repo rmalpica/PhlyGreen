@@ -47,7 +47,7 @@ def MissionParameters(argRange, argPayload, argProfile, argPhi, argMission):
                 "Range Mission": argRange / 1.852,  # nautical miles but the input comes in km #TODO
                 "Range Diversion": (270+95.4)/1.852,  # nautical miles
                 "Beta start": 0.97,
-                "Minimum SOC": 0.2,
+                #"Minimum SOC": 0.2,
                 "Payload Weight": argPayload - 500,  # Kg #TODO
                 "Crew Weight": 500,
             },  # Kg,
@@ -168,7 +168,7 @@ def MissionParameters(argRange, argPayload, argProfile, argPhi, argMission):
                 "Range Mission": argRange / 1.852,  # nautical miles but the input comes in km #TODO
                 "Range Diversion": (150)/1.852,  # nautical miles
                 "Beta start": 0.97,
-                "Minimum SOC": 0.2,
+               # "Minimum SOC": 0.2,
                 "Payload Weight": argPayload - 500,  # Kg #TODO
                 "Crew Weight": 500,
             },  # Kg,
@@ -289,7 +289,7 @@ def MissionParameters(argRange, argPayload, argProfile, argPhi, argMission):
                 "Range Mission": argRange / 1.852,  # nautical miles but the input comes in km #TODO
                 "Range Diversion": (150)/1.852,  # nautical miles
                 "Beta start": 0.97,
-                "Minimum SOC": 0.2,
+                # "Minimum SOC": 0.2,
                 "Payload Weight": argPayload - 500,  # Kg #TODO
                 "Crew Weight": 500,
             },  # Kg,

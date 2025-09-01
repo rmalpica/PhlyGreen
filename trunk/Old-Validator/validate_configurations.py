@@ -153,8 +153,10 @@ class RunAll:
                 a["Range"][0],
                 a["Payload"][0],
                 a["Powerplant"][0],
+                a["Cell"][0],
                 a["Cell Specific Energy"][0],
                 a["Cell Specific Power"][0],
+                a["Pack Voltage"][0],
                 a["Base Phi"][0],
                 a["Mission Name"][0],
             )
