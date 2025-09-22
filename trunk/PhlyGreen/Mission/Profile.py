@@ -284,7 +284,7 @@ class Profile:
                 
                 
             # Descent Diversion
-        for i in range(len(self.BreaksDescent)):
+        for i in range(len(self.BreaksDescentDiversion)):
             
             def localFunctionDescent(t):
                 alt = self.Altitudes[i + len(self.BreaksClimb) + len(self.BreaksDescent) + len(self.BreaksClimbDiversion)]
