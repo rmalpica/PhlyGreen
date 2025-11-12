@@ -1,5 +1,47 @@
 class Aircraft:
+    """ The Aircraft class. 
+
+    This code is designed using the "mediator class" paradigm (a sort of hub and spoke). There is
+    one central class (Aircraft) which takes subsystems modules as inputs, and each of the modules takes the mediator
+    as their input as well. This way, any necessary module data or methods may be accessed by other modules by going through Aircraft.
+
+    """
+
     def __init__(self, powertrain, structures, aerodynamics, performance, mission, weight, constraint, welltowake, battery, climateimpact):
+        """Initialize a Aircraft instance.
+
+        Args:
+            powertrain: An instance of the powertrain class.
+            structures: An instance of the structures class.
+            aerodynamics: An instance of the aerodynamics class.
+            performance: An instance of the performance class.
+            mission: An instance of the mission class.
+            weight: An instance of the weight class.
+            constraint: An instance of the constraint class.
+            welltowake: An instance of the welltowake class.
+            battery: An instance of the battery class.
+            climateimpact: An instance of the climateimpact class.
+
+        Attributes:
+            AerodynamicsInput (dictionary): contains aerodynamics input keys and values
+            ConstraintsInput (dictionary): contains constraint analysis input keys and values
+            MissionInput (dictionary): contains mission analysis input keys and values
+            EnergyInput (dictionary): contains powertrain input keys and values
+            CellInput (dictionary): contains battery cell input keys and values
+            MissionStages (dictionary): contains mission profile input keys and values
+            DiversionStages (dictionary): contains diversion mission profile input keys and values
+            LoiterStages (dictionary): contains loiter mission profile input keys and values
+            WellToTankInput (dictionary): contains well-to-wake input keys and values
+            FLOPSInput (dictionary): contains FLOPS input keys and values
+            PropellerInput (dictionary): contains propeller input keys and values
+            Configuration (string): 'Traditional' or 'Hybrid'. Defines powertrain efficiency chain in powertrain.DefinePowertrainSystem and affects mission integration in mission.EvaluateMission.  
+            HybridType (string): 'Parallel' or 'Serial'. Specifies powertrain efficiency chain in powertrain.DefinePowertrainSystem 
+            AircraftType (string): 'ATR' or 'DO228'. Defines Class I structural model in structures.StructuralWeight
+            WingSurface (float): aircraft wing surface [m^2] 
+            DesignPW (float): aircraft design power-to-weight ratio [W/kg] 
+            DesignWTOoS (float): aircraft design wing loading  
+            
+        """
         #subsystems
         self.powertrain = powertrain
         self.structures = structures
@@ -16,16 +58,22 @@ class Aircraft:
         self.ConstraintsInput = None 
         self.MissionInput = None 
         self.EnergyInput = None 
-        self.BatteryInput = None
+        self.CellInput = None
         self.MissionStages = None 
         self.DiversionStages = None 
         self.LoiterStages = None
         self.WellToTankInput = None
         self.FLOPSInput = None
         self.PropellerInput = None
+        #aircraft configuration
+        self.Configuration = None
+        self.HybridType = None
+        self.AircraftType = None
         #aircraft design
+        self.WingSurface = None
         self.DesignPW = None
         self.DesignWTOoS = None
+
 
     """ Properties """
 
@@ -53,6 +101,21 @@ class Aircraft:
     """ Methods """
 
     def ReadInput(self,AerodynamicsInput,ConstraintsInput,MissionInput,EnergyInput,MissionStages,DiversionStages, LoiterStages=None, WellToTankInput=None, CellInput=None, ClimateImpactInput=None, PropellerInput=None):
+        """Imports input dictionaries and assigns them to Aircraft class attributes. Then it also passes them over to the subsystems classes.
+
+        Args:
+            AerodynamicsInput (dictionary)
+            ConstraintsInput (dictionary)
+            MissionInput (dictionary)
+            EnergyInput (dictionary)
+            MissionStages (dictionary)
+            DiversionStages (dictionary)
+            LoiterStages (dictionary, optional) 
+            WellToTankInput (dictionary, optional) 
+            CellInput (dictionary, optional)
+            ClimateImpactInput (dictionary, optional)
+            PropellerInput (dictionary, optional)        
+        """
         
         self.AerodynamicsInput = AerodynamicsInput
         self.ConstraintsInput = ConstraintsInput
@@ -98,24 +161,42 @@ class Aircraft:
             self.climateimpact.SetInput()
 
 
-    def DesignAircraft(self,AerodynamicsInput,ConstraintsInput, MissionInput, EnergyInput, MissionStages, DiversionStages, **kwargs):
+    def DesignAircraft(self, AerodynamicsInput, ConstraintsInput, MissionInput, EnergyInput, MissionStages, DiversionStages, **kwargs):
+        """Executes the ReadInput function, then finds desing point in the constraint diagram, then runs the mission analysis (WeightEstimation function) to design the aircraft.
+           If PrintOutput is True, it returns a full summary of the design results.
+        Args:
+            AerodynamicsInput (dictionary)
+            ConstraintsInput (dictionary)
+            MissionInput (dictionary)
+            EnergyInput (dictionary)
+            MissionStages (dictionary)
+            DiversionStages (dictionary)
+            LoiterStages (dictionary, optional) 
+            WellToTankInput (dictionary, optional) 
+            CellInput (dictionary, optional)
+            ClimateImpactInput (dictionary, optional)
+            PropellerInput (dictionary, optional)  
+            PrintOutput (bool, default is False)     
+        """
+
         WellToTankInput = kwargs.get('WellToTankInput', None)
         LoiterStages = kwargs.get('LoiterStages', None)
         CellInput = kwargs.get('CellInput', None)
         ClimateImpactInput = kwargs.get('ClimateImpactInput', None)
         PropellerInput = kwargs.get('PropellerInput', None)
         PrintOutput = kwargs.get('PrintOutput', False)
-        # print("Initializing aircraft...")
+
+        if PrintOutput: print("Reading input data...")
         self.ReadInput(AerodynamicsInput,ConstraintsInput, MissionInput, EnergyInput, MissionStages, DiversionStages,LoiterStages, WellToTankInput,CellInput,ClimateImpactInput,PropellerInput)
 
         if PrintOutput: print("Finding Design Point...")
         self.constraint.FindDesignPoint()
         
         if PrintOutput:
-            print('----------------------------------------')
-            print('Design W/S: ',self.DesignWTOoS)
-            print('Design P/W: ',self.DesignPW)
-            print('----------------------------------------')
+            print('----------------------------------------------')
+            print(f'Design wing loading W/S: {self.DesignWTOoS:.1f} [N/m^2]')
+            print(f'Design power-to-mass ratio P/W: {self.DesignPW:.2f} [W/kg]')
+            print('----------------------------------------------')
 
         if PrintOutput: print("Evaluating Weights...")
         self.weight.WeightEstimation()
@@ -147,7 +228,7 @@ class Aircraft:
         print(' ')
         if self.WellToTankInput is not None:
             print(f'Source Energy:                    {self.welltowake.SourceEnergy/1.e6:.1f} [MJ]')
-            print(f'Psi:                              {self.welltowake.Psi:.1f} [-]')
+            print(f'Psi:                              {self.welltowake.Psi:.4f} [-]')
         print(' ')
         print(f'Wing Surface:                     {self.WingSurface:.1f} [m^2]')
         print(' ')
