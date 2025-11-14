@@ -10,6 +10,14 @@ from .Propeller import Propeller
 from scipy.optimize import brentq, brenth, ridder, newton
 
 class Powertrain:
+    """
+    The Powertrain class.
+
+    This class provides efficiency chains for several propulsive architectures. It also computes Class I estimates of the powertrain mass.
+    Efficiency chains are computed by properly assembling user-provided efficiencies of each powertrain component. Components efficiencies can be constant or can depend on the operating condition. Also, Hamilton model for propeller efficiency is available.
+    Several powertrain architectures are available (traditional, hybrid-series, hybrid-parallel), with reference to De Vries, R., Brown, M., and Vos, R., “Preliminary Sizing Method for Hybrid-Electric Distributed-Propulsion Aircraft,” Journal of Aircraft, Vol. 56, No. 6, 2019, pp. 2172–2188.
+
+    """
     def __init__(self, aircraft):
         self.aircraft = aircraft
         #thermal powerplant efficiencies

@@ -2,6 +2,17 @@ import numpy as np
 import numbers
 
 class Aerodynamics:
+    """ The Aerodynamics class. 
+
+    This class provides models for the Class I estimation of the aircraft polar, i.e., the drag coefficient as a function of the lift coefficient. 
+    At the moments, this class offers two major options:
+    - an analytical quadratic polar, that expresses the CD as a function of CL with macroscopic aircraft properties as parameters (aspect ratio, oswald efficiency)
+    - numerical polars, where the CD is a given numerical function of CL. Two polars have been implemented:
+        - ATR42: 0.021476 + 0.03037383 * Cl**2
+        - Do228: 0.029 + k1 * Cl**2 
+    The class also stores and provides values for the maximum efficiency CL (analytical and numerical)
+
+    """
     def __init__(self, aircraft):
         self.aircraft = aircraft
         self.AR = None
