@@ -10,6 +10,34 @@ from .Profile import Profile
 from PhlyGreen.Systems.Battery.Battery import BatteryError
 
 class Mission:
+    """
+    Mission-level performance and energy simulation.
+
+    This class defines and evaluates the complete mission simulation of a point-mass aircraft,
+    including the time history of propulsive power, fuel burn, electric power
+    usage, battery consumption, aircraft mass fraction evolution, and peak subsystem
+    loads.
+
+    It supports:
+    - Traditional thermal propulsion configurations
+    - Hybrid-electric configurations (Class I and Class II battery models)
+    - Time-dependent integration of the governing ODEs across mission segments
+    - Peak power analysis and altitude at which peak power occurs
+    - Battery sizing (for Class II missions using iterative Parallel cells number `P-number` search)
+
+    Parameters
+    ----------
+    aircraft : Aircraft
+        Parent aircraft object containing propulsion, performance, constraint,
+        and battery models.
+
+    Notes
+    -----
+    - `Beta` is the instantaneous mass fraction (`W/W_TO`).
+    - Fuel energy `Ef` and battery energy `EBat` are integrated over time.
+    - Hybrid Class II missions rely on iterative sizing of a battery P-number,
+      ensuring voltage, SOC, current, and thermal constraints are satisfied.
+    """
   
     def __init__(self, aircraft):
         self.aircraft = aircraft
@@ -43,6 +71,8 @@ class Mission:
 
     @property
     def beta0(self):
+        """Initial mass fraction W/W_TO at start of mission. Note that mission profile does not include taxi and take-off, 
+           so beta0 is used to account for mass depletion in such phases"""
         if self._beta0 is None:
             raise ValueError("Initial weight fraction beta0 unset. Exiting")
         return self._beta0
@@ -55,6 +85,7 @@ class Mission:
 
     @property
     def ef(self):
+        """Fuel specific energy [J/kg]."""
         if self._ef is None:
             raise ValueError("Fuel specific energy unset. Exiting")
         return self._ef
@@ -68,6 +99,20 @@ class Mission:
     """Methods """
 
     def check_PP(self,PP):
+        """
+        Ensure propulsive power is non-negative. This can happen if the mission profile 
+        is badly designed in the descent phase (e.g. excessive rate of descent)
+
+        Parameters
+        ----------
+        PP : float
+            Propulsive power.
+
+        Returns
+        -------
+        float
+            PP clipped to a minimum of zero, with a warning if clipping occurs.
+        """
         if PP < 0:
             warnings.warn(". Setting Propulsive power to 0.", RuntimeWarning)
             PP = 0
@@ -75,11 +120,21 @@ class Mission:
 
 
     def SetInput(self):
+        """
+        Read mission input parameters from the aircraft object.
+
+        Must be called before mission evaluation.
+        """
 
         self.beta0 = self.aircraft.MissionInput['Beta start']
         self.ef = self.aircraft.EnergyInput['Ef']
 
     def InitializeProfile(self):
+        """
+        Construct and initialize the mission profile. Requires the Profile class to be already initialized.
+
+        Creates the flight profile and generates a time grid.
+        """
         
         self.profile = Profile(self.aircraft)
         
@@ -89,6 +144,21 @@ class Mission:
 
 
     def EvaluateMission(self,WTO):
+        """
+        Evaluates and returns mission energy consumption for the chosen configuration.
+
+        Parameters
+        ----------
+        WTO : float
+            Takeoff weight [kg].
+
+        Returns
+        -------
+        float or tuple
+            Traditional: (cumulative fuel energy [J])
+            Hybrid Class I: (cumulative fuel energy [J], cumulative battery energy [J])
+            Hybrid Class II: same, after battery sizing
+        """
         
         if self.aircraft.Configuration == 'Traditional':     
             return self.TraditionalConfiguration(WTO)
@@ -105,22 +175,62 @@ class Mission:
   
   
     def TraditionalConfiguration(self,WTO):
+        """
+        Evaluate the complete mission for a traditional (non-hybrid) propulsion system.
+
+        Includes:
+        - instantaneous propulsive power calculation
+        - fuel-burn ODE integration
+        - peak thermal shaft power evaluation
+
+        Parameters
+        ----------
+        WTO : float
+            Takeoff weight [kg].
+
+        Returns
+        -------
+        float
+            Final cumulative fuel energy [J].
+        """
  
         self.WTO = WTO
         
         
         def PowerPropulsive(Beta,t):
+            """Return required propulsive power = PP/WTO · WTO."""
 
-            PPoWTO = self.aircraft.performance.PoWTO(self.aircraft.DesignWTOoS,Beta,self.profile.PowerExcess(t),1,self.profile.Altitude(t),self.DISA,self.profile.Velocity(t),'TAS')
+            PPoWTO = self.aircraft.performance.PoWTO(
+                self.aircraft.DesignWTOoS,
+                Beta,
+                self.profile.PowerExcess(t),
+                1,
+                self.profile.Altitude(t),
+                self.DISA,
+                self.profile.Velocity(t),
+                'TAS'
+                )
 
             return PPoWTO * WTO
 
         
         def model(t,y):
+            """
+            System ODE:
+            y[0] = fuel energy consumed
+            y[1] = Beta (mass fraction)
+
+            Returns RHS:
+            dy/dt = [dE/dt, dbeta/dt]
+            """
             Beta = y[1]
             PP = PowerPropulsive(Beta,t)
             self.check_PP(PP)
-            PRatio = self.aircraft.powertrain.Traditional(self.profile.Altitude(t),self.profile.Velocity(t),PP)
+            PRatio = self.aircraft.powertrain.Traditional(
+                self.profile.Altitude(t),
+                self.profile.Velocity(t),
+                PP
+                )
             dEdt = PP * PRatio[0]
             dbetadt = - dEdt/(self.ef*self.WTO)
 
@@ -150,7 +260,11 @@ class Mission:
         
         Ppropulsive = max(Ppropulsive,PpropulsiveOEI) #consider worst case
 
-        PRatio = self.aircraft.powertrain.Traditional(self.aircraft.constraint.TakeOffConstraints['Altitude'],self.aircraft.constraint.TakeOffConstraints['Speed'],Ppropulsive)
+        PRatio = self.aircraft.powertrain.Traditional(
+            self.aircraft.constraint.TakeOffConstraints['Altitude'],
+            self.aircraft.constraint.TakeOffConstraints['Speed'],
+            Ppropulsive
+            )
         self.TO_PP = Ppropulsive * PRatio[1] #shaft power 
 
         #set/reset max values
@@ -186,7 +300,16 @@ class Mission:
 
     
 
-        PP = [WTO * self.aircraft.performance.PoWTO(self.aircraft.DesignWTOoS,beta[i],self.profile.PowerExcess(times[i]),1,self.profile.Altitude(times[i]),self.DISA,self.profile.Velocity(times[i]),'TAS') for i in range(len(times))]
+        PP = [WTO * self.aircraft.performance.PoWTO(
+            self.aircraft.DesignWTOoS,
+            beta[i],
+            self.profile.PowerExcess(times[i]),
+            1,
+            self.profile.Altitude(times[i]),
+            self.DISA,
+            self.profile.Velocity(times[i]),
+            'TAS') for i in range(len(times))]
+
         PRatio = np.array([self.aircraft.powertrain.Traditional(self.profile.Altitude(times[i]),self.profile.Velocity(times[i]),PP[i]) for i in range(len(times))] )
         self.Max_PEng = np.max(np.multiply(PP,PRatio[:,1])) #shaft power
         self.Max_PEng_alt = self.profile.Altitude(times[np.argmax(np.multiply(PP,PRatio[:,1]))]) #altitude at which peak power occurs 
@@ -195,22 +318,68 @@ class Mission:
     
     
     def HybridConfigurationClassI(self,WTO):
+            """
+            Evaluate the mission for a Hybrid-Electric aircraft using a Class I battery model.
+
+            Class I battery:
+                - Does NOT enforce electrochemical or thermal limits.
+                - Battery energy is updated simply from power * efficiency relationships.
+                - No P-number sizing loop is used.
+
+            Output:
+                - Fuel consumption (Ef)
+                - Battery energy consumption (EBat)
+                - Mission-level peak thermal and electric power
+
+            Parameters
+            ----------
+            WTO : float
+                Takeoff weight [kg].
+
+            Returns
+            -------
+            tuple
+                (final cumulative fuel energy [J], final cumulative battery energy [J])
+            """
             
             self.WTO = WTO
             
             def PowerPropulsive(Beta,t):
+                """Return required propulsive power = PP/WTO · WTO."""
 
-                PPoWTO = self.aircraft.performance.PoWTO(self.aircraft.DesignWTOoS,Beta,self.profile.PowerExcess(t),1,self.profile.Altitude(t),self.DISA,self.profile.Velocity(t),'TAS')
+                PPoWTO = self.aircraft.performance.PoWTO(
+                    self.aircraft.DesignWTOoS,
+                    Beta,
+                    self.profile.PowerExcess(t),
+                    1,
+                    self.profile.Altitude(t),
+                    self.DISA,
+                    self.profile.Velocity(t),
+                    'TAS'
+                    )
             
                 return PPoWTO * WTO
 
             
             def model(t,y):
+                """
+                Governing ODEs. State vector:
+                y[0] = cumulative fuel energy Ef
+                y[1] = cumulative battery energy EBat
+                y[2] = mass fraction Beta
+
+                Returns RHS dy/dy = [dEFdt,dEBatdt,dbetadt]
+                """
                 
                 Beta = y[2]
                 Ppropulsive = PowerPropulsive(Beta,t)
                 self.check_PP(Ppropulsive)
-                PRatio = self.aircraft.powertrain.Hybrid(self.aircraft.mission.profile.SuppliedPowerRatio(t),self.profile.Altitude(t),self.profile.Velocity(t),Ppropulsive)
+                PRatio = self.aircraft.powertrain.Hybrid(
+                    self.aircraft.mission.profile.SuppliedPowerRatio(t),
+                    self.profile.Altitude(t),
+                    self.profile.Velocity(t),
+                    Ppropulsive
+                    )
 
                 # if self.aircraft.mission.profile.SuppliedPowerRatio(t) > 0.:
                     # print(self.aircraft.mission.profile.SuppliedPowerRatio(t))
@@ -302,15 +471,71 @@ class Mission:
 
     
     def HybridConfigurationClassII(self,WTO):
+        """
+        Evaluate the mission for a Hybrid-Electric aircraft using a Class II battery model.
+
+        Class II battery:
+            - Enforces current, voltage, SOC, and thermal constraints.
+            - Requires P-number sizing (battery discretization).
+            - Mission evaluation is repeatedly performed until a feasible P-number
+              (battery size) is found.
+
+        Outputs:
+            - Fuel energy (Ef)
+            - Battery energy (EBat)
+            - Peak thermal and electric power
+            - Updated optimal P-number
+
+        Parameters
+        ----------
+        WTO : float
+            Takeoff weight [kg].
+
+        Returns
+        -------
+        tuple
+            (final cumulative fuel energy [J], final cumulative battery energy [J])
+
+        Notes
+        -----
+        The algorithm:
+            1. Uses a P-number guess (or previous optimal).
+            2. Scales P-number based on weight from previous iteration (if available).
+            3. Evaluates mission for that P-number:
+                - battery thermal model
+                - battery electrochemical model
+                - SOC/voltage/current limits
+            4. If infeasible, P-number is adjusted using a bounded search.
+            5. Continues until a feasible P-number is found.    
+        """
  
         self.WTO = WTO
 
         def PowerPropulsive(Beta,t):
-            PPoWTO = self.aircraft.performance.PoWTO(self.aircraft.DesignWTOoS,Beta,self.profile.PowerExcess(t),1,self.profile.Altitude(t),self.DISA,self.profile.Velocity(t),'TAS')
+            PPoWTO = self.aircraft.performance.PoWTO(
+                self.aircraft.DesignWTOoS,
+                Beta,
+                self.profile.PowerExcess(t),
+                1,
+                self.profile.Altitude(t),
+                self.DISA,
+                self.profile.Velocity(t),
+                'TAS'
+                )
           
             return PPoWTO * WTO
 
         def model(t, y):
+            """
+            Governing ODEs. State vector:
+            y[0] = Ef     (fuel energy)
+            y[1] = EBat   (battery energy)
+            y[2] = Beta   (mass fraction)
+            y[3] = it     (Ampere-seconds, i.e. charge throughput)
+            y[4] = T      (battery temperature, K)
+
+            Return RHS dy/dt = [dEFdt, dEdt_bat, dbetadt, i, dTdt] 
+        """
             # aircraft mass fraction
             Beta = y[2]
             Ppropulsive = PowerPropulsive(Beta, t)
@@ -369,6 +594,15 @@ class Mission:
             return [dEFdt, dEdt_bat, dbetadt, self.aircraft.battery.i, dTdt]
 
         def evaluate_mission_given_P(P_number):
+            """
+            Evaluate the full mission for a given battery discretization P-number.
+
+            Returns
+            -------
+            bool, int or None
+                (True, None) if feasible
+                (False, error_code) if battery constraint failed
+            """
             # print(f"evaluating pnumber {P_number}")
             self.P_n_arr.append(P_number)
             # no maths needed to know nothing will work without a battery
@@ -499,6 +733,15 @@ class Mission:
             return True, None
 
         def find_P_nr(n_guess, wto_ratio,bypass=True):
+            """
+            Find the feasible P-number using a bounded search (bisection-like).
+            Efficient and robust for large battery discretizations.
+
+            Returns
+            -------
+            int
+                Optimal feasible P-number.
+            """
             # Flags used to prevent double checking the boundaries
             nmin_is_bounded = False
             nmax_is_bounded = False
