@@ -5,6 +5,37 @@ import PhlyGreen.Utilities.Units as Units
 
 
 class Profile:
+    """
+    Mission profile generator for a complete aircraft trajectory.
+
+    This class builds the time history of altitude, velocity, climb/descent
+    rates, and—when applicable—supplied power ratio phi(t) for hybrid aircraft.
+
+    The mission may include:
+        - Climb (multiple stages)
+        - Cruise
+        - Descent (multiple stages)
+        - Diversion climb/cruise/descent
+        - Optional loiter segment
+
+    The structure is:
+        1. User supplies stage definitions (climb, cruise, descent blocks)
+        2. Profile.DefineMission() loops through these stages and builds:
+            - Breakpoints in time for each phase
+            - Piecewise altitude and velocity functions
+            - Power excess (HTMission)
+            - Supplied Power Ratio (SPW) interpolation (hybrid only)
+        3. A merged timeline is created that concatenates all segments
+        4. Mission functions return altitude(t), velocity(t), phi(t) via
+           piecewise interpolation for use in ODE integration.
+
+    Notes
+    -----
+    • Breakpoints are cumulative times (s) separating phases.
+    • HTMission values represent the climb/descent vertical speed (dh/dt).
+    • Velocity histories follow the same break structure.
+    
+    """
     
     def __init__(self, aircraft):
         self.aircraft = aircraft
@@ -71,6 +102,7 @@ class Profile:
 
     @property
     def SPW(self):
+        """Supplied power ratio table (per-stage phi_start, phi_end)."""
         if len(self._SPW) == 0:
             raise ValueError("Supplied power ratio unset. Exiting")
         return self._SPW
@@ -102,6 +134,19 @@ class Profile:
         
 
     def DefineMission(self):
+        """
+        Constructs the full mission timeline by parsing each phase of mission,
+        diversion, and optional loiter sequence.
+
+        Steps:
+            1) Parse climb and descent phases
+            2) Parse cruise segments
+            3) Construct power ratio phi(t) schedule (hybrid)
+            4) Build diversion segments
+            5) Build loiter
+            6) Merge into one global timeline
+            7) Generate interpolating functions for phi(t)
+        """
         
         self.SetInput()
 
@@ -186,6 +231,10 @@ class Profile:
 
 
     def MergeMission(self):
+        """
+        Combine climb, cruise, descent, diversion, and loiter segments into
+        continuous breakpoints and lookup tables for altitude and velocity.
+        """
         
         for i in range(len(self.BreaksClimb)):
             self.Breaks.append(self.BreaksClimb[i])
@@ -234,6 +283,14 @@ class Profile:
 
 
     def Altitude_Func(self,t):
+        """
+        Generate the piecewise local altitude(t) functions for each segment.
+
+        Returns
+        -------
+        list of callables
+            Functions of t for each mission segment.
+        """
         AltitudeFunctions=[]
         
           # Climb Mission        
@@ -305,15 +362,24 @@ class Profile:
 
 
     def Altitude(self,t):
+        """Return altitude at time t via piecewise selection."""
         return np.piecewise(t, [ t >= ti for ti in self.Breaks], self.Altitude_Func(t))
 
     def PowerExcess(self,t):
+        """Return vertical climb/descent rate HTMission(t)."""
         return np.piecewise(t, [ t >= ti for ti in self.Breaks], self.HTMission)
     
     def Velocity(self,t):
+        """Return velocity at time t."""
         return np.piecewise(t, [ t >= ti for ti in self.Breaks], self.Velocities)
 
     def SuppliedPowerRatio(self,t):
+        """
+        Return the hybrid supplied power ratio phi(t) through interpolation.
+
+        SPWinterp contains a lambda for each segment computing phi(t) based on
+        segment endpoints.
+        """
         idx=np.piecewise(t, [ self.times[i] < t <= self.times[i+1] for i in range(len(self.times)-1)], [i for i in range(len(self.times)-1)])
         return self.SPWinterp[idx.astype(int)](t) 
 
@@ -321,6 +387,20 @@ class Profile:
 # Flight segments
 
     def ConstantRateClimb(self,StageInput,phase):
+        """
+        Build a constant-rate climb segment for Mission or Diversion.
+
+        Parameters
+        ----------
+        StageInput : dict
+            Contains:
+                - StartAltitude [m]
+                - EndAltitude [m]
+                - CB (climb gradient as dh/dx)
+                - Speed (true airspeed) [m/s]
+        phase : str
+            'Mission' or 'Diversion'
+        """
         
         StartAltitude = StageInput['StartAltitude']
         self.Altitudes.append(StartAltitude)
@@ -355,6 +435,18 @@ class Profile:
         
         
     def ConstantMachCruise(self,StageInput,phase):
+        """
+        Build a constant-Mach cruise segment.
+
+        Parameters
+        ----------
+        StageInput : dict
+            Contains:
+                - Altitude [m]
+                - Mach
+        phase : str
+            'Mission', 'Diversion', or 'Loiter'
+        """
         
         Altitude = StageInput['Altitude']
         Mach = StageInput['Mach']
@@ -392,6 +484,18 @@ class Profile:
         
         
     def ConstantRateDescent(self,StageInput,phase):
+        """
+        Build a constant-rate descent segment for Mission or Diversion.
+
+        Parameters
+        ----------
+        StageInput : dict
+            Contains:
+                - StartAltitude [m]
+                - EndAltitude [m]
+                - CB (descent gradient)
+                - Speed (true airspeed) [m/s]
+        """
                 
         StartAltitude = StageInput['StartAltitude']
         self.Altitudes.append(StartAltitude)
