@@ -481,6 +481,43 @@ class Powertrain:
 
        
     def Traditional(self,alt,vel,pwr):
+        """
+        Compute the power ratios across a traditional gas-turbine propulsion
+        chain.
+
+        This function solves a 4x4 linear system representing the steady-state power
+        balance between fuel power, gas-turbine shaft power, gearbox power, and
+        delivered propulsive power. The solution is expressed in nondimensional
+        form, normalized by the propulsive power P_p.
+
+        Parameters
+        ----------
+        alt : float
+            Aircraft altitude [m].
+        vel : float
+            True airspeed [m/s].
+        pwr : float
+            Requested shaft power.
+
+        These inputs are required for quering the instantaneous values of the components efficiencies 
+        if models are provided. Otherwise, the constant user-provided values are employed.
+
+        Returns
+        -------
+        numpy.ndarray of shape (4,)
+            Normalized power ratios, in the following order:
+
+            - Pf/Pp : fuel power to propulsive power ratio 
+            - Pgt/Pp : gas-turbine shaft power to propulsive power ratio 
+            - Pgb/Pp : gearbox output power to propulsive power ratio 
+            - Pp/Pp  : always equal to 1
+
+        Notes
+        -----
+        The system matrix is upper-triangular and could be solved analytically.
+        However, using ``np.linalg.solve`` keeps the expression general and ensures
+        numerical robustness with negligible computational overhead.
+        """
         
 
         A = np.array([[- self.EtaGTmodel(alt,vel,pwr), 1, 0, 0],
@@ -497,6 +534,66 @@ class Powertrain:
 
     
     def Hybrid(self,phi,alt,vel,pwr):
+        """
+        Compute power ratios for hybrid-electric propulsion architectures.
+
+        This function assembles and solves a linear system representing the steady-state
+        power balance across all components of a hybrid propulsion system. Two
+        architectures are supported:
+
+        1. **Parallel hybrid**
+           Includes:
+           - Gas turbine (GT) engine
+           - Gearbox (GB)
+           - Electric motor/generator (EM)
+           - Power electronics and/or management system(PM)
+           - Propulsive device, e.g., propeller (PP)
+           - Hybrid power-split defined by ``phi``
+
+           The returned power ratios correspond to:
+           ``[Pf/Pp, Pgt/Pp, Pgb/Pp, Ps1/Pp, Pe1/Pp, Pbat/Pp, Pp1/Pp]``
+
+        2. **Serial hybrid**
+           Includes:
+           - Gas turbine (GT) engine
+           - generator (EM1)
+           - Power electronics and/or management system(PM)
+           - Electric motor (EM2)
+           - Gearbox (GB)
+           - Propulsive device, e.g., propeller (PP)
+           - Hybrid power-split constraint defined by ``phi``
+
+           The returned power ratios correspond to:
+           ``[Pf/Pp, Pgt/Pp, Pgb/Pp, Ps1/Pp, Pe1/Pp, Pbat/Pp, Pgen/Pp, Pp1/Pp]``
+
+        Parameters
+        ----------
+        phi : float
+            Hybrid power-split ratio.  
+            - In parallel mode: fraction of propulsive power supplied electrically.  
+            - In serial mode: fraction of generator/battery power routed to propulsion.
+        alt : float
+            Aircraft altitude [m].
+        vel : float
+            True airspeed [m/s].
+        pwr : float
+            Requested shaft power level.
+
+        Returns
+        -------
+        numpy.ndarray
+            Vector of nondimensional power ratios, normalized by propulsive power P_p.
+            The output order depends on the hybrid configuration (parallel or serial).
+
+        Notes
+        -----
+        - The function constructs a 7x7 (parallel) or 8x8 (serial) linear system and
+          solves it using ``np.linalg.solve``.
+        - The systems have block-triangular structure, but closed-form analytical
+          expressions would be lengthy and less maintainable than the numerical solve.
+        - All efficiencies (GT, GB, EM, PM, PP) are evaluated at the given flight
+          condition, if models are available.
+        """
         
         # phi = self.aircraft.mission.profile.SuppliedPowerRatio(t)
         self.phi = phi
@@ -556,6 +653,11 @@ class Powertrain:
     
 
     def DefinePowertrainSystem(self,alt,vel,PP,eta_PP):
+        """
+        Auxiliary function that returns the matrix A and the vector B of the linear systems employed in powertrain.Traditional and powertrain.Hybrid
+
+        Presently unused.
+        """
 
 
         if self.aircraft.Configuration == 'Traditional':
@@ -601,6 +703,61 @@ class Powertrain:
 
 
     def WeightPowertrain(self,WTO):
+        """
+        This function estimates the total weight of the propulsion powertrain based on the aircraft
+        configuration (traditional or hybrid) and the maximum required power level.
+
+        This function inherits from the mission class the installed power requirements for the propulsion
+        system and converts them into component weights using specific power
+        coefficients (shaft-power-to-weight ratios). The methodology differs for
+        traditional and hybrid-electric architectures:
+
+        - **Traditional configuration**
+          Only the thermal (gas-turbine) powertrain is present. The peak required
+          shaft power is determined as the maximum between:
+            1. Mission maximum engine power corrected by power lapse, and
+            2. Take-Off (TO) required propulsive power.
+          The thermal powertrain weight is obtained by dividing this peak shaft
+          power by the thermal specific power ratio ``SPowerPT[0]``.
+
+        - **Hybrid configuration**
+          Both thermal and electric subsystems are sized independently:
+            * Thermal subsystem: same criterion as in traditional case.
+            * Electric subsystem: peak battery power is the maximum between mission
+              maximum electric power and TO electric power.
+          The total powertrain weight is the sum of thermal and electric subsystem
+          weights, computed using ``SPowerPT[0]`` and ``SPowerPT[1]`` respectively.
+
+        Parameters
+        ----------
+        WTO : float
+            Take-off weight of the aircraft [kg].  
+            (Currently unused inside the method but included for interface
+            compatibility.)
+
+        Returns
+        -------
+        float
+            Total estimated powertrain weight [kg]. Fuel and Battery weights are not included.
+
+        Attributes Updated
+        ------------------
+        engineRating : float
+            Rated thermal shaft power required for the mission [W].
+        WThermal : float
+            Weight of the thermal propulsion subsystem [kg].
+        WElectric : float, optional
+            Weight of the electric power subsystem (only for hybrid configurations)
+            [kg].
+
+        Notes
+        -----
+        - ``SPowerPT`` is assumed to contain the specific power (W/kg) for thermal
+          and electric powertrain components. 
+        - ``PowerLapse(alt, vel)`` is used to compute the reduction in available
+          GT power with altitude.
+        - Raises an exception if an unsupported aircraft configuration is provided.
+        """
         
         if self.aircraft.Configuration == 'Traditional':
         
