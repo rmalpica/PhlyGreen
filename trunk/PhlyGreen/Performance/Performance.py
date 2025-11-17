@@ -6,6 +6,32 @@ import PhlyGreen.Utilities.Units as Units
 
 
 class Performance:
+    """
+    Provides all low-level performance computations for an aircraft within the
+    conceptual design loop: speed conversions, aerodynamic state evaluation,
+    power-to-weight constraints, take-off, landing, ceiling, climb, turn, and
+    acceleration requirements.
+
+    The class centralizes all the physics relating thrust/power, speed, lift,
+    drag, and mission requirements. It is meant to be used inside the
+    Constraint analysis and Mission modules.
+
+    Key responsibilities
+    --------------------
+    - Convert between Mach, CAS, TAS, KCAS, KTAS using ISA atmosphere and units
+    - Compute dynamic pressure, lift coefficient, drag coefficient
+    - Compute required Power-to-Weight ratio (PoWTO) for a generic flight condition, plus:
+        * OEI climb
+        * Ceiling ROC requirement
+        * Take-off field length
+        * Landing approach/stall constraint (gives W/S max)
+        * Finger methods (Torenbeek / Raymer-like approximations)
+    - Handle aerodynamic inputs (Cl, Cd, etc.) via aircraft.aerodynamics
+
+    Notes
+    -----
+    All power-to-weight outputs are in [W/kg].
+    """
     def __init__(self, aircraft):
         self.aircraft = aircraft
         self.g_acc = 9.81 
@@ -80,9 +106,31 @@ class Performance:
 
 
 
-    """ Methods """
+    # ----------------------------------------------------------------------
+    # SPEED CONVERSIONS
+    # ----------------------------------------------------------------------
 
     def set_speed(self,altitude,speed,speedtype,DISA):
+        """
+        Sets the internal speed state (Mach, CAS [m/s], TAS [m/s], KTAS [knots], KCAS [knots]) depending on
+        the input speed type, using full ISA atmosphere conversions.
+
+        Parameters
+        ----------
+        altitude : float
+            Altitude of the aircraft [m]
+        speed : float
+            Speed value given by the user
+        speedtype : {'Mach', 'TAS', 'CAS', 'KTAS', 'KCAS'}
+            Type of input speed
+        DISA : float
+            ISA temperature deviation
+
+        Notes
+        -----
+        This method ensures self.Mach, self.TAS, self.CAS, self.KTAS, self.KCAS
+        are always internally consistent.
+        """
 
         if speedtype == 'Mach':
             self.Mach = speed
@@ -124,41 +172,115 @@ class Performance:
 
         return None
 
+    # ----------------------------------------------------------------------
+    # POWER-TO-WEIGHT FUNCTIONS
+    # ----------------------------------------------------------------------
+
     def PoWTO(self,WTOoS,beta,Ps,n,altitude,DISA,speed,speedtype):      # W/Kg 
+        """
+        Computes required P/W for generic steady conditions using:
+
+            P/W = g * [ q * TAS / W/S * Cd(Cl,M) + beta * Ps ]
+
+        where Ps is the required excess power per unit weight (for climb, accel).
+
+        Parameters
+        ----------
+        WTOoS : array
+            Wing loading value W/S
+        beta : float
+            Weight fraction W/W_TO
+        Ps : float
+            Required specific excess power (for ROC or acceleration)
+        n : float
+            Load factor
+        altitude : float
+            Flight altitude [m]
+        speed, speedtype : float, str
+            Flight speed definition
+        DISA : float
+            ISA deviation
+
+        Returns
+        -------
+        PW : float
+            Required P/W 
+        """
         self.set_speed(altitude,speed,speedtype,DISA)
         q = 0.5 * ISA.atmosphere.RHOstd(altitude,DISA) * self.TAS**2
         Cl = n * beta * WTOoS / q
-        PW = self.g_acc * ( 1.0/WTOoS * q * self.TAS * self.aircraft.aerodynamics.Cd(Cl,self.Mach)  + beta * Ps )
+        Cd = self.aircraft.aerodynamics.Cd(Cl, self.Mach)
+        PW = self.g_acc * ( 1.0/WTOoS * q * self.TAS * Cd  + beta * Ps )
         return PW
 
-    def OEIClimb(self,WTOoS,beta,Ps,n,altitude,DISA,speed,speedtype):       
+    def OEIClimb(self,WTOoS,beta,Ps,n,altitude,DISA,speed,speedtype):
+        """
+        One-engine-inoperative (OEI) climb P/W requirement.
+
+        Includes correction factor n_eng/(n_eng - 1) because available thrust
+        decreases but required includes OEI climb gradient.
+        """       
         self.set_speed(altitude,speed,speedtype,DISA)
         q = 0.5 * ISA.atmosphere.RHOstd(altitude,DISA) * self.TAS**2
         Cl = n * beta * WTOoS / q
-        PW =  (self.n_engines/(self.n_engines-1))*(self.g_acc * (1.0/WTOoS * q * self.TAS * self.aircraft.aerodynamics.Cd(Cl,self.Mach) + beta * Ps))
+        Cd = self.aircraft.aerodynamics.Cd(Cl, self.Mach)
+        PW =  (self.n_engines/(self.n_engines-1))*(self.g_acc * (1.0/WTOoS * q * self.TAS * Cd + beta * Ps))
         return PW
     
     def Ceiling(self,WTOoS,beta,Ps,n,altitude,DISA,MachC):
+        """
+        Ceiling P/W requirement from specified ROC at service ceiling altitude.
+
+        Uses:
+            V = TAS_ceiling = sqrt( 2 beta (W/S) / (rho * Cl_E) )
+
+        and classical drag polar.
+        """
         TASCeiling = np.sqrt((2*beta*WTOoS)/(ISA.atmosphere.RHOstd(altitude, DISA)* self.aircraft.aerodynamics.ClE(MachC)))
         q = 0.5 * ISA.atmosphere.gammaair * ISA.atmosphere.Pstd(altitude) * MachC**2
         Cl = n * beta * WTOoS / q
-        PW = self.g_acc * ( 1.0/WTOoS * q * TASCeiling * self.aircraft.aerodynamics.Cd(Cl,MachC) + beta * Ps )
+        Cd = self.aircraft.aerodynamics.Cd(Cl,MachC)
+        PW = self.g_acc * ( 1.0/WTOoS * q * TASCeiling * Cd + beta * Ps )
         return PW
     
     def TakeOff(self,WTOoS,beta,altitudeTO,kTO,sTO,DISA,speed,speedtype):
+        """
+        Takeoff field length P/W requirement.
+
+        Uses Raymer-like relation:
+            P/W = TAS * beta^2 (W/S) (kTO^2) / (s_TO * rho * Cl_TO)
+        """
         self.set_speed(altitudeTO, speed, speedtype, DISA)
         PW = self.TAS * beta**2 * WTOoS * (kTO**2) / (sTO * ISA.atmosphere.RHOstd(altitudeTO,DISA) * self.aircraft.aerodynamics.Cl_TO)
         return PW
         
     def Landing(self,WTOoS,altitude,speed,speedtype,DISA):
+        """
+        Landing constraint: determines maximum allowable W/S.
+
+        Returns
+        -------
+        PW_landing : ndarray
+            Always zero line (landing does not impose P/W)
+        WTOoS_landing : ndarray
+            Maximum allowable W/S based on stall / approach limits.
+        """
         self.set_speed(altitude, speed, speedtype, DISA)
         PWLanding = np.linspace(0, 400,num= len(WTOoS))
         WTOoSLanding = np.ones(len(WTOoS)) * (ISA.atmosphere.RHOstd(altitude, DISA)/2 * self.aircraft.aerodynamics.ClMax * self.TAS**2)
         return PWLanding, WTOoSLanding
         
             #-----------------------              WIP            ------------------------#    
-            
+
+    # ----------------------------------------------------------------------
+    # FINGER METHODS (Torenbeek / Raymer approximations)
+    # ----------------------------------------------------------------------
+               
     def TakeOff_TORENBEEK(self, altitudeTO, sTO, fTO, hTO, V3oVS, mu, speed, speedtype, DISA):
+        """
+        Torenbeek-style analytical takeoff curve generator.
+        Provides (P/W, W/S) parametric curve.
+        """
         self.set_speed(altitudeTO,speed,speedtype,DISA)
         PW = np.linspace(1, 300, num=100)
         ToWTO = PW/self.TAS
@@ -169,6 +291,9 @@ class Performance:
         return PW, WTOoS
 
     def ClimbFinger(self,WTOoS,beta,Ps,n,altitude,DISA,speed,speedtype):
+        """
+        Finger method for climb constraint (approximate but explicit).
+        """
 
         self.set_speed(altitude,speed,speedtype,DISA)
         k = self.aircraft.aerodynamics.ki()
@@ -182,6 +307,9 @@ class Performance:
         return PW
     
     def OEIClimbFinger(self,WTOoS,beta,Ps,n,altitude,DISA,speed,speedtype):
+        """
+        OEI version of Finger climb method.
+        """
 
         self.set_speed(altitude,speed,speedtype,DISA)
         k = self.aircraft.aerodynamics.ki()
@@ -195,6 +323,10 @@ class Performance:
         return PW
 
     def TakeOff_Finger(self,WTOoS,beta,altitudeTO,kTO,sTO,DISA,speed,speedtype):
+        """
+        Finger method for takeoff performance.
+        More explicit than the default Raymer approach.
+        """
         self.set_speed(altitudeTO, speed, speedtype, DISA)
         PW = self.TAS  * (1.21 * WTOoS / (sTO * ISA.atmosphere.RHOstd(altitudeTO,DISA) * self.aircraft.aerodynamics.ClTO * self.g_acc) + 
                          1.21*self.aircraft.aerodynamics.Cd(self.aircraft.aerodynamics.ClTO,self.Mach)/self.aircraft.aerodynamics.ClTO + 
