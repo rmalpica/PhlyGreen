@@ -4,23 +4,36 @@ from PhlyGreen.Systems.Battery import Cell_Models
 
 
 class BatteryError(Exception):
-    """Custom exception to be caught when the battery is invalid"""
+    """Custom exception to be caught when the battery violates physical or model constraints."""
     def __init__(self, message, code=None):
         super().__init__(message)
         self.code = code
 
 
 class Battery:
+    """
+    Battery electro-thermal model with safety checks.
+    Handles:
+    - Voltage model evaluated at cell level
+    - SOC tracking through current integration
+    - Max current enforcement
+    - Pack configuration (series/parallel)
+    - Thermal dynamics
+    """
     def __init__(self, aircraft):
         self.aircraft = aircraft
 
         self.pack_Vmax = 800
         self._SOC_min = None
-        self._it = 0
-        self._i = None
-        self._T = None
+        self._it = 0         # integral of current [Ah], used to compute SOC
+        self._i = None       # pack current [A]
+        self._T = None       # cell temperature [K]
         self._cell_max_current = None
-        self.mdot = 0
+        self.mdot = 0        # cooling mass flow estimate from heat loss model
+
+    # -------------------------------------------------------------------------
+    #                           CORE PROPERTIES
+    # -------------------------------------------------------------------------
 
     @property
     def i(self):
@@ -28,6 +41,7 @@ class Battery:
 
     @i.setter
     def i(self, value):
+        """Sets pack current and checks whether a physically valid value is available."""
         self._i = value
         # print(f"cell_Iout{value}")
         if value is None:
@@ -42,6 +56,10 @@ class Battery:
 
     @it.setter
     def it(self, value):
+        """
+        Sets the current integral.
+        Converts total pack discharge to cell discharge and checks SOC boundaries.
+        """
         self._it = value
         # print(f"it{self._it}")
         _soc = 1 - value / (self.cell_capacity * self.P_number)
@@ -60,6 +78,7 @@ class Battery:
 
     @T.setter
     def T(self, value):
+        """Ensures temperature remains physically valid."""
         self._T = value
         # print(f"cell_T{value}")
         if value < 0:
@@ -70,6 +89,7 @@ class Battery:
 
     @property
     def SOC_min(self):
+        """Ensures SOC_min is between 0 and 1."""
         if self._SOC_min is None:
             raise BatteryError("Fail_Condition_4\nMinimum SOC unset.")
         return self._SOC_min
@@ -90,6 +110,10 @@ class Battery:
 
     @cell_max_current.setter
     def cell_max_current(self, value):
+        """
+        Ensures the chosen max current does not produce invalid cell voltage.
+        This is required because cells deviate from ideal behavior near limits.
+        """
         self._cell_max_current = value
         v = self._voltageModel(0, value)
         # if not self.cell_Vmax >= v >= self.cell_Vmin:
@@ -100,8 +124,16 @@ class Battery:
                 f"Limits are {self.cell_Vmin}V ~ {self.cell_Vmax}V"
             )
 
+    # -------------------------------------------------------------------------
+    #                             CELL VOLTAGE OUTPUTS
+    # -------------------------------------------------------------------------
+
     @property
     def cell_Vout(self) -> float:
+        """
+        Actual instantaneous cell voltage.
+        Should never drop below the minimum safe voltage.
+        """
         _value = self._voltageModel(self.cell_it, self.cell_i)
         # print(f"cell_Vout{_value}")
         if not (self.cell_Vmin <= _value):# <= self.cell_Vmax):
@@ -113,10 +145,12 @@ class Battery:
 
     @property
     def cell_Voc(self) -> float:
+        """Open-circuit voltage at the current SOC."""
         return self._voltageModel(self.cell_it, 0)
 
     @property
     def Vout(self) -> float:
+        """Pack-level voltage from series connection."""
         _value = self.cell_Vout * self.S_number
         # if not ( _value <= self.pack_Vmax):
         #     raise BatteryError(
@@ -126,14 +160,20 @@ class Battery:
 
     @property
     def Voc(self) -> float:
+        """Open-circuit pack voltage."""
         return self.cell_Voc * self.S_number
 
     @property
     def cell_it(self) -> float:
+        """Discharge per cell (Ah)."""
         return self.it / self.P_number
 
     @property
     def cell_i(self) -> float:
+        """
+        Cell-level current (A).
+        For parallel strings, each cell sees pack current divided by P.
+        """
         _value = self.i / self.P_number
         if _value > self.cell_max_current:
             raise BatteryError(
@@ -144,6 +184,7 @@ class Battery:
 
     @property
     def SOC(self) -> float:
+        """Real-time State-Of-Charge computed from integrated current."""
         _value = 1 - self.cell_it / self.cell_capacity
         _socmax = 1
         # print(f"cell_SOC{_value}")
@@ -153,7 +194,13 @@ class Battery:
                 code = "SOC_OUTSIDE_LIMITS"
             )
         return _value
+    
+    # -------------------------------------------------------------------------
+    #                      TEMPERATURE-CORRECTED MODEL PARAMETERS
+    # -------------------------------------------------------------------------
+
     # Set all the discharge curve parameters to already be corrected with temperature
+
     @property
     def E0(self) -> float:
         "Voltage constant"
@@ -166,15 +213,20 @@ class Battery:
 
     @property
     def K(self) -> float:
-        "Polarization constant"
+        "Polarization resistance (Arrhenius temperature correction)"
         return self.polarization_ctt * np.exp(self.K_arrhenius * (1 / self.T - 1 / self.Tref))
 
     @property
     def R(self) -> float:
-        "Internal resistance"
+        "Internal ohmic resistance (Arrhenius temperature correction)"
         return self.cell_resistance * np.exp(self.R_arrhenius * (1 / self.T - 1 / self.Tref))
 
+    # -------------------------------------------------------------------------
+    #                          ELECTRICAL CELL MODEL
+    # -------------------------------------------------------------------------
+
     # Thermal electric model of the voltage
+
     def _voltageModel(self, it, i):
         """Model that determines the voltage from the present cell state.
            It receives i and it in order to be able to provide cell
@@ -192,7 +244,12 @@ class Battery:
         # print('_voltage returns: ', V)
         return V
 
-    # Set inputs from cell model chosen
+    # -------------------------------------------------------------------------
+    #                           INPUT SETTING
+    # -------------------------------------------------------------------------
+
+    # Set inputs from chosen cell model 
+
     def SetInput(self):
         """
         This grabs the CellModel object from the aircraft class where a
@@ -330,12 +387,17 @@ class Battery:
         self.Rith = 3.3*(self.cell_radius/0.022)**2 # probably need a citation for this one
         self.Cth = 1000 * self.cell_mass
 
+    # -------------------------------------------------------------------------
+    #                     PACK CONFIGURATION (SxP)
+    # -------------------------------------------------------------------------
 
     # determine battery configuration
     # must receive the number of cells in parallel
+
     def Configure(self, parallel_cells):
         """WIP
-            Configures the battery for the chosen P number
+            Defines the parallel count (P_number) and computes
+        pack-level properties: mass, volume, max power, nominal energy.
 
         Receives:
             - parallel_cells - the chosen P number
