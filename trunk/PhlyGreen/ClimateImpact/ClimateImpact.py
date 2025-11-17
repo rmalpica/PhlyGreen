@@ -10,6 +10,46 @@ import PhlyGreen.Utilities.Atmosphere as ISA
 
 
 class ClimateImpact:
+    """
+    Computes the climate impact of an aircraft concept over a finite time horizon H,
+    following the classical climate-chemistry impulse-response modelling framework
+    used in global aviation climate assessments (e.g. Dallara et al. 2011, Sausen et al. 2000).
+
+    The module evaluates:
+        • Annual emissions of CO2, H2O, SO4, soot, and NOx
+        • Radiative forcing contributions of all species:
+              CO2, H2O, SO4, soot, CH4, O3 (short- and long-lived), contrails (AIC)
+        • Temperature response ΔT(t) from convolution of RF *(t) with the climate kernel
+        • ATR(H): Average Temperature Response over the time horizon H
+
+    The model supports two NOx estimation approaches:
+        - Filippone semi-empirical model
+        - GasTurb-based regression model (4th-degree polynomial via scikit-learn)
+
+    Inputs expected in `aircraft.ClimateImpactInput`:
+        H             : time horizon [yr]
+        N             : number of missions per year
+        Y             : operative years
+        Grid_CO2      : CO2 intensity of electricity [kg CO2 / kWh]
+        WTW_CO2       : well-to-wake CO2 intensity of fuel [kg CO2 / MJ]
+        EINOx_model   : {'unset', 'Filippone', 'GasTurb'}
+
+    The class relies on mission profiles produced by the Mission module, including:
+        • continuous or discrete altitude/velocity profiles
+        • power demand, beta schedule, supplied power ratio (Hybrid), etc.
+
+    Outputs (stored internally):
+        self.mission_emissions = dict with keys:
+            'co2', 'h2o', 'so4', 'soot', 'nox'
+        self.media_pesata_quote : altitude-weighted average cruise height
+        self.frazioni_di_missione : altitude PDF over mission range
+        ATR(H)                   : final climate metric [K]
+
+    Notes
+    -----
+    • All forcings are normalized by RF_2CO2 to be expressed in CO2-equivalent units.
+    • Impulse response functions follow simplified standard forms for climate metrics.
+    """
     def __init__(self, aircraft):
         self.aircraft = aircraft
         self.H = None   # orizzonte temporale in anni
@@ -45,6 +85,7 @@ class ClimateImpact:
 
     @property
     def EINOx_model(self):
+        """Selected NOx model: {'unset', 'GasTurb', 'Filippone'}"""
         return self._EINOx_model
           
     @EINOx_model.setter
@@ -97,6 +138,14 @@ class ClimateImpact:
     """ Methods """
 
     def SetInput(self):
+        """
+        Load climate-impact parameters from aircraft.ClimateImpactInput.
+
+        Expected fields:
+            H, N, Y, Grid_CO2, WTW_CO2, EINOx_model
+
+        If EINOx_model == 'GasTurb', the regression model is loaded from disk.
+        """
         required_keys = {'H', 'N', 'Y', 'EINOx_model'}
         if required_keys.issubset(self.aircraft.ClimateImpactInput.keys()):
             self.H = self.aircraft.ClimateImpactInput.get("H")
@@ -129,6 +178,14 @@ class ClimateImpact:
     # NUMERO DI VOLI ALL'ANNO
 
     def U(self,year):
+        """
+        Annual mission count function U(t).
+
+        Model:
+            • Ramp-up from 0 to N over 30 years
+            • Steady operation for 5 years
+            • Linear phase-out to 0 over 30 years
+        """
 
         if year >= 0 and year <= 30:
 
@@ -157,6 +214,19 @@ class ClimateImpact:
     # EMISSIONI ANNUALI
 
     def calculate_mission_emissions(self):
+        """
+        Compute single-mission emitted mass of:
+            CO₂, H₂O, SO₄, soot, and NOx.
+
+        CO₂ includes:
+            • Tank-to-wake emissions
+            • Upstream WTW fuel CO₂
+            • Upstream grid CO₂ for battery energy (hybrid only)
+
+        NOx is computed using:
+            • Filippone empirical model, OR
+            • GasTurb-based regression model
+        """
         Wf = self.aircraft.weight.Wf  # [kg]
         
         # CO2
@@ -458,7 +528,10 @@ class ClimateImpact:
         self.mission_emissions_calculated = True
 
 
-        
+    # ----------------------------------------------------------------------
+    #                   EMISSION FUNCTIONS E_i(year)
+    # ----------------------------------------------------------------------
+    #         
     def E_co2(self,year):
         if not self.mission_emissions_calculated:
             self.calculate_mission_emissions()
