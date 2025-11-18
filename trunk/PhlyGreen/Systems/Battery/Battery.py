@@ -13,6 +13,7 @@ class BatteryError(Exception):
 class Battery:
     """
     Battery electro-thermal model with safety checks.
+
     Handles:
     - Voltage model evaluated at cell level
     - SOC tracking through current integration
@@ -395,12 +396,15 @@ class Battery:
     # must receive the number of cells in parallel
 
     def Configure(self, parallel_cells):
-        """WIP
-            Defines the parallel count (P_number) and computes
+        """
+        Defines the parallel count (P_number) and computes
         pack-level properties: mass, volume, max power, nominal energy.
 
-        Receives:
-            - parallel_cells - the chosen P number
+        Parameters
+        ----------
+        parallel_cells : int
+            Number of cells in parallel (P_number).
+
         """
         self.P_number = parallel_cells
         self.cells_total = self.P_number * self.S_number
