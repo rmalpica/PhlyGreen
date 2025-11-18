@@ -1,0 +1,125 @@
+site_name: PhlyGreen Documentation
+site_description: "User & Developer Manual for the PhlyGreen Aircraft Design Toolkit"
+site_author: Your Name
+repo_url: https://github.com/rmalpica/phlygreen
+repo_name: GitHub
+theme:
+  name: material
+  features:
+    - navigation.instant
+    - navigation.sections
+    - navigation.top
+    - navigation.expand
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - header.autohide
+    - toc.integrate
+    - announce.dismiss
+    - content.action.edit
+    - navigation.footer
+  palette:
+    - scheme: default
+      primary: teal
+      accent: cyan
+    - scheme: slate
+      primary: teal
+      accent: cyan
+      toggle:
+        icon: material/weather-night
+        name: Switch to light mode
+  font:
+    text: Inter
+    code: Fira Code
+  icon:
+    repo: fontawesome/brands/github
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - toc:
+      permalink: true
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem
+  - pymdownx.caret
+  - pymdownx.inlinehilite
+  - pymdownx.magiclink
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tilde
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: ["trunk/PhlyGreen"]
+          options:
+            show_source: true
+            show_root_full_path: false
+            show_signature: true
+            separate_signature: true
+            docstring_style: google
+            docstring_section_style: list
+            inherited_members: true
+            merge_init_into_class: true
+            show_symbol_type_heading: true
+  - autorefs
+  - macros
+  - minify:
+      minify_html: true
+  - mkdocs-jupyter:
+      execute: false   # or true if you want it to auto-run cells
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/YOUR_REPOSITORY
+
+extra_javascript:
+  - https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js
+  - https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.js
+  - https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/contrib/auto-render.min.js
+  - js/katex-init.js
+  - js/mathjax.js
+  - https://polyfill.io/v3/polyfill.min.js?features=es6
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+
+extra_css:
+  - https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css
+  - css/custom.css
+  - css/extra.css
+
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Installation: getting-started/installation.md
+      - Running Your First Mission: getting-started/running-your-first-mission.ipynb
+  - User Guide:
+      - Aircraft Module: user-guide/aircraft.md
+      - Mission Module: user-guide/mission.md
+      - Powertrain Module: user-guide/powertrain.md
+      - Battery Module: user-guide/battery.md
+      - Weight Estimation: user-guide/weight.md
+      - Aerodynamic & Performance Models: user-guide/performance.md
+      - Constraints Analysis: user-guide/constraints.md
+      - Well-To-Wake Analysis: user-guide/well-to-wake.md
+  - Developer Guide:
+      - Architecture Overview: developer-guide/architecture-overview.md
+      - Flowcharts: developer-guide/flowcharts.md
+      - Module Reference: developer-guide/module-reference.md
+      - Extending the Model: developer-guide/extending-the-model.md
+      - Troubleshooting: developer-guide/troubleshooting.md
+  - API Reference:
+      - Mission: api/mission.md
+      - Powertrain: api/powertrain.md
+      - Battery: api/battery.md
+      - Weight: api/weight.md
+      - Performance: api/performance.md
+      - Constraints: api/constraints.md
+      - Well-to-Wake: api/welltowake.md
+

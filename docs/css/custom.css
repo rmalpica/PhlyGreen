@@ -1,0 +1,13 @@
+.md-main__inner {
+  max-width: 85rem;  /* Wider body text, like Kyle Niemeyer */
+}
+
+code {
+  font-size: 0.85em;
+}
+
+.md-typeset h1, .md-typeset h2 {
+  font-weight: 600;
+}
+
+
