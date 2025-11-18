@@ -1,3 +1,5 @@
+from ._version import __version__
+
 #systems
 from . import Systems
 from . import Performance
