@@ -30,7 +30,7 @@ class ClimateImpact:
         H             : time horizon [yr]
         N             : number of missions per year
         Y             : operative years
-        Grid_CO2      : CO2 intensity of electricity [kg CO2 / kWh]
+        Grid_CO2      : CO2 intensity of electricity [kg CO2 / MJ]
         WTW_CO2       : well-to-wake CO2 intensity of fuel [kg CO2 / MJ]
         EINOx_model   : {'unset', 'Filippone', 'GasTurb'}
 
