@@ -1,13 +1,14 @@
 # PhlyGreen
 
-PhlyGreen is an open-source platform for aircraft propulsion and mission simulation,
-supporting hybrid-electric, all-electric, and conventional configurations.
+PhlyGreen is an open-source platform for aircraft designed, focused on novel propulsion architectures,
+supporting hybrid-electric, all-electric, and conventional configurations. 
+The code is under development at Sapienza Universita' di Roma. 
 
 This guide explains the logic, workflow, and structure of each major subsystem in the codebase.
 
 This documentation includes:
 
-- **User Guide** – learn how to run and customize missions  
+- **User Guide** – learn how to run and customize missions and designs 
 - **Developer Guide** – understand the architecture and modify modules  
 - **API Reference** – automatically generated from Python docstrings  
 

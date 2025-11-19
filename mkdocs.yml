@@ -98,6 +98,8 @@ nav:
   - Home: index.md
   - Getting Started:
       - Installation: getting-started/installation.md
+      - Theoretical Reference: getting-started/theory.md
+      - Program Logic: getting-started/logic.md
       - Running Your First Mission: getting-started/running-your-first-mission.ipynb
   - User Guide:
       - Aircraft Module: user-guide/aircraft.md
