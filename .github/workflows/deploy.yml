@@ -33,8 +33,7 @@ jobs:
 
     - name: Install PhlyGreen package
       run: |
-        cd trunk
-        pip install .
+        pip install -e ./trunk
 
     - name: Build site
       run: mkdocs build
