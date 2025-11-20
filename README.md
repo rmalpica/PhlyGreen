@@ -12,3 +12,5 @@ Students who contributed to the code development:
 
 - Joao Delille (Battery model)
 - Valeria Falcone (Climate Impact)
+
+[![Documentation Status](https://img.shields.io/badge/docs-online-success)](https://rmalpica.github.io/PhlyGreen/)
