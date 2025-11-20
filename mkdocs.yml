@@ -7,7 +7,7 @@ repo_name: GitHub
 theme:
   name: material
   features:
-    - navigation.instant
+    - navigation.instant: false
     - navigation.sections
     - navigation.top
     - navigation.expand
