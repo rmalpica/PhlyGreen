@@ -1,7 +1,7 @@
 site_name: PhlyGreen Documentation
 site_description: "User & Developer Manual for the PhlyGreen Aircraft Design Toolkit"
 site_author: Your Name
-repo_url: https://github.com/rmalpica/phlygreen
+repo_url: https://github.com/rmalpica/PhlyGreen
 repo_name: GitHub
 theme:
   name: material
