@@ -95,3 +95,4 @@ The structural weight $W_{ST}$ can be estimated again following two approaches: 
 - Finger, D. F., Braun, C., and Bil, C., “Impact of Engine Failure Constraints on the Initial Sizing of Hybrid-Electric GA Aircraft,” AIAA Scitech 2019 Forum, 2019, p. 1812
 - Proesmans, P.-J., and Vos, R., “Airplane Design Optimization for Minimal Global Warming Impact,” Journal of Aircraft, Vol. 59, No. 5, 2022, pp. 1363–1381
 - Filippone, A., and Bojdo, N., “Statistical Model for Gas Turbine Engines Exhaust Emissions,” Transportation Research Part D: Transport and Environment, Vol. 59, 2018, pp. 451–463
+- Souleman Njoya Motapon, Alexandre Lupien-Bedard, Louis-A. Dessaint, Handy Fortin-Blanchette, and Kamal Al-Haddad. A Generic Electrothermal Li-ion Battery Model for Rapid Evaluation of Cell Temperature Temporal Evolution. IEEE Transactions on Industrial Electronics, 64(2):998–1008, 2017.
