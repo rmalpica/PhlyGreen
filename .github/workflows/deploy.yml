@@ -24,12 +24,18 @@ jobs:
 
     - name: Install dependencies
       run: |
+        pip install -e trunk/PhlyGreen
         pip install mkdocs-material
         pip install mkdocstrings[python]
         pip install pymdown-extensions
         pip install mkdocs-jupyter
         pip install mkdocs-macros-plugin
         pip install mkdocs-minify-plugin
+
+    - name: Install PhlyGreen package
+      run: |
+        cd trunk
+        pip install .
 
     - name: Build site
       run: mkdocs build
