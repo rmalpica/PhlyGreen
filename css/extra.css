@@ -1,0 +1,19 @@
+.img-small {
+    width: 400px;
+}
+.img-medium {
+    width: 60%;
+}
+.img-center {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.img-left {
+  display: block;
+  margin: 1rem 0;
+  max-width: 40%;
+  text-align: left;
+}
+
