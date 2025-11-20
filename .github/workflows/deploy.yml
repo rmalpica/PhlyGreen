@@ -1,0 +1,39 @@
+name: Deploy MkDocs site
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      run: |
+        pip install mkdocs-material
+        pip install mkdocstrings[python]
+        pip install pymdown-extensions
+        pip install mkdocs-jupyter
+        pip install mkdocs-macros-plugin
+        pip install mkdocs-minify-plugin
+
+    - name: Build and deploy
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./site
+
