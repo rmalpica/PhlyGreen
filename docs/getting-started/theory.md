@@ -81,3 +81,17 @@ $$
 
 The structural weight $W_{ST}$ can be estimated again following two approaches: a) a low-fidelity quick estimate based on empirical correlations between $W_{ST}$ and $W_{TO}$ of existing aircraft (class I); b) the more detailed estimations proposed in the FLOPS software, which consider the structural mass as the sum of the masses of several aircraft components (class II). The powertrain weight is estimated using the specific power of the components of the chosen architecture, considering the peak power requirement across the mission, take-off, and the TLARs. Given that the value of $W_{TO}$ is needed in the intgeral equation above, the weight estimation necessitates an iterative procedure, such as Brent's method. The mission profile is modeled as a continuous function to integrate using the Backward differentiation formula (BDF) solver, an adaptive step method that does not rely on a priori time discretization of the mission.
 
+## References
+
+- Roskam, J., Airplane Design, DARcorporation, 1985.
+- Torenbeek, E., Synthesis of Subsonic Airplane Design: an Introduction to the Preliminary Design of Subsonic General Aviation and Transport Aircraft, with Emphasis on Layout, Aerodynamic Design, Propulsion and Performance, Springer Science & Business Media, 2013
+- Mattingly, J. D., Aircraft Engine Design, AIAA, 2002.
+- Isikveren, A. T., Kaiser, S., Pornet, C., and Vratny, P. C., “Pre-design Strategies and Sizing Techniques for Dual-energy Aircraft,” Aircraft Engineering and Aerospace Technology: An International Journal, Vol. 86, No. 6, 2014, pp. 525–542.
+- Pornet, C., Gologan, C., Vratny, P. C., Seitz, A., Schmitz, O., Isikveren, A. T., and Hornung, M., “Methodology for Sizing and Performance Assessment of Hybrid Energy Aircraft,” Journal of Aircraft, Vol. 52, No. 1, 2015, pp. 341–352.
+- Zamboni, J., Vos, R., Emeneth, M., and Schneegans, A., “A Method for the Conceptual Design of Hybrid Electric Aircraft,” AIAA Scitech 2019 Forum, 2019, p. 1587
+- Orefice, F., Della Vecchia, P., Ciliberti, D., and Nicolosi, F., “Aircraft Conceptual Design Including Powertrain System Architecture and Distributed Propulsion,” 2019 AIAA/IEEE Electric Aircraft Technologies Symposium (EATS), IEEE, 2019, pp.1–20
+- de Vries, R., Brown, M. T., and Vos, R., “A Preliminary Sizing Method for Hybrid-Electric Aircraft Including Aero-Propulsive Interaction Effects,” 2018 Aviation Technology, Integration, and Operations Conference, 2018, p. 4228.
+- De Vries, R., Brown, M., and Vos, R., “Preliminary Sizing Method for Hybrid-Electric Distributed-Propulsion Aircraft,” Journal of Aircraft, Vol. 56, No. 6, 2019, pp. 2172–2188
+- Finger, D. F., Braun, C., and Bil, C., “Impact of Engine Failure Constraints on the Initial Sizing of Hybrid-Electric GA Aircraft,” AIAA Scitech 2019 Forum, 2019, p. 1812
+- Proesmans, P.-J., and Vos, R., “Airplane Design Optimization for Minimal Global Warming Impact,” Journal of Aircraft, Vol. 59, No. 5, 2022, pp. 1363–1381
+- Filippone, A., and Bojdo, N., “Statistical Model for Gas Turbine Engines Exhaust Emissions,” Transportation Research Part D: Transport and Environment, Vol. 59, 2018, pp. 451–463
