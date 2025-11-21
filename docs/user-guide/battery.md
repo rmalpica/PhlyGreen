@@ -1,202 +1,272 @@
 # Battery Model
 
-This page documents the `Battery` class, which implements the electro‑thermal model, safety constraints, configuration logic, and power–current conversion used in PhlyGreen.
+This page documents the high‑fidelity **electro‑thermal battery model** in PhlyGreen.
 
 ---
 
-## Overview
+# 1. Overview
 
-The `Battery` class models the behavior of a lithium‑ion battery pack at both the **cell level** and **pack level**.  
-It handles:
+PhlyGreen’s Battery module provides a **dynamic**, **temperature‑aware**, **physics‑based**
+representation of a lithium‑ion battery pack suitable for hybrid‑electric aircraft preliminary design.
 
-- Validation of operating conditions (SOC, current, voltage, temperature)
-- The electro‑thermal voltage model
-- Pack sizing (series/parallel)
-- Thermal dynamics via a lumped‑parameter model
-- Current estimation from requested power
-- Integration with the Mission and Powertrain models
+It simulates:
+
+- A representative **cell**, based on a modified Shepherd equation  
+- Its **thermal behaviour** using a lumped‑parameter model  
+- A complete **battery pack**, built via series (`S`) and parallel (`P`) configuration  
+- Full **operational constraint handling** (voltage, SOC, current, temperature)  
+- A sizing loop integrated into the aircraft’s WTO iteration  
 
 The model is based on empirical cell parameters (selected in `Cell_Models`) and is configurable via user‑provided battery settings.
 
 ---
 
-## Key Concepts
+# 2. Battery State Variables
 
-### Cell‑Level Quantities
+At every timestep, the battery tracks three continuous state variables:
 
-The battery pack consists of:
+- **Cell current**: `i`  
+- **Spent charge** (Ah):  
 
-- `S_number`: number of cells in **series**
-- `P_number`: number of cells in **parallel**
-- Total cells = `S_number × P_number`
+  $$ i_t(t+\Delta t) = i_t(t) + \frac{i\,\Delta t}{3600} $$
 
-A few important cell quantities:
+- **Temperature**: \( T \)
 
-- `cell_Vout` — instantaneous cell voltage under load  
-- `cell_it` — charge spent per cell (Ah)  
-- `cell_i` — discharge current per cell (A)  
-- `cell_capacity` — nominal capacity (Ah)  
-- `cell_max_current` — max allowable cell current  
+The **State of Charge (SOC)** is defined as:
 
-SOC is computed as:
+$$ \text{SOC} = 1 - \frac{i_t}{Q} $$
 
-```text
-SOC = 1 − cell_it / cell_capacity
-```
+where \( Q \) is the cell capacity.
+
+A `BatteryError` is raised if SOC leaves the allowable range:
+
+$$ \text{SOC}_{\min} \le \text{SOC} \le 1 $$
 
 ---
 
-## Safety Checks
+# 3. Pack Architecture
 
-The model automatically enforces:
+A battery pack is constructed as:
 
-- **SOC limits** (`SOC_min ≤ SOC ≤ 1`)
-- **Voltage limits** (`cell_Vmin ≤ Vout`)
-- **Current limits** (per‑cell)
-- **Temperature positivity**
+- `S` cells in series → increases voltage  
+- `P` cells in parallel → increases current capability  
 
-Failures raise a `BatteryError` with a diagnostic code.
+Thus:
 
----
+$$ V_{\text{pack}} = S \, V_{\text{cell}} $$
 
-## Pack Configuration
+$$ I_{\text{pack}} = P \, i_{\text{cell}} $$
 
-Use the method:
+Pack-level capacity and energy:
 
-```python
-battery.Configure(parallel_cells)
-```
+$$ Q_{\text{pack}} = P \, Q $$
 
-This sets:
-
-- Pack mass  
-- Pack volume  
-- Pack nominal energy  
-- Pack peak power capability  
-
-Series count is determined automatically from the requested pack voltage.
+$$ E_{\text{pack}} = S \, P \, E_{\text{cell}} $$
 
 ---
 
-## Power → Current Conversion
+# 4. Cell Electrical Model  
+## Modified Shepherd Equation (Temperature‑Aware)
 
-The function:
+The cell voltage is computed using a temperature‑corrected modified Shepherd model:
 
-```python
-I_out = battery.Power_2_current(P)
-```
+\[
+V = E_0(T)
+    - K(T)\left(\frac{Q}{Q - i_t}\right)i_t
+    + A(T)e^{-B(T)i_t}
+    - i\,R(T)
+\]
 
-solves the quadratic relationship:
+Where:
 
-$$
-P = V(I) · I
-$$
+- \( E_0(T) \) — open‑circuit voltage (with thermal correction)  
+- \( K(T) \) — polarization constant  
+- \( A(T), B(T) \) — exponential zone parameters  
+- \( R(T) \) — internal resistance (Arrhenius‑corrected)  
 
-using the electro‑thermal voltage model:
+### Solving for Current from a Required Power
 
-$$
-V = E0 − (i + it)·K·Q/(Q−it) + A·exp(−B·it) − i·R
-$$
+Given a required pack power \( P_{\text{pack}} \), the battery solves:
 
-The returned current is the **total pack current**, not per‑cell.
+\[
+P_{\text{cell}} = \frac{P_{\text{pack}}}{S\,P}
+\]
 
----
+\[
+P_{\text{cell}} = V(i)\, i
+\]
 
-## Thermal Model
+This becomes a quadratic equation:
 
-Battery heat generation:
+\[
+a i^2 + b i + c = 0
+\]
 
-$$
-P_{loss} = (V_{oc} − V)·i + \frac{dE}{dT} · i · T
-$$
+Where:
 
-Cooling is modeled with a convection coefficient:
+- \( a = -(R + K_r) \) with \( K_r = K Q/(Q-i_t) \)  
+- \( b = E_0 + A e^{-Bi_t} - i_t K_r \)  
+- \( c = -P_{\text{cell}} \)
 
-$$
-h = \text{max} \left(30 \cdot  \left(\frac{\dot{m}/(A·\rho)}{5} \right)^{0.8} , 2 \right)
-$$
+The physically meaningful root is selected:
 
-Temperature change follows:
+\[
+i = \frac{-b + \sqrt{b^2 - 4ac}}{2a}
+\]
 
-$$
-\frac{dT}{dt} = \frac{P_{loss}}{C_{th}} + \frac{T_a − T}{R_{th} \cdot C_{th}}
-$$
+If the discriminant is negative:
 
----
-
-## Initialization via `SetInput()`
-
-When `BatteryClass == 'II'`, the model loads all cell parameters from `Cell_Models` and applies user-specified overrides:
-
-- `SpecificEnergy`
-- `SpecificPower`
-- `Pack Voltage`
-- `Minimum SOC`
-
-These values update:
-
-- Capacity
-- Resistance
-- Polarization constants
-- Max current
-- Thermal slopes
+\[
+b^2 - 4ac < 0 \quad\Rightarrow\quad \text{BatteryError}
+\]
 
 ---
 
-## Typical Usage
+# 5. Thermal Model  
+## Lumped‑Parameter Single‑Node Cell Temperature
+
+The cell temperature evolves according to:
+
+\[
+\frac{dT}{dt} = \frac{Q_{\text{loss}}}{C_{\text{th}}}
+               + \frac{T_{\infty} - T}{R_{\text{th}}\, C_{\text{th}}}
+\]
+
+Where:
+
+- \( C_{\text{th}} \) — thermal capacitance  
+- \( R_{\text{th}} \) — total thermal resistance  
+
+### Heat Generation
+
+\[
+Q_{\text{loss}} = (V_{\text{oc}} - V)i + \frac{dE_0}{dT} i T
+\]
+
+### Convection Cooling Model
+
+\[
+h = \max\left[
+30\left(\frac{\dot{m}/(A_{\text{surf}}\rho)}{5}\right)^{0.8},\; 2
+\right]
+\]
+
+with airflow proportional to losses:
+
+\[
+\dot{m} = a \, Q_{\text{loss}}
+\]
+
+---
+
+# 6. Battery Sizing Loop
+
+Inside the aircraft’s WTO root‑finding solver:
+
+1. Guess `WTO`  
+2. Guess `P_number`  
+3. Run full mission simulation  
+4. During each timestep, battery state is updated  
+5. If any violation occurs:  
+    - SOC too low  
+    - Voltage too low  
+    - Current > max  
+    - Temperature out of range  
+    → A `BatteryError` is thrown  
+6. Increase `P_number` and retry  
+7. Once feasible, compute pack weight  
+8. Continue WTO iteration  
+
+This ensures size is based on **actual in‑mission behaviour**, not just averaged metrics.
+
+---
+
+# 7. Inputs
+
+Battery configuration comes from `CellInput`:
+
+- `"Class"` — `"I"` (simple) or `"II"` (electro‑thermal)  
+- `"Model"` — reference into `Cell_Models`  
+- `"SpecificEnergy"` override  
+- `"SpecificPower"` override  
+- `"Pack Voltage"`  
+- `"Minimum SOC"`  
+- `"Initial temperature"`  
+- `"Max operative temperature"`
+
+Cell models include:
+
+- Mass, size, geometry  
+- OCV constants  
+- Polarization coefficients  
+- Exponential coefficients  
+- Arrhenius constants  
+- Thermal properties  
+
+---
+
+# 8. Outputs
+
+Available throughout the simulation:
+
+- `Vout` — pack voltage  
+- `cell_Vout` — cell voltage  
+- `I_pack` and `i_cell` — total and per‑cell current  
+- `SOC`  
+- `T`  
+- `Q_loss` — thermal losses  
+- Pack mass, volume, energy  
+- Maximum deliverable power  
+
+---
+
+# 9. Error Handling
+
+The battery throws structured exceptions:
+
+- `"SOC_OUTSIDE_LIMITS"`  
+- `"VOLTAGE_OUTSIDE_LIMITS"`  
+- `"CURR_OUTSIDE_LIMITS"`  
+- `"NEG_BATT_TEMP"`  
+- `"BATT_UNDERPOWERED"`  
+- `"TEMP_OUTSIDE_LIMITS"`  
+
+These allow the sizing algorithm to automatically increase P.
+
+---
+
+# 10. Usage Example
 
 ```python
 battery = Battery(aircraft)
 battery.SetInput()
-battery.Configure(parallel_cells=40)
+battery.Configure(parallel_cells=48)
 
-battery.i = battery.Power_2_current(P=120e3)
-battery.it += battery.i * dt / 3600  # integrate Ah
-battery.T += dTdt * dt               # thermal integration
+I = battery.Power_2_current(P=150e3)
+dTdt, Qloss = battery.heatLoss(Ta=288, rho=1.225)
+
+battery.it += I * dt / 3600
+battery.T  += dTdt * dt
 ```
 
 ---
 
-## Returned Attributes
+# 11. Limitations
 
-After configuration, the following are available:
-
-- `pack_weight`
-- `pack_volume`
-- `pack_energy`
-- `pack_power_max`
-- `Vout` / `Voc`
-- `SOC`, `T`, `i`, `it`
+- Single‑node temperature model (no spatial gradients).  
+- No ageing/SEI model.  
+- Cooling system mass is not sized.  
+- Discharge‑only model (no charging).  
 
 ---
 
-## Error Handling
+# References
 
-The model raises:
+- Shepherd, C. M. *Design of Primary and Secondary Cells: II. An Equation Describing Battery Discharge.*  
+   Journal of The Electrochemical Society, 112(7):657, 1965.
 
-```python
-BatteryError(message, code="...")
-```
+- Tremblay, O., & Dessaint, L.-A. *A Generic Battery Model for the Dynamic Simulation of Hybrid Electric Vehicles.*  
+   Proceedings of the 2007 IEEE Vehicle Power and Propulsion Conference, pp. 284–289.
 
-Codes include:
-
-- `"SOC_OUTSIDE_LIMITS"`
-- `"VOLTAGE_OUTSIDE_LIMITS"`
-- `"CURR_OUTSIDE_LIMITS"`
-- `"NEG_BATT_TEMP"`
-- `"BATT_UNDERPOWERED"`
-- and others
-
-This ensures numerical stability when running long mission simulations.
-
----
-
-## Notes for Users
-
-- Most failures indicate physically impossible demands (e.g., power > battery can deliver).  
-- Ensure consistent timestep scaling when integrating `it` and `T`.  
-- Pack sizing should be performed before mission evaluation.  
-- The model supports both simple (`BatteryClass == 'I'`) and full (`BatteryClass == 'II'`) configurations.
-
----
-
+- Saw, L., Somasundaram, K., Ye, Y., & Tay, A. *Electro-thermal analysis of Lithium Iron Phosphate battery for electric vehicles.*  
+   Journal of Power Sources, 249:231–238, 2014.
