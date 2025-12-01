@@ -104,12 +104,12 @@ nav:
       - Running Your First Mission: getting-started/running-your-first-mission.ipynb
   - User Guide:
       - Aircraft Module: user-guide/aircraft.md
+      - Constraints Analysis: user-guide/constraints.md
       - Mission Module: user-guide/mission.md
       - Powertrain Module: user-guide/powertrain.md
       - Battery Module: user-guide/battery.md
       - Weight Estimation: user-guide/weight.md
       - Aerodynamic & Performance Models: user-guide/performance.md
-      - Constraints Analysis: user-guide/constraints.md
       - Well-To-Wake Analysis: user-guide/well-to-wake.md
   - Developer Guide:
       - Architecture Overview: developer-guide/architecture-overview.md
