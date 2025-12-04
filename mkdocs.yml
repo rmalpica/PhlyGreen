@@ -106,10 +106,12 @@ nav:
       - Aircraft Module: user-guide/aircraft.md
       - Constraints Analysis: user-guide/constraints.md
       - Mission Module: user-guide/mission.md
+      - Weight Estimation: user-guide/weight.md
+      - Performance Module: user-guide/performance.md
       - Powertrain Module: user-guide/powertrain.md
       - Battery Module: user-guide/battery.md
-      - Weight Estimation: user-guide/weight.md
-      - Aerodynamic & Performance Models: user-guide/performance.md
+      - Aerodynamics Module: user-guide/aerodynamics.md
+      - Structures Module: user-guide/structures.md
       - Well-To-Wake Analysis: user-guide/well-to-wake.md
   - Developer Guide:
       - Architecture Overview: developer-guide/architecture-overview.md
