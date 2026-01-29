@@ -4,7 +4,7 @@ This page documents the high‑fidelity **electro‑thermal battery model** in P
 
 ---
 
-# 1. Overview
+## Overview
 
 PhlyGreen’s Battery module provides a **dynamic**, **temperature‑aware**, **physics‑based**
 representation of a lithium‑ion battery pack suitable for hybrid‑electric aircraft preliminary design.
@@ -21,7 +21,7 @@ The model is based on empirical cell parameters (selected in `Cell_Models`) and 
 
 ---
 
-# 2. Battery State Variables
+## Battery State Variables
 
 At every timestep, the battery tracks three continuous state variables:
 
@@ -44,7 +44,7 @@ $$ \text{SOC}_{\min} \le \text{SOC} \le 1 $$
 
 ---
 
-# 3. Pack Architecture
+## Pack Architecture
 
 A battery pack is constructed as:
 
@@ -65,8 +65,8 @@ $$ E_{\text{pack}} = S \, P \, E_{\text{cell}} $$
 
 ---
 
-# 4. Cell Electrical Model  
-## Modified Shepherd Equation (Temperature‑Aware)
+## Cell Electrical Model  
+### Modified Shepherd Equation (Temperature‑Aware)
 
 The cell voltage is computed using a temperature‑corrected modified Shepherd model:
 
@@ -122,8 +122,8 @@ b^2 - 4ac < 0 \quad\Rightarrow\quad \text{BatteryError}
 
 ---
 
-# 5. Thermal Model  
-## Lumped‑Parameter Single‑Node Cell Temperature
+## Thermal Model  
+### Lumped‑Parameter Single‑Node Cell Temperature
 
 The cell temperature evolves according to:
 
@@ -159,7 +159,7 @@ with airflow proportional to losses:
 
 ---
 
-# 6. Battery Sizing Loop
+## Battery Sizing Loop
 
 Inside the aircraft’s WTO root‑finding solver:
 
@@ -181,7 +181,7 @@ This ensures size is based on **actual in‑mission behaviour**, not just averag
 
 ---
 
-# 7. Inputs
+## Inputs
 
 Battery configuration comes from `CellInput`:
 
@@ -205,7 +205,7 @@ Cell models include:
 
 ---
 
-# 8. Outputs
+## Outputs
 
 Available throughout the simulation:
 
@@ -220,7 +220,7 @@ Available throughout the simulation:
 
 ---
 
-# 9. Error Handling
+## Error Handling
 
 The battery throws structured exceptions:
 
@@ -235,7 +235,7 @@ These allow the sizing algorithm to automatically increase P.
 
 ---
 
-# 10. Usage Example
+## Usage Example
 
 ```python
 battery = Battery(aircraft)
@@ -251,7 +251,7 @@ battery.T  += dTdt * dt
 
 ---
 
-# 11. Limitations
+## Limitations
 
 - Single‑node temperature model (no spatial gradients).  
 - No ageing/SEI model.  

@@ -24,13 +24,13 @@ def PoWTO(self, WTOoS, beta, Ps, n, altitude, DISA, speed, speedtype):
     #...
 ```
 
-This method computes the required **power-to-weight ratio** \\( P/W_{T0} \\) for a generic
-steady flight or climb condition. Note that the power-to-weight ratio is computed with reference to the takeoff weight \\( W_{T0} \\).
+This method computes the required **power-to-weight ratio** \\( P/W_{TO} \\) for a generic
+steady flight or climb condition. Note that the power-to-weight ratio is computed with reference to the takeoff weight \\( W_{TO} \\).
 
 **Inputs**
 
-- `WTOoS`: wing loading \\( W_{T0} / S \\) [N/m²].
-- `beta`: weight fraction \\( \beta = W / W_{T0} \\).
+- `WTOoS`: wing loading \\( W_{TO} / S \\) [N/m²].
+- `beta`: weight fraction \\( \beta = W / W_{TO} \\).
 - `Ps`: required specific excess power (e.g. for climb), in m/s.
 - `n`: load factor.
 - `altitude`, `DISA`, `speed`, `speedtype`: define the operating point.
@@ -53,8 +53,8 @@ steady flight or climb condition. Note that the power-to-weight ratio is compute
    which corresponds to
 
    \\[
-   \frac{P}{W_{T0}} = g\left[
-     \frac{q \, V}{W_{T0}/S} C_D + \beta P_s
+   \frac{P}{W_{TO}} = g\left[
+     \frac{q \, V}{W_{TO}/S} C_D + \beta P_s
    \right].
    \\]
 
@@ -78,8 +78,8 @@ the factor \\( n_{eng}/(n_{eng} - 1) \\) to model the loss of one engine.
 Hence, OEI climb yields:
 
 \[
-\left(\frac{P}{W_{T0}}\right)_{\text{OEI}}
-= \frac{n_{eng}}{n_{eng}-1} \, g\left[\frac{qV}{W_{T0}/S}C_D + \beta P_s\right].
+\left(\frac{P}{W_{TO}}\right)_{\text{OEI}}
+= \frac{n_{eng}}{n_{eng}-1} \, g\left[\frac{qV}{W_{TO}/S}C_D + \beta P_s\right].
 \]
 
 ---

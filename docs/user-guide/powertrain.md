@@ -4,7 +4,7 @@ The **Powertrain** module computes powertrain performance throughout the mission
 
 ---
 
-# 1. Overview
+## Overview
 
 The Powertrain model:
 
@@ -21,7 +21,7 @@ The powertrain system performance is evaluated at every timestep during the Miss
 
 ---
 
-# 2. Power Ratios
+## Power Ratios
 
 The main objective of the powertrain module is to compute the fuel/battery power required to deliver a certain propulsive power. At any instant in time, the required **propulsive power** is computed by the Mission module (see [Mission](mission.md/#4-mission-power-calculation)):
 
@@ -294,7 +294,7 @@ PowerRatio = np.linalg.solve(A,b)
 
 ---
 
-# 3. Engine Power Lapse With Altitude 
+## Engine Power Lapse With Altitude 
 
 The constraint analysis requires a preliminary estimation of the engine power at different altitudes. Thermal engine maximum power decreases with altitude due to reduced air density.
 
@@ -318,6 +318,6 @@ def PowerLapse(self,altitude,DISA):
 
 ---
 
-### References
+## References
 
 de Vries, R., Brown, M., & Vos, R. (2019). Preliminary Sizing Method for Hybrid-Electric Distributed-Propulsion Aircraft. Journal of Aircraft: devoted to aeronautical science and technology, 56(6), 2172-2188.

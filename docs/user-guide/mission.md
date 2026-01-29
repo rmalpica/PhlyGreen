@@ -7,7 +7,7 @@ and provide the temporal backbone used by all sizing routines (weight, battery, 
 
 ---
 
-# 1. Overview
+## Overview
 
 The mission solver integrates the aircraft state along a sequence of **flight segments**:
 
@@ -31,7 +31,7 @@ The **Profile** module generates the *time‑resolved reference states* (altitud
 
 ---
 
-# 2. Mission Class — High‑Level Responsibilities
+## Mission Class — High‑Level Responsibilities
 
 The `Mission` class:
 
@@ -46,7 +46,7 @@ The `Mission` class:
 
 ---
 
-# 3. Flight Profile Generation (Profile Class)
+## Flight Profile Generation (Profile Class)
 
 The `Profile` class discretizes the flight profile.  
 It stores vectors of:
@@ -69,7 +69,7 @@ Each segment **appends time‑resolved states** to the global mission arrays.
 
 ---
 
-# 4. Mission Power Calculation
+## Mission Power Calculation
 
 At each timestep \( t \), the Mission module computes the required **propulsive power** using the aircraft’s `Performance` instance:
 
@@ -98,9 +98,9 @@ depending on the configured architecture (tradition, serial hybrid, parallel hyb
 
 ---
 
-# 5. Energy Integration
+## Energy Integration
 
-## 5.1 Battery Energy
+### Battery Energy
 
 The integrated battery power request yields:
 
@@ -135,7 +135,7 @@ Battery temperature uses the thermal ODE:
 \frac{T_\infty - T}{R_{\text{th}}C_{\text{th}}}
 \]
 
-## 5.2 Fuel Energy
+### Fuel Energy
 
 Fuel energy integration:
 
@@ -147,7 +147,7 @@ where the fuel power is obtained by amplifying the propulsive power with the the
 
 ---
 
-# 6. Segment Loop (Core Mission Logic)
+## Segment Loop (Core Mission Logic)
 
 Pseudocode equivalent to the Mission solver:
 
@@ -166,7 +166,7 @@ If any constraint is violated, a `MissionError` or `BatteryError` is thrown, cau
 ---
 
 
-# 7. Mission Outputs
+## Mission Outputs
 
 After integrating the full mission, the module returns:
 
@@ -189,7 +189,7 @@ These outputs feed directly into:
 
 ---
 
-# 10. Usage Example
+## Usage Example
 
 ```python
 mission = aircraft.mission
@@ -200,7 +200,7 @@ results = mission.EvaluateMission(WTO) # integrate energy and power use
 
 ---
 
-# 11. Limitations
+## Limitations
 
 - Flight mechanics are 1‑D (no lateral simulation)  
 - Weather and airport constraints not included  
