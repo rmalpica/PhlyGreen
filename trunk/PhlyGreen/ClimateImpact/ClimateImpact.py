@@ -339,7 +339,7 @@ class ClimateImpact:
                     # plt.show()    
 
                     integranda = portata*EI_NOx
-                    massa_di_NOx = integrate.cumtrapz(integranda, times, initial=0.0)
+                    massa_di_NOx = integrate.cumulative_trapezoid(integranda, times, initial=0.0)
                     # l'elemento n-esimo del vettore massa_di_NOx è l'integrale definito dell'integranda tra t = 0 e t = times[n]
                     E_nox_1m = massa_di_NOx[-1]
 
@@ -385,7 +385,7 @@ class ClimateImpact:
                         portata[t] = power * PRatio[0]/self.aircraft.weight.ef
 
                     integranda = portata*EI_NOx
-                    massa_di_NOx = integrate.cumtrapz(integranda, times, initial=0.0)
+                    massa_di_NOx = integrate.cumulative_trapezoid(integranda, times, initial=0.0)
                     # l'elemento n-esimo del vettore massa_di_NOx è l'integrale definito dell'integranda tra t = 0 e t = times[n]
                     E_nox_1m = massa_di_NOx[-1]
 
@@ -464,7 +464,7 @@ class ClimateImpact:
                     # plt.show()    
 
                     integranda = portata*EI_NOx
-                    massa_di_NOx = integrate.cumtrapz(integranda, times, initial=0.0)
+                    massa_di_NOx = integrate.cumulative_trapezoid(integranda, times, initial=0.0)
                     # l'elemento n-esimo del vettore massa_di_NOx è l'integrale definito dell'integranda tra t = 0 e t = times[n]
                     E_nox_1m = massa_di_NOx[-1]
 
@@ -507,7 +507,7 @@ class ClimateImpact:
                         portata[t] = power * PRatio[0]/self.aircraft.weight.ef
 
                     integranda = portata*EI_NOx
-                    massa_di_NOx = integrate.cumtrapz(integranda, times, initial=0.0)
+                    massa_di_NOx = integrate.cumulative_trapezoid(integranda, times, initial=0.0)
                     # l'elemento n-esimo del vettore massa_di_NOx è l'integrale definito dell'integranda tra t = 0 e t = times[n]
                     E_nox_1m = massa_di_NOx[-1]
 
