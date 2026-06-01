@@ -44,13 +44,136 @@ def mission_timeseries(aircraft):
         out["phi"] = np.array([float(profile.SuppliedPowerRatio(t)) for t in time])
 
     # Battery energy time-series exists as an ODE state only for the Hybrid configuration.
-    if config == "Hybrid" and sols[0].y.shape[0] >= 3:
+    if config == "Hybrid":
+        nstates = sols[0].y.shape[0]
         out["battery_energy"] = np.concatenate([s.y[1] for s in sols])
-        pack_energy = getattr(aircraft.battery, "pack_energy", None)
-        if pack_energy:
-            out["soc"] = np.clip(1.0 - out["battery_energy"] / pack_energy, 0.0, 1.0)
+        b = aircraft.battery
+        if nstates >= 5:
+            # Class II: SOC is charge-based (state y[3] = charge throughput [A·s]); the
+            # energy ratio is NOT a valid SOC. Also expose the battery temperature (y[4]).
+            it_As = np.concatenate([s.y[3] for s in sols])
+            q_pack_Ah = getattr(b, "cell_capacity", None)
+            p_number = getattr(b, "P_number", None)
+            if q_pack_Ah and p_number:
+                out["soc"] = np.clip(1.0 - (it_As / 3600.0) / (q_pack_Ah * p_number), 0.0, 1.0)
+            out["battery_temperature"] = np.concatenate([s.y[4] for s in sols])
+        else:
+            # Class I: energy-based SOC against the installed battery energy.
+            ebat = getattr(b, "Ebat", None)            # [J/kg]
+            wbat = getattr(aircraft.weight, "WBat", None)
+            if ebat and wbat:
+                out["soc"] = np.clip(1.0 - out["battery_energy"] / (ebat * wbat), 0.0, 1.0)
 
     return out
+
+
+def component_timeseries(aircraft, n_engines=2, gt_design_hp=None, em_design=None,
+                         propeller_rpm=1200.0):
+    """Evaluate the Class-II propulsion models along the flown mission (for visualization).
+
+    Walks the converged mission timeline and, at each instant, computes the propulsive power
+    and its thermal/electric split (via the powertrain graph), then evaluates the gas-turbine
+    response surface, the d-q electric-motor model and the propeller RBF surrogate. Returns
+    per-time arrays: component efficiencies, gas-turbine throttle (used/available power),
+    propeller pitch, motor rpm, and the thermal/electric shaft powers. This is a *showcase*
+    of the Class-II models on the real flight path; the design itself may have used constant
+    efficiencies.
+
+    Requires the optional GT artifact and (for the propeller) pandas; propeller fields are
+    omitted if unavailable.
+    """
+    from .Systems.Powertrain.efficiency import OperatingPoint, MotorEfficiencyModel
+    from .Systems.Powertrain.GT_response_surface import GasTurbineResponseSurface
+    import PhlyGreen.Utilities.Units as Units
+    import PhlyGreen.Utilities.Speed as Speed
+
+    ts = mission_timeseries(aircraft)
+    t, alt, vel = ts["time"], ts["altitude"], ts["velocity"]
+    pe, beta = ts["power_excess"], ts["mass_fraction"]
+    phi = ts.get("phi", np.zeros_like(t))
+
+    perf, pt = aircraft.performance, aircraft.powertrain
+    WTO, WS, DISA = aircraft.weight.WTO, aircraft.DesignWTOoS, aircraft.mission.DISA
+
+    # Propulsive power and its thermal(Pgt)/electric(Pbat) split (parallel-hybrid graph).
+    PP = np.array([WTO * perf.PoWTO(WS, beta[i], pe[i], 1, alt[i], DISA, vel[i], 'TAS')
+                   for i in range(len(t))])
+    PR = np.array([pt.Hybrid(float(phi[i]), alt[i], vel[i], PP[i]) for i in range(len(t))])
+    p_thermal = PR[:, 1] * PP    # gas-turbine shaft power
+    p_electric = PR[:, 5] * PP   # battery (electric) power
+
+    # Default the design sizes from the converged design when not supplied. A small GT
+    # oversize keeps it off its power limit so the throttle is illustrative.
+    if gt_design_hp is None:
+        rating = getattr(pt, "engineRating", None) or float(np.max(p_thermal)) or 1.0
+        gt_design_hp = 1.5 * Units.wTohp(rating) / n_engines
+    if em_design is None:
+        em_kw = max(float(np.max(p_electric)) / n_engines / 1000.0, 1.0)
+        em_design = (em_kw, 800.0, 11000.0)
+
+    gt = GasTurbineResponseSurface()
+    em = MotorEfficiencyModel(*em_design, n_engines=n_engines)
+
+    eta_gt, throttle, eta_em = [], [], []
+    for i in range(len(t)):
+        a = Speed.soundspeed(alt[i], 0.0)
+        mach = vel[i] / a if a > 0 else 0.0
+        req_hp = Units.wTohp(p_thermal[i]) / n_engines
+        e, _, pmax, _ = gt.predict(gt_design_hp, Units.mToft(alt[i]), mach, req_hp)
+        eta_gt.append(e)
+        throttle.append(min(req_hp / pmax, 1.0) if pmax > 0 else 0.0)
+        # Electric-motor efficiency only meaningful when the motor is loaded.
+        if p_electric[i] > 1.0:
+            eta_em.append(em.eta(OperatingPoint(power=p_electric[i], rpm=em_design[2])))
+        else:
+            eta_em.append(np.nan)
+
+    out = {
+        "time": t, "p_thermal": p_thermal, "p_electric": p_electric,
+        "eta_gas_turbine": np.array(eta_gt), "gt_throttle": np.array(throttle),
+        "eta_electric_motor": np.array(eta_em), "rpm": np.full_like(t, em_design[2]),
+    }
+
+    try:
+        import os
+        from .Systems.Powertrain import PropellerRBF as _prbf
+        csv = os.path.join(os.path.dirname(_prbf.__file__), "data", "propeller_data_rbf.csv")
+        prop = _prbf.PropellerSurrogate(csv)
+        eta_pp, pitch = [], []
+        for i in range(len(t)):
+            pk = (PP[i] / n_engines) / 1000.0
+            pit = prop.solve_pitch(pk, alt[i], vel[i], propeller_rpm)
+            eta_pp.append(prop.get_efficiency(pk, alt[i], vel[i], pit, propeller_rpm))
+            pitch.append(pit)
+        out["eta_propeller"] = np.array(eta_pp)
+        out["propeller_pitch"] = np.array(pitch)
+    except Exception:
+        pass
+    return out
+
+
+def plot_component_timeseries(aircraft, **kwargs):
+    """Plot the Class-II component time series from :func:`component_timeseries`."""
+    import matplotlib.pyplot as plt
+    cs = component_timeseries(aircraft, **kwargs)
+    t = cs["time"] / 60.0
+    fig, axes = plt.subplots(3, 1, sharex=True, figsize=(8, 9))
+    axes[0].plot(t, cs["eta_gas_turbine"], label="gas turbine")
+    axes[0].plot(t, cs["eta_electric_motor"], label="electric motor")
+    if "eta_propeller" in cs:
+        axes[0].plot(t, cs["eta_propeller"], label="propeller")
+    axes[0].set_ylabel("efficiency [-]"); axes[0].legend(fontsize=8)
+    axes[1].plot(t, cs["gt_throttle"], color="tab:red")
+    axes[1].set_ylabel("GT throttle [-]")
+    if "propeller_pitch" in cs:
+        axes[2].plot(t, cs["propeller_pitch"], color="tab:purple")
+        axes[2].set_ylabel("propeller pitch [deg]")
+    else:
+        axes[2].plot(t, cs["rpm"], color="tab:gray"); axes[2].set_ylabel("motor rpm")
+    axes[-1].set_xlabel("time [min]")
+    for ax in axes:
+        ax.grid(alpha=0.3)
+    return axes
 
 
 def plot_mission_profile(aircraft, axes=None):

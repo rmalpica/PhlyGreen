@@ -110,8 +110,17 @@ write("02_hybrid_electric.ipynb", [
          "print(f'mission fuel    : {r.Wf:8.1f} kg')\n"
          "print(f'battery mass    : {r.WBat:8.1f} kg')\n"
          "print(f'battery pack    : {r.pack_energy/3.6e6:6.1f} kWh, {r.pack_power_max/1000:6.1f} kW')"),
-    md("## Plot every outcome (note the battery energy and state-of-charge traces)"),
+    md("## Plot every outcome (note the battery energy and state-of-charge traces)\n\n"
+       "For a Class-II battery the state of charge is charge-based: it falls from 1 at the\n"
+       "start of cruise to the minimum SOC by the end of the battery-assisted phase."),
     code(PLOTS),
+    md("## Class-II propulsion models along the mission\n\n"
+       "Beyond the design, we can look at the time-resolved behaviour of the Class-II\n"
+       "propulsion components — the gas-turbine response surface, the d-q electric motor and\n"
+       "the propeller RBF surrogate — evaluated along the flown trajectory. The plot shows\n"
+       "each component's efficiency, the gas-turbine throttle (used/available power), and the\n"
+       "propeller pitch. (Requires the GT artifact and pandas for the propeller surrogate.)"),
+    code("pp.plot_component_timeseries(aircraft, n_engines=2); plt.show()"),
 ])
 
 # 3. Hydrogen fuel cell ----------------------------------------------------------
