@@ -4,3 +4,5 @@ pytest-cov
 # Optional: para-hydrogen properties for the cryogenic LH2 tank model
 # (the tank tests skip automatically if it is not installed).
 CoolProp
+# Optional: the Class-II propeller RBF surrogate reads its training CSV with pandas.
+pandas
