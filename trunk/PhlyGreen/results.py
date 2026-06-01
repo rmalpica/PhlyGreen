@@ -59,6 +59,10 @@ class AircraftResults:
 
     extras: Dict[str, Any] = field(default_factory=dict)
 
+    # Reference to the source aircraft, set by :meth:`from_aircraft`. Not a dataclass field
+    # (no annotation), so it stays out of ``to_dict``/``asdict`` and equality.
+    _aircraft = None
+
     @classmethod
     def from_aircraft(cls, aircraft):
         """Build :class:`AircraftResults` from a designed :class:`Aircraft`.
@@ -108,11 +112,27 @@ class AircraftResults:
             r.S_number = _get(b, 'S_number')
             r.P_number = _get(b, 'P_number')
 
+        r._aircraft = aircraft
         return r
 
     def to_dict(self):
         """Return a plain dict of all fields (suitable for JSON serialization)."""
         return asdict(self)
+
+    def write_timeseries(self, path, include_components=True):
+        """Dump every time-evolving mission variable to a CSV file (debug helper).
+
+        Writes one row per solver time point with the raw ODE states, the derived mission
+        quantities (altitude, velocity, SOC, phi, …) and, when applicable, the Class-II
+        component quantities (efficiencies, throttles, shaft powers). Requires the results to
+        have been built via :meth:`from_aircraft` / :meth:`Aircraft.results`. Returns the path.
+        """
+        if self._aircraft is None:
+            raise ValueError(
+                "No source aircraft attached — build results via Aircraft.results() / "
+                "AircraftResults.from_aircraft() before dumping the time series.")
+        from .postprocess import write_timeseries as _write
+        return _write(self._aircraft, path, include_components=include_components)
 
 
 def _get(obj, name):

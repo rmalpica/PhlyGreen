@@ -34,3 +34,28 @@ def test_mass_breakdown_sums_to_wto():
     aircraft = design_from_config(*sc.traditional_config())
     total = sum(pp.mass_breakdown(aircraft).values())
     assert total == pytest.approx(aircraft.weight.WTO, rel=1e-3)
+
+
+@pytest.mark.slow
+def test_write_timeseries_dumps_all_states(tmp_path):
+    aircraft = design_from_config(*sc.traditional_config())
+    path = aircraft.results().write_timeseries(tmp_path / "ts.csv")
+    with open(path) as f:
+        header = f.readline().strip().split(",")
+    data = np.loadtxt(path, delimiter=",", skiprows=1)
+    # time first; raw ODE states + derived mission columns are all present and aligned.
+    assert header[0] == "time"
+    nstates = aircraft.mission.integral_solution[0].y.shape[0]
+    for i in range(nstates):
+        assert f"state_{i}" in header
+    for key in ("altitude", "velocity", "power_excess", "mass_fraction", "fuel_energy"):
+        assert key in header
+    n = len(pp.mission_timeseries(aircraft)["time"])
+    assert data.shape == (n, len(header))
+
+
+@pytest.mark.slow
+def test_write_timeseries_requires_aircraft():
+    from PhlyGreen.results import AircraftResults
+    with pytest.raises(ValueError):
+        AircraftResults().write_timeseries("/tmp/should_not_be_written.csv")

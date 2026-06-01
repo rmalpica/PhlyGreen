@@ -165,6 +165,69 @@ def component_timeseries(aircraft, n_engines=None, gt_design_hp=None, em_design=
     return out
 
 
+def timeseries_table(aircraft, include_components=True):
+    """Collect *every* time-evolving mission variable into one aligned table (debug).
+
+    Returns ``(header, columns)`` where ``header`` is a list of column names and ``columns``
+    is a list of equal-length numpy arrays (one per name), all sampled at the solver time
+    points of the converged mission. It gathers:
+
+    * the raw ODE states (``state_0`` … ``state_n`` — fuel/battery energy, Beta, and, for the
+      Class-II battery, charge throughput and temperature) straight from
+      ``mission.integral_solution`` — nothing is lost or smoothed;
+    * the derived mission quantities from :func:`mission_timeseries` (altitude, velocity,
+      power excess, SOC, phi, …);
+    * the Class-II component quantities from :func:`component_timeseries` when applicable
+      (gas-turbine / electric-motor / propeller efficiencies, throttles, shaft powers) —
+      skipped silently for non-hybrid configurations or if the optional models are missing.
+
+    ``time`` is always the first column; the remaining columns are sorted by name.
+    """
+    data = dict(mission_timeseries(aircraft))
+
+    # Raw ODE states, segment by segment, so the dump is the integrator's own output.
+    sols = aircraft.mission.integral_solution
+    if sols:
+        nstates = sols[0].y.shape[0]
+        for i in range(nstates):
+            data.setdefault(f"state_{i}", np.concatenate([s.y[i] for s in sols]))
+
+    n = len(data["time"])
+    if include_components:
+        try:
+            cs = component_timeseries(aircraft)
+            for k, v in cs.items():
+                if k == "time":
+                    continue
+                arr = np.asarray(v)
+                if arr.ndim == 1 and arr.shape[0] == n:
+                    data.setdefault(k, arr)
+        except Exception:
+            # Non-hybrid config or optional Class-II models unavailable — derived/raw
+            # columns are still written.
+            pass
+
+    cols = [(k, np.asarray(v, dtype=float)) for k, v in data.items()
+            if np.ndim(v) == 1 and len(v) == n]
+    cols.sort(key=lambda kv: (kv[0] != "time", kv[0]))
+    header = [k for k, _ in cols]
+    columns = [v for _, v in cols]
+    return header, columns
+
+
+def write_timeseries(aircraft, path, include_components=True):
+    """Dump every time-evolving mission variable to a CSV file (debug helper).
+
+    Writes one row per solver time point and one column per variable returned by
+    :func:`timeseries_table` (raw ODE states + derived mission quantities + Class-II
+    component quantities when available). Returns the path written.
+    """
+    header, columns = timeseries_table(aircraft, include_components=include_components)
+    matrix = np.column_stack(columns) if columns else np.empty((0, 0))
+    np.savetxt(path, matrix, delimiter=",", header=",".join(header), comments="")
+    return path
+
+
 def plot_component_timeseries(aircraft, **kwargs):
     """Plot the Class-II component time series from :func:`component_timeseries`."""
     import matplotlib.pyplot as plt
