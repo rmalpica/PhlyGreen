@@ -114,7 +114,7 @@ class Aircraft:
 
     """ Methods """
 
-    def ReadInput(self,AerodynamicsInput,ConstraintsInput,MissionInput,EnergyInput,MissionStages,DiversionStages, LoiterStages=None, WellToTankInput=None, CellInput=None, ClimateImpactInput=None, PropellerInput=None):
+    def ReadInput(self,AerodynamicsInput,ConstraintsInput,MissionInput,EnergyInput,MissionStages,DiversionStages, LoiterStages=None, WellToTankInput=None, CellInput=None, ClimateImpactInput=None, PropellerInput=None, TankInput=None):
         """Imports input dictionaries and assigns them to Aircraft class attributes. Then it also passes them over to the subsystems classes.
 
         Args:
@@ -148,6 +148,9 @@ class Aircraft:
         CellInput = _as_dict(CellInput)
         ClimateImpactInput = _as_dict(ClimateImpactInput)
         PropellerInput = _as_dict(PropellerInput)
+        TankInput = _as_dict(TankInput)
+        if TankInput is not None:
+            self.TankInput = TankInput
 
         self.AerodynamicsInput = AerodynamicsInput
         self.ConstraintsInput = ConstraintsInput
@@ -220,10 +223,11 @@ class Aircraft:
         CellInput = kwargs.get('CellInput', None)
         ClimateImpactInput = kwargs.get('ClimateImpactInput', None)
         PropellerInput = kwargs.get('PropellerInput', None)
+        TankInput = kwargs.get('TankInput', None)
         PrintOutput = kwargs.get('PrintOutput', False)
 
         if PrintOutput: print("Reading input data...")
-        self.ReadInput(AerodynamicsInput,ConstraintsInput, MissionInput, EnergyInput, MissionStages, DiversionStages,LoiterStages, WellToTankInput,CellInput,ClimateImpactInput,PropellerInput)
+        self.ReadInput(AerodynamicsInput,ConstraintsInput, MissionInput, EnergyInput, MissionStages, DiversionStages,LoiterStages, WellToTankInput,CellInput,ClimateImpactInput,PropellerInput,TankInput)
 
         if PrintOutput: print("Finding Design Point...")
         self.constraint.FindDesignPoint()

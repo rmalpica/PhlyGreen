@@ -16,7 +16,7 @@ Both return a fully-validated :class:`PhlyGreen.config.AircraftConfig`.
 from PhlyGreen.config import (
     AircraftConfig, AerodynamicsConfig, ConstraintsConfig, MissionConfig,
     EnergyConfig, CellConfig, WellToTankConfig, ClimateImpactConfig,
-    StagesConfig, Segment,
+    StagesConfig, Segment, TankConfig,
 )
 
 
@@ -126,13 +126,23 @@ def _energy_hydrogen(v_cell_design=0.5):
     )
 
 
-def hydrogen_config(v_cell_design=0.5):
-    """A hydrogen fuel-cell (electric) ATR-like aircraft — no battery, no gas turbine."""
+def hydrogen_config(v_cell_design=0.5, tank=False):
+    """A hydrogen fuel-cell (electric) ATR-like aircraft — no battery, no gas turbine.
+
+    With ``tank=True`` a cryogenic LH2 tank (TankConfig) is attached, enabling the
+    physics-based tank sizing and the transient tank thermodynamics (requires CoolProp).
+    Without it, hydrogen storage uses a simple gravimetric-index mass model.
+    """
+    tank_cfg = None
+    if tank:
+        tank_cfg = TankConfig(max_diameter=2.4, number_of_tanks=1,
+                              tank_model='Svensson_Default', fuselage_diameter=2.8)
     return AircraftConfig(
         configuration='Hydrogen', aircraft_type='ATR', weight_class='I',
         aerodynamics=_aerodynamics(), constraints=_constraints(),
         mission=_mission(), energy=_energy_hydrogen(v_cell_design),
         mission_stages=_mission_stages(), diversion_stages=_diversion_stages(),
+        tank=tank_cfg,
     )
 
 

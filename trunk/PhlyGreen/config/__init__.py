@@ -8,7 +8,7 @@ legacy dict API (every section has ``to_dict``/``from_dict``).
 from ._base import ConfigError, DictConfig
 from .sections import (
     MissionConfig, EnergyConfig, CellConfig, WellToTankConfig,
-    ClimateImpactConfig, AerodynamicsConfig, ConstraintsConfig,
+    ClimateImpactConfig, AerodynamicsConfig, ConstraintsConfig, TankConfig,
 )
 from .profile import Segment, StagesConfig
 from .aircraft_config import AircraftConfig
@@ -16,6 +16,6 @@ from .aircraft_config import AircraftConfig
 __all__ = [
     "ConfigError", "DictConfig",
     "MissionConfig", "EnergyConfig", "CellConfig", "WellToTankConfig",
-    "ClimateImpactConfig", "AerodynamicsConfig", "ConstraintsConfig",
+    "ClimateImpactConfig", "AerodynamicsConfig", "ConstraintsConfig", "TankConfig",
     "Segment", "StagesConfig", "AircraftConfig",
 ]

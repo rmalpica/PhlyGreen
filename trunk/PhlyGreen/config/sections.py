@@ -252,6 +252,28 @@ _CONSTRAINT_PHASES = (
 
 
 @dataclass
+class TankConfig(DictConfig):
+    """Liquid-hydrogen tank configuration (``TankInput``, Hydrogen configuration only)."""
+
+    max_diameter: float = None          # max tank outer diameter [m]
+    number_of_tanks: int = 1
+    tank_model: str = "Svensson_Default"  # key into TANK_Database
+    fuselage_diameter: Optional[float] = None
+
+    _KEY_MAP = {
+        "max_diameter": "Max Diameter",
+        "number_of_tanks": "Number of Tanks",
+        "tank_model": "Tank Model",
+        "fuselage_diameter": "Fuselage Diameter",
+    }
+
+    def __post_init__(self):
+        _check_positive("max_diameter", self.max_diameter)
+        if self.number_of_tanks is not None and self.number_of_tanks < 1:
+            raise ConfigError(f"number_of_tanks must be >= 1, got {self.number_of_tanks!r}")
+
+
+@dataclass
 class ConstraintsConfig(DictConfig):
     """Constraint-diagram definition (``ConstraintsInput``).
 

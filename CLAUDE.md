@@ -153,8 +153,12 @@ is a physics model (Kulikovsky polarization curve, stack sizing, air-system powe
 `ComputePRatio` returning 1/system-efficiency). `Mission.HydrogenConfiguration` integrates the
 mission on hydrogen chemical energy (set `Ef` to the H2 LHV ≈120 MJ/kg); `Weight.Hydrogen`
 closes the take-off weight over structure + fuel-cell system + H2 + tank + cooling. The
-cryogenic LH2 tank (CoolProp) is optional — by default a gravimetric-index tank model is used
-(`EnergyConfig.h2_gravimetric_index`). Fuel-cell inputs live in `EnergyConfig`
+cryogenic LH2 tank (`Systems/Tank/`, **CoolProp** para-hydrogen) is sized when a `TankConfig`
+is supplied and CoolProp is installed; otherwise a gravimetric-index model is used
+(`EnergyConfig.h2_gravimetric_index`). The tank also has a transient `time_step` model
+(self-pressurization, venting at P_max, heater at P_min); set `mission.track_tank = True` and
+re-run `EvaluateMission` to populate `aircraft.tank.history` (see example `22`). Fuel-cell
+inputs live in `EnergyConfig`
 (`fc_model`, `i_rated`, `v_cell_design`, `stack_power_density`, `bop_mass_ratio`); examples
 `20`/`21` size a fuel cell, fly the mission, and sweep the design voltage.
 

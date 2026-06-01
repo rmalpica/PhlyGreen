@@ -172,8 +172,18 @@ class Weight:
         installation/feed margin. Hydrogen storage mass uses the cryogenic ``LH2_Tank`` if
         available, otherwise a simple gravimetric-index model so the design always closes.
         """
-        # Gravimetric index of the H2 storage system (usable H2 / total tank+H2 mass).
+        # Gravimetric index of the H2 storage system (usable H2 / total tank+H2 mass),
+        # used as a fallback when the detailed cryogenic tank model is unavailable.
         grav_index = self.aircraft.EnergyInput.get('H2 Gravimetric Index', 0.35)
+
+        # Use the physics-based LH2 tank model when a TankInput is given and CoolProp is
+        # installed; otherwise fall back to the simple gravimetric-index model.
+        LH2_Tank = None
+        if getattr(self.aircraft, 'TankInput', None) is not None:
+            try:
+                from PhlyGreen.Systems.Tank import LH2_Tank
+            except Exception:
+                LH2_Tank = None
 
         def func(WTO):
             # 1. Size the fuel-cell system for this take-off weight.
@@ -185,7 +195,13 @@ class Weight:
             self.Wf = self.WH2_Fuel
 
             # 3. Hydrogen tank (empty) mass.
-            self.WTank = self.WH2_Fuel * (1.0 / grav_index - 1.0) if self.WH2_Fuel > 0 else 0.0
+            if self.WH2_Fuel <= 0:
+                self.WTank = 0.0
+            elif LH2_Tank is not None:
+                self.aircraft.tank = LH2_Tank(capacity_kg=self.WH2_Fuel, aircraft=self.aircraft)
+                self.WTank = self.aircraft.tank.mass_system_empty
+            else:
+                self.WTank = self.WH2_Fuel * (1.0 / grav_index - 1.0)
 
             # 4. Thermal-management (heat-exchanger) mass from the peak fuel-cell heat load.
             Q_max = self.aircraft.mission.Max_FC_Thermal_Pwr

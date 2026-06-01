@@ -1,3 +1,6 @@
 # Development / test dependencies (in addition to requirements.txt)
 pytest
 pytest-cov
+# Optional: para-hydrogen properties for the cryogenic LH2 tank model
+# (the tank tests skip automatically if it is not installed).
+CoolProp

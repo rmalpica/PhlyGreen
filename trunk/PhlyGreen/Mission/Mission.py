@@ -54,6 +54,9 @@ class Mission:
         self.Max_FC_Thermal_Pwr = 0.0
         self.Max_FC_Thermal_Pwr_alt = 0.0
         self.TO_P_H2_Thermal = 0.0
+        # when True (and aircraft.tank is set) the LH2 tank thermodynamic state is
+        # advanced through the mission; off by default so the weight loop stays fast.
+        self.track_tank = False
 
         self.ef = None
         self.profile = None
@@ -231,6 +234,16 @@ class Mission:
         self.TO_P_H2_Thermal = P_TO * PRatio_TO[0]
         self.Max_FC_Thermal_Pwr = -1.0
 
+        # Optionally advance the LH2 tank thermodynamic state through the mission.
+        track = self.track_tank and getattr(self.aircraft, 'tank', None) is not None
+        if track:
+            tank = self.aircraft.tank
+            tank.m_curr = tank.capacity_single        # start full
+            tank.P_curr = tank.P_min
+            tank.history = {'t': [], 'P': [], 'm_tot': [], 'Vent': [], 'Q_in': [],
+                            'Alt': [], 'Q_heater': [], 'm_vent_cum': []}
+            tank.cum_vented_mass = 0.0
+
         y0 = [0, self.beta0]
         self.integral_solution = []
         times = np.append(self.profile.Breaks, self.profile.MissionTime2)
@@ -238,6 +251,14 @@ class Mission:
             sol = integrate.solve_ivp(model, [times[i], times[i + 1]], y0,
                                       method='BDF', rtol=1e-5, max_step=60.0)
             self.integral_solution.append(sol)
+            if track:
+                # Drive the tank with the hydrogen mass flow over each solver micro-step.
+                for k in range(1, len(sol.t)):
+                    dt_mini = sol.t[k] - sol.t[k - 1]
+                    dE = max(sol.y[0][k] - sol.y[0][k - 1], 0.0)
+                    m_dot = (dE / self.ef) / dt_mini if dt_mini > 0 else 0.0
+                    t_mid = 0.5 * (sol.t[k] + sol.t[k - 1])
+                    tank.time_step(dt_mini, m_dot, float(self.profile.Altitude(t_mid)))
             y0 = [sol.y[0][-1], sol.y[1][-1]]
 
         self.Ef = sol.y[0]

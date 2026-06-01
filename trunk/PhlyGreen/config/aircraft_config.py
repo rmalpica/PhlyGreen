@@ -11,7 +11,7 @@ from typing import Optional
 from ._base import ConfigError
 from .sections import (
     MissionConfig, EnergyConfig, CellConfig, WellToTankConfig,
-    ClimateImpactConfig, AerodynamicsConfig, ConstraintsConfig,
+    ClimateImpactConfig, AerodynamicsConfig, ConstraintsConfig, TankConfig,
 )
 from .profile import StagesConfig
 
@@ -39,6 +39,7 @@ class AircraftConfig:
     well_to_tank: Optional[WellToTankConfig] = None
     cell: Optional[CellConfig] = None
     climate_impact: Optional[ClimateImpactConfig] = None
+    tank: Optional[TankConfig] = None    # liquid-hydrogen tank (Hydrogen configuration)
 
     def __post_init__(self):
         if self.configuration not in ("Traditional", "Hybrid", "Hydrogen"):
@@ -70,4 +71,6 @@ class AircraftConfig:
             kwargs["CellInput"] = self.cell.to_dict()
         if self.climate_impact is not None:
             kwargs["ClimateImpactInput"] = self.climate_impact.to_dict()
+        if self.tank is not None:
+            kwargs["TankInput"] = self.tank.to_dict()
         return positional, kwargs
