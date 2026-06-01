@@ -69,7 +69,7 @@ def component_performance_maps():
         print("\n(matplotlib not available — skipping performance-map plots)")
         return
 
-    from PhlyGreen.Systems.Powertrain.GT_response_surface import GasTurbineResponseSurface
+    from PhlyGreen.Systems.Powertrain.gas_turbine_surrogate import GasTurbineResponseSurface
     from PhlyGreen.Systems.Powertrain.EM import ElectricMotor
 
     fig, axes = plt.subplots(1, 3, figsize=(16, 4.5))
@@ -96,7 +96,7 @@ def component_performance_maps():
 
     # --- Propeller: efficiency vs airspeed & power (RBF surrogate, needs pandas) ---
     try:
-        from PhlyGreen.Systems.Powertrain import PropellerRBF as _prbf
+        from PhlyGreen.Systems.Powertrain import propeller_surrogate as _prbf
         csv = os.path.join(os.path.dirname(_prbf.__file__), "data", "propeller_data_rbf.csv")
         prop = _prbf.PropellerSurrogate(csv)
         speeds = np.linspace(40, 170, 35)
