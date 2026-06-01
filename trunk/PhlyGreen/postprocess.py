@@ -122,16 +122,19 @@ def component_timeseries(aircraft, n_engines=None, gt_design_hp=None, em_design=
 
     gt = GasTurbineResponseSurface()
     em = MotorEfficiencyModel(*em_design, n_engines=n_engines)
+    em_nominal_total = em_design[0] * 1000.0 * n_engines   # [W]
 
-    eta_gt, throttle, eta_em = [], [], []
+    eta_gt, gt_throttle, eta_em, em_throttle = [], [], [], []
     for i in range(len(t)):
         a = Speed.soundspeed(alt[i], 0.0)
         mach = vel[i] / a if a > 0 else 0.0
         req_hp = Units.wTohp(p_thermal[i]) / n_engines
         e, _, pmax, _ = gt.predict(gt_design_hp, Units.mToft(alt[i]), mach, req_hp)
         eta_gt.append(e)
-        throttle.append(min(req_hp / pmax, 1.0) if pmax > 0 else 0.0)
-        # Electric-motor efficiency only meaningful when the motor is loaded.
+        # GT throttle = required / available power (1.0 means power-limited at this point).
+        gt_throttle.append(min(req_hp / pmax, 1.0) if pmax > 0 else 0.0)
+        # EM throttle = electric demand / nominal; efficiency only when the motor is loaded.
+        em_throttle.append(p_electric[i] / em_nominal_total if em_nominal_total > 0 else 0.0)
         if p_electric[i] > 1.0:
             eta_em.append(em.eta(OperatingPoint(power=p_electric[i], rpm=em_design[2])))
         else:
@@ -139,8 +142,9 @@ def component_timeseries(aircraft, n_engines=None, gt_design_hp=None, em_design=
 
     out = {
         "time": t, "p_thermal": p_thermal, "p_electric": p_electric,
-        "eta_gas_turbine": np.array(eta_gt), "gt_throttle": np.array(throttle),
-        "eta_electric_motor": np.array(eta_em), "rpm": np.full_like(t, em_design[2]),
+        "eta_gas_turbine": np.array(eta_gt), "gt_throttle": np.array(gt_throttle),
+        "eta_electric_motor": np.array(eta_em), "em_throttle": np.array(em_throttle),
+        "rpm": np.full_like(t, em_design[2]),
     }
 
     try:
@@ -172,8 +176,9 @@ def plot_component_timeseries(aircraft, **kwargs):
     if "eta_propeller" in cs:
         axes[0].plot(t, cs["eta_propeller"], label="propeller")
     axes[0].set_ylabel("efficiency [-]"); axes[0].legend(fontsize=8)
-    axes[1].plot(t, cs["gt_throttle"], color="tab:red")
-    axes[1].set_ylabel("GT throttle [-]")
+    axes[1].plot(t, cs["gt_throttle"], color="tab:red", label="gas turbine")
+    axes[1].plot(t, cs["em_throttle"], color="tab:blue", label="electric motor")
+    axes[1].set_ylabel("throttle [-]"); axes[1].set_ylim(0, 1.05); axes[1].legend(fontsize=8)
     if "propeller_pitch" in cs:
         axes[2].plot(t, cs["propeller_pitch"], color="tab:purple")
         axes[2].set_ylabel("propeller pitch [deg]")

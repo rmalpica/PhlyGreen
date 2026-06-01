@@ -15,6 +15,7 @@ def _traditional_class_ii_gt(gt_design_power):
     energy['GT Design Power'] = gt_design_power
     kwargs = dict(kwargs); kwargs['EnergyInput'] = energy
     aircraft = pg.build_aircraft()
+    aircraft.PropellerInput = {'Number of Engines': 2}
     aircraft.Configuration = 'Traditional'; aircraft.AircraftType = 'ATR'
     aircraft.weight.Class = 'I'
     aircraft.DesignAircraft(kwargs['AerodynamicsInput'], kwargs['ConstraintsInput'],
@@ -45,10 +46,13 @@ def test_adequate_nominal_is_not_undersized():
                        kwargs['MissionStages'], kwargs['DiversionStages'])
     p_nominal = pre.DesignPW * pre.weight.WTO
 
-    aircraft = _traditional_class_ii_gt(p_nominal)
+    # Size to the nominal needed to avoid power-limiting (altitude-aware), then check.
+    tentative = _traditional_class_ii_gt(p_nominal).powertrain.report_class_ii_sizing()['gas turbine']
+    aircraft = _traditional_class_ii_gt(1.05 * tentative['min_nominal'])
     report = aircraft.powertrain.report_class_ii_sizing()['gas turbine']
     assert report['status'] != 'UNDERSIZED'
-    assert report['actual'] <= report['nominal']
+    assert not report['power_limited']
+    assert report['worst_load_ratio'] <= 1.0 + 1e-6
 
 
 @pytest.mark.slow

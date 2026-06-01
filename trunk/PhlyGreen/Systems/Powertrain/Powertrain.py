@@ -456,40 +456,106 @@ class Powertrain:
         eff['fuel_cell'] = ConstantEfficiency(const('EtaFC', 0.50))
         self.efficiency = eff
 
-    def report_class_ii_sizing(self, raise_on_undersize=False):
-        """Compare the Class-II GT/EM nominal power against the peak power absorbed.
+    def _thermal_power_timeline(self):
+        """Return (altitude[m], velocity[m/s], gas-turbine shaft power[W]) along the mission."""
+        import numpy as np
+        m = self.aircraft.mission
+        sols = getattr(m, "integral_solution", None)
+        if not sols:
+            return None
+        prof, perf = m.profile, self.aircraft.performance
+        WTO, WS, DISA = self.aircraft.weight.WTO, self.aircraft.DesignWTOoS, m.DISA
+        t = np.concatenate([s.t for s in sols])
+        beta = np.concatenate([s.y[-1] for s in sols])
+        alt = np.array([float(prof.Altitude(x)) for x in t])
+        vel = np.array([float(prof.Velocity(x)) for x in t])
+        pe = np.array([float(prof.PowerExcess(x)) for x in t])
+        PP = np.array([WTO * perf.PoWTO(WS, beta[i], pe[i], 1, alt[i], DISA, vel[i], 'TAS')
+                       for i in range(len(t))])
+        cfg = self.aircraft.Configuration
+        if cfg == 'Traditional':
+            p_th = np.array([self.Traditional(alt[i], vel[i], PP[i])[1] * PP[i]
+                             for i in range(len(t))])
+        elif cfg == 'Hybrid':
+            phi = np.array([float(prof.SuppliedPowerRatio(x)) for x in t])
+            p_th = np.array([self.Hybrid(float(phi[i]), alt[i], vel[i], PP[i])[1] * PP[i]
+                             for i in range(len(t))])
+        else:
+            p_th = np.zeros(len(t))
+        return alt, vel, p_th
 
-        Run after the weight-sizing loop. The nominal power is fixed before the mission;
-        here we check whether it was adequate. Returns a dict of
-        ``{component: {'nominal','actual','ratio','status'}}`` and warns (or raises) when a
-        component is undersized (peak demand exceeds its nominal power).
+    def report_class_ii_sizing(self, raise_on_undersize=False):
+        """Check the Class-II GT/EM nominal power against what the mission demands.
+
+        Run after the weight-sizing loop. For the **gas turbine** the check is altitude
+        aware: the available shaft power lapses with altitude, so a turbine whose *peak
+        demand* is below its nominal can still be **power-limited** at altitude (unable to
+        deliver the required power — the aircraft cannot sustain that flight condition). We
+        walk the mission and compare the required power to the power *available* from the
+        response surface at each point. For the **electric motor** (no altitude lapse) we
+        compare the peak electric power to the nominal.
+
+        Returns ``{component: {...}}`` (including ``power_limited`` and ``min_nominal`` — the
+        nominal power needed to avoid power-limiting — for the GT) and warns (or raises) when
+        a component is undersized.
         """
         import warnings
+        import numpy as np
+        import PhlyGreen.Utilities.Units as Units
+        import PhlyGreen.Utilities.Speed as Speed
+        from .efficiency import GasTurbineEfficiencyModel
+
         report = {}
-
-        def assess(name, nominal, actual):
-            if not nominal:
-                return
-            ratio = actual / nominal
-            if ratio > 1.0:
-                status = "UNDERSIZED"
-            elif ratio < 0.6:
-                status = "oversized"
-            else:
-                status = "ok"
-            report[name] = {"nominal": nominal, "actual": actual, "ratio": ratio,
-                            "status": status}
-            if status == "UNDERSIZED":
-                msg = (f"{name} is undersized: peak absorbed {actual/1e3:.1f} kW exceeds the "
-                       f"nominal {nominal/1e3:.1f} kW (ratio {ratio:.2f}). Increase its "
-                       f"design power.")
-                if raise_on_undersize:
-                    raise ValueError(msg)
-                warnings.warn(msg)
-
         m = self.aircraft.mission
-        assess("gas turbine", self.gt_design_power, getattr(m, "Max_PEng", 0.0) or 0.0)
-        assess("electric motor", self.em_design_power, getattr(m, "Max_PBat", 0.0) or 0.0)
+
+        def warn_or_raise(msg):
+            if raise_on_undersize:
+                raise ValueError(msg)
+            warnings.warn(msg)
+
+        # --- Gas turbine: altitude-aware power-limit check ---
+        gt = getattr(self, "efficiency", {}).get("gas_turbine")
+        if self.gt_design_power and isinstance(gt, GasTurbineEfficiencyModel):
+            timeline = self._thermal_power_timeline()
+            worst_ratio, peak_demand = 0.0, 0.0
+            if timeline is not None:
+                alt, vel, p_th = timeline
+                design_hp = Units.wTohp(self.gt_design_power) / self.n_engines
+                for i in range(len(alt)):
+                    a = Speed.soundspeed(alt[i], 0.0)
+                    mach = vel[i] / a if a > 0 else 0.0
+                    req_hp = Units.wTohp(p_th[i]) / self.n_engines
+                    _, _, pmax_hp, _ = gt.surrogate.predict(design_hp, Units.mToft(alt[i]),
+                                                            mach, req_hp)
+                    if pmax_hp > 0:
+                        worst_ratio = max(worst_ratio, req_hp / pmax_hp)
+                    peak_demand = max(peak_demand, float(p_th[i]))
+            power_limited = worst_ratio > 1.0 + 1e-6
+            min_nominal = self.gt_design_power * worst_ratio   # to make available >= demand
+            # Status from the altitude-aware load ratio (peak required / peak available).
+            status = "UNDERSIZED" if power_limited else ("oversized" if worst_ratio < 0.5 else "ok")
+            report["gas turbine"] = {
+                "nominal": self.gt_design_power, "peak_demand": peak_demand,
+                "worst_load_ratio": worst_ratio, "power_limited": power_limited,
+                "min_nominal": min_nominal, "status": status}
+            if power_limited:
+                warn_or_raise(
+                    f"gas turbine is undersized (power-limited at altitude): required power "
+                    f"exceeds the available power by up to {(worst_ratio-1)*100:.0f}% — the "
+                    f"engine cannot sustain flight. Increase 'GT Design Power' to at least "
+                    f"{min_nominal/1e3:.0f} kW.")
+
+        # --- Electric motor: peak electric power vs nominal (no altitude lapse) ---
+        if self.em_design_power:
+            actual = getattr(m, "Max_PBat", 0.0) or 0.0
+            ratio = actual / self.em_design_power
+            status = "UNDERSIZED" if ratio > 1.0 else ("oversized" if ratio < 0.5 else "ok")
+            report["electric motor"] = {"nominal": self.em_design_power, "peak_demand": actual,
+                                        "worst_load_ratio": ratio, "status": status}
+            if status == "UNDERSIZED":
+                warn_or_raise(
+                    f"electric motor is undersized: peak {actual/1e3:.1f} kW exceeds the "
+                    f"nominal {self.em_design_power/1e3:.1f} kW. Increase 'EM Design Power'.")
         return report
 
     def eta(self, component, alt=0.0, vel=0.0, pwr=0.0, rpm=None):

@@ -118,39 +118,69 @@ write("02_hybrid_electric.ipynb", [
        "Now we *size the aircraft using the Class-II propulsion models* — the gas-turbine\n"
        "response surface and the d-q electric motor. These work as a percentage of a **fixed\n"
        "nominal power** that must be set before the mission (an engine cannot resize itself\n"
-       "instant by instant). A good tentative nominal is `DesignPW * WTO`, taken from a quick\n"
-       "Class-I pre-pass. (We use a simple Class-I battery here to keep the run fast.)"),
-    code("# 1. Class-I pre-pass -> tentative nominal power = DesignPW * WTO\n"
+       "instant by instant). A good first guess is `DesignPW * WTO` from a quick Class-I\n"
+       "pre-pass. We set **two engines** (an ATR has two) so each gas turbine sits in the\n"
+       "well-trained part of the response surface. (A simple Class-I battery keeps it fast.)"),
+    code("import warnings\n"
+         "def design_class_ii(p_gt, p_em, n_engines=2):\n"
+         "    cfg = hybrid_config(battery_class='I')\n"
+         "    for seg in cfg.mission_stages.segments:\n"
+         "        if seg.name == 'Cruise':\n"
+         "            seg.phi_end = 0.5\n"
+         "    cfg.energy.eta_gas_turbine_model = 'ResponseSurface'\n"
+         "    cfg.energy.gt_design_power = p_gt\n"
+         "    cfg.energy.eta_electric_motor_model = 'Smart'\n"
+         "    cfg.energy.em_design_power = p_em\n"
+         "    cfg.energy.em_design_voltage = 800.0\n"
+         "    cfg.energy.em_design_rpm = 11000.0\n"
+         "    aircraft = pg.build_aircraft()\n"
+         "    aircraft.PropellerInput = {'Number of Engines': n_engines}\n"
+         "    with warnings.catch_warnings():\n"
+         "        warnings.simplefilter('ignore')   # we read the sizing report explicitly below\n"
+         "        aircraft.configure(cfg)\n"
+         "    return aircraft\n\n"
+         "# 1. Class-I pre-pass -> tentative nominal power = DesignPW * WTO\n"
          "pre = pg.build_aircraft(); pre.configure(hybrid_config(battery_class='I'))\n"
          "P_nominal = pre.DesignPW * pre.weight.WTO\n"
          "print(f'tentative nominal power = DesignPW * WTO = {P_nominal/1e3:.0f} kW')"),
-    code("# 2. Hybrid sized WITH the Class-II gas turbine + electric motor\n"
-         "cfg = hybrid_config(battery_class='I')\n"
-         "for seg in cfg.mission_stages.segments:\n"
-         "    if seg.name == 'Cruise':\n"
-         "        seg.phi_end = 0.5\n"
-         "cfg.energy.eta_gas_turbine_model = 'ResponseSurface'\n"
-         "cfg.energy.gt_design_power = P_nominal\n"
-         "cfg.energy.eta_electric_motor_model = 'Smart'\n"
-         "cfg.energy.em_design_power = P_nominal\n"
-         "cfg.energy.em_design_voltage = 800.0\n"
-         "cfg.energy.em_design_rpm = 11000.0\n"
-         "aircraft = pg.build_aircraft()\n"
-         "aircraft.configure(cfg)\n"
-         "r = aircraft.results()\n"
-         "print(f'take-off weight : {r.WTO:8.1f} kg')"),
-    md("## Was the nominal power adequate?\n\n"
-       "After sizing, compare the nominal power against the peak power actually absorbed."),
-    code("for name, info in aircraft.powertrain.report_class_ii_sizing().items():\n"
-         "    print(f\"{name:14s}: nominal {info['nominal']/1e3:7.0f} kW, peak \"\n"
-         "          f\"{info['actual']/1e3:7.0f} kW -> {info['status']} (ratio {info['ratio']:.2f})\")"),
+    md("## Is the gas turbine adequately sized? (altitude-aware check)\n\n"
+       "The available shaft power lapses with altitude. The check below walks the mission and\n"
+       "compares the **required** power to the power **available** from the response surface at\n"
+       "each point — so a turbine whose peak demand is below its nominal can still be\n"
+       "*power-limited* in the climb (unable to sustain flight)."),
+    code("aircraft = design_class_ii(P_nominal, P_nominal)\n"
+         "gt = aircraft.powertrain.report_class_ii_sizing()['gas turbine']\n"
+         "print(f\"GT nominal      : {gt['nominal']/1e3:8.0f} kW\")\n"
+         "print(f\"worst load ratio: {gt['worst_load_ratio']:8.2f}  (>1 means power-limited)\")\n"
+         "print(f\"power-limited?  : {gt['power_limited']}\")\n"
+         "print(f\"min nominal to avoid power-limiting: {gt['min_nominal']/1e3:.0f} kW\")"),
+    md("The tentative gas turbine is **power-limited at altitude** — it cannot deliver the\n"
+       "climb power, so the design is infeasible. Re-size it to the recommended nominal (with a\n"
+       "small margin) and design again:"),
+    code("aircraft = design_class_ii(1.05 * gt['min_nominal'], P_nominal)\n"
+         "rep = aircraft.powertrain.report_class_ii_sizing()\n"
+         "g, m = rep['gas turbine'], rep['electric motor']\n"
+         "print(f\"GT : nominal {g['nominal']/1e3:7.0f} kW, worst load ratio {g['worst_load_ratio']:.2f} -> {g['status']}\")\n"
+         "print(f\"EM : nominal {m['nominal']/1e3:7.0f} kW, peak {m['peak_demand']/1e3:7.0f} kW -> {m['status']}\")\n"
+         "print(f\"take-off weight : {aircraft.results().WTO:.0f} kg\")"),
     md("## Class-II propulsion time series\n\n"
-       "Because the gas turbine was actually sized (with its fixed nominal power), the\n"
-       "throttle is now a realistic, varying result — high on climb, lower in cruise where the\n"
-       "battery offloads the turbine — not pinned at 100%. The plot also shows each\n"
-       "component's efficiency and the propeller pitch. (The nominal powers and engine count\n"
-       "are taken from the designed aircraft.)"),
+       "With the gas turbine adequately sized, the **throttle is now realistic and varying** —\n"
+       "high on climb, lower in cruise where the battery offloads the turbine — and never\n"
+       "pinned at 100%. The **electric-motor throttle is low** (the motor only carries the\n"
+       "battery share). The plot also shows each component's efficiency and the propeller\n"
+       "pitch."),
     code("pp.plot_component_timeseries(aircraft); plt.show()"),
+    md("## Why is the Class-II take-off weight lower than Class-I?\n\n"
+       "Not a paradox — it is an input-assumption difference. The Class-I model used a\n"
+       "*constant* gas-turbine efficiency (here 0.22, deliberately conservative), while the\n"
+       "Class-II response surface returns a higher, operating-point-dependent efficiency\n"
+       "(~0.30-0.40 at the cruise load). Higher efficiency burns less fuel, so the aircraft is\n"
+       "lighter. For a like-for-like comparison, set the constant Class-I efficiency to the\n"
+       "value the response surface predicts at cruise."),
+    code("import numpy as np\n"
+         "ts = pp.component_timeseries(aircraft)\n"
+         "print(f\"Class-II GT efficiency in cruise ~ {np.nanmedian(ts['eta_gas_turbine']):.3f}\")\n"
+         "print(f\"Class-I  GT efficiency (constant)  = 0.220\")"),
 ])
 
 # 3. Hydrogen fuel cell ----------------------------------------------------------
