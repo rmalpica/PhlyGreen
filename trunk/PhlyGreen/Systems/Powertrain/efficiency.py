@@ -153,18 +153,28 @@ class MotorEfficiencyModel(EfficiencyModel):
 class GasTurbineEfficiencyModel(EfficiencyModel):
     """Class-II gas-turbine efficiency from the RBF response surface (:mod:`.GT_response_surface`).
 
-    Converts the operating point to the surrogate's inputs (design power [hp], altitude [ft],
-    Mach, required power [hp] per engine) and returns the thermal efficiency. If a design
-    power is not given it falls back to the instantaneous required power (i.e. an engine
-    sized for this point).
+    The gas turbine has a **fixed nominal (design) power** — it must be sized *before* the
+    mission, not per operating point (an engine cannot resize itself instant by instant).
+    ``eta`` then evaluates the (universal) response surface at the current load, i.e. the
+    ratio of required to nominal power, accounting for the altitude power lapse.
+
+    Args:
+        design_power: nominal (rated) shaft power of the whole installation [W] — typically
+            ``DesignPW * WTO``. Required.
+        surrogate: a :class:`GasTurbineResponseSurface` (loaded by default).
+        n_engines: number of engines the installation is split over.
     """
 
-    def __init__(self, surrogate=None, design_power_hp=None, n_engines=1):
+    def __init__(self, design_power, surrogate=None, n_engines=1):
+        if design_power is None or design_power <= 0:
+            raise ValueError(
+                "GasTurbineEfficiencyModel needs a positive nominal 'design_power' [W] "
+                "(size the engine before the mission, e.g. DesignPW * WTO).")
         if surrogate is None:
             from .GT_response_surface import GasTurbineResponseSurface
             surrogate = GasTurbineResponseSurface()
         self.surrogate = surrogate
-        self.design_power_hp = design_power_hp
+        self.design_power = design_power
         self.n_engines = max(int(n_engines), 1)
 
     def eta(self, op: OperatingPoint) -> float:
@@ -173,8 +183,8 @@ class GasTurbineEfficiencyModel(EfficiencyModel):
         a = Speed.soundspeed(op.altitude, 0.0)
         mach = op.velocity / a if a > 0 else 0.0
         alt_ft = Units.mToft(op.altitude)
+        design_hp = Units.wTohp(self.design_power) / self.n_engines   # per engine
         req_hp = Units.wTohp(op.power) / self.n_engines
-        design_hp = self.design_power_hp if self.design_power_hp else max(req_hp, 1.0)
         efficiency, _, _, _ = self.surrogate.predict(design_hp, alt_ft, mach, req_hp)
         return efficiency
 

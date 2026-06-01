@@ -90,6 +90,12 @@ class EnergyConfig(DictConfig):
     battery_specific_energy: Optional[float] = None  # [Wh/kg]
     battery_specific_power: Optional[float] = None   # [W/kg]
     battery_usable_soc: Optional[float] = None       # usable state-of-charge fraction
+    # --- Class-II propulsion model selection + nominal (design) powers ---
+    eta_electric_motor_model: Optional[str] = None   # 'constant' | 'Smart'
+    gt_design_power: Optional[float] = None           # nominal gas-turbine power [W]
+    em_design_power: Optional[float] = None           # nominal electric-motor power [W]
+    em_design_voltage: Optional[float] = None         # [V]
+    em_design_rpm: Optional[float] = None             # [rpm]
 
     _KEY_MAP = {
         "Ef": "Ef",
@@ -114,6 +120,11 @@ class EnergyConfig(DictConfig):
         "battery_specific_energy": "Battery Specific Energy",
         "battery_specific_power": "Battery Specific Power",
         "battery_usable_soc": "Battery Usable SOC",
+        "eta_electric_motor_model": "Eta Electric Motor Model",
+        "gt_design_power": "GT Design Power",
+        "em_design_power": "EM Design Power",
+        "em_design_voltage": "EM Design Voltage",
+        "em_design_rpm": "EM Design RPM",
     }
 
     def __post_init__(self):

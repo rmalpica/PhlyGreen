@@ -246,7 +246,11 @@ class Aircraft:
         
         if (self.Configuration == 'Hybrid' and WellToTankInput is not None):
             self.welltowake.EvaluateSource()
-        
+
+        # If Class-II GT/EM models were used, check the fixed nominal power was adequate.
+        if getattr(self.powertrain, 'gt_design_power', None) or getattr(self.powertrain, 'em_design_power', None):
+            self.powertrain.report_class_ii_sizing()
+
         if PrintOutput: self.Print_Aircraft_Design_Summary()
 
 

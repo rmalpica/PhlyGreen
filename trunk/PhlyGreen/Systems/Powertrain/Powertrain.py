@@ -56,6 +56,10 @@ class Powertrain:
         #preserving legacy behavior.
         self.em_model = None   # electric motor (parallel hybrid / fuel-cell-battery)
         self.fc_model = None   # fuel-cell system efficiency (fuel-cell-battery)
+        # Class-II nominal (design) powers [W], fixed before the mission (None for Class-I).
+        self.gt_design_power = None
+        self.em_design_power = None
+        self.n_engines = 1
 
 
     """ Properties """
@@ -401,15 +405,26 @@ class Powertrain:
                 return default
             return value if value is not None else default
 
+        self.n_engines = n_eng
+        # Class-II nominal (design) powers [W]; None for Class-I components. These are fixed
+        # before the mission and used by the over/under-size check after sizing.
+        self.gt_design_power = e.get('GT Design Power')
+        self.em_design_power = e.get('EM Design Power')
+
         eff = {}
         eff['gearbox'] = ConstantEfficiency(const('EtaGB', 1.0))
         eff['pmad'] = ConstantEfficiency(const('EtaPM', 1.0))
 
-        # Gas turbine: Class-I constant or Class-II response surface.
+        # Gas turbine: Class-I constant or Class-II response surface (needs a nominal power).
         if self.EtaGTmodelType == 'ResponseSurface':
             from .efficiency import GasTurbineEfficiencyModel
+            if not self.gt_design_power:
+                raise ValueError(
+                    "Class-II gas turbine selected but 'GT Design Power' [W] is not set. "
+                    "Size the engine before the mission (e.g. DesignPW * WTO) and pass it "
+                    "in EnergyInput as 'GT Design Power'.")
             eff['gas_turbine'] = GasTurbineEfficiencyModel(
-                design_power_hp=e.get('GT Design Power'), n_engines=n_eng)
+                design_power=self.gt_design_power, n_engines=n_eng)
         else:
             eff['gas_turbine'] = ConstantEfficiency(const('EtaGT', 0.30))
 
@@ -424,17 +439,58 @@ class Powertrain:
         else:
             eff['propeller'] = ConstantEfficiency(const('EtaPP', 0.85))
 
-        # Electric motor: Class-I constant or Class-II d-q model.
+        # Electric motor: Class-I constant or Class-II d-q model (needs a nominal power).
         if e.get('Eta Electric Motor Model') == 'Smart':
             from .efficiency import MotorEfficiencyModel
+            if not self.em_design_power:
+                raise ValueError(
+                    "Class-II electric motor selected but 'EM Design Power' [W] is not set. "
+                    "Size the motor before the mission (e.g. DesignPW * WTO) and pass it in "
+                    "EnergyInput as 'EM Design Power'.")
             eff['electric_motor'] = MotorEfficiencyModel(
-                e.get('EM Design Power', 2000.0), e.get('EM Design Voltage', 800.0),
+                (self.em_design_power / n_eng) / 1000.0, e.get('EM Design Voltage', 800.0),
                 e.get('EM Design RPM', 11000.0), n_engines=n_eng)
         else:
             eff['electric_motor'] = ConstantEfficiency(const('EtaEM', 1.0))
 
         eff['fuel_cell'] = ConstantEfficiency(const('EtaFC', 0.50))
         self.efficiency = eff
+
+    def report_class_ii_sizing(self, raise_on_undersize=False):
+        """Compare the Class-II GT/EM nominal power against the peak power absorbed.
+
+        Run after the weight-sizing loop. The nominal power is fixed before the mission;
+        here we check whether it was adequate. Returns a dict of
+        ``{component: {'nominal','actual','ratio','status'}}`` and warns (or raises) when a
+        component is undersized (peak demand exceeds its nominal power).
+        """
+        import warnings
+        report = {}
+
+        def assess(name, nominal, actual):
+            if not nominal:
+                return
+            ratio = actual / nominal
+            if ratio > 1.0:
+                status = "UNDERSIZED"
+            elif ratio < 0.6:
+                status = "oversized"
+            else:
+                status = "ok"
+            report[name] = {"nominal": nominal, "actual": actual, "ratio": ratio,
+                            "status": status}
+            if status == "UNDERSIZED":
+                msg = (f"{name} is undersized: peak absorbed {actual/1e3:.1f} kW exceeds the "
+                       f"nominal {nominal/1e3:.1f} kW (ratio {ratio:.2f}). Increase its "
+                       f"design power.")
+                if raise_on_undersize:
+                    raise ValueError(msg)
+                warnings.warn(msg)
+
+        m = self.aircraft.mission
+        assess("gas turbine", self.gt_design_power, getattr(m, "Max_PEng", 0.0) or 0.0)
+        assess("electric motor", self.em_design_power, getattr(m, "Max_PBat", 0.0) or 0.0)
+        return report
 
     def eta(self, component, alt=0.0, vel=0.0, pwr=0.0, rpm=None):
         """Efficiency of ``component`` at the operating point (altitude, velocity, power).
