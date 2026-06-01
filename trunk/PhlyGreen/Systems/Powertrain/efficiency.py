@@ -150,6 +150,69 @@ class MotorEfficiencyModel(EfficiencyModel):
         return self.motor.get_weight()
 
 
+class GasTurbineEfficiencyModel(EfficiencyModel):
+    """Class-II gas-turbine efficiency from the RBF response surface (:mod:`.GT_response_surface`).
+
+    Converts the operating point to the surrogate's inputs (design power [hp], altitude [ft],
+    Mach, required power [hp] per engine) and returns the thermal efficiency. If a design
+    power is not given it falls back to the instantaneous required power (i.e. an engine
+    sized for this point).
+    """
+
+    def __init__(self, surrogate=None, design_power_hp=None, n_engines=1):
+        if surrogate is None:
+            from .GT_response_surface import GasTurbineResponseSurface
+            surrogate = GasTurbineResponseSurface()
+        self.surrogate = surrogate
+        self.design_power_hp = design_power_hp
+        self.n_engines = max(int(n_engines), 1)
+
+    def eta(self, op: OperatingPoint) -> float:
+        import PhlyGreen.Utilities.Units as Units
+        import PhlyGreen.Utilities.Speed as Speed
+        a = Speed.soundspeed(op.altitude, 0.0)
+        mach = op.velocity / a if a > 0 else 0.0
+        alt_ft = Units.mToft(op.altitude)
+        req_hp = Units.wTohp(op.power) / self.n_engines
+        design_hp = self.design_power_hp if self.design_power_hp else max(req_hp, 1.0)
+        efficiency, _, _, _ = self.surrogate.predict(design_hp, alt_ft, mach, req_hp)
+        return efficiency
+
+
+class HamiltonPropellerEfficiency(EfficiencyModel):
+    """Class-II propeller efficiency from the Hamilton-Standard model (:class:`.Propeller.Propeller`)."""
+
+    def __init__(self, propeller):
+        self.propeller = propeller
+
+    def eta(self, op: OperatingPoint) -> float:
+        e = self.propeller.ComputePropEfficiency(op.altitude, op.velocity, op.power)
+        return float(min(max(e, 0.4), 1.0))
+
+
+class PropellerSurrogateEfficiency(EfficiencyModel):
+    """Class-II propeller efficiency from the RBF surrogate (:class:`.PropellerRBF.PropellerSurrogate`).
+
+    Solves the pitch governor for the target rpm, then evaluates the efficiency map.
+    """
+
+    def __init__(self, surrogate=None, rpm=1200.0, n_engines=1):
+        if surrogate is None:
+            import os
+            from .PropellerRBF import PropellerSurrogate
+            csv = os.path.join(os.path.dirname(__file__), "data", "propeller_data_rbf.csv")
+            surrogate = PropellerSurrogate(csv)
+        self.surrogate = surrogate
+        self.rpm = rpm
+        self.n_engines = max(int(n_engines), 1)
+
+    def eta(self, op: OperatingPoint) -> float:
+        power_kw = (op.power / self.n_engines) / 1000.0
+        rpm = op.rpm if op.rpm is not None else self.rpm
+        pitch = self.surrogate.solve_pitch(power_kw, op.altitude, op.velocity, rpm)
+        return float(self.surrogate.get_efficiency(power_kw, op.altitude, op.velocity, pitch, rpm))
+
+
 def make_efficiency_model(spec) -> EfficiencyModel:
     """Build an :class:`EfficiencyModel` from a compact specification.
 

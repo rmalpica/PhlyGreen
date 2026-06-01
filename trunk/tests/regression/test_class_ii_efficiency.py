@@ -33,8 +33,8 @@ def _parallel_powertrain():
 def test_no_model_uses_constant_eta_em():
     pt = _parallel_powertrain()
     assert pt.em_model is None
-    # _eta_em falls back to the constant EtaEM read from EnergyInput.
-    assert pt._eta_em(8000, 120, 1e6) == pt.EtaEM
+    # the electric-motor efficiency falls back to the constant EtaEM from EnergyInput.
+    assert pt.eta('electric_motor', 8000, 120, 1e6) == pt.EtaEM
 
 
 def test_constant_model_matches_constant_eta_em():

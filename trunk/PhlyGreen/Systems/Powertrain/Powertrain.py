@@ -3,13 +3,11 @@ import numbers
 import PhlyGreen.Utilities.Atmosphere as ISA
 import PhlyGreen.Utilities.Speed as Speed
 import PhlyGreen.Utilities.Units as Units
-import joblib
 import os
-from sklearn.preprocessing import PolynomialFeatures
 from .Propeller import Propeller
 from .graph import (traditional_graph, parallel_hybrid_graph, serial_hybrid_graph,
                     fuelcell_battery_graph)
-from .efficiency import OperatingPoint
+from .efficiency import OperatingPoint, ConstantEfficiency
 from scipy.optimize import brentq, brenth, ridder, newton
 
 class Powertrain:
@@ -68,18 +66,18 @@ class Powertrain:
       
     @EtaGTmodelType.setter
     def EtaGTmodelType(self,value):
-        if value == 'PW127' or value == 'constant':
+        if value in ('constant', 'ResponseSurface'):
             self._EtaGTmodelType = value
         else:
             raise ValueError("Error: %s Eta GT model not implemented. Exiting" %value)
-    
+
     @property
     def EtaPPmodelType(self):
         return self._EtaPPmodelType
-      
+
     @EtaPPmodelType.setter
     def EtaPPmodelType(self,value):
-        if value == 'PW127' or value == 'constant' or value == 'Hamilton':
+        if value in ('constant', 'Hamilton', 'Surrogate', 'RBF'):
             self._EtaPPmodelType = value
         else:
             raise ValueError("Error: %s Eta PP model not implemented. Exiting" %value)
@@ -316,16 +314,11 @@ class Powertrain:
             self.EtaGT = self.aircraft.EnergyInput['Eta Gas Turbine']
 
         try:
-            self.aircraft.EnergyInput['Eta Gas Turbine Model'] 
+            self.aircraft.EnergyInput['Eta Gas Turbine Model']
         except:
             print('Warning: Eta Gas Turbine model unset. Using constant model')
-        else: 
-            self.EtaGTmodelType = self.aircraft.EnergyInput['Eta Gas Turbine Model'] 
-            if self.EtaGTmodelType == 'PW127': 
-                self.model_etath_0 = joblib.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'PW127', 'model_eta_th_0.joblib'))
-                self.model_etath_1 = joblib.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'PW127', 'model_eta_th_1.joblib'))
-                self.model_etath_2 = joblib.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'PW127', 'model_eta_th_2.joblib'))
-
+        else:
+            self.EtaGTmodelType = self.aircraft.EnergyInput['Eta Gas Turbine Model']
 
         try:
             self.aircraft.EnergyInput['Eta Propulsive']
@@ -376,12 +369,84 @@ class Powertrain:
                 self.EtaEM = self.aircraft.EnergyInput['Eta Electric Motor']
                 
             if (self.aircraft.HybridType == 'Serial'):
-                
+
                 self.EtaEM1 = self.aircraft.EnergyInput['Eta Electric Motor 1']
                 self.EtaEM2 = self.aircraft.EnergyInput['Eta Electric Motor 2']
 
-        
+        self._build_efficiencies()
         return None
+
+    def _build_efficiencies(self):
+        """Assemble one :class:`EfficiencyModel` per powertrain component.
+
+        Each component's efficiency is either Class-I (a constant, the default) or Class-II
+        (a model that depends on the operating point). The choice is driven by the
+        ``Eta <component> Model`` keys in ``EnergyInput`` (``'constant'`` |
+        ``'ResponseSurface'`` for the gas turbine, ``'constant'`` | ``'Hamilton'`` |
+        ``'Surrogate'`` for the propeller, ``'constant'`` | ``'Smart'`` for the motor).
+        The result is stored in ``self.efficiency`` and read through :meth:`eta`.
+        """
+        e = self.aircraft.EnergyInput
+        n_eng = 1
+        if getattr(self.aircraft, 'PropellerInput', None):
+            n_eng = int(self.aircraft.PropellerInput.get('Number of Engines', 1))
+
+        # The constant Eta* are validating properties that raise when unset; read safely.
+        def const(name, default):
+            try:
+                value = getattr(self, name)
+            except Exception:
+                return default
+            return value if value is not None else default
+
+        eff = {}
+        eff['gearbox'] = ConstantEfficiency(const('EtaGB', 1.0))
+        eff['pmad'] = ConstantEfficiency(const('EtaPM', 1.0))
+
+        # Gas turbine: Class-I constant or Class-II response surface.
+        if self.EtaGTmodelType == 'ResponseSurface':
+            from .efficiency import GasTurbineEfficiencyModel
+            eff['gas_turbine'] = GasTurbineEfficiencyModel(
+                design_power_hp=e.get('GT Design Power'), n_engines=n_eng)
+        else:
+            eff['gas_turbine'] = ConstantEfficiency(const('EtaGT', 0.30))
+
+        # Propeller: Class-I constant, Class-II Hamilton, or Class-II RBF surrogate.
+        if self.EtaPPmodelType == 'Hamilton':
+            from .efficiency import HamiltonPropellerEfficiency
+            eff['propeller'] = HamiltonPropellerEfficiency(self.Propeller)
+        elif self.EtaPPmodelType in ('Surrogate', 'RBF'):
+            from .efficiency import PropellerSurrogateEfficiency
+            eff['propeller'] = PropellerSurrogateEfficiency(
+                rpm=e.get('Propeller RPM', 1200.0), n_engines=n_eng)
+        else:
+            eff['propeller'] = ConstantEfficiency(const('EtaPP', 0.85))
+
+        # Electric motor: Class-I constant or Class-II d-q model.
+        if e.get('Eta Electric Motor Model') == 'Smart':
+            from .efficiency import MotorEfficiencyModel
+            eff['electric_motor'] = MotorEfficiencyModel(
+                e.get('EM Design Power', 2000.0), e.get('EM Design Voltage', 800.0),
+                e.get('EM Design RPM', 11000.0), n_engines=n_eng)
+        else:
+            eff['electric_motor'] = ConstantEfficiency(const('EtaEM', 1.0))
+
+        eff['fuel_cell'] = ConstantEfficiency(const('EtaFC', 0.50))
+        self.efficiency = eff
+
+    def eta(self, component, alt=0.0, vel=0.0, pwr=0.0, rpm=None):
+        """Efficiency of ``component`` at the operating point (altitude, velocity, power).
+
+        Components: ``'gas_turbine'``, ``'propeller'``, ``'gearbox'``, ``'electric_motor'``,
+        ``'pmad'``, ``'fuel_cell'``. An externally-set ``em_model``/``fc_model`` overrides
+        the electric-motor/fuel-cell entry (back-compatible Class-II injection).
+        """
+        op = OperatingPoint(altitude=alt, velocity=vel, power=pwr, rpm=rpm)
+        if component == 'electric_motor' and self.em_model is not None:
+            return self.em_model.eta(op)
+        if component == 'fuel_cell' and self.fc_model is not None:
+            return self.fc_model.eta(op)
+        return self.efficiency[component].eta(op)
 
     def PowerLapse(self,altitude,DISA):
         """ Full throttle power lapse, to be used in constraint analysis. Source: Ruijgrok, Elements of airplane performance, Eq.(6.7-11)"""
@@ -389,111 +454,6 @@ class Powertrain:
         lapse = (ISA.atmosphere.RHOstd(altitude,DISA)/ISA.atmosphere.RHOstd(0.0,DISA))**n
         return lapse
     
-    def EtaPPconstModel(self,altitude,velocity,powerOutput):
-        
-        const = self.EtaPP
-
-        return const
-        
-    def EtaPPpw127Model(self,altitude,velocity,powerOutput):
-
-        eta = 0.89
-
-        return eta
-    
-    def EtaPPHamiltonModel(self,alt,vel,PP):
-        
-        def func(Pgb):
-
-            eta_PP = self.Propeller.ComputePropEfficiency(alt,vel,Pgb)
-            if eta_PP > 1. or eta_PP < 0.4:
-                eta_PP = 0.4
-
-            A, b = self.DefinePowertrainSystem(alt,vel,PP,eta_PP)
-
-            PR = np.linalg.solve(A,b)
-
-            if self.aircraft.Configuration == 'Traditional':
-                PDiff = PR[2] - Pgb/PP
-            elif self.aircraft.Configuration == 'Hybrid': 
-                # if self.aircraft.HybridType == 'Parallel':
-                PDiff = PR[3] - Pgb/PP
-            
-            # print('Pgb/PP: ', PR[3])
-            # print('Pgb solution of the linear system: ', PR[3]*PP)
-            # print('Pgb guess: ', Pgb)
-            # print('Difference: ', PDiff)
-            # print('-'*40)
-            return PDiff
-            
-        try:
-            Pgb_Hamilton = brenth(func,PP, PP/0.4, xtol=0.001)
-        except ValueError as e:
-            if "must have different signs" in str(e):
-                Pgb_Hamilton = 0.4
-            else:
-                raise
-
-        Eta_Hamilton = self.Propeller.ComputePropEfficiency(alt,vel,Pgb_Hamilton) 
-        if Eta_Hamilton > 1. or Eta_Hamilton < 0.4:
-            Eta_Hamilton = 0.4
-
-        # print('Propeller Efficiency: ', Eta_Hamilton)
-
-        return Eta_Hamilton
-    
-    def EtaPPmodel(self,alt,vel,pwr):
-
-        if self.EtaPPmodelType == 'constant':
-            return self.EtaPPconstModel(alt,vel,pwr)
-        elif self.EtaPPmodelType == 'PW127':
-            return self.EtaPPpw127Model(alt,vel,pwr) 
-        elif self.EtaPPmodelType == 'Hamilton':
-            return self.EtaPPHamiltonModel(alt,vel,pwr)
-        else:
-            raise Exception("Unknown EtaPPmodelType: %s" %self.EtaPPmodelType)
-
-    def EtaGTconstModel(self,altitude,velocity,powerOutput):
-        
-        const = self.EtaGT
-
-        return const
-        
-    def EtaGTpw127Model(self,altitude,velocity,powerOutput):
-        # potenza erogata all'albero dal singolo motore:
-        pwsd_c = 1e-3*0.5*self.EtaPPmodel(altitude,velocity,powerOutput)*powerOutput
-        # il fattore 0.5 serve a tenere conto che la potenza powerOutput è complessivamente erogata dai due motori 
-
-        pwsd = min(2280, pwsd_c)
-
-        if 0 <= pwsd <= 400 and 0 <= altitude <= 7600:
-            model = self.model_etath_1
-        elif 2000 <= pwsd <= 2280 and 0 <= altitude <= 1000:
-            model = self.model_etath_2
-        else:
-            model = self.model_etath_0
-
-        data_for_prediction = np.array([[pwsd, velocity, altitude]])
-        poly_features = PolynomialFeatures(degree=4)
-        data_for_prediction_poly = poly_features.fit_transform(data_for_prediction)
-
-        eta_th = model.predict(data_for_prediction_poly)[0]
-
-        eta = max(0.001, eta_th)
-
-        return eta
-    
-    def EtaGTmodel(self,alt,vel,pwr):
-
-        if self.EtaGTmodelType == 'constant':
-            return self.EtaGTconstModel(alt,vel,pwr)
-        elif self.EtaGTmodelType == 'PW127':
-            return self.EtaGTpw127Model(alt,vel,pwr) 
-        else:
-            raise Exception("Unknown EtaGTmodelType: %s" %self.EtaGTmodelType)
-
-
-       
     def Traditional(self, alt, vel, pwr):
         """Power ratios for the traditional gas-turbine chain.
 
@@ -501,8 +461,9 @@ class Powertrain:
         :meth:`_traditional_legacy` for the original hand-coded 4x4 system that this
         reproduces. Output order: ``[Pf/Pp, Pgt/Pp, Pgb/Pp, Pp/Pp]``.
         """
-        g = traditional_graph(self.EtaGTmodel(alt, vel, pwr), self.EtaGB,
-                              self.EtaPPmodel(alt, vel, pwr))
+        g = traditional_graph(self.eta('gas_turbine', alt, vel, pwr),
+                              self.eta('gearbox', alt, vel, pwr),
+                              self.eta('propeller', alt, vel, pwr))
         return g.solve()
 
     def Hybrid(self, phi, alt, vel, pwr):
@@ -516,31 +477,18 @@ class Powertrain:
         """
         self.phi = phi
         if self.aircraft.HybridType == 'Parallel':
-            g = parallel_hybrid_graph(self.EtaGTmodel(alt, vel, pwr), self.EtaGB,
-                                      self.EtaPM, self._eta_em(alt, vel, pwr),
-                                      self.EtaPPmodel(alt, vel, pwr), phi)
+            g = parallel_hybrid_graph(self.eta('gas_turbine', alt, vel, pwr),
+                                      self.eta('gearbox', alt, vel, pwr), self.eta('pmad', alt, vel, pwr),
+                                      self.eta('electric_motor', alt, vel, pwr),
+                                      self.eta('propeller', alt, vel, pwr), phi)
         elif self.aircraft.HybridType == 'Serial':
-            g = serial_hybrid_graph(self.EtaGT, self.EtaEM1, self.EtaPM, self.EtaEM2,
-                                    self.EtaGB, self.EtaPPmodel(alt, vel, pwr), phi)
+            g = serial_hybrid_graph(self.eta('gas_turbine', alt, vel, pwr), self.EtaEM1,
+                                    self.eta('pmad', alt, vel, pwr), self.EtaEM2,
+                                    self.eta('gearbox', alt, vel, pwr),
+                                    self.eta('propeller', alt, vel, pwr), phi)
         else:
             raise Exception("Unknown hybrid type: %s" % self.aircraft.HybridType)
         return np.abs(g.solve())
-
-    def _eta_em(self, alt, vel, pwr):
-        """Electric-motor efficiency at the operating point.
-
-        Uses the Class-II ``em_model`` if one is set (making the motor efficiency depend
-        on altitude/velocity/power), otherwise the constant ``EtaEM``.
-        """
-        if self.em_model is not None:
-            return self.em_model.eta(OperatingPoint(altitude=alt, velocity=vel, power=pwr))
-        return self.EtaEM
-
-    def _eta_fc(self, alt, vel, pwr):
-        """Fuel-cell system efficiency at the operating point (Class-II model or constant)."""
-        if self.fc_model is not None:
-            return self.fc_model.eta(OperatingPoint(altitude=alt, velocity=vel, power=pwr))
-        return self.EtaFC
 
     def PowerRatioFuelCellBattery(self, phi, alt, vel, pwr):
         """Power ratios for a fuel-cell + battery (gas-turbine-free) hybrid.
@@ -552,9 +500,11 @@ class Powertrain:
         ``[PfH2, Pfc, Pbat, Pe1, Pem, Pgb, Pp1]`` (all /Pp), so ``[0]`` is hydrogen power
         and ``[2]`` is battery power.
         """
-        g = fuelcell_battery_graph(self._eta_fc(alt, vel, pwr), self.EtaPM,
-                                   self._eta_em(alt, vel, pwr), self.EtaGB,
-                                   self.EtaPPmodel(alt, vel, pwr), phi)
+        g = fuelcell_battery_graph(self.eta('fuel_cell', alt, vel, pwr),
+                                   self.eta('pmad', alt, vel, pwr),
+                                   self.eta('electric_motor', alt, vel, pwr),
+                                   self.eta('gearbox', alt, vel, pwr),
+                                   self.eta('propeller', alt, vel, pwr), phi)
         return np.abs(g.solve())
 
     def _traditional_legacy(self,alt,vel,pwr):
@@ -597,9 +547,9 @@ class Powertrain:
         """
         
 
-        A = np.array([[- self.EtaGTmodel(alt,vel,pwr), 1, 0, 0],
+        A = np.array([[- self.eta('gas_turbine',alt,vel,pwr), 1, 0, 0],
                       [0, - self.EtaGB, 1, 0],
-                      [0, 0, - self.EtaPPmodel(alt,vel,pwr), 1],
+                      [0, 0, - self.eta('propeller',alt,vel,pwr), 1],
                       [0, 0, 0, 1]])
        
         b = np.array([0, 0, 0, 1])
@@ -677,11 +627,11 @@ class Powertrain:
 
         if (self.aircraft.HybridType == 'Parallel'):
         
-            A = np.array([[- self.EtaGTmodel(alt,vel,pwr), 1, 0, 0, 0, 0, 0],
+            A = np.array([[- self.eta('gas_turbine',alt,vel,pwr), 1, 0, 0, 0, 0, 0],
                       [0, -self.EtaGB, -self.EtaGB, 1, 0, 0, 0],
                       [0, 0, 0, 0, 1, -self.EtaPM, 0],
                       [0, 0, 1, 0, - self.EtaEM, 0, 0],
-                      [0, 0, 0, - self.EtaPPmodel(alt,vel,pwr), 0, 0, 1],
+                      [0, 0, 0, - self.eta('propeller',alt,vel,pwr), 0, 0, 1],
                       [phi, 0, 0, 0, 0, phi - 1, 0],
                       [0, 0, 0, 0, 0, 0, 1]])
        
@@ -697,7 +647,7 @@ class Powertrain:
                       [0, 0, 0, -self.EtaPM, 1, -self.EtaPM, 0, 0],
                       [0, 0, 1, 0,  - self.EtaEM2, 0, 0, 0],
                       [0, 0, - self.EtaGB, 0, 0, 0, 1, 0],
-                      [0, 0, 0, 0, 0, 0, - self.EtaPPmodel(alt,vel,pwr), 1],
+                      [0, 0, 0, 0, 0, 0, - self.eta('propeller',alt,vel,pwr), 1],
                       [phi, 0, 0, 0, 0, phi - 1, 0, 0],
                       [0, 0, 0, 0, 0, 0, 0, 1]])
        
@@ -710,75 +660,6 @@ class Powertrain:
         return np.abs(PowerRatio)  #here abs is used to avoid that Pbat/Pp = -0 when phi=0
         
         
-    # def ParallelHybrid2(self,t):
-        
-    #     self.ReadInput()
-        
-    #     phi = self.aircraft.mission.profile.SuppliedPowerRatio(t)
-        
-    #     P1 = self.EtaPP / (self.EtaGB*self.EtaGT - (phi/(phi-1))*self.EtaGB*self.EtaPM*self.EtaEM)
-    #     P2 = P1 * self.EtaGT
-    #     P3 = - (phi/(phi-1)) * self.EtaPM * self.EtaEM * P1
-    #     P4 = self.EtaPP
-    #     P5 = - (phi/(phi-1)) * self.EtaPM * P1
-    #     P6 = - (phi/(phi-1)) * P1
-    #     P7 = 1
-    #     PowerRatio = [P1, P2, P3, P4, P5, P6, P7]
-        
-    # #Ordine output   Pf/Pp  Pgt/Pp   Pgb/Pp  Ps1/Pp  Pe1/Pp   Pbat/Pp    Pp1/Pp 
-    #     return PowerRatio
-    
-
-    def DefinePowertrainSystem(self,alt,vel,PP,eta_PP):
-        """
-        Auxiliary function that returns the matrix A and the vector B of the linear systems employed in powertrain.Traditional and powertrain.Hybrid
-
-        Presently unused.
-        """
-
-
-        if self.aircraft.Configuration == 'Traditional':
-            A = np.array([[- self.EtaGTmodel(alt,vel,PP), 1, 0, 0],
-                      [0, - self.EtaGB, 1, 0],
-                      [0, 0, - eta_PP, 1],
-                      [0, 0, 0, 1]])
-       
-            b = np.array([0, 0, 0, 1])
-
-        elif self.aircraft.Configuration == 'Hybrid':
-
-            if (self.aircraft.HybridType == 'Parallel'):
-            
-                A = np.array([[- self.EtaGTmodel(alt,vel,PP), 1, 0, 0, 0, 0, 0],
-                        [0, -self.EtaGB, -self.EtaGB, 1, 0, 0, 0],
-                        [0, 0, 0, 0, 1, -self.EtaPM, 0],
-                        [0, 0, 1, 0, - self.EtaEM, 0, 0],
-                        [0, 0, 0, - eta_PP, 0, 0, 1],
-                        [self.phi, 0, 0, 0, 0, self.phi - 1, 0],
-                        [0, 0, 0, 0, 0, 0, 1]])
-        
-                b = np.array([0, 0, 0, 0, 0, 0, 1])
-                
-                #Ordine output   Pf/Pp  Pgt/Pp   Pgb/Pp  Ps1/Pp  Pe1/Pp   Pbat/Pp    Pp1/Pp 
-
-            
-            elif (self.aircraft.HybridType == 'Serial'):
-                            
-                A = np.array([[- self.EtaGT, 1, 0, 0, 0, 0, 0, 0],
-                        [0, - self.EtaEM1, 0, 1, 0, 0, 0, 0],
-                        [0, 0, 0, -self.EtaPM, 1, -self.EtaPM, 0, 0],
-                        [0, 0, 1, 0,  - self.EtaEM2, 0, 0, 0],
-                        [0, 0, - self.EtaGB, 0, 0, 0, 1, 0],
-                        [0, 0, 0, 0, 0, 0, - eta_PP, 1],
-                        [self.phi, 0, 0, 0, 0, self.phi - 1, 0, 0],
-                        [0, 0, 0, 0, 0, 0, 0, 1]])
-        
-                b = np.array([0, 0, 0, 0, 0, 0, 0, 1])
-
-        return A,b
-
-
-
     def WeightPowertrain(self,WTO):
         """
         This function estimates the total weight of the propulsion powertrain based on the aircraft
