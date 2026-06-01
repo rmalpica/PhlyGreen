@@ -52,7 +52,78 @@ def new_architecture_fuel_cell_battery():
     print(f"  battery power  : {sol['Pbat']:.3f}")
 
 
+def component_performance_maps():
+    """Plot the Class-II GT / electric-motor / propeller efficiency maps.
+
+    Each is a real Class-II model: the gas turbine and propeller are response surfaces
+    trained offline; the electric motor is a d-q physics model. Requires matplotlib (and
+    pandas for the propeller surrogate); skipped gracefully if unavailable.
+    """
+    try:
+        import os
+        import numpy as np
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except Exception:
+        print("\n(matplotlib not available — skipping performance-map plots)")
+        return
+
+    from PhlyGreen.Systems.Powertrain.GT_response_surface import GasTurbineResponseSurface
+    from PhlyGreen.Systems.Powertrain.EM import ElectricMotor
+
+    fig, axes = plt.subplots(1, 3, figsize=(16, 4.5))
+
+    # --- Gas turbine: efficiency vs required power & altitude (design 2750 hp) ---
+    gt = GasTurbineResponseSurface()
+    powers = np.linspace(400, 2750, 40)        # required shaft power [hp]
+    alts_ft = np.linspace(0, 25000, 40)
+    Zgt = np.array([[gt.predict(2750, a, 0.4, p)[0] for p in powers] for a in alts_ft])
+    c0 = axes[0].contourf(powers, alts_ft, Zgt, levels=20, cmap="viridis")
+    fig.colorbar(c0, ax=axes[0], label="efficiency")
+    axes[0].set_xlabel("required power [hp]"); axes[0].set_ylabel("altitude [ft]")
+    axes[0].set_title("Gas turbine (response surface)")
+
+    # --- Electric motor: efficiency vs rpm & torque (d-q model) ---
+    motor = ElectricMotor(design_kw=2000, design_v=800, design_rpm=11000)
+    rpms = np.linspace(1000, 11000, 40)
+    torques = np.linspace(50, 1700, 40)
+    Zem = np.array([[motor.solve_efficiency(r, t) for r in rpms] for t in torques])
+    c1 = axes[1].contourf(rpms, torques, Zem, levels=20, cmap="viridis")
+    fig.colorbar(c1, ax=axes[1], label="efficiency")
+    axes[1].set_xlabel("rpm"); axes[1].set_ylabel("torque [N·m]")
+    axes[1].set_title("Electric motor (d-q model)")
+
+    # --- Propeller: efficiency vs airspeed & power (RBF surrogate, needs pandas) ---
+    try:
+        from PhlyGreen.Systems.Powertrain import PropellerRBF as _prbf
+        csv = os.path.join(os.path.dirname(_prbf.__file__), "data", "propeller_data_rbf.csv")
+        prop = _prbf.PropellerSurrogate(csv)
+        speeds = np.linspace(40, 170, 35)
+        powers_kw = np.linspace(200, 2200, 35)
+        rpm = 1200.0
+        Zpp = np.empty((len(powers_kw), len(speeds)))
+        for i, pk in enumerate(powers_kw):
+            for j, v in enumerate(speeds):
+                pitch = prop.solve_pitch(pk, 3000.0, v, rpm)
+                Zpp[i, j] = prop.get_efficiency(pk, 3000.0, v, pitch, rpm)
+        c2 = axes[2].contourf(speeds, powers_kw, Zpp, levels=20, cmap="viridis")
+        fig.colorbar(c2, ax=axes[2], label="efficiency")
+        axes[2].set_xlabel("airspeed [m/s]"); axes[2].set_ylabel("power [kW]")
+        axes[2].set_title("Propeller (RBF surrogate)")
+    except Exception as exc:
+        axes[2].text(0.5, 0.5, f"propeller surrogate\nunavailable\n({type(exc).__name__})",
+                     ha="center", va="center")
+        axes[2].set_title("Propeller")
+
+    os.makedirs("examples/_output", exist_ok=True)
+    fig.tight_layout()
+    fig.savefig("examples/_output/component_performance_maps.png", dpi=120, bbox_inches="tight")
+    print("\nSaved examples/_output/component_performance_maps.png")
+
+
 if __name__ == "__main__":
     builtin_architecture()
     operating_point_dependent_efficiency()
     new_architecture_fuel_cell_battery()
+    component_performance_maps()
