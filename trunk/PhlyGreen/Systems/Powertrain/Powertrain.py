@@ -7,6 +7,7 @@ import joblib
 import os
 from sklearn.preprocessing import PolynomialFeatures
 from .Propeller import Propeller
+from .graph import traditional_graph, parallel_hybrid_graph, serial_hybrid_graph
 from scipy.optimize import brentq, brenth, ridder, newton
 
 class Powertrain:
@@ -480,7 +481,39 @@ class Powertrain:
 
 
        
-    def Traditional(self,alt,vel,pwr):
+    def Traditional(self, alt, vel, pwr):
+        """Power ratios for the traditional gas-turbine chain.
+
+        Delegates to the component-graph engine (:func:`graph.traditional_graph`); see
+        :meth:`_traditional_legacy` for the original hand-coded 4x4 system that this
+        reproduces. Output order: ``[Pf/Pp, Pgt/Pp, Pgb/Pp, Pp/Pp]``.
+        """
+        g = traditional_graph(self.EtaGTmodel(alt, vel, pwr), self.EtaGB,
+                              self.EtaPPmodel(alt, vel, pwr))
+        return g.solve()
+
+    def Hybrid(self, phi, alt, vel, pwr):
+        """Power ratios for the hybrid-electric chain (parallel or serial).
+
+        Delegates to the component-graph engine; see :meth:`_hybrid_legacy` for the
+        original hand-coded systems this reproduces. ``abs`` is applied to avoid ``-0``
+        for the battery ratio when ``phi == 0``. Output order:
+        parallel ``[Pf, Pgt, Pgb, Ps1, Pe1, Pbat, Pp1]`` / serial
+        ``[Pf, Pgt, Pgb, Ps1, Pe1, Pbat, Pgen, Pp1]`` (all /Pp).
+        """
+        self.phi = phi
+        if self.aircraft.HybridType == 'Parallel':
+            g = parallel_hybrid_graph(self.EtaGTmodel(alt, vel, pwr), self.EtaGB,
+                                      self.EtaPM, self.EtaEM,
+                                      self.EtaPPmodel(alt, vel, pwr), phi)
+        elif self.aircraft.HybridType == 'Serial':
+            g = serial_hybrid_graph(self.EtaGT, self.EtaEM1, self.EtaPM, self.EtaEM2,
+                                    self.EtaGB, self.EtaPPmodel(alt, vel, pwr), phi)
+        else:
+            raise Exception("Unknown hybrid type: %s" % self.aircraft.HybridType)
+        return np.abs(g.solve())
+
+    def _traditional_legacy(self,alt,vel,pwr):
         """
         Compute the power ratios across a traditional gas-turbine propulsion
         chain.
@@ -533,7 +566,7 @@ class Powertrain:
         return PowerRatio
 
     
-    def Hybrid(self,phi,alt,vel,pwr):
+    def _hybrid_legacy(self,phi,alt,vel,pwr):
         """
         Compute power ratios for hybrid-electric propulsion architectures.
 

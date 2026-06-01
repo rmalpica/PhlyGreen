@@ -104,6 +104,16 @@ weight estimation is an iterative **WTO convergence loop** solved with **Brent's
 energy and peak power over each segment; `Weight` turns those into fuel, battery, powertrain, and
 structural masses.
 
+**Powertrain power balance.** `Powertrain.Traditional`/`Hybrid` return normalized power
+ratios (`PRatio[0]`=fuel, `[1]`=gas-turbine shaft, `[5]`=battery — these indices are
+consumed by Mission/Weight). They delegate to a **component graph**
+(`PhlyGreen/Systems/Powertrain/graph.py`): architectures are composed from
+`converter`/`combiner`/`split`/`sink` primitives and solved as one linear system, instead
+of hand-coded 4x4/7x7/8x8 matrices. Add a new architecture (e.g. fuel cell + battery, see
+`fuelcell_battery_graph`) by composing primitives — no new matrix algebra. The original
+solvers are kept as `_traditional_legacy`/`_hybrid_legacy` purely as the equivalence-test
+reference.
+
 ### Configuration flags (set on the Aircraft instance before `ReadInput`)
 These switch major code paths — check them when changing subsystem logic:
 - `Configuration`: `'Traditional'` (thermal only) or `'Hybrid'` (thermal + battery). Drives the
