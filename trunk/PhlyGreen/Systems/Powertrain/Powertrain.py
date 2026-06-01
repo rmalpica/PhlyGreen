@@ -4,7 +4,7 @@ import PhlyGreen.Utilities.Atmosphere as ISA
 import PhlyGreen.Utilities.Speed as Speed
 import PhlyGreen.Utilities.Units as Units
 import os
-from .Propeller import Propeller
+from .propeller_hamilton import Propeller
 from .graph import (traditional_graph, parallel_hybrid_graph, serial_hybrid_graph,
                     fuelcell_battery_graph)
 from .efficiency import OperatingPoint, ConstantEfficiency

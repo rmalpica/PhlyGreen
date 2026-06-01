@@ -1,3 +1,11 @@
+"""Hamilton-Standard propeller chart data + interpolation primitives.
+
+Lookup tables (activity factor, blade-angle, power/thrust-coefficient maps, Mach and
+blade-count corrections) and the 1-D/2-D interpolation helpers (``_unint``, ``_biquad``)
+used by the Hamilton-Standard propeller model in :mod:`.propeller_hamilton`. Pure data +
+numpy; not used by the data-trained :mod:`.propeller_surrogate`.
+"""
+
 import numpy as np
 
 def _unint(xa, ya, x):

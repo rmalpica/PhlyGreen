@@ -151,7 +151,7 @@ class MotorEfficiencyModel(EfficiencyModel):
 
 
 class GasTurbineEfficiencyModel(EfficiencyModel):
-    """Class-II gas-turbine efficiency from the RBF response surface (:mod:`.GT_response_surface`).
+    """Class-II gas-turbine efficiency from the RBF response surface (:mod:`.gas_turbine_surrogate`).
 
     The gas turbine has a **fixed nominal (design) power** — it must be sized *before* the
     mission, not per operating point (an engine cannot resize itself instant by instant).
@@ -171,7 +171,7 @@ class GasTurbineEfficiencyModel(EfficiencyModel):
                 "GasTurbineEfficiencyModel needs a positive nominal 'design_power' [W] "
                 "(size the engine before the mission, e.g. DesignPW * WTO).")
         if surrogate is None:
-            from .GT_response_surface import GasTurbineResponseSurface
+            from .gas_turbine_surrogate import GasTurbineResponseSurface
             surrogate = GasTurbineResponseSurface()
         self.surrogate = surrogate
         self.design_power = design_power
@@ -201,7 +201,7 @@ class HamiltonPropellerEfficiency(EfficiencyModel):
 
 
 class PropellerSurrogateEfficiency(EfficiencyModel):
-    """Class-II propeller efficiency from the RBF surrogate (:class:`.PropellerRBF.PropellerSurrogate`).
+    """Class-II propeller efficiency from the RBF surrogate (:class:`.propeller_surrogate.PropellerSurrogate`).
 
     Solves the pitch governor for the target rpm, then evaluates the efficiency map.
     """
@@ -209,7 +209,7 @@ class PropellerSurrogateEfficiency(EfficiencyModel):
     def __init__(self, surrogate=None, rpm=1200.0, n_engines=1):
         if surrogate is None:
             import os
-            from .PropellerRBF import PropellerSurrogate
+            from .propeller_surrogate import PropellerSurrogate
             csv = os.path.join(os.path.dirname(__file__), "data", "propeller_data_rbf.csv")
             surrogate = PropellerSurrogate(csv)
         self.surrogate = surrogate

@@ -1,3 +1,12 @@
+"""Data-trained RBF propeller surrogate.
+
+``PropellerSurrogate`` reads a CSV of propeller performance
+(``data/propeller_data_rbf.csv``: power, altitude, airspeed, rpm, pitch, efficiency) and fits
+radial-basis-function maps for (a) the pitch governor — the pitch needed to hold a target
+rpm — and (b) the efficiency. This is the *data-driven* propeller model (needs pandas); for
+the analytic Hamilton-Standard model see :mod:`.propeller_hamilton`.
+"""
+
 import sys
 import os
 import numpy as np

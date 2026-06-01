@@ -1,8 +1,18 @@
+"""Hamilton-Standard propeller efficiency model (analytic / blade-element).
+
+Computes propeller efficiency from altitude, true airspeed and shaft power using the classic
+Hamilton-Standard generalized blade-element charts — no external data file needed. The chart
+data and interpolation primitives live in :mod:`.propeller_hamilton_tables`.
+
+This is the *physics/empirical* propeller model (class :class:`Propeller`). For the
+data-trained alternative, see :mod:`.propeller_surrogate`.
+"""
+
 import numpy as np
 import PhlyGreen.Utilities.Atmosphere as ISA
 import PhlyGreen.Utilities.Units as Units
 import PhlyGreen.Utilities.Speed as Speed
-from .utils_propeller import _unint, _biquad, Act_Factor_arr, AFCPC, AFCTC, CL_arr, CPEC, CTEC, BL_P_corr_table, PF_CLI_arr, CP_CLi_table, cli_arr_len, ang_arr_len, XPCLI, XTCLI, CP_Angle_table, Blade_angle_table, CT_Angle_table, advance_ratio_array, BL_T_corr_table, TF_CLI_arr, CT_CLi_table, advance_ratio_array2, mach_corr_table, mach_tip_corr_arr, num_blades_arr, comp_mach_CT_arr
+from .propeller_hamilton_tables import _unint, _biquad, Act_Factor_arr, AFCPC, AFCTC, CL_arr, CPEC, CTEC, BL_P_corr_table, PF_CLI_arr, CP_CLi_table, cli_arr_len, ang_arr_len, XPCLI, XTCLI, CP_Angle_table, Blade_angle_table, CT_Angle_table, advance_ratio_array, BL_T_corr_table, TF_CLI_arr, CT_CLi_table, advance_ratio_array2, mach_corr_table, mach_tip_corr_arr, num_blades_arr, comp_mach_CT_arr
 
 class Propeller:
 

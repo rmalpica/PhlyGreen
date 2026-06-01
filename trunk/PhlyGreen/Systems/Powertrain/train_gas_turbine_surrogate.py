@@ -1,3 +1,12 @@
+"""Offline trainer for the gas-turbine response surface (not used at run time).
+
+Fits the RBF surrogates (efficiency, power limit, weight) from a turboshaft performance map
+``data/GT_Universal_Map.csv`` and serializes them to ``data/GT_Engine_Model_Complete.pkl``,
+which the runtime model :mod:`.gas_turbine_surrogate` loads. The CSV itself comes from a
+physics engine-cycle model (pycycle). Re-run this script to regenerate the pkl after updating
+the CSV. Requires pandas + scikit-learn.
+"""
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt

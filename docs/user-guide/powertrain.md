@@ -13,8 +13,8 @@ The Powertrain model:
 - Components efficiencies are computed based on the current flight conditions, if a model is provided. Otherwise, constant, user-specified values are used.
 - Presently, the available component models are:
     - Hamilton model for **propeller efficiency**, computed as a function of true airspeed, altitude, and power request 
-    - An RBF **gas-turbine response surface** for **thermal efficiency**, computed as a function of design power, altitude, Mach and power request (trained offline; see `Systems/Powertrain/GT_response_surface.py`)
-    - A d-q **electric-motor** efficiency model and an RBF **propeller** surrogate
+    - An RBF **gas-turbine response surface** for **thermal efficiency** vs design power, altitude, Mach and power request (runtime model `Systems/Powertrain/gas_turbine_surrogate.py`, fitted offline by `train_gas_turbine_surrogate.py`)
+    - A d-q **electric-motor** model (`EM.py`) and two **propeller** models: the analytic Hamilton-Standard model (`propeller_hamilton.py` + `propeller_hamilton_tables.py`) and a data-trained RBF surrogate (`propeller_surrogate.py`)
 - Computes **powertrain mass** from subsystem specific powers
 - Provides a **GT engine power-lapse** with altitude, to be used for constraint evaluation and engine rating
 

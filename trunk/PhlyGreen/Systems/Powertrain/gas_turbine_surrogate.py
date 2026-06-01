@@ -1,9 +1,10 @@
-"""Gas-turbine (turboshaft) response-surface model.
+"""Gas-turbine (turboshaft) response-surface model — *runtime*.
 
 A Class-II gas-turbine efficiency model: a set of radial-basis-function (RBF) surrogates,
-trained offline from a physics engine cycle (pycycle, see ``Single_spool_GT.py``) and a
-universal ratio map (see ``Response_Surface_GT.py``), and serialized to
-``data/GT_Engine_Model_Complete.pkl``.
+serialized to ``data/GT_Engine_Model_Complete.pkl``. This module only *loads and evaluates*
+them (class :class:`GasTurbineResponseSurface`); the offline trainer that fits the pkl from a
+turboshaft performance map (itself produced by a pycycle engine cycle) is
+:mod:`.train_gas_turbine_surrogate`.
 
 The surrogate is *universal* (normalized by design power), so one map covers any engine
 size: given the design shaft power, the flight condition (altitude, Mach) and the required
