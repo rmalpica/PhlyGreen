@@ -26,6 +26,8 @@ change a number, and re-run an example to see the effect.
 | `04_flight_profile_and_custom_segment.py` | Query altitude/speed/phi(t); register a new segment type |
 | `05_powertrain_graph_and_efficiency_models.py` | Power-balance graph; operating-point-dependent efficiencies; a fuel-cell+battery architecture |
 | `06_utilities_atmosphere_and_speeds.py` | ISA atmosphere and Mach/TAS/CAS/EAS conversions |
+| `14_welltowake_and_climate.py` | Well-to-wake source energy, mission emissions, climate impact (ATR) |
+| `15_class_i_vs_class_ii.py` | Class-I vs Class-II structures (FLOPS) and battery models |
 | `20_hydrogen_fuel_cell.py` | Size a hydrogen fuel-cell aircraft and fly the full mission; polarization curve |
 | `21_hydrogen_design_voltage_sweep.py` | Sweep the fuel-cell design voltage; find the take-off-weight optimum |
 | `22_hydrogen_tank.py` | Size the cryogenic LH2 tank and track its pressure/mass/venting over the mission (needs CoolProp) |

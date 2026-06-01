@@ -19,6 +19,8 @@ FAST_EXAMPLES = [
     "04_flight_profile_and_custom_segment.py",
     "05_powertrain_graph_and_efficiency_models.py",
     "06_utilities_atmosphere_and_speeds.py",
+    "14_welltowake_and_climate.py",
+    "15_class_i_vs_class_ii.py",
     "20_hydrogen_fuel_cell.py",
 ]
 
