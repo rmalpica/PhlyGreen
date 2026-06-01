@@ -118,3 +118,42 @@ def traditional_config():
         DiversionStages=DIVERSION_STAGES,
     )
     return flags, kwargs
+
+
+# --- typed AircraftConfig equivalents (built from the same dicts) -----------
+
+def hybrid_parallel_aircraft_config():
+    """The tutorial Hybrid/Parallel design as a typed :class:`AircraftConfig`."""
+    from PhlyGreen.config import (
+        AircraftConfig, AerodynamicsConfig, ConstraintsConfig, MissionConfig,
+        EnergyConfig, StagesConfig, WellToTankConfig, CellConfig, ClimateImpactConfig,
+    )
+    return AircraftConfig(
+        configuration='Hybrid', hybrid_type='Parallel', aircraft_type='ATR', weight_class='I',
+        aerodynamics=AerodynamicsConfig.from_dict(AERODYNAMICS_INPUT),
+        constraints=ConstraintsConfig.from_dict(CONSTRAINTS_INPUT),
+        mission=MissionConfig.from_dict(MISSION_INPUT),
+        energy=EnergyConfig.from_dict(ENERGY_INPUT),
+        mission_stages=StagesConfig.from_dict(MISSION_STAGES),
+        diversion_stages=StagesConfig.from_dict(DIVERSION_STAGES),
+        well_to_tank=WellToTankConfig.from_dict(WELL_TO_TANK_INPUT),
+        cell=CellConfig.from_dict(CELL_INPUT),
+        climate_impact=ClimateImpactConfig.from_dict(CLIMATE_IMPACT_INPUT),
+    )
+
+
+def traditional_aircraft_config():
+    """The Traditional design as a typed :class:`AircraftConfig`."""
+    from PhlyGreen.config import (
+        AircraftConfig, AerodynamicsConfig, ConstraintsConfig, MissionConfig,
+        EnergyConfig, StagesConfig,
+    )
+    return AircraftConfig(
+        configuration='Traditional', aircraft_type='ATR', weight_class='I',
+        aerodynamics=AerodynamicsConfig.from_dict(AERODYNAMICS_INPUT),
+        constraints=ConstraintsConfig.from_dict(CONSTRAINTS_INPUT),
+        mission=MissionConfig.from_dict(MISSION_INPUT),
+        energy=EnergyConfig.from_dict(ENERGY_INPUT),
+        mission_stages=StagesConfig.from_dict(MISSION_STAGES),
+        diversion_stages=StagesConfig.from_dict(DIVERSION_STAGES),
+    )

@@ -1,5 +1,16 @@
+def _as_dict(value):
+    """Coerce a typed config object to its legacy dict; pass dicts/None through.
+
+    Lets :meth:`Aircraft.ReadInput` accept either the legacy dict API or the typed
+    objects in :mod:`PhlyGreen.config` (anything exposing ``to_dict``).
+    """
+    if value is not None and hasattr(value, "to_dict"):
+        return value.to_dict()
+    return value
+
+
 class Aircraft:
-    """ The Aircraft class. 
+    """ The Aircraft class.
 
     This code is designed using the "mediator class" paradigm (a sort of hub and spoke). There is
     one central class (Aircraft) which takes subsystems modules as inputs, and each of the modules takes the mediator
@@ -114,9 +125,27 @@ class Aircraft:
             WellToTankInput (dictionary, optional) 
             CellInput (dictionary, optional)
             ClimateImpactInput (dictionary, optional)
-            PropellerInput (dictionary, optional)        
+            PropellerInput (dictionary, optional)
+
+        Note:
+            Each argument may be either a legacy dict or a typed config object from
+            :mod:`PhlyGreen.config` (anything exposing ``to_dict``). Config objects are
+            coerced to dicts here, so the subsystems downstream are unaffected.
         """
-        
+
+        # Adapter shim: accept typed config objects in place of legacy dicts.
+        AerodynamicsInput = _as_dict(AerodynamicsInput)
+        ConstraintsInput = _as_dict(ConstraintsInput)
+        MissionInput = _as_dict(MissionInput)
+        EnergyInput = _as_dict(EnergyInput)
+        MissionStages = _as_dict(MissionStages)
+        DiversionStages = _as_dict(DiversionStages)
+        LoiterStages = _as_dict(LoiterStages)
+        WellToTankInput = _as_dict(WellToTankInput)
+        CellInput = _as_dict(CellInput)
+        ClimateImpactInput = _as_dict(ClimateImpactInput)
+        PropellerInput = _as_dict(PropellerInput)
+
         self.AerodynamicsInput = AerodynamicsInput
         self.ConstraintsInput = ConstraintsInput
         self.MissionInput = MissionInput
@@ -217,6 +246,33 @@ class Aircraft:
         """
         from .results import AircraftResults
         return AircraftResults.from_aircraft(self)
+
+
+    def configure(self, config, design=True, PrintOutput=False):
+        """Apply a typed :class:`~PhlyGreen.config.AircraftConfig` to this aircraft.
+
+        Sets the configuration flags and feeds the input sections through ``ReadInput``
+        (or the full ``DesignAircraft`` sizing loop when ``design`` is True). This is the
+        typed counterpart to manually assigning ``self.Configuration`` etc. and calling
+        ``DesignAircraft`` with a pile of dicts.
+
+        Args:
+            config (AircraftConfig): the validated design specification.
+            design (bool): if True (default), run the full ``DesignAircraft`` loop;
+                otherwise only ``ReadInput``.
+            PrintOutput (bool): forwarded to ``DesignAircraft``.
+        """
+        self.Configuration = config.configuration
+        self.HybridType = config.hybrid_type
+        self.AircraftType = config.aircraft_type
+        self.weight.Class = config.weight_class
+
+        positional, kwargs = config.read_input_args()
+        if design:
+            self.DesignAircraft(*positional, PrintOutput=PrintOutput, **kwargs)
+        else:
+            self.ReadInput(*positional, **kwargs)
+        return self
 
 
     def Print_Aircraft_Design_Summary(self):
