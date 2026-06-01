@@ -41,9 +41,10 @@ class AircraftConfig:
     climate_impact: Optional[ClimateImpactConfig] = None
 
     def __post_init__(self):
-        if self.configuration not in ("Traditional", "Hybrid"):
+        if self.configuration not in ("Traditional", "Hybrid", "Hydrogen"):
             raise ConfigError(
-                f"configuration must be 'Traditional' or 'Hybrid', got {self.configuration!r}")
+                f"configuration must be 'Traditional', 'Hybrid' or 'Hydrogen', "
+                f"got {self.configuration!r}")
         if self.configuration == "Hybrid" and self.hybrid_type not in ("Parallel", "Serial"):
             raise ConfigError(
                 f"hybrid_type must be 'Parallel' or 'Serial' for Hybrid, got {self.hybrid_type!r}")

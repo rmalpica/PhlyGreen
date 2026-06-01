@@ -61,7 +61,7 @@ class Weight:
         self.WPayload = self.aircraft.MissionInput['Payload Weight']
         self.WCrew = self.aircraft.MissionInput['Crew Weight']
         self.ef = self.aircraft.EnergyInput['Ef']
-        self.final_reserve = self.aircraft.EnergyInput['Contingency Fuel']
+        self.final_reserve = self.aircraft.EnergyInput.get('Contingency Fuel', 0)
 
         if self.Class == 'II':
             self.AircraftComponents = FLOPS_model(self.aircraft)
@@ -84,10 +84,14 @@ class Weight:
                  return self.Traditional()
              
              
-        elif self.aircraft.Configuration == 'Hybrid':     
-                 
-                 
+        elif self.aircraft.Configuration == 'Hybrid':
+
+
                  return self.Hybrid()
+
+        elif self.aircraft.Configuration == 'Hydrogen':
+
+                 return self.Hydrogen()
 
         else:
                  return "Try a different configuration..."
@@ -154,6 +158,73 @@ class Weight:
                 return (self.Wf + self.final_reserve + self.WPT + self.WStructure + self.WPayload + self.WCrew - WTO)
         
         self.WTO = brenth(func, 1000, 300000, xtol=0.1)
+
+
+    def Hydrogen(self):
+        """Solve the take-off-weight equation for a hydrogen fuel-cell aircraft.
+
+            f(WTO) = W_structure + W_fuelcell + W_H2 + W_tank + W_HX
+                     + W_payload + W_crew + W_reserve - WTO
+
+        The fuel-cell system mass is sized by ``FuelCell.ComputeAndStoreWeights`` (which
+        also sets ``aircraft.weight.WPT``); the mission returns the hydrogen chemical
+        energy, converted to usable H2 mass via the hydrogen LHV (``self.ef``) with a 5%
+        installation/feed margin. Hydrogen storage mass uses the cryogenic ``LH2_Tank`` if
+        available, otherwise a simple gravimetric-index model so the design always closes.
+        """
+        # Gravimetric index of the H2 storage system (usable H2 / total tank+H2 mass).
+        grav_index = self.aircraft.EnergyInput.get('H2 Gravimetric Index', 0.35)
+
+        def func(WTO):
+            # 1. Size the fuel-cell system for this take-off weight.
+            self.WPT = self.aircraft.fuelcell.ComputeAndStoreWeights(WTO)
+
+            # 2. Fly the mission -> hydrogen chemical energy -> usable H2 mass.
+            E_h2_chem = self.aircraft.mission.EvaluateMission(WTO)
+            self.WH2_Fuel = (E_h2_chem / self.ef) * 1.05
+            self.Wf = self.WH2_Fuel
+
+            # 3. Hydrogen tank (empty) mass.
+            self.WTank = self.WH2_Fuel * (1.0 / grav_index - 1.0) if self.WH2_Fuel > 0 else 0.0
+
+            # 4. Thermal-management (heat-exchanger) mass from the peak fuel-cell heat load.
+            Q_max = self.aircraft.mission.Max_FC_Thermal_Pwr
+            if Q_max > 0:
+                delta_T = max(self.aircraft.fuelcell.T_op - (288.15 + 20.0), 10.0)
+                self.WHeat_Exchanger = Q_max / (100.0 * delta_T)
+            else:
+                self.WHeat_Exchanger = 0.0
+
+            # 5. Structure.
+            if self.Class == 'I':
+                self.WStructure = self.aircraft.structures.StructuralWeight(WTO)
+            elif self.Class == 'II':
+                self.aircraft.FLOPSInput['GROSS_WEIGHT'] = WTO
+                self.AircraftComponents.SetInput()
+                self.AircraftComponents.CalculateComponentMasses()
+                c = self.AircraftComponents
+                self.WStructure = Units.lbTokg(
+                    c.Wing.wingmass + c.Fuselage.fuselagemass + c.Tail.HTailmass
+                    + c.Tail.VTailmass + c.LandingGear.Landing_gearmass + c.Nacelle.nacellemass
+                    + c.Paint.paintmass + c.SystemEquipment.system_equipment_mass
+                    + c.Propeller.propellermass)
+
+            # 6. Reserve (default 5% of usable H2 if none specified) and sum.
+            if not self.final_reserve:
+                self.final_reserve = 0.05 * self.WH2_Fuel
+
+            return (self.WStructure + self.WPT + self.WH2_Fuel + self.WTank
+                    + self.WHeat_Exchanger + self.WPayload + self.WCrew
+                    + self.final_reserve - WTO)
+
+        try:
+            self.WTO = brenth(func, 1000, 300000, xtol=self.tol)
+        except ValueError:
+            raise RuntimeError(
+                "Hydrogen weight loop did not converge: the design did not close within "
+                "1000-300000 kg (the fuel-cell system mass may be snowballing — try a lower "
+                "design cell voltage, a higher stack power density, or a shorter mission).")
+        return self.WTO
 
 
     def Hybrid(self):

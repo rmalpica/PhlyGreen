@@ -18,7 +18,7 @@ class Aircraft:
 
     """
 
-    def __init__(self, powertrain, structures, aerodynamics, performance, mission, weight, constraint, welltowake, battery, climateimpact):
+    def __init__(self, powertrain, structures, aerodynamics, performance, mission, weight, constraint, welltowake, battery, climateimpact, fuelcell=None, tank=None):
         """Initialize a Aircraft instance.
 
         Args:
@@ -64,6 +64,8 @@ class Aircraft:
         self.welltowake = welltowake
         self.battery = battery
         self.climateimpact = climateimpact
+        self.fuelcell = fuelcell      # hydrogen fuel-cell system (optional)
+        self.tank = tank              # liquid-hydrogen tank (optional)
         #input dictionaries
         self.AerodynamicsInput = None 
         self.ConstraintsInput = None 
@@ -76,6 +78,7 @@ class Aircraft:
         self.WellToTankInput = None
         self.FLOPSInput = None
         self.PropellerInput = None
+        self.TankInput = None
         #aircraft configuration
         self.Configuration = None
         self.HybridType = None
@@ -188,6 +191,10 @@ class Aircraft:
         if ClimateImpactInput is not None:
             self.ClimateImpactInput = ClimateImpactInput
             self.climateimpact.SetInput()
+
+        # Initialize the hydrogen fuel-cell system (Hydrogen configuration only).
+        if self.Configuration == 'Hydrogen' and self.fuelcell is not None:
+            self.fuelcell.SetInput()
 
 
     def DesignAircraft(self, AerodynamicsInput, ConstraintsInput, MissionInput, EnergyInput, MissionStages, DiversionStages, **kwargs):

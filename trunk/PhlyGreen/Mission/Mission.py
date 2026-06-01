@@ -48,8 +48,12 @@ class Mission:
         self.Max_PBat = -1  
         self.Max_PEng = -1  
         self.Max_PEng_alt = 0
-        self.TO_PBat = 0  
-        self.TO_PP = 0 
+        self.TO_PBat = 0
+        self.TO_PP = 0
+        # hydrogen fuel-cell mission tracking
+        self.Max_FC_Thermal_Pwr = 0.0
+        self.Max_FC_Thermal_Pwr_alt = 0.0
+        self.TO_P_H2_Thermal = 0.0
 
         self.ef = None
         self.profile = None
@@ -163,17 +167,92 @@ class Mission:
         if self.aircraft.Configuration == 'Traditional':     
             return self.TraditionalConfiguration(WTO)
             
-        elif self.aircraft.Configuration == 'Hybrid':    
-            if self.aircraft.battery.BatteryClass == 'II': 
+        elif self.aircraft.Configuration == 'Hybrid':
+            if self.aircraft.battery.BatteryClass == 'II':
                 return self.HybridConfigurationClassII(WTO)
-            elif self.aircraft.battery.BatteryClass == 'I': 
+            elif self.aircraft.battery.BatteryClass == 'I':
                 return self.HybridConfigurationClassI(WTO)
+
+        elif self.aircraft.Configuration == 'Hydrogen':
+            return self.HydrogenConfiguration(WTO)
 
         else:
             raise Exception("Unknown aircraft configuration: %s" %self.aircraft.Configuration)
         
   
   
+    def HydrogenConfiguration(self, WTO):
+        """Evaluate the full mission for a hydrogen fuel-cell (electric) propulsion system.
+
+        Integrates two states over the mission: cumulative hydrogen *chemical* energy and
+        the mass fraction Beta. At each instant the fuel cell converts the required
+        propulsive shaft power into a hydrogen chemical-power demand via
+        ``fuelcell.ComputePRatio`` (whose first entry is 1 / system efficiency). Tracks the
+        peak fuel-cell thermal load for sizing the thermal-management system.
+
+        Returns:
+            float: total hydrogen chemical energy consumed over the mission [J].
+        """
+        self.WTO = WTO
+
+        def PowerPropulsive(Beta, t):
+            PPoWTO = self.aircraft.performance.PoWTO(
+                self.aircraft.DesignWTOoS, Beta, self.profile.PowerExcess(t), 1,
+                self.profile.Altitude(t), self.DISA, self.profile.Velocity(t), 'TAS')
+            return PPoWTO * WTO
+
+        def model(t, y):
+            Beta = y[1]
+            PP = PowerPropulsive(Beta, t)
+            self.check_PP(PP)
+            PRatio = self.aircraft.fuelcell.ComputePRatio(
+                self.profile.Altitude(t), self.profile.Velocity(t), PP)
+            dEdt_chem = PP * PRatio[0]                 # hydrogen chemical power [W]
+            dbetadt = - dEdt_chem / (self.ef * self.WTO)
+            q = self.aircraft.fuelcell.Q_thermal
+            if q > self.Max_FC_Thermal_Pwr:
+                self.Max_FC_Thermal_Pwr = q
+                self.Max_FC_Thermal_Pwr_alt = self.profile.Altitude(t)
+            return [dEdt_chem, dbetadt]
+
+        # Peak (take-off / one-engine-inoperative climb) propulsive power, used to size
+        # the fuel-cell rated power and the take-off operating point.
+        P_TO = WTO * self.aircraft.performance.TakeOff(
+            self.aircraft.DesignWTOoS, self.aircraft.constraint.TakeOffConstraints['Beta'],
+            self.aircraft.constraint.TakeOffConstraints['Altitude'],
+            self.aircraft.constraint.TakeOffConstraints['kTO'],
+            self.aircraft.constraint.TakeOffConstraints['sTO'], self.aircraft.constraint.DISA,
+            self.aircraft.constraint.TakeOffConstraints['Speed'],
+            self.aircraft.constraint.TakeOffConstraints['Speed Type'])
+        PRatio_TO = self.aircraft.fuelcell.ComputePRatio(
+            self.aircraft.constraint.TakeOffConstraints['Altitude'],
+            self.aircraft.constraint.TakeOffConstraints['Speed'], P_TO)
+        self.TO_PP = P_TO
+        self.TO_P_H2_Thermal = P_TO * PRatio_TO[0]
+        self.Max_FC_Thermal_Pwr = -1.0
+
+        y0 = [0, self.beta0]
+        self.integral_solution = []
+        times = np.append(self.profile.Breaks, self.profile.MissionTime2)
+        for i in range(len(times) - 1):
+            sol = integrate.solve_ivp(model, [times[i], times[i + 1]], y0,
+                                      method='BDF', rtol=1e-5, max_step=60.0)
+            self.integral_solution.append(sol)
+            y0 = [sol.y[0][-1], sol.y[1][-1]]
+
+        self.Ef = sol.y[0]
+        self.Beta = sol.y[1]
+
+        # Peak mission shaft power (with a small installation margin), for FC mass sizing.
+        pp_peak = 0.0
+        for arr in self.integral_solution:
+            for k in range(len(arr.t)):
+                pp_peak = max(pp_peak, PowerPropulsive(arr.y[1][k], arr.t[k]))
+        self.Max_PEng = pp_peak / 0.8
+        self.Max_PEng_alt = 0.0
+        return self.Ef[-1]
+
+
     def TraditionalConfiguration(self,WTO):
         """
         Evaluate the complete mission for a traditional (non-hybrid) propulsion system.

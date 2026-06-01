@@ -79,6 +79,13 @@ class EnergyConfig(DictConfig):
     eta_pmad: Optional[float] = None
     specific_power_powertrain: Optional[List[float]] = None  # [thermal, electric] W/kg
     specific_power_pmad: Optional[List[float]] = None        # W/kg
+    # --- hydrogen fuel-cell parameters (Hydrogen configuration only) ---
+    fc_model: Optional[str] = None              # key into FC_Database
+    i_rated: Optional[float] = None             # rated current density [A/cm^2]
+    v_cell_design: Optional[float] = None       # design cell voltage [V]
+    stack_power_density: Optional[float] = None  # [W/kg]
+    bop_mass_ratio: Optional[float] = None       # balance-of-plant mass / stack mass
+    h2_gravimetric_index: Optional[float] = None  # usable H2 / (H2 + tank) mass
 
     _KEY_MAP = {
         "Ef": "Ef",
@@ -94,6 +101,12 @@ class EnergyConfig(DictConfig):
         "eta_pmad": "Eta PMAD",
         "specific_power_powertrain": "Specific Power Powertrain",
         "specific_power_pmad": "Specific Power PMAD",
+        "fc_model": "Model",
+        "i_rated": "i Rated",
+        "v_cell_design": "V Cell Design",
+        "stack_power_density": "Stack Power Density",
+        "bop_mass_ratio": "BoP Mass Ratio",
+        "h2_gravimetric_index": "H2 Gravimetric Index",
     }
 
     def __post_init__(self):

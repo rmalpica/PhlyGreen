@@ -104,6 +104,38 @@ def traditional_config():
     )
 
 
+def _energy_hydrogen(v_cell_design=0.5):
+    """Energy/efficiency inputs for a hydrogen fuel-cell aircraft.
+
+    Note `Ef` is now the hydrogen lower heating value (~120 MJ/kg). The fuel-cell stack is
+    described by a model in the FC database plus a few design knobs.
+    """
+    return EnergyConfig(
+        Ef=120e6,                          # hydrogen LHV [J/kg]
+        eta_gearbox=0.96, eta_pmad=0.99, eta_electric_motor=0.96,
+        eta_gas_turbine_model='constant', eta_gas_turbine=0.22,
+        eta_propulsive_model='constant', eta_propulsive=0.9,
+        specific_power_powertrain=[3900, 7700],
+        # --- fuel-cell stack ---
+        fc_model='PEMFC_GoodPerformance',  # see PhlyGreen.Systems.FuelCell.FC_Database
+        i_rated=2.5,                       # rated current density [A/cm^2]
+        v_cell_design=v_cell_design,       # design cell voltage [V] (try sweeping this)
+        stack_power_density=3000,          # [W/kg]
+        bop_mass_ratio=0.40,               # balance-of-plant mass / stack mass
+        h2_gravimetric_index=0.35,         # usable H2 / (H2 + tank) mass
+    )
+
+
+def hydrogen_config(v_cell_design=0.5):
+    """A hydrogen fuel-cell (electric) ATR-like aircraft — no battery, no gas turbine."""
+    return AircraftConfig(
+        configuration='Hydrogen', aircraft_type='ATR', weight_class='I',
+        aerodynamics=_aerodynamics(), constraints=_constraints(),
+        mission=_mission(), energy=_energy_hydrogen(v_cell_design),
+        mission_stages=_mission_stages(), diversion_stages=_diversion_stages(),
+    )
+
+
 def hybrid_config():
     """A parallel hybrid-electric ATR-like aircraft with a battery pack."""
     cell = CellConfig(

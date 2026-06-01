@@ -124,8 +124,9 @@ reference.
 
 ### Configuration flags (set on the Aircraft instance before `ReadInput`)
 These switch major code paths — check them when changing subsystem logic:
-- `Configuration`: `'Traditional'` (thermal only) or `'Hybrid'` (thermal + battery). Drives the
-  powertrain efficiency chain and mission integration.
+- `Configuration`: `'Traditional'` (thermal only), `'Hybrid'` (thermal + battery), or
+  `'Hydrogen'` (fuel-cell electric — no battery, no gas turbine). Drives the powertrain
+  efficiency chain and which `Mission.*Configuration` / `Weight.*` path runs.
 - `HybridType`: `'Parallel'` or `'Serial'` (only when Hybrid).
 - `weight.Class`: `'I'` (regression-based Structures model) or `'II'` (FLOPS component masses,
   `trunk/PhlyGreen/Weight/FLOPS_model.py`).
@@ -145,6 +146,17 @@ graph: when set, the electric-motor / fuel-cell efficiency varies with the opera
 `MotorEfficiencyModel` wraps the d-q `ElectricMotor` (`Systems/Powertrain/EM.py`) as a worked
 Class-II example. The fuel-cell + battery architecture is available via
 `Powertrain.PowerRatioFuelCellBattery` and `graph.fuelcell_battery_graph`.
+
+### Hydrogen fuel cell
+The `'Hydrogen'` configuration is a full fuel-cell electric path. `Systems/FuelCell/FuelCell.py`
+is a physics model (Kulikovsky polarization curve, stack sizing, air-system power,
+`ComputePRatio` returning 1/system-efficiency). `Mission.HydrogenConfiguration` integrates the
+mission on hydrogen chemical energy (set `Ef` to the H2 LHV ≈120 MJ/kg); `Weight.Hydrogen`
+closes the take-off weight over structure + fuel-cell system + H2 + tank + cooling. The
+cryogenic LH2 tank (CoolProp) is optional — by default a gravimetric-index tank model is used
+(`EnergyConfig.h2_gravimetric_index`). Fuel-cell inputs live in `EnergyConfig`
+(`fc_model`, `i_rated`, `v_cell_design`, `stack_power_density`, `bop_mass_ratio`); examples
+`20`/`21` size a fuel cell, fly the mission, and sweep the design voltage.
 
 Heavy Class-II models from the source forks — the pycycle/openmdao gas turbine, the
 pandas/CSV propeller RBF surrogate, and the CoolProp LH2 tank — integrate through this same

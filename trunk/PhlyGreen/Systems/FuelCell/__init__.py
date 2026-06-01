@@ -12,5 +12,6 @@ dependency-gated.
 """
 
 from .FC_Models import FC_Database
+from .FuelCell import FuelCell, FuelCellError
 
-__all__ = ["FC_Database"]
+__all__ = ["FC_Database", "FuelCell", "FuelCellError"]
