@@ -114,13 +114,43 @@ write("02_hybrid_electric.ipynb", [
        "For a Class-II battery the state of charge is charge-based: it falls from 1 at the\n"
        "start of cruise to the minimum SOC by the end of the battery-assisted phase."),
     code(PLOTS),
-    md("## Class-II propulsion models along the mission\n\n"
-       "Beyond the design, we can look at the time-resolved behaviour of the Class-II\n"
-       "propulsion components — the gas-turbine response surface, the d-q electric motor and\n"
-       "the propeller RBF surrogate — evaluated along the flown trajectory. The plot shows\n"
-       "each component's efficiency, the gas-turbine throttle (used/available power), and the\n"
-       "propeller pitch. (Requires the GT artifact and pandas for the propeller surrogate.)"),
-    code("pp.plot_component_timeseries(aircraft, n_engines=2); plt.show()"),
+    md("## Designing with the Class-II propulsion models\n\n"
+       "Now we *size the aircraft using the Class-II propulsion models* — the gas-turbine\n"
+       "response surface and the d-q electric motor. These work as a percentage of a **fixed\n"
+       "nominal power** that must be set before the mission (an engine cannot resize itself\n"
+       "instant by instant). A good tentative nominal is `DesignPW * WTO`, taken from a quick\n"
+       "Class-I pre-pass. (We use a simple Class-I battery here to keep the run fast.)"),
+    code("# 1. Class-I pre-pass -> tentative nominal power = DesignPW * WTO\n"
+         "pre = pg.build_aircraft(); pre.configure(hybrid_config(battery_class='I'))\n"
+         "P_nominal = pre.DesignPW * pre.weight.WTO\n"
+         "print(f'tentative nominal power = DesignPW * WTO = {P_nominal/1e3:.0f} kW')"),
+    code("# 2. Hybrid sized WITH the Class-II gas turbine + electric motor\n"
+         "cfg = hybrid_config(battery_class='I')\n"
+         "for seg in cfg.mission_stages.segments:\n"
+         "    if seg.name == 'Cruise':\n"
+         "        seg.phi_end = 0.5\n"
+         "cfg.energy.eta_gas_turbine_model = 'ResponseSurface'\n"
+         "cfg.energy.gt_design_power = P_nominal\n"
+         "cfg.energy.eta_electric_motor_model = 'Smart'\n"
+         "cfg.energy.em_design_power = P_nominal\n"
+         "cfg.energy.em_design_voltage = 800.0\n"
+         "cfg.energy.em_design_rpm = 11000.0\n"
+         "aircraft = pg.build_aircraft()\n"
+         "aircraft.configure(cfg)\n"
+         "r = aircraft.results()\n"
+         "print(f'take-off weight : {r.WTO:8.1f} kg')"),
+    md("## Was the nominal power adequate?\n\n"
+       "After sizing, compare the nominal power against the peak power actually absorbed."),
+    code("for name, info in aircraft.powertrain.report_class_ii_sizing().items():\n"
+         "    print(f\"{name:14s}: nominal {info['nominal']/1e3:7.0f} kW, peak \"\n"
+         "          f\"{info['actual']/1e3:7.0f} kW -> {info['status']} (ratio {info['ratio']:.2f})\")"),
+    md("## Class-II propulsion time series\n\n"
+       "Because the gas turbine was actually sized (with its fixed nominal power), the\n"
+       "throttle is now a realistic, varying result — high on climb, lower in cruise where the\n"
+       "battery offloads the turbine — not pinned at 100%. The plot also shows each\n"
+       "component's efficiency and the propeller pitch. (The nominal powers and engine count\n"
+       "are taken from the designed aircraft.)"),
+    code("pp.plot_component_timeseries(aircraft); plt.show()"),
 ])
 
 # 3. Hydrogen fuel cell ----------------------------------------------------------

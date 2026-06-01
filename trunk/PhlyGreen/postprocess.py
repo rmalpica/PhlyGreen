@@ -67,23 +67,25 @@ def mission_timeseries(aircraft):
     return out
 
 
-def component_timeseries(aircraft, n_engines=2, gt_design_hp=None, em_design=None,
+def component_timeseries(aircraft, n_engines=None, gt_design_hp=None, em_design=None,
                          propeller_rpm=1200.0):
-    """Evaluate the Class-II propulsion models along the flown mission (for visualization).
+    """Evaluate the Class-II propulsion models along the flown mission.
 
     Walks the converged mission timeline and, at each instant, computes the propulsive power
     and its thermal/electric split (via the powertrain graph), then evaluates the gas-turbine
     response surface, the d-q electric-motor model and the propeller RBF surrogate. Returns
     per-time arrays: component efficiencies, gas-turbine throttle (used/available power),
-    propeller pitch, motor rpm, and the thermal/electric shaft powers. This is a *showcase*
-    of the Class-II models on the real flight path; the design itself may have used constant
-    efficiencies.
+    propeller pitch, motor rpm, and the thermal/electric shaft powers.
+
+    By default the GT/EM nominal powers and the engine count are taken from the *designed*
+    aircraft (``powertrain.gt_design_power``/``em_design_power``/``n_engines``), so the
+    throttle is the real result for the sized engines; pass overrides to explore other sizes.
 
     Requires the optional GT artifact and (for the propeller) pandas; propeller fields are
     omitted if unavailable.
     """
     from .Systems.Powertrain.efficiency import OperatingPoint, MotorEfficiencyModel
-    from .Systems.Powertrain.GT_response_surface import GasTurbineResponseSurface
+    from .Systems.Powertrain.gas_turbine_surrogate import GasTurbineResponseSurface
     import PhlyGreen.Utilities.Units as Units
     import PhlyGreen.Utilities.Speed as Speed
 
@@ -94,6 +96,8 @@ def component_timeseries(aircraft, n_engines=2, gt_design_hp=None, em_design=Non
 
     perf, pt = aircraft.performance, aircraft.powertrain
     WTO, WS, DISA = aircraft.weight.WTO, aircraft.DesignWTOoS, aircraft.mission.DISA
+    if n_engines is None:
+        n_engines = getattr(pt, "n_engines", 1) or 1
 
     # Propulsive power and its thermal(Pgt)/electric(Pbat) split (parallel-hybrid graph).
     PP = np.array([WTO * perf.PoWTO(WS, beta[i], pe[i], 1, alt[i], DISA, vel[i], 'TAS')
@@ -102,13 +106,18 @@ def component_timeseries(aircraft, n_engines=2, gt_design_hp=None, em_design=Non
     p_thermal = PR[:, 1] * PP    # gas-turbine shaft power
     p_electric = PR[:, 5] * PP   # battery (electric) power
 
-    # Default the design sizes from the converged design when not supplied. A small GT
-    # oversize keeps it off its power limit so the throttle is illustrative.
+    # Nominal powers: use the designed Class-II values if available, else a sensible default.
     if gt_design_hp is None:
-        rating = getattr(pt, "engineRating", None) or float(np.max(p_thermal)) or 1.0
-        gt_design_hp = 1.5 * Units.wTohp(rating) / n_engines
+        if getattr(pt, "gt_design_power", None):
+            gt_design_hp = Units.wTohp(pt.gt_design_power) / n_engines
+        else:
+            rating = getattr(pt, "engineRating", None) or float(np.max(p_thermal)) or 1.0
+            gt_design_hp = 1.5 * Units.wTohp(rating) / n_engines
     if em_design is None:
-        em_kw = max(float(np.max(p_electric)) / n_engines / 1000.0, 1.0)
+        if getattr(pt, "em_design_power", None):
+            em_kw = (pt.em_design_power / n_engines) / 1000.0
+        else:
+            em_kw = max(float(np.max(p_electric)) / n_engines / 1000.0, 1.0)
         em_design = (em_kw, 800.0, 11000.0)
 
     gt = GasTurbineResponseSurface()
@@ -136,7 +145,7 @@ def component_timeseries(aircraft, n_engines=2, gt_design_hp=None, em_design=Non
 
     try:
         import os
-        from .Systems.Powertrain import PropellerRBF as _prbf
+        from .Systems.Powertrain import propeller_surrogate as _prbf
         csv = os.path.join(os.path.dirname(_prbf.__file__), "data", "propeller_data_rbf.csv")
         prop = _prbf.PropellerSurrogate(csv)
         eta_pp, pitch = [], []
