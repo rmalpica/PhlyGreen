@@ -190,13 +190,18 @@ class Weight:
                 LH2_Tank = None
 
         def func(WTO):
-            # 1. Size the fuel-cell system for this take-off weight.
-            self.WPT = self.aircraft.fuelcell.ComputeAndStoreWeights(WTO)
+            # 1. Initialize the fuel-cell geometry (needed before the mission queries it).
+            self.aircraft.fuelcell.ComputeAndStoreWeights(WTO)
 
             # 2. Fly the mission -> hydrogen chemical energy -> usable H2 mass.
             E_h2_chem = self.aircraft.mission.EvaluateMission(WTO)
             self.WH2_Fuel = (E_h2_chem / self.ef) * 1.05
             self.Wf = self.WH2_Fuel
+
+            # 3. Size the fuel cell to the actual mission peak (same rule as the
+            # fuel-cell + battery path, so a battery-free FuelCellBattery design and a
+            # pure Hydrogen design coincide).
+            self.WPT = self.aircraft.fuelcell.FinalizeMassFromMission()
 
             # 3. Hydrogen tank (empty) mass.
             if self.WH2_Fuel <= 0:

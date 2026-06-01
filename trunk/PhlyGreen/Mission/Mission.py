@@ -302,26 +302,27 @@ class Mission:
                 self.profile.Altitude(t), self.DISA, self.profile.Velocity(t), 'TAS')
             return PPoWTO * WTO
 
-        def split(t, PP):
-            phi = float(self.profile.SuppliedPowerRatio(t))   # battery fraction
-            return (1.0 - phi) * PP, phi * PP                 # (fuel-cell, battery) shaft power
+        def fuel_cell_share(t, PP):
+            phi = float(self.profile.SuppliedPowerRatio(t))   # battery fraction of PP
+            return (1.0 - phi) * PP
 
+        # Two-state ODE (hydrogen chemical energy, mass fraction) — identical in form to the
+        # pure-hydrogen mission, so a battery-free (phi=0) design reproduces it exactly. The
+        # battery energy is a passive integral computed afterwards (it does not burn mass).
         def model(t, y):
-            Beta = y[2]
+            Beta = y[1]
             PP = PowerPropulsive(Beta, t)
             self.check_PP(PP)
-            P_fc, P_bat = split(t, PP)
+            P_fc = fuel_cell_share(t, PP)
             alt, vel = self.profile.Altitude(t), self.profile.Velocity(t)
             dEh2 = P_fc * fc.ComputePRatio(alt, vel, P_fc)[0] if P_fc > 0 else 0.0
-            dEbat = P_bat / eta_elec if P_bat > 0 else 0.0
-            dbetadt = - dEh2 / (self.ef * self.WTO)            # battery does not burn mass
+            dbetadt = - dEh2 / (self.ef * self.WTO)
             q = fc.Q_thermal
             if q > self.Max_FC_Thermal_Pwr:
                 self.Max_FC_Thermal_Pwr = q
                 self.Max_FC_Thermal_Pwr_alt = alt
-            return [dEh2, dEbat, dbetadt]
+            return [dEh2, dbetadt]
 
-        # Take-off / sizing peak (split at the take-off phi).
         P_TO = WTO * self.aircraft.performance.TakeOff(
             self.aircraft.DesignWTOoS, self.aircraft.constraint.TakeOffConstraints['Beta'],
             self.aircraft.constraint.TakeOffConstraints['Altitude'],
@@ -334,31 +335,34 @@ class Mission:
         self.TO_PBat = phi_TO * P_TO                # battery shaft power at take-off
         self.Max_FC_Thermal_Pwr = -1.0
 
-        y0 = [0.0, 0.0, self.beta0]
+        y0 = [0.0, self.beta0]
         self.integral_solution = []
         times = np.append(self.profile.Breaks, self.profile.MissionTime2)
         for i in range(len(times) - 1):
             sol = integrate.solve_ivp(model, [times[i], times[i + 1]], y0,
                                       method='BDF', rtol=1e-5, max_step=60.0)
             self.integral_solution.append(sol)
-            y0 = [sol.y[0][-1], sol.y[1][-1], sol.y[2][-1]]
+            y0 = [sol.y[0][-1], sol.y[1][-1]]
 
         self.Ef = sol.y[0]
-        self.EBat = sol.y[1]
-        self.Beta = sol.y[2]
+        self.Beta = sol.y[1]
 
-        # Peak fuel-cell and battery shaft powers over the mission, for sizing.
+        # Post-process the battery: electrical energy drawn and peak battery shaft power.
+        E_bat = 0.0
         pp_fc_peak, pp_bat_peak = 0.0, 0.0
         for arr in self.integral_solution:
-            for k in range(len(arr.t)):
-                PP = PowerPropulsive(arr.y[2][k], arr.t[k])
-                p_fc, p_bat = split(arr.t[k], PP)
-                pp_fc_peak = max(pp_fc_peak, p_fc)
-                pp_bat_peak = max(pp_bat_peak, p_bat)
+            p_bat = np.array([float(self.profile.SuppliedPowerRatio(t)) *
+                              PowerPropulsive(b, t) for t, b in zip(arr.t, arr.y[1])])
+            p_fc = np.array([PowerPropulsive(b, t) for t, b in zip(arr.t, arr.y[1])]) - p_bat
+            if len(arr.t) > 1:
+                E_bat += float(np.trapezoid(p_bat / eta_elec, arr.t))
+            pp_bat_peak = max(pp_bat_peak, float(p_bat.max()) if len(p_bat) else 0.0)
+            pp_fc_peak = max(pp_fc_peak, float(p_fc.max()) if len(p_fc) else 0.0)
+        self.EBat = E_bat
         self.Max_PEng = pp_fc_peak / 0.8
         self.Max_PEng_alt = 0.0
         self.Max_PBat = max(pp_bat_peak, self.TO_PBat)
-        return self.Ef[-1], self.EBat[-1]
+        return self.Ef[-1], self.EBat
 
 
     def TraditionalConfiguration(self,WTO):

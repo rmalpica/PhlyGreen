@@ -135,7 +135,8 @@ class Profile:
     def DefineMission(self):
         """Build the full timeline and the phi(t) schedule."""
         self.SetInput()
-        hybrid = self.aircraft.Configuration == 'Hybrid'
+        # Configurations that carry a supplied-power ratio phi(t) schedule.
+        hybrid = self.aircraft.Configuration in ('Hybrid', 'FuelCellBattery')
 
         merged = []
         # Mission phase (also carries the takeoff supplied-power ratio).
