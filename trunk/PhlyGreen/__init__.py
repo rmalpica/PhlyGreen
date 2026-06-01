@@ -25,3 +25,6 @@ from .config import AircraftConfig
 
 #stateless API for outer loops (optimization, UQ, sweeps)
 from .api import run_design, evaluate
+
+#post-processing / plotting helpers
+from . import postprocess
