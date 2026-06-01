@@ -22,3 +22,6 @@ from .results import AircraftResults
 #typed configuration objects
 from . import config
 from .config import AircraftConfig
+
+#stateless API for outer loops (optimization, UQ, sweeps)
+from .api import run_design, evaluate

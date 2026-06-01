@@ -15,6 +15,8 @@ The installable package lives in `trunk/PhlyGreen/`, **not** the repo root. Key 
 - `trunk/PhlyGreen/` — the `PhlyGreen` package (the actual code).
 - `trunk/tutorial/` — Jupyter notebooks + scripts showing real usage (`tutorial.ipynb`,
   `ATR42.ipynb`, `DO228.ipynb`, `battery-demo.ipynb`, `tutorial_WtW.ipynb`).
+- `trunk/examples/` — student-facing, well-commented scripts (capability tour + outer-loop
+  apps). Start at `examples/README.md`; `examples/common.py` holds baseline configs.
 - `trunk/Validation/`, `trunk/playground/` — validation sweeps and experimental scripts.
 - `docs/` + `mkdocs.yml` — MkDocs site (published via GitHub Pages on push to `main`).
 - `to_be_merged/`, `misc/`, `trunk/JofAircraft/` — unmerged forks (e.g. H2, advanced propeller
@@ -76,6 +78,12 @@ dataclasses (`AircraftConfig` bundling `MissionConfig`, `EnergyConfig`, `CellCon
 `AircraftResults` dataclass (`PhlyGreen/results.py`) instead of only printing. The legacy dict API
 still works: `ReadInput` accepts either dicts or config objects (each config has
 `to_dict`/`from_dict`), so existing notebooks are unaffected.
+
+**Outer-loop API (optimization / UQ / sweeps).** `PhlyGreen/api.py` exposes
+`pg.run_design(config) -> AircraftResults` (a pure function: fresh aircraft per call, input
+never mutated) and `pg.evaluate(base_config, apply, x)` (apply parameters `x` to a copy of
+the baseline, then design). These are the building blocks for the `examples/` outer-loop
+scripts and are safe to call in a loop or in parallel.
 
 ### Input model
 The model is configured entirely through nested dictionaries passed to
