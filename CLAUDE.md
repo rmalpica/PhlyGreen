@@ -125,6 +125,24 @@ These switch major code paths — check them when changing subsystem logic:
 - Battery `CellInput['Class']`: `'I'` (specific energy/power lookup) or `'II'`
   (cell-level thermal model, `trunk/PhlyGreen/Systems/Battery/Cell_Models.py`).
 
+### Class-II efficiency models (pluggable)
+Component efficiencies can be operating-point dependent and are *replaceable*: see
+`PhlyGreen/Systems/Powertrain/efficiency.py`. An `EfficiencyModel` maps an
+`OperatingPoint(altitude, velocity, power, ...)` to an efficiency; implementations are
+`ConstantEfficiency` (default — preserves legacy behavior), `CallableEfficiency` (wrap an
+external code/law), and `ResponseSurfaceEfficiency` (wrap a fitted surrogate via
+`.predict` or load one with `from_file`). `make_efficiency_model(spec)` builds one from a
+float/callable/dict. `Powertrain.em_model`/`fc_model` (default `None`) inject these into the
+graph: when set, the electric-motor / fuel-cell efficiency varies with the operating point.
+`MotorEfficiencyModel` wraps the d-q `ElectricMotor` (`Systems/Powertrain/EM.py`) as a worked
+Class-II example. The fuel-cell + battery architecture is available via
+`Powertrain.PowerRatioFuelCellBattery` and `graph.fuelcell_battery_graph`.
+
+Heavy Class-II models from the source forks — the pycycle/openmdao gas turbine, the
+pandas/CSV propeller RBF surrogate, and the CoolProp LH2 tank — integrate through this same
+`EfficiencyModel`/response-surface interface but require their optional dependencies and
+fitted artifacts; they are gated and not part of the default install.
+
 ### Units
 Mixed unit conventions (SI internally, but inputs use kg, nautical miles, Mach/KCAS/TAS, °C, W/kg).
 Use the helpers in `trunk/PhlyGreen/Utilities/` (`Units.py`, `Speed.py`, `Atmosphere.py` for ISA)

@@ -7,7 +7,9 @@ import joblib
 import os
 from sklearn.preprocessing import PolynomialFeatures
 from .Propeller import Propeller
-from .graph import traditional_graph, parallel_hybrid_graph, serial_hybrid_graph
+from .graph import (traditional_graph, parallel_hybrid_graph, serial_hybrid_graph,
+                    fuelcell_battery_graph)
+from .efficiency import OperatingPoint
 from scipy.optimize import brentq, brenth, ridder, newton
 
 class Powertrain:
@@ -41,6 +43,7 @@ class Powertrain:
         self.EtaEM = None
         self.EtaEM1 = None
         self.EtaEM2 = None
+        self.EtaFC = None  # fuel-cell system efficiency (constant; or use fc_model)
         #specific powers
         self.SPowerPT = None 
         self.SPowerPMAD = None  
@@ -49,6 +52,12 @@ class Powertrain:
         self.WElectric = None
         #components rating
         self.engineRating = None
+        #optional Class-II efficiency models (EfficiencyModel objects). When set, they
+        #make the corresponding graph efficiency depend on the operating point
+        #(altitude, velocity, power). Left as None -> the constant Eta* values are used,
+        #preserving legacy behavior.
+        self.em_model = None   # electric motor (parallel hybrid / fuel-cell-battery)
+        self.fc_model = None   # fuel-cell system efficiency (fuel-cell-battery)
 
 
     """ Properties """
@@ -352,8 +361,12 @@ class Powertrain:
 
 
         
+        # Optional fuel-cell system efficiency (used by PowerRatioFuelCellBattery).
+        if 'Eta Fuel Cell' in self.aircraft.EnergyInput:
+            self.EtaFC = self.aircraft.EnergyInput['Eta Fuel Cell']
+
         if (self.aircraft.Configuration == 'Hybrid'):
-            
+
             self.EtaPM = self.aircraft.EnergyInput['Eta PMAD']
             self.SPowerPMAD = self.aircraft.EnergyInput['Specific Power PMAD']
 
@@ -504,13 +517,44 @@ class Powertrain:
         self.phi = phi
         if self.aircraft.HybridType == 'Parallel':
             g = parallel_hybrid_graph(self.EtaGTmodel(alt, vel, pwr), self.EtaGB,
-                                      self.EtaPM, self.EtaEM,
+                                      self.EtaPM, self._eta_em(alt, vel, pwr),
                                       self.EtaPPmodel(alt, vel, pwr), phi)
         elif self.aircraft.HybridType == 'Serial':
             g = serial_hybrid_graph(self.EtaGT, self.EtaEM1, self.EtaPM, self.EtaEM2,
                                     self.EtaGB, self.EtaPPmodel(alt, vel, pwr), phi)
         else:
             raise Exception("Unknown hybrid type: %s" % self.aircraft.HybridType)
+        return np.abs(g.solve())
+
+    def _eta_em(self, alt, vel, pwr):
+        """Electric-motor efficiency at the operating point.
+
+        Uses the Class-II ``em_model`` if one is set (making the motor efficiency depend
+        on altitude/velocity/power), otherwise the constant ``EtaEM``.
+        """
+        if self.em_model is not None:
+            return self.em_model.eta(OperatingPoint(altitude=alt, velocity=vel, power=pwr))
+        return self.EtaEM
+
+    def _eta_fc(self, alt, vel, pwr):
+        """Fuel-cell system efficiency at the operating point (Class-II model or constant)."""
+        if self.fc_model is not None:
+            return self.fc_model.eta(OperatingPoint(altitude=alt, velocity=vel, power=pwr))
+        return self.EtaFC
+
+    def PowerRatioFuelCellBattery(self, phi, alt, vel, pwr):
+        """Power ratios for a fuel-cell + battery (gas-turbine-free) hybrid.
+
+        Demonstrates an arbitrary hybridization assembled on the powertrain graph: a fuel
+        cell and a battery share an electrical bus feeding the motor/gearbox/propeller.
+        Requires ``EtaFC`` (or a ``fc_model``); ``em_model`` makes the motor efficiency
+        operating-point dependent. Output order:
+        ``[PfH2, Pfc, Pbat, Pe1, Pem, Pgb, Pp1]`` (all /Pp), so ``[0]`` is hydrogen power
+        and ``[2]`` is battery power.
+        """
+        g = fuelcell_battery_graph(self._eta_fc(alt, vel, pwr), self.EtaPM,
+                                   self._eta_em(alt, vel, pwr), self.EtaGB,
+                                   self.EtaPPmodel(alt, vel, pwr), phi)
         return np.abs(g.solve())
 
     def _traditional_legacy(self,alt,vel,pwr):
