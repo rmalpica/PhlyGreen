@@ -1,3 +1,3 @@
-# Battery API Reference
+# Battery API
 
 ::: PhlyGreen.Systems.Battery.Battery

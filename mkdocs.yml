@@ -103,6 +103,7 @@ nav:
       - Program Logic: getting-started/logic.md
       - Running Your First Mission: getting-started/running-your-first-mission.ipynb
   - User Guide:
+      - Configuration & Workflow: user-guide/configuration.md
       - Aircraft Module: user-guide/aircraft.md
       - Constraints Analysis: user-guide/constraints.md
       - Mission Module: user-guide/mission.md
@@ -110,6 +111,7 @@ nav:
       - Performance Module: user-guide/performance.md
       - Powertrain Module: user-guide/powertrain.md
       - Battery Module: user-guide/battery.md
+      - Hydrogen (Fuel Cell & Tank): user-guide/hydrogen.md
       - Aerodynamics Module: user-guide/aerodynamics.md
       - Structures Module: user-guide/structures.md
       - Well-To-Wake Analysis: user-guide/well-to-wake.md
@@ -120,11 +122,15 @@ nav:
       - Extending the Model: developer-guide/extending-the-model.md
       - Troubleshooting: developer-guide/troubleshooting.md
   - API Reference:
+      - Configuration: api/config.md
       - Mission: api/mission.md
       - Powertrain: api/powertrain.md
       - Battery: api/battery.md
+      - Fuel Cell: api/fuelcell.md
+      - LH2 Tank: api/tank.md
       - Weight: api/weight.md
       - Performance: api/performance.md
       - Constraints: api/constraints.md
       - Well-to-Wake: api/welltowake.md
+      - Utilities & API: api/utilities.md
 

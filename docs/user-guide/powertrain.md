@@ -13,7 +13,8 @@ The Powertrain model:
 - Components efficiencies are computed based on the current flight conditions, if a model is provided. Otherwise, constant, user-specified values are used.
 - Presently, the available component models are:
     - Hamilton model for **propeller efficiency**, computed as a function of true airspeed, altitude, and power request 
-    - A surrogate response function of a twin-spool gas-turbine engine **thermal efficiency**, computed as a function of true airspeed, altitude, and power request 
+    - An RBF **gas-turbine response surface** for **thermal efficiency**, computed as a function of design power, altitude, Mach and power request (trained offline; see `Systems/Powertrain/GT_response_surface.py`)
+    - A d-q **electric-motor** efficiency model and an RBF **propeller** surrogate
 - Computes **powertrain mass** from subsystem specific powers
 - Provides a **GT engine power-lapse** with altitude, to be used for constraint evaluation and engine rating
 
@@ -111,25 +112,23 @@ Thus, the system computes the **inverse cumulative efficiencies** needed to deli
 The calculation is performed using the following code, that solves the linear system \(A\,x = b\):
 
 
-```python
-A = np.array([
-    [-self.EtaGTmodel(alt, vel, pwr), 1, 0, 0],
-    [0, -self.EtaGB, 1, 0],
-    [0, 0, -self.EtaPPmodel(alt, vel, pwr), 1],
-    [0, 0, 0, 1]
-])
+!!! note "Assembled by the component graph"
+    These linear systems are no longer hand-coded. `Systems/Powertrain/graph.py` assembles
+    them from composable primitives (`converter`, `combiner`, `split`, `sink`); the
+    solution is identical. Adding a new architecture (e.g. fuel cell + battery) is a new
+    composition of those primitives — no new matrix algebra. Each component efficiency is
+    an `EfficiencyModel` evaluated through `Powertrain.eta(component, alt, vel, pwr)`.
 
-b = np.array([0, 0, 0, 1])
-
-PowerRatio = np.linalg.solve(A, b)
-```
-
-yielding the power ratios vector: \(P_f/P_p, \ P_{gt}/P_p, \  P_{gb}/P_p, \  P_p/P_p\). Both \(\eta_{PP}\) and \(\eta_{GT}\) can be computed as functions of the flight conditions or left as constants (default). To use the models, the user must select the following options in the EnergyInput:
+yielding the power ratios vector: \(P_f/P_p, \ P_{gt}/P_p, \  P_{gb}/P_p, \  P_p/P_p\).
+Every component efficiency can be **Class-I** (a constant, the default) or **Class-II** (a
+model that depends on altitude/velocity/power/rpm), selected per component in the
+`EnergyInput`:
 
 ```python
 EnergyInput = {
-    'Eta Propulsive Model': 'Hamilton',
-    'Eta GT Model': 'PW127',
+    'Eta Propulsive Model': 'Hamilton',        # or 'Surrogate' (RBF), or 'constant'
+    'Eta Gas Turbine Model': 'ResponseSurface', # or 'constant'
+    'Eta Electric Motor Model': 'Smart',        # d-q model, or 'constant'
     # ... other options
 }
 ```
