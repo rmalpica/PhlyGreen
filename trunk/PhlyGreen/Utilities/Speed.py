@@ -29,3 +29,11 @@ def CAS2TAS(CAS,h,DISA=0.):
 
 def TAS2CAS(TAS,h,DISA=0.):
     return Mach2CAS(TAS2Mach(TAS,h,DISA),h,DISA)
+
+def EAS2TAS(EAS,h,DISA=0.):
+    # TAS = EAS * sqrt(rho0 / rho)
+    return EAS * np.sqrt(ISA.atmosphere.Rho_sls / ISA.atmosphere.RHOstd(h,DISA))
+
+def TAS2EAS(TAS,h,DISA=0.):
+    # EAS = TAS * sqrt(rho / rho0)
+    return TAS * np.sqrt(ISA.atmosphere.RHOstd(h,DISA) / ISA.atmosphere.Rho_sls)

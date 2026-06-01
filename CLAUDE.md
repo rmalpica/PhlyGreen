@@ -25,6 +25,16 @@ The installable package lives in `trunk/PhlyGreen/`, **not** the repo root. Key 
 ```bash
 pip install -e ./trunk          # editable install of the PhlyGreen package
 pip install -r requirements.txt # numpy, scipy, joblib, scikit-learn, matplotlib, ipykernel
+pip install -r requirements-dev.txt  # pytest, pytest-cov (for the test suite)
+```
+
+There is a dedicated conda env `phlygreen` (Python 3.12) with the package installed
+editable. Run tests from `trunk/`:
+
+```bash
+cd trunk
+pytest                 # full suite (unit + slow regression)
+pytest -m "not slow"   # fast unit tests only
 ```
 
 Notebooks/scripts under `trunk/tutorial/` import the package with `sys.path.insert(0, '../')`,
@@ -38,9 +48,11 @@ mkdocs serve   # live preview
 mkdocs build   # build static site
 ```
 
-There is **no automated test suite** (no pytest/CI for the code). The only CI is `mkdocs build`
-in `.github/workflows/deploy.yml`. Validate changes by running the tutorial notebooks or the
-scripts in `trunk/Validation/` and comparing the printed design summary.
+The test suite lives in `trunk/tests/` (`unit/` + `regression/`, pytest). The
+**golden-master** regression tests (`tests/regression/golden/*.json`) pin the design
+outputs of canonical configs and are the safety net for refactors — regenerate them with
+`python tests/regression/_generate_golden.py` only when a change is *meant* to alter
+results. CI (`.github/workflows/deploy.yml`) currently only runs `mkdocs build`.
 
 ## Architecture
 
@@ -53,7 +65,17 @@ battery, climateimpact`.
 
 Wiring is done by hand (see `trunk/tutorial/tutorial.ipynb`): each subsystem is constructed with
 `None`, the `Aircraft` is built from all of them, then each subsystem's `.aircraft` attribute is
-assigned back. When adding a subsystem, replicate this two-way wiring.
+assigned back. When adding a subsystem, replicate this two-way wiring — or just call
+**`pg.build_aircraft()`** (`PhlyGreen/factory.py`), which does all of it and returns a ready
+aircraft.
+
+**Typed config & results (preferred new API).** `PhlyGreen/config/` provides typed, validated
+dataclasses (`AircraftConfig` bundling `MissionConfig`, `EnergyConfig`, `CellConfig`,
+`AerodynamicsConfig`, `ConstraintsConfig`, `StagesConfig`, …) that replace the loose input dicts.
+`aircraft.configure(AircraftConfig)` runs the design; `aircraft.results()` returns an
+`AircraftResults` dataclass (`PhlyGreen/results.py`) instead of only printing. The legacy dict API
+still works: `ReadInput` accepts either dicts or config objects (each config has
+`to_dict`/`from_dict`), so existing notebooks are unaffected.
 
 ### Input model
 The model is configured entirely through nested dictionaries passed to
@@ -65,6 +87,13 @@ The model is configured entirely through nested dictionaries passed to
 and a `Supplied Power Ratio` (`phi`) block. `ReadInput` stores each dict on the `Aircraft` and
 calls `SetInput()` on every subsystem — so every subsystem follows a `SetInput()` convention that
 pulls its parameters from `self.aircraft.<...>Input`.
+
+**Profile / segment types.** `Mission.Profile` (`PhlyGreen/Mission/Profile.py`) builds the
+altitude/velocity/vertical-rate/phi(t) timeline from those stage dicts. Segment types live in
+`PhlyGreen/Mission/segments.py` as a registry (`SEGMENT_TYPES`); add a new flight-segment kind by
+subclassing `FlightSegment` and decorating with `@register_segment("Name")` — no other code
+changes. The previous monolithic implementation is kept as `Profile_legacy.py` purely as a
+numerical reference for the equivalence tests; don't build on it.
 
 ### Sizing flow (the core algorithm)
 `Aircraft.DesignAircraft()` runs: `ReadInput` → `constraint.FindDesignPoint()` (picks the design

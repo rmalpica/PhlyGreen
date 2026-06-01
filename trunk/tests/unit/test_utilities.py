@@ -65,6 +65,22 @@ def test_cas_tas_roundtrip(cas, h):
     assert Speed.TAS2CAS(Speed.CAS2TAS(cas, h), h) == pytest.approx(cas, rel=1e-6)
 
 
+def test_eas_equals_tas_at_sea_level():
+    # EAS == TAS at sea level only to ~1e-4: the ISA model's computed SLS density
+    # (Pstd(0)/(R*Tstd(0)) with R=287) is 1.2253, slightly off the stored Rho_sls=1.225.
+    assert Speed.EAS2TAS(100.0, 0) == pytest.approx(100.0, rel=2e-3)
+
+
+@pytest.mark.parametrize("eas", [80.0, 150.0])
+@pytest.mark.parametrize("h", [0, 7000])
+def test_eas_tas_roundtrip(eas, h):
+    assert Speed.TAS2EAS(Speed.EAS2TAS(eas, h), h) == pytest.approx(eas, rel=1e-9)
+
+
+def test_tas_exceeds_eas_at_altitude():
+    assert Speed.EAS2TAS(100.0, 8000) > 100.0
+
+
 # --- Units ------------------------------------------------------------------
 
 def test_unit_roundtrips():

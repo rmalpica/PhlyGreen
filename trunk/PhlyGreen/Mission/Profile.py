@@ -1,532 +1,267 @@
-import numpy as np
+"""Mission profile generator (clean, extensible reimplementation).
+
+Builds the time history of altitude, velocity, vertical rate, and (for hybrids) the
+supplied-power ratio phi(t) over a full trajectory: mission climb/cruise/descent, an
+optional diversion, and an optional loiter.
+
+Design
+------
+The trajectory is a list of *segments* (see :mod:`PhlyGreen.Mission.segments`). Each
+segment computes its own geometry; this class only:
+
+1. instantiates segments from the stage dicts (via the segment registry),
+2. orders them within each phase (climbs, then cruise, then descents),
+3. lays them on a common timeline (``Breaks`` = the segment start-times), and
+4. exposes piecewise lookups :meth:`Altitude`, :meth:`Velocity`, :meth:`PowerExcess`,
+   :meth:`SuppliedPowerRatio`.
+
+This replaces the legacy ``getattr`` dispatch, manual counters, and offset-indexed
+altitude closures of :mod:`PhlyGreen.Mission.Profile_legacy`, while producing identical
+numerical results (verified in tests/regression/test_profile_equivalence.py). New segment
+types can be added purely by registering them — no change to this file.
+"""
+
 import numbers
+
+import numpy as np
+
 import PhlyGreen.Utilities.Speed as Speed
 import PhlyGreen.Utilities.Units as Units
+from .segments import make_segment, CRUISE, CLIMB, DESCENT
+
+
+class _MergedSegment:
+    """One segment placed on the global timeline."""
+
+    __slots__ = ("name", "phase", "start_time", "start_altitude", "vertical_rate",
+                 "velocity", "duration", "phi_start", "phi_end", "category")
+
+    def __init__(self, name, phase, result, phi_start, phi_end):
+        self.name = name
+        self.phase = phase
+        self.start_altitude = result.start_altitude
+        self.vertical_rate = result.vertical_rate
+        self.velocity = result.velocity
+        self.duration = result.duration
+        self.category = result.category
+        self.phi_start = phi_start
+        self.phi_end = phi_end
+        self.start_time = None  # filled in during global assembly
+
+    @property
+    def end_time(self):
+        return self.start_time + self.duration
 
 
 class Profile:
-    """
-    Mission profile generator for a complete aircraft trajectory.
+    """Mission profile generator. Drop-in replacement for the legacy ``Profile``."""
 
-    This class builds the time history of altitude, velocity, climb/descent
-    rates, and—when applicable—supplied power ratio phi(t) for hybrid aircraft.
-
-    The mission may include:
-        - Climb (multiple stages)
-        - Cruise
-        - Descent (multiple stages)
-        - Diversion climb/cruise/descent
-        - Optional loiter segment
-
-    The structure is:
-        1. User supplies stage definitions (climb, cruise, descent blocks)
-        2. Profile.DefineMission() loops through these stages and builds:
-            - Breakpoints in time for each phase
-            - Piecewise altitude and velocity functions
-            - Power excess (HTMission)
-            - Supplied Power Ratio (SPW) interpolation (hybrid only)
-        3. A merged timeline is created that concatenates all segments
-        4. Mission functions return altitude(t), velocity(t), phi(t) via
-           piecewise interpolation for use in ODE integration.
-
-    Notes
-    -----
-    • Breakpoints are cumulative times (s) separating phases.
-    • HTMission values represent the climb/descent vertical speed (dh/dt).
-    • Velocity histories follow the same break structure.
-    
-    """
-    
     def __init__(self, aircraft):
         self.aircraft = aircraft
-      
-        self.MissionRange = None 
-        self.DiversionRange = None 
-        self.MissionStages = None 
+
+        self.MissionRange = None
+        self.DiversionRange = None
+        self.MissionStages = None
         self.DiversionStages = None
         self.LoiterStages = None
         self.TLoiter = None
-        self.AltitudeLoiter = None  
-        self.SPW = None 
+        self.LoiterRange = None
+        self.AltitudeLoiter = None
+
+        self._segments = []          # list[_MergedSegment] in flight order
+
+        # legacy-compatible public surface (assembled in DefineMission)
+        self.Breaks = None
+        self.Velocities = None
+        self.HTMission = None
+        self.MissionTime = None
+        self.MissionTime2 = None
+        self.SPW = None
         self.SPWinterp = None
         self.times = None
-
-        self.Altitudes = []
-        self.HTMissionClimb = []
-        self.HTMissionDescent = []
-        self.HTMission = []
-        self.BreaksClimb = [0]
-        self.BreaksDescent = [0]
-        self.Breaks = [0]
         self.Distances = []
-        self.counterClimb = 0
-        self.counterDescent = 0
-        self.VClimbs = []
-        self.VDescents = []
-        self.Velocities = []
-        
-        self.HTDiversionClimb = []
-        self.HTDiversionDescent = []
-        self.BreaksDescentDiversion = [0]
-        self.VClimbsDiversion = []
-        self.VDescentsDiversion = []
-        self.counterClimbDiversion = 0
-        self.counterDescentDiversion = 0
         self.DistancesDiversion = []
+        self.BreaksClimb = []
+        self.BreaksDescent = []
+        self.BreaksClimbDiversion = []
 
-    """ Properties """
+        self._alt_funcs = []
+
+    # --- properties (preserve legacy validation) ----------------------------
 
     @property
     def MissionRange(self):
-        if self._MissionRange == None:
+        if self._MissionRange is None:
             raise ValueError("Mission Range unset. Exiting")
         return self._MissionRange
-      
+
     @MissionRange.setter
-    def MissionRange(self,value):
+    def MissionRange(self, value):
+        if isinstance(value, numbers.Number) and value <= 0:
+            raise ValueError("Error: Illegal mission range: %e. Exiting" % value)
         self._MissionRange = value
-        if(isinstance(value, numbers.Number) and (value <= 0)):
-            raise ValueError("Error: Illegal mission range: %e. Exiting" %value)
 
     @property
     def DiversionRange(self):
-        if self._DiversionRange== None:
+        if self._DiversionRange is None:
             raise ValueError("Diversion Range unset. Exiting")
         return self._DiversionRange
-      
+
     @DiversionRange.setter
-    def DiversionRange(self,value):
+    def DiversionRange(self, value):
+        if isinstance(value, numbers.Number) and value <= 0:
+            raise ValueError("Error: Illegal diversion range: %e. Exiting" % value)
         self._DiversionRange = value
-        if(isinstance(value, numbers.Number) and (value <= 0)):
-            raise ValueError("Error: Illegal diversion range: %e. Exiting" %value)
 
-    @property
-    def SPW(self):
-        """Supplied power ratio table (per-stage phi_start, phi_end)."""
-        if len(self._SPW) == 0:
-            raise ValueError("Supplied power ratio unset. Exiting")
-        return self._SPW
-      
-    @SPW.setter
-    def SPW(self,value):
-        self._SPW = value
-        if(isinstance(value, numbers.Number) and (value < 0 or value > 1)):
-            raise ValueError("Error: Illegal Supplied power ratio: %e. Exiting" %value)
-
-    """ Methods """
+    # --- setup --------------------------------------------------------------
 
     def SetInput(self):
-                
         self.MissionRange = Units.NMtoM(self.aircraft.MissionInput['Range Mission'])
         self.DiversionRange = Units.NMtoM(self.aircraft.MissionInput['Range Diversion'])
         self.MissionStages = self.aircraft.MissionStages
         self.DiversionStages = self.aircraft.DiversionStages
         if self.aircraft.LoiterStages is not None:
-            self.LoiterStages = self.aircraft.LoiterStages 
-            self.AltitudeLoiter = self.aircraft.LoiterStages['Cruise']['input']['Altitude'] 
-            print(self.AltitudeLoiter)
+            self.LoiterStages = self.aircraft.LoiterStages
+            self.AltitudeLoiter = self.aircraft.LoiterStages['Cruise']['input']['Altitude']
             if 'Range Loiter' in self.aircraft.MissionInput:
                 self.LoiterRange = Units.NMtoM(self.aircraft.MissionInput['Range Loiter'])
             elif 'Time Loiter' in self.aircraft.MissionInput:
                 self.TLoiter = self.aircraft.MissionInput['Time Loiter']
             else:
-                raise ValueError("Insert loiter range or duration ")
-        
+                raise ValueError("Insert loiter range or duration")
+
+    # --- assembly -----------------------------------------------------------
 
     def DefineMission(self):
-        """
-        Constructs the full mission timeline by parsing each phase of mission,
-        diversion, and optional loiter sequence.
-
-        Steps:
-            1) Parse climb and descent phases
-            2) Parse cruise segments
-            3) Construct power ratio phi(t) schedule (hybrid)
-            4) Build diversion segments
-            5) Build loiter
-            6) Merge into one global timeline
-            7) Generate interpolating functions for phi(t)
-        """
-        
+        """Build the full timeline and the phi(t) schedule."""
         self.SetInput()
+        hybrid = self.aircraft.Configuration == 'Hybrid'
 
-        #parse all phases except cruise and takeoff
-        for Stage in self.MissionStages:
-            if ('Cruise' in Stage) or ('Takeoff' in Stage): 
-                continue
-            else:
-                getattr(self, self.MissionStages[Stage]['type'])(self.MissionStages[Stage]['input'],'Mission')
+        merged = []
+        # Mission phase (also carries the takeoff supplied-power ratio).
+        mission_segs, self.Distances, phi_takeoff = self._build_phase(
+            self.MissionStages, self.MissionRange, "Mission", hybrid, want_takeoff=True)
+        merged += mission_segs
 
-        #parse cruise 
-        for Stage in self.MissionStages:
-            if 'Cruise' not in Stage: 
-                continue
-            else:
-                getattr(self, self.MissionStages[Stage]['type'])(self.MissionStages[Stage]['input'],'Mission')
-        
-        #parse supplied power ratios
-        if self.aircraft.Configuration == 'Hybrid':
-            for Stage in self.MissionStages: 
-                if ('Takeoff') in Stage:
-                    phiTO = self.MissionStages[Stage]['Supplied Power Ratio']['phi']
-                    self.SPW = [[phiTO,phiTO]]
-                else:
-                    phi_start = self.MissionStages[Stage]['Supplied Power Ratio']['phi_start'] 
-                    phi_end = self.MissionStages[Stage]['Supplied Power Ratio']['phi_end'] 
-                    self.SPW = np.vstack([self.SPW,[phi_start,phi_end]])
-        
-        self.BreaksClimb.pop(0)
-        self.BreaksDescent.pop(0)
-        self.BreaksDescent += self.CruiseTime
+        # Diversion phase.
+        diversion_segs, self.DistancesDiversion, _ = self._build_phase(
+            self.DiversionStages, self.DiversionRange, "Diversion", hybrid)
+        merged += diversion_segs
 
-        self.BreaksClimbDiversion = [self.BreaksDescent[-1]]
-
-        #parse all phases except cruise and takeoff
-        for Stage in self.DiversionStages:
-            if ('Cruise' in Stage) or ('Takeoff' in Stage): 
-                continue
-            else:
-                getattr(self, self.DiversionStages[Stage]['type'])(self.DiversionStages[Stage]['input'],'Diversion')
-
-        #parse cruise 
-        for Stage in self.DiversionStages:
-            if 'Cruise' not in Stage: 
-                continue
-            else:
-                getattr(self, self.DiversionStages[Stage]['type'])(self.DiversionStages[Stage]['input'],'Diversion')
-        
-        #parse supplied power ratios
-        if self.aircraft.Configuration == 'Hybrid':
-            for Stage in self.DiversionStages: 
-                if ('Takeoff') in Stage:
-                    pass
-                else:
-                    phi_start = self.DiversionStages[Stage]['Supplied Power Ratio']['phi_start'] 
-                    phi_end = self.DiversionStages[Stage]['Supplied Power Ratio']['phi_end'] 
-                    self.SPW = np.vstack([self.SPW,[phi_start,phi_end]])
-
-        self.BreaksClimbDiversion.pop(0)
-        self.BreaksDescentDiversion.pop(0)
-        self.BreaksDescentDiversion += self.CruiseTimeDiversion
-
+        # Optional loiter phase.
         if self.LoiterStages is not None:
-            getattr(self, self.LoiterStages['Cruise']['type'])(self.LoiterStages['Cruise']['input'],'Loiter')
+            merged += self._build_loiter(hybrid)
 
-        #parse supplied power ratio for loiter phase
-        
-            if self.aircraft.Configuration == 'Hybrid':
+        # Lay segments on the global timeline: Breaks are the segment start-times.
+        t = 0.0
+        for seg in merged:
+            seg.start_time = t
+            t += seg.duration
+        self._segments = merged
 
-                phi_start = self.LoiterStages['Cruise']['Supplied Power Ratio']['phi_start'] 
-                phi_end = self.LoiterStages['Cruise']['Supplied Power Ratio']['phi_end'] 
-                self.SPW = np.vstack([self.SPW,[phi_start,phi_end]])
+        self.Breaks = [seg.start_time for seg in merged]
+        self.Velocities = [seg.velocity for seg in merged]
+        self.HTMission = [seg.vertical_rate for seg in merged]
+        self.MissionTime2 = merged[-1].end_time if merged else 0.0
 
+        # End of the mission phase (used by some downstream consumers).
+        mission_end = [s.end_time for s in merged if s.phase == "Mission"]
+        self.MissionTime = mission_end[-1] if mission_end else 0.0
 
-        self.MergeMission()
+        # Legacy-compatible auxiliary break lists.
+        self.BreaksClimb = [s.end_time for s in merged if s.phase == "Mission" and s.category == CLIMB]
+        self.BreaksDescent = [s.end_time for s in merged if s.phase == "Mission" and s.category == DESCENT]
+        self.BreaksClimbDiversion = [s.end_time for s in merged if s.phase == "Diversion" and s.category == CLIMB]
 
+        # Altitude lookup functions (default-arg binding avoids the late-binding bug).
+        self._alt_funcs = [
+            (lambda t, a=seg.start_altitude, h=seg.vertical_rate, b=seg.start_time: a + h * (t - b))
+            for seg in merged
+        ]
 
-        self.times = np.append(self.Breaks,self.MissionTime2)
-        self.SPWinterp = [lambda t,coef=i: np.interp(t, [self.times[coef], self.times[coef+1]], self.SPW[coef+1])  for i in range(len(self.times)-1)]
+        if hybrid:
+            spw = [[phi_takeoff, phi_takeoff]]
+            spw += [[seg.phi_start, seg.phi_end] for seg in merged]
+            self.SPW = np.array(spw, dtype=float)
+            self.times = np.append(self.Breaks, self.MissionTime2)
+            self.SPWinterp = [
+                (lambda t, i=i: np.interp(t, [self.times[i], self.times[i + 1]], self.SPW[i + 1]))
+                for i in range(len(self.times) - 1)
+            ]
 
-        return None
+    def _build_phase(self, stages, phase_range, phase, hybrid, want_takeoff=False):
+        """Build the ordered merged segments for one phase.
 
-
-    def MergeMission(self):
+        Returns (merged_segments, non_cruise_distances, takeoff_phi).
         """
-        Combine climb, cruise, descent, diversion, and loiter segments into
-        continuous breakpoints and lookup tables for altitude and velocity.
-        """
-        
-        for i in range(len(self.BreaksClimb)):
-            self.Breaks.append(self.BreaksClimb[i])
-            self.HTMission.append(self.HTMissionClimb[i])
-            self.Velocities.append(self.VClimbs[i])
-        
-        self.Breaks.append(self.CruiseTime)
-        self.HTMission.append(0)
-        self.Velocities.append(self.VCruise)
-            
-        for i in range(len(self.BreaksDescent)):  
-            self.Breaks.append(self.BreaksDescent[i])
-            
-        self.MissionTime = self.Breaks[-1]
-        # self.Breaks.pop(-1)
-            
-        for i in range(len(self.BreaksDescent)):   
-            self.HTMission.append(self.HTMissionDescent[i])
-            self.Velocities.append(self.VDescents[i])
+        phi_takeoff = 0.0
+        noncruise = []  # (name, stage, result)
+        cruise = []     # (name, stage, segment)
 
-        for i in range(len(self.BreaksClimbDiversion)):
-            self.Breaks.append(self.BreaksClimbDiversion[i])
-            self.HTMission.append(self.HTDiversionClimb[i])
-            self.Velocities.append(self.VClimbsDiversion[i])
-            
-        self.Breaks.append(self.CruiseTimeDiversion)
-        self.HTMission.append(0)
-        self.Velocities.append(self.VCruiseDiversion)
-        
-        for i in range(len(self.BreaksDescentDiversion)):   # L'ultimo tempo non mi interessa
-            self.Breaks.append(self.BreaksDescentDiversion[i])
-            self.HTMission.append(self.HTDiversionDescent[i])
-            self.Velocities.append(self.VDescentsDiversion[i])
+        for name, stage in stages.items():
+            if 'type' not in stage:           # takeoff-style entry (phi only)
+                if want_takeoff:
+                    phi_takeoff = stage.get('Supplied Power Ratio', {}).get('phi', 0.0)
+                continue
+            seg = make_segment(name, stage['type'], stage.get('input'))
+            if seg.category == CRUISE:
+                cruise.append((name, stage, seg))
+            else:
+                noncruise.append((name, stage, seg.compute(phase_range, 0.0)))
 
-        if self.LoiterStages is not None:
+        distance_so_far = sum(r.distance for _, _, r in noncruise)
+        built = [(name, stage, r) for name, stage, r in noncruise]
+        for name, stage, seg in cruise:
+            built.append((name, stage, seg.compute(phase_range, distance_so_far)))
 
-            self.Breaks.append(self.Breaks[-1] + self.DTLoiter)
-            self.HTMission.append(0)
-            self.Velocities.append(self.VCruiseLoiter)
+        # Order within the phase: climbs, then cruise, then descents (stable).
+        built.sort(key=lambda item: item[2].category)
 
+        merged = [_MergedSegment(name, phase, result, *self._phi(stage, hybrid))
+                  for name, stage, result in built]
+        non_cruise_distances = [r.distance for _, _, r in noncruise]
+        return merged, non_cruise_distances, phi_takeoff
 
+    def _build_loiter(self, hybrid):
+        cruise = self.LoiterStages['Cruise']
+        velocity = Speed.Mach2TAS(cruise['input']['Mach'], self.AltitudeLoiter)
+        if self.TLoiter is not None:
+            duration = self.TLoiter * 60.0
+        else:
+            duration = np.ceil(self.LoiterRange / velocity)
 
+        from .segments import SegmentResult
+        result = SegmentResult(
+            start_altitude=self.AltitudeLoiter, vertical_rate=0, velocity=velocity,
+            duration=duration, distance=velocity * duration, category=CRUISE)
+        return [_MergedSegment('Loiter', 'Loiter', result, *self._phi(cruise, hybrid))]
 
-        self.MissionTime2 = self.Breaks[-1]
-        self.Breaks.pop(-1)
+    @staticmethod
+    def _phi(stage, hybrid):
+        if not hybrid:
+            return (None, None)
+        spr = stage.get('Supplied Power Ratio', {})
+        return (spr.get('phi_start', 0), spr.get('phi_end', 0))
 
+    # --- piecewise lookups --------------------------------------------------
 
-    def Altitude_Func(self,t):
-        """
-        Generate the piecewise local altitude(t) functions for each segment.
+    def Altitude(self, t):
+        """Altitude at time t [m]."""
+        return np.piecewise(t, [t >= ti for ti in self.Breaks], self._alt_funcs)
 
-        Returns
-        -------
-        list of callables
-            Functions of t for each mission segment.
-        """
-        AltitudeFunctions=[]
-        
-          # Climb Mission        
-        
-        for i in range(len(self.BreaksClimb)):
-            
-            def localFunctionClimb(t):
-                alt = self.Altitudes[i]
-                htm = self.HTMission[i]
-                brk = self.Breaks[i]
-            
-                return (lambda t : (alt + htm * (t - brk)))
-            
-            AltitudeFunctions.append(localFunctionClimb(t))
-            
-            
-            # Cruise Mission
-        AltitudeFunctions.append( self.Altitudes[len(self.BreaksClimb)]) # ATTENZIONE!!! NON VALE SE L'ALTITUDINE CAMBIA IN CROCIERA
-                    
-            # Descent Mission
-        for i in range(len(self.BreaksDescent)):
-            
-            def localFunctionDescent(t):
-                alt = self.Altitudes[i + len(self.BreaksClimb)]
-                htm = self.HTMission[i + len(self.BreaksClimb) + 1]
-                brk = self.Breaks[i + len(self.BreaksClimb) + 1]
-                            
-                return (lambda t : (alt + htm * (t - brk)))
-                
-            AltitudeFunctions.append(localFunctionDescent(t))
-                
-                
-        # Climb Diversion       
-               
-        for i in range(len(self.BreaksClimbDiversion)):
-                   
-            def localFunctionClimb(t):
-                alt = self.Altitudes[i + len(self.BreaksClimb) + len(self.BreaksDescent)]
-                htm = self.HTMission[i + len(self.BreaksClimb) + len(self.BreaksDescent) + 1]
-                brk = self.Breaks[i + len(self.BreaksClimb) + len(self.BreaksDescent) + 1]
-                   
-                return (lambda t : (alt + htm * (t - brk)))
-                   
-            AltitudeFunctions.append(localFunctionClimb(t))
+    def PowerExcess(self, t):
+        """Vertical rate dh/dt at time t [m/s]."""
+        return np.piecewise(t, [t >= ti for ti in self.Breaks], self.HTMission)
 
-            # Cruise Diversion
-        AltitudeFunctions.append( self.Altitudes[len(self.BreaksClimb) + len(self.BreaksDescent) + len(self.BreaksClimbDiversion)]) # ATTENZIONE!!! NON VALE SE L'ALTITUDINE CAMBIA IN CROCIERA
-                
-                
-            # Descent Diversion
-        for i in range(len(self.BreaksDescentDiversion)):
-            
-            def localFunctionDescent(t):
-                alt = self.Altitudes[i + len(self.BreaksClimb) + len(self.BreaksDescent) + len(self.BreaksClimbDiversion)]
-                htm = self.HTMission[i + len(self.BreaksClimb) + len(self.BreaksDescent) + len(self.BreaksClimbDiversion) + 2]
-                brk = self.Breaks[i + len(self.BreaksClimb) + len(self.BreaksDescent) + len(self.BreaksClimbDiversion) + 2]
-                            
-                return (lambda t : (alt + htm * (t - brk)))
-                
-            AltitudeFunctions.append(localFunctionDescent(t))                
+    def Velocity(self, t):
+        """True airspeed at time t [m/s]."""
+        return np.piecewise(t, [t >= ti for ti in self.Breaks], self.Velocities)
 
-        if self.LoiterStages is not None:
-            
-            AltitudeFunctions.append(self.AltitudeLoiter) 
- 
-
-
-        return AltitudeFunctions
-
-
-    def Altitude(self,t):
-        """Return altitude at time t via piecewise selection."""
-        return np.piecewise(t, [ t >= ti for ti in self.Breaks], self.Altitude_Func(t))
-
-    def PowerExcess(self,t):
-        """Return vertical climb/descent rate HTMission(t)."""
-        return np.piecewise(t, [ t >= ti for ti in self.Breaks], self.HTMission)
-    
-    def Velocity(self,t):
-        """Return velocity at time t."""
-        return np.piecewise(t, [ t >= ti for ti in self.Breaks], self.Velocities)
-
-    def SuppliedPowerRatio(self,t):
-        """
-        Return the hybrid supplied power ratio phi(t) through interpolation.
-
-        SPWinterp contains a lambda for each segment computing phi(t) based on
-        segment endpoints.
-        """
-        idx=np.piecewise(t, [ self.times[i] < t <= self.times[i+1] for i in range(len(self.times)-1)], [i for i in range(len(self.times)-1)])
-        return self.SPWinterp[idx.astype(int)](t) 
-
-
-# Flight segments
-
-    def ConstantRateClimb(self,StageInput,phase):
-        """
-        Build a constant-rate climb segment for Mission or Diversion.
-
-        Parameters
-        ----------
-        StageInput : dict
-            Contains:
-                - StartAltitude [m]
-                - EndAltitude [m]
-                - CB (climb gradient as dh/dx)
-                - Speed (true airspeed) [m/s]
-        phase : str
-            'Mission' or 'Diversion'
-        """
-        
-        StartAltitude = StageInput['StartAltitude']
-        self.Altitudes.append(StartAltitude)
-        EndAltitude = StageInput['EndAltitude']
-        CB = StageInput['CB']
-        VClimb = StageInput['Speed']
-
-        HTClimb = CB * VClimb
-        DHClimb = EndAltitude - StartAltitude
-        DTClimb = np.ceil(DHClimb/HTClimb)
-        DRClimb = VClimb * DTClimb
-
-        # Devo definire un punto di break
-    
-        if (phase == 'Mission'):    
-    
-            self.BreaksClimb.append(DTClimb + self.BreaksClimb[self.counterClimb])
-            self.Distances.append(DRClimb)
-            self.HTMissionClimb.append(HTClimb)
-            self.VClimbs.append(VClimb)
-        
-            self.counterClimb += 1
-            
-        if (phase == 'Diversion'):    
-    
-            self.BreaksClimbDiversion.append(DTClimb + self.BreaksClimbDiversion[self.counterClimbDiversion] )
-            self.DistancesDiversion.append(DRClimb)
-            self.HTDiversionClimb.append(HTClimb)
-            self.VClimbsDiversion.append(VClimb)
-        
-            self.counterClimbDiversion += 1
-        
-        
-    def ConstantMachCruise(self,StageInput,phase):
-        """
-        Build a constant-Mach cruise segment.
-
-        Parameters
-        ----------
-        StageInput : dict
-            Contains:
-                - Altitude [m]
-                - Mach
-        phase : str
-            'Mission', 'Diversion', or 'Loiter'
-        """
-        
-        Altitude = StageInput['Altitude']
-        Mach = StageInput['Mach']
-
-        if (phase == 'Mission'):
-            
-            self.VCruise = Speed.Mach2TAS(Mach, Altitude)
-            
-            DRCruise = self.MissionRange - np.sum(self.Distances)
-            DTCruise = np.ceil(DRCruise/self.VCruise)
-                
-            self.CruiseTime = DTCruise + self.BreaksClimb[-1]
-        
-        if (phase == 'Diversion'):
-            
-            self.VCruiseDiversion = Speed.Mach2TAS(Mach, Altitude)
-            
-            DRCruise = self.DiversionRange - np.sum(self.DistancesDiversion)
-            DTCruise = np.ceil(DRCruise/self.VCruiseDiversion)
-                
-            self.CruiseTimeDiversion = DTCruise + self.BreaksClimbDiversion[-1] 
-        
-        if (phase == 'Loiter'):
-
-            self.VCruiseLoiter = Speed.Mach2TAS(Mach, Altitude)
-
-            if self.TLoiter is not None:
-                self.DTLoiter = self.TLoiter*60. #From minutes to seconds
-
-            elif self.LoiterRange is not None:
-                self.DTLoiter = np.ceil(self.LoiterRange/self.VCruiseLoiter)
-    
-
-            
-        
-        
-    def ConstantRateDescent(self,StageInput,phase):
-        """
-        Build a constant-rate descent segment for Mission or Diversion.
-
-        Parameters
-        ----------
-        StageInput : dict
-            Contains:
-                - StartAltitude [m]
-                - EndAltitude [m]
-                - CB (descent gradient)
-                - Speed (true airspeed) [m/s]
-        """
-                
-        StartAltitude = StageInput['StartAltitude']
-        self.Altitudes.append(StartAltitude)
-        EndAltitude = StageInput['EndAltitude']
-        CB = StageInput['CB']
-        VDescent = StageInput['Speed']
-
-        HTDescent = CB * VDescent
-        DHDescent = StartAltitude - EndAltitude
-        DTDescent = np.ceil(np.abs(DHDescent/HTDescent))
-        DRDescent = VDescent * DTDescent
-
-        
-        # Devo definire un punto di break
-    
-        if (phase == 'Mission'):
-            
-            self.BreaksDescent.append(DTDescent + self.BreaksDescent[self.counterDescent])
-            self.Distances.append(DRDescent)
-            self.HTMissionDescent.append(HTDescent)
-            self.VDescents.append(VDescent)
-        
-            self.counterDescent += 1
-        
-        if (phase == 'Diversion'):
-            
-            self.BreaksDescentDiversion.append(DTDescent + self.BreaksDescentDiversion[self.counterDescentDiversion])
-            self.DistancesDiversion.append(DRDescent)
-            self.HTDiversionDescent.append(HTDescent)
-            self.VDescentsDiversion.append(VDescent)
-        
-            self.counterDescentDiversion += 1
-        
-        
+    def SuppliedPowerRatio(self, t):
+        """Hybrid supplied-power ratio phi(t) via per-segment linear interpolation."""
+        idx = np.piecewise(
+            t,
+            [self.times[i] < t <= self.times[i + 1] for i in range(len(self.times) - 1)],
+            [i for i in range(len(self.times) - 1)],
+        )
+        return self.SPWinterp[int(idx)](t)
