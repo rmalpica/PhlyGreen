@@ -361,6 +361,8 @@ class Powertrain:
         if (self.aircraft.Configuration == 'Hybrid'):
 
             self.EtaPM = self.aircraft.EnergyInput['Eta PMAD']
+            # NOTE: SPowerPMAD is read and stored but not yet consumed by WeightPowertrain.
+            # It is reserved for a future PMAD-mass term (SPowerPT is the one used today).
             self.SPowerPMAD = self.aircraft.EnergyInput['Specific Power PMAD']
 
             
