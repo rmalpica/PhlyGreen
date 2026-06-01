@@ -25,6 +25,7 @@ class AircraftConfig:
     hybrid_type: Optional[str] = None  # 'Parallel' | 'Serial'
     aircraft_type: str = None          # 'ATR' | 'DO228'
     weight_class: str = "I"            # 'I' | 'II'
+    design_wing_loading: Optional[float] = None  # fix W/S [N/m^2] (else optimized)
 
     # required sections
     aerodynamics: AerodynamicsConfig = None

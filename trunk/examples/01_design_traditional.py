@@ -21,6 +21,10 @@ def main():
     # 2. A validated design specification (see common.py).
     config = traditional_config()
 
+    # Optional: fix the design wing loading W/S [N/m^2] instead of letting the constraint
+    # analysis optimize it. Comment this out to recover the optimized design point.
+    # config.design_wing_loading = 3000.0
+
     # 3. Size the aircraft: find the design point, then iterate take-off weight to
     #    convergence (Brent's method) so component masses are mutually consistent.
     aircraft.configure(config)            # runs the full DesignAircraft loop

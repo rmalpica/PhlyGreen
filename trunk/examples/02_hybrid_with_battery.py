@@ -16,6 +16,10 @@ def main():
     aircraft = pg.build_aircraft()
     config = hybrid_config()
 
+    # Optional: fix the design wing loading W/S [N/m^2] (else it is optimized from the
+    # constraint diagram). Uncomment to impose your own value:
+    # config.design_wing_loading = 3000.0
+
     aircraft.configure(config)
     r = aircraft.results()
 

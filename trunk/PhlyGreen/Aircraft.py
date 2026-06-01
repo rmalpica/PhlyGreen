@@ -224,13 +224,15 @@ class Aircraft:
         ClimateImpactInput = kwargs.get('ClimateImpactInput', None)
         PropellerInput = kwargs.get('PropellerInput', None)
         TankInput = kwargs.get('TankInput', None)
+        DesignWingLoading = kwargs.get('DesignWingLoading', None)
         PrintOutput = kwargs.get('PrintOutput', False)
 
         if PrintOutput: print("Reading input data...")
         self.ReadInput(AerodynamicsInput,ConstraintsInput, MissionInput, EnergyInput, MissionStages, DiversionStages,LoiterStages, WellToTankInput,CellInput,ClimateImpactInput,PropellerInput,TankInput)
 
         if PrintOutput: print("Finding Design Point...")
-        self.constraint.FindDesignPoint()
+        # If a design wing loading (W/S) is supplied, fix it; otherwise optimize it.
+        self.constraint.FindDesignPoint(DesignWingLoading)
         
         if PrintOutput:
             print('----------------------------------------------')
@@ -280,6 +282,8 @@ class Aircraft:
 
         positional, kwargs = config.read_input_args()
         if design:
+            if config.design_wing_loading is not None:
+                kwargs["DesignWingLoading"] = config.design_wing_loading
             self.DesignAircraft(*positional, PrintOutput=PrintOutput, **kwargs)
         else:
             self.ReadInput(*positional, **kwargs)

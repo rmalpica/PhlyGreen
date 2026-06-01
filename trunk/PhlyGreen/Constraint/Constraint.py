@@ -277,10 +277,14 @@ class Constraint:
 
         return None
     
-    def FindDesignPoint(self):
+    def FindDesignPoint(self, wing_loading=None):
         """
-        Computes the aircraft design point (P/W, W/S) by taking the upper 
+        Computes the aircraft design point (P/W, W/S) by taking the upper
         envelope of all constraints and selecting the minimum feasible P/W.
+
+        If ``wing_loading`` (W/S, [N/m^2]) is given, the wing loading is fixed to that
+        value instead of being optimized, and the design P/W is read off the constraint
+        envelope at that wing loading (so the aircraft still satisfies every constraint).
 
         Procedure
         ---------
@@ -303,6 +307,12 @@ class Constraint:
         for i in range(len(WTOoSrange)):
             self.MaxPW[i] = np.max(PWMatrix[:,i])
 
-        self.aircraft.DesignPW = np.min(self.MaxPW)
-        self.aircraft.DesignWTOoS = self.WTOoS[np.argmin(self.MaxPW)]
+        if wing_loading is not None:
+            # Fix the wing loading; read the design P/W off the envelope there.
+            idx = int(np.argmin(np.abs(WTOoSrange - wing_loading)))
+            self.aircraft.DesignWTOoS = float(wing_loading)
+            self.aircraft.DesignPW = float(self.MaxPW[idx])
+        else:
+            self.aircraft.DesignPW = np.min(self.MaxPW)
+            self.aircraft.DesignWTOoS = self.WTOoS[np.argmin(self.MaxPW)]
         return None

@@ -112,13 +112,21 @@ def plot_constraint_diagram(aircraft, ax=None):
             ax.plot(c.WTOoS, y, label=label)
     if getattr(c, "PWLanding", None) is not None and getattr(c, "WTOoSLanding", None) is not None:
         ax.plot(c.WTOoSLanding, c.PWLanding, label="Landing")
+    design_pw = None
     try:
-        ax.plot(aircraft.DesignWTOoS, aircraft.DesignPW, "o", ms=10,
+        design_pw = aircraft.DesignPW
+        ax.plot(aircraft.DesignWTOoS, design_pw, "o", ms=10,
                 mfc="red", mec="black", label="design point", zorder=5)
     except Exception:
         pass
     ax.set_xlabel(r"$W_{TO}/S$ [N/m$^2$]"); ax.set_ylabel(r"$P/W_{TO}$ [W/kg]")
-    ax.set_ylim(bottom=0); ax.grid(alpha=0.3); ax.legend(fontsize=8)
+    # Limit the y-range so the design point sits roughly mid-axis (P/W curves can shoot up
+    # towards the W/S extremes and otherwise squash the design region).
+    if design_pw is not None and design_pw > 0:
+        ax.set_ylim(0, 2.0 * design_pw)
+    else:
+        ax.set_ylim(bottom=0)
+    ax.grid(alpha=0.3); ax.legend(fontsize=8)
     return ax
 
 
