@@ -84,9 +84,8 @@ class AircraftResults:
         r.WCrew = _get(w, 'WCrew')
         r.WPayload = _get(w, 'WPayload')
 
-        is_hybrid = r.configuration == 'Hybrid'
         if None not in (r.WPT, r.WStructure, r.WCrew):
-            r.empty_weight = r.WPT + r.WStructure + r.WCrew + (r.WBat or 0.0 if is_hybrid else 0.0)
+            r.empty_weight = r.WPT + r.WStructure + r.WCrew + (r.WBat or 0.0)
             if r.WPayload is not None:
                 r.zero_fuel_weight = r.empty_weight + r.WPayload
 
@@ -100,7 +99,8 @@ class AircraftResults:
             r.SourceEnergy = _get(aircraft.welltowake, 'SourceEnergy')
             r.Psi = _get(aircraft.welltowake, 'Psi')
 
-        if is_hybrid:
+        # Detailed (Class II) battery pack specs only exist for the Hybrid configuration.
+        if r.configuration == 'Hybrid':
             b = aircraft.battery
             r.battery_class = getattr(b, 'BatteryClass', None)
             r.pack_energy = _get(b, 'pack_energy')

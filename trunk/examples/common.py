@@ -146,6 +146,35 @@ def hydrogen_config(v_cell_design=0.5, tank=False):
     )
 
 
+def _mission_stages_with_cruise_phi(cruise_phi):
+    """Mission stages where the cruise battery fraction (phi) is set to ``cruise_phi``."""
+    stages = _mission_stages()
+    for seg in stages.segments:
+        if seg.name == 'Cruise':
+            seg.phi_start = cruise_phi
+            seg.phi_end = cruise_phi
+    return stages
+
+
+def fuelcell_battery_config(cruise_phi=0.15):
+    """A fuel-cell + battery hybrid: the battery supplies ``cruise_phi`` of cruise power.
+
+    Demonstrates hybridizing a hydrogen fuel cell with a battery. ``phi`` is the fraction of
+    propulsive power taken from the battery (the fuel cell supplies the rest).
+    """
+    energy = _energy_hydrogen()
+    energy.battery_specific_energy = 250.0   # Wh/kg
+    energy.battery_specific_power = 1500.0    # W/kg
+    energy.battery_usable_soc = 0.8
+    return AircraftConfig(
+        configuration='FuelCellBattery', aircraft_type='ATR', weight_class='I',
+        aerodynamics=_aerodynamics(), constraints=_constraints(),
+        mission=_mission(), energy=energy,
+        mission_stages=_mission_stages_with_cruise_phi(cruise_phi),
+        diversion_stages=_diversion_stages(),
+    )
+
+
 def hybrid_config():
     """A parallel hybrid-electric ATR-like aircraft with a battery pack."""
     cell = CellConfig(

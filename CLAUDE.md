@@ -124,9 +124,10 @@ reference.
 
 ### Configuration flags (set on the Aircraft instance before `ReadInput`)
 These switch major code paths — check them when changing subsystem logic:
-- `Configuration`: `'Traditional'` (thermal only), `'Hybrid'` (thermal + battery), or
-  `'Hydrogen'` (fuel-cell electric — no battery, no gas turbine). Drives the powertrain
-  efficiency chain and which `Mission.*Configuration` / `Weight.*` path runs.
+- `Configuration`: `'Traditional'` (thermal only), `'Hybrid'` (thermal + battery),
+  `'Hydrogen'` (fuel-cell electric — no battery, no gas turbine), or `'FuelCellBattery'`
+  (fuel cell + battery, split by the profile's `phi`). Drives the powertrain efficiency
+  chain and which `Mission.*Configuration` / `Weight.*` path runs.
 - `HybridType`: `'Parallel'` or `'Serial'` (only when Hybrid).
 - `weight.Class`: `'I'` (regression-based Structures model) or `'II'` (FLOPS component masses,
   `trunk/PhlyGreen/Weight/FLOPS_model.py`).
@@ -160,7 +161,16 @@ is supplied and CoolProp is installed; otherwise a gravimetric-index model is us
 re-run `EvaluateMission` to populate `aircraft.tank.history` (see example `22`). Fuel-cell
 inputs live in `EnergyConfig`
 (`fc_model`, `i_rated`, `v_cell_design`, `stack_power_density`, `bop_mass_ratio`); examples
-`20`/`21` size a fuel cell, fly the mission, and sweep the design voltage.
+`20`/`21`/`22` size a fuel cell, fly the mission, sweep the design voltage, and run the tank.
+
+The `'FuelCellBattery'` configuration hybridizes the fuel cell with a (Class-I) battery:
+`Mission.FuelCellBatteryConfiguration` splits propulsive power by the profile's `phi`
+(battery fraction), the fuel cell uses its physics efficiency and the battery a simple
+electric chain; `Weight.FuelCellBattery` sizes the battery from its energy/power needs and
+re-sizes the fuel cell to the actual mission peak via `FuelCell.FinalizeMassFromMission`
+(so the battery shrinks the stack). Note the `'Hydrogen'` and `'FuelCellBattery'` paths size
+the stack differently (conservative P/W heuristic vs mission-peak), so a phi=0
+`FuelCellBattery` design is not identical to a `'Hydrogen'` one. See example `23`.
 
 Heavy Class-II models from the source forks — the pycycle/openmdao gas turbine, the
 pandas/CSV propeller RBF surrogate, and the CoolProp LH2 tank — integrate through this same

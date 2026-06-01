@@ -29,6 +29,7 @@ change a number, and re-run an example to see the effect.
 | `20_hydrogen_fuel_cell.py` | Size a hydrogen fuel-cell aircraft and fly the full mission; polarization curve |
 | `21_hydrogen_design_voltage_sweep.py` | Sweep the fuel-cell design voltage; find the take-off-weight optimum |
 | `22_hydrogen_tank.py` | Size the cryogenic LH2 tank and track its pressure/mass/venting over the mission (needs CoolProp) |
+| `23_fuelcell_battery_hybrid.py` | Hybridize a fuel cell with a battery; sweep the battery power share |
 
 ## Outer-loop applications
 

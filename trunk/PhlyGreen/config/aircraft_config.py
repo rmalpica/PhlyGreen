@@ -42,10 +42,10 @@ class AircraftConfig:
     tank: Optional[TankConfig] = None    # liquid-hydrogen tank (Hydrogen configuration)
 
     def __post_init__(self):
-        if self.configuration not in ("Traditional", "Hybrid", "Hydrogen"):
+        if self.configuration not in ("Traditional", "Hybrid", "Hydrogen", "FuelCellBattery"):
             raise ConfigError(
-                f"configuration must be 'Traditional', 'Hybrid' or 'Hydrogen', "
-                f"got {self.configuration!r}")
+                f"configuration must be 'Traditional', 'Hybrid', 'Hydrogen' or "
+                f"'FuelCellBattery', got {self.configuration!r}")
         if self.configuration == "Hybrid" and self.hybrid_type not in ("Parallel", "Serial"):
             raise ConfigError(
                 f"hybrid_type must be 'Parallel' or 'Serial' for Hybrid, got {self.hybrid_type!r}")

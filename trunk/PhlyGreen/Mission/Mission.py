@@ -179,6 +179,9 @@ class Mission:
         elif self.aircraft.Configuration == 'Hydrogen':
             return self.HydrogenConfiguration(WTO)
 
+        elif self.aircraft.Configuration == 'FuelCellBattery':
+            return self.FuelCellBatteryConfiguration(WTO)
+
         else:
             raise Exception("Unknown aircraft configuration: %s" %self.aircraft.Configuration)
         
@@ -272,6 +275,90 @@ class Mission:
         self.Max_PEng = pp_peak / 0.8
         self.Max_PEng_alt = 0.0
         return self.Ef[-1]
+
+
+    def FuelCellBatteryConfiguration(self, WTO):
+        """Evaluate the full mission for a fuel-cell + battery hybrid (electric) system.
+
+        The propulsive power at each instant is split between a hydrogen fuel cell and a
+        battery according to the profile's supplied-power ratio phi (the battery fraction):
+        the battery covers ``phi`` of the propulsive power and the fuel cell the remaining
+        ``1 - phi``. The fuel-cell branch uses the physics-based fuel-cell efficiency
+        (``fuelcell.ComputePRatio``); the battery branch uses the electric chain efficiency.
+
+        Integrates three states: hydrogen chemical energy, battery (electrical) energy, and
+        the mass fraction Beta (only hydrogen burn changes the aircraft mass).
+
+        Returns:
+            tuple(float, float): (hydrogen chemical energy [J], battery energy [J]).
+        """
+        self.WTO = WTO
+        fc = self.aircraft.fuelcell
+        eta_elec = fc.EtaEM * fc.EtaPM * fc.EtaGB   # battery electrical -> shaft
+
+        def PowerPropulsive(Beta, t):
+            PPoWTO = self.aircraft.performance.PoWTO(
+                self.aircraft.DesignWTOoS, Beta, self.profile.PowerExcess(t), 1,
+                self.profile.Altitude(t), self.DISA, self.profile.Velocity(t), 'TAS')
+            return PPoWTO * WTO
+
+        def split(t, PP):
+            phi = float(self.profile.SuppliedPowerRatio(t))   # battery fraction
+            return (1.0 - phi) * PP, phi * PP                 # (fuel-cell, battery) shaft power
+
+        def model(t, y):
+            Beta = y[2]
+            PP = PowerPropulsive(Beta, t)
+            self.check_PP(PP)
+            P_fc, P_bat = split(t, PP)
+            alt, vel = self.profile.Altitude(t), self.profile.Velocity(t)
+            dEh2 = P_fc * fc.ComputePRatio(alt, vel, P_fc)[0] if P_fc > 0 else 0.0
+            dEbat = P_bat / eta_elec if P_bat > 0 else 0.0
+            dbetadt = - dEh2 / (self.ef * self.WTO)            # battery does not burn mass
+            q = fc.Q_thermal
+            if q > self.Max_FC_Thermal_Pwr:
+                self.Max_FC_Thermal_Pwr = q
+                self.Max_FC_Thermal_Pwr_alt = alt
+            return [dEh2, dEbat, dbetadt]
+
+        # Take-off / sizing peak (split at the take-off phi).
+        P_TO = WTO * self.aircraft.performance.TakeOff(
+            self.aircraft.DesignWTOoS, self.aircraft.constraint.TakeOffConstraints['Beta'],
+            self.aircraft.constraint.TakeOffConstraints['Altitude'],
+            self.aircraft.constraint.TakeOffConstraints['kTO'],
+            self.aircraft.constraint.TakeOffConstraints['sTO'], self.aircraft.constraint.DISA,
+            self.aircraft.constraint.TakeOffConstraints['Speed'],
+            self.aircraft.constraint.TakeOffConstraints['Speed Type'])
+        phi_TO = float(self.profile.SPW[0][0]) if self.profile.SPW is not None else 0.0
+        self.TO_PP = (1.0 - phi_TO) * P_TO          # fuel-cell shaft power at take-off
+        self.TO_PBat = phi_TO * P_TO                # battery shaft power at take-off
+        self.Max_FC_Thermal_Pwr = -1.0
+
+        y0 = [0.0, 0.0, self.beta0]
+        self.integral_solution = []
+        times = np.append(self.profile.Breaks, self.profile.MissionTime2)
+        for i in range(len(times) - 1):
+            sol = integrate.solve_ivp(model, [times[i], times[i + 1]], y0,
+                                      method='BDF', rtol=1e-5, max_step=60.0)
+            self.integral_solution.append(sol)
+            y0 = [sol.y[0][-1], sol.y[1][-1], sol.y[2][-1]]
+
+        self.Ef = sol.y[0]
+        self.EBat = sol.y[1]
+        self.Beta = sol.y[2]
+
+        # Peak fuel-cell and battery shaft powers over the mission, for sizing.
+        pp_fc_peak, pp_bat_peak = 0.0, 0.0
+        for arr in self.integral_solution:
+            for k in range(len(arr.t)):
+                PP = PowerPropulsive(arr.y[2][k], arr.t[k])
+                p_fc, p_bat = split(arr.t[k], PP)
+                pp_fc_peak = max(pp_fc_peak, p_fc)
+                pp_bat_peak = max(pp_bat_peak, p_bat)
+        self.Max_PEng = pp_fc_peak / 0.8
+        self.Max_PEng_alt = 0.0
+        self.Max_PBat = max(pp_bat_peak, self.TO_PBat)
+        return self.Ef[-1], self.EBat[-1]
 
 
     def TraditionalConfiguration(self,WTO):

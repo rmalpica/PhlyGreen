@@ -93,6 +93,10 @@ class Weight:
 
                  return self.Hydrogen()
 
+        elif self.aircraft.Configuration == 'FuelCellBattery':
+
+                 return self.FuelCellBattery()
+
         else:
                  return "Try a different configuration..."
 
@@ -240,6 +244,95 @@ class Weight:
                 "Hydrogen weight loop did not converge: the design did not close within "
                 "1000-300000 kg (the fuel-cell system mass may be snowballing — try a lower "
                 "design cell voltage, a higher stack power density, or a shorter mission).")
+        return self.WTO
+
+
+    def FuelCellBattery(self):
+        """Solve the take-off-weight equation for a fuel-cell + battery hybrid aircraft.
+
+            f(WTO) = W_structure + W_fuelcell + W_battery + W_H2 + W_tank + W_HX
+                     + W_payload + W_crew + W_reserve - WTO
+
+        The fuel cell is sized by ``FuelCell.ComputeAndStoreWeights``; the mission returns
+        the hydrogen and battery energies. The battery is sized (Class I) by the larger of
+        its energy and power requirements, using specific energy/power from EnergyInput.
+        """
+        energy = self.aircraft.EnergyInput
+        spec_energy_Wh = energy.get('Battery Specific Energy', 250.0)   # Wh/kg
+        spec_power = energy.get('Battery Specific Power', 1500.0)       # W/kg
+        usable_soc = energy.get('Battery Usable SOC', 0.8)
+        grav_index = energy.get('H2 Gravimetric Index', 0.35)
+
+        LH2_Tank = None
+        if getattr(self.aircraft, 'TankInput', None) is not None:
+            try:
+                from PhlyGreen.Systems.Tank import LH2_Tank
+            except Exception:
+                LH2_Tank = None
+
+        def func(WTO):
+            # Initialize the fuel-cell geometry (needed before the mission can query it).
+            self.aircraft.fuelcell.ComputeAndStoreWeights(WTO)
+
+            # Mission -> hydrogen + battery energies (and the fuel-cell / battery peaks).
+            E_h2_chem, E_bat = self.aircraft.mission.EvaluateMission(WTO)
+            self.WH2_Fuel = (E_h2_chem / self.ef) * 1.05
+            self.Wf = self.WH2_Fuel
+
+            # Re-size the fuel cell to the *actual* mission peak (the battery offloads it,
+            # so it is smaller than a fuel-cell-only design).
+            self.WPT = self.aircraft.fuelcell.FinalizeMassFromMission()
+
+            # Battery mass: max of energy- and power-limited sizing (Class I).
+            WBat_energy = (E_bat / 3600.0) / (spec_energy_Wh * usable_soc)
+            WBat_power = self.aircraft.mission.Max_PBat / spec_power
+            self.WBat = max(WBat_energy, WBat_power)
+
+            # Hydrogen tank (empty) mass.
+            if self.WH2_Fuel <= 0:
+                self.WTank = 0.0
+            elif LH2_Tank is not None:
+                self.aircraft.tank = LH2_Tank(capacity_kg=self.WH2_Fuel, aircraft=self.aircraft)
+                self.WTank = self.aircraft.tank.mass_system_empty
+            else:
+                self.WTank = self.WH2_Fuel * (1.0 / grav_index - 1.0)
+
+            # Cooling (heat exchanger) mass from peak fuel-cell heat.
+            Q_max = self.aircraft.mission.Max_FC_Thermal_Pwr
+            if Q_max > 0:
+                delta_T = max(self.aircraft.fuelcell.T_op - (288.15 + 20.0), 10.0)
+                self.WHeat_Exchanger = Q_max / (100.0 * delta_T)
+            else:
+                self.WHeat_Exchanger = 0.0
+
+            # Structure.
+            if self.Class == 'I':
+                self.WStructure = self.aircraft.structures.StructuralWeight(WTO)
+            elif self.Class == 'II':
+                self.aircraft.FLOPSInput['GROSS_WEIGHT'] = WTO
+                self.AircraftComponents.SetInput()
+                self.AircraftComponents.CalculateComponentMasses()
+                c = self.AircraftComponents
+                self.WStructure = Units.lbTokg(
+                    c.Wing.wingmass + c.Fuselage.fuselagemass + c.Tail.HTailmass
+                    + c.Tail.VTailmass + c.LandingGear.Landing_gearmass + c.Nacelle.nacellemass
+                    + c.Paint.paintmass + c.SystemEquipment.system_equipment_mass
+                    + c.Propeller.propellermass)
+
+            if not self.final_reserve:
+                self.final_reserve = 0.05 * self.WH2_Fuel
+
+            return (self.WStructure + self.WPT + self.WBat + self.WH2_Fuel + self.WTank
+                    + self.WHeat_Exchanger + self.WPayload + self.WCrew
+                    + self.final_reserve - WTO)
+
+        try:
+            self.WTO = brenth(func, 1000, 300000, xtol=self.tol)
+        except ValueError:
+            raise RuntimeError(
+                "Fuel-cell+battery weight loop did not converge within 1000-300000 kg "
+                "(try a lower fuel-cell design voltage, more battery hybridization, or a "
+                "shorter mission).")
         return self.WTO
 
 

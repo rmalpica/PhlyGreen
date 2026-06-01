@@ -86,6 +86,10 @@ class EnergyConfig(DictConfig):
     stack_power_density: Optional[float] = None  # [W/kg]
     bop_mass_ratio: Optional[float] = None       # balance-of-plant mass / stack mass
     h2_gravimetric_index: Optional[float] = None  # usable H2 / (H2 + tank) mass
+    # --- simple (Class I) battery for fuel-cell + battery hybrids ---
+    battery_specific_energy: Optional[float] = None  # [Wh/kg]
+    battery_specific_power: Optional[float] = None   # [W/kg]
+    battery_usable_soc: Optional[float] = None       # usable state-of-charge fraction
 
     _KEY_MAP = {
         "Ef": "Ef",
@@ -107,6 +111,9 @@ class EnergyConfig(DictConfig):
         "stack_power_density": "Stack Power Density",
         "bop_mass_ratio": "BoP Mass Ratio",
         "h2_gravimetric_index": "H2 Gravimetric Index",
+        "battery_specific_energy": "Battery Specific Energy",
+        "battery_specific_power": "Battery Specific Power",
+        "battery_usable_soc": "Battery Usable SOC",
     }
 
     def __post_init__(self):
