@@ -12,3 +12,9 @@ from . import ClimateImpact
 
 #the aircraft class
 from .Aircraft import Aircraft
+
+#factory helper for assembling a fully wired aircraft
+from .factory import build_aircraft
+
+#structured results
+from .results import AircraftResults

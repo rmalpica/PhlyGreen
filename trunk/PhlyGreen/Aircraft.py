@@ -206,7 +206,18 @@ class Aircraft:
             self.welltowake.EvaluateSource()
         
         if PrintOutput: self.Print_Aircraft_Design_Summary()
-        
+
+
+    def results(self):
+        """Return the design outcome as a structured :class:`AircraftResults` dataclass.
+
+        Collects the same scalar quantities printed by
+        :meth:`Print_Aircraft_Design_Summary`, for programmatic use (tests, outer-loop
+        optimization/UQ, serialization). Call after a successful ``DesignAircraft``.
+        """
+        from .results import AircraftResults
+        return AircraftResults.from_aircraft(self)
+
 
     def Print_Aircraft_Design_Summary(self):
         print(f'Fuel mass (trip + altn + loiter): {self.weight.Wf:.1f} [Kg]')
