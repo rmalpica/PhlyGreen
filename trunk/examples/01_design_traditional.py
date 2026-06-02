@@ -49,11 +49,14 @@ def main():
     #     (totals for the whole aircraft; the electric motor is zero for a fuel-only design).
     _plot_power(aircraft, "01_power_timeseries.png", "Traditional — mission power")
 
-    # 6. For debugging you can dump *every* time-evolving mission variable to a CSV — including
-    #    the propulsive / gas-turbine / electric-motor power columns.
+    # 6. For debugging you can dump the time-evolving mission variables to a CSV — the raw ODE
+    #    states, the derived mission quantities and the propulsive / gas-turbine / electric-motor
+    #    power. include_components=False here because this is a *constant-efficiency* design, so
+    #    the Class-II GT/EM/propeller surrogate columns (and their loading) are not relevant.
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    csv = aircraft.results().write_timeseries(os.path.join(OUTPUT_DIR, "01_timeseries.csv"))
-    print(f"  saved {csv}  (all mission states + powers vs time)")
+    csv = aircraft.results().write_timeseries(os.path.join(OUTPUT_DIR, "01_timeseries.csv"),
+                                              include_components=False)
+    print(f"  saved {csv}  (mission states + powers vs time)")
 
 
 def _plot_power(aircraft, name, title):
