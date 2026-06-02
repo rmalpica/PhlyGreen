@@ -51,7 +51,7 @@ run one independent design per call (safe to loop or parallelize).
 |--------|---------------|---------|
 | `10_parameter_sweep.py` | Sweep design range; weights and block fuel | line plots |
 | `11_optimization.py` | Minimize block fuel over cruise Mach (SciPy) | objective curve |
-| `11b_multiobjective_optimization.py` | Multi-objective NSGA-II (pymoo), in parallel: power split + Class-II GT/EM nominal powers → WTO-vs-fuel Pareto front | Pareto front |
+| `11b_multiobjective_optimization.py` | Multi-objective NSGA-II (pymoo), in parallel: power split + Class-II GT/EM nominal powers + wing loading (ranges from a Class-I pre-pass) → WTO-vs-fuel Pareto front | Pareto front coloured by W/S |
 | `12_uncertainty_quantification.py` | Monte-Carlo propagation of input uncertainty (NumPy; `chaospy` note inside) | histogram + sensitivity |
 | `13_payload_range.py` | A 2-D payload×range sweep | block-fuel & WTO contours |
 
