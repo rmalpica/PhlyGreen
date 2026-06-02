@@ -181,9 +181,67 @@ This ensures size is based on **actual in‑mission behaviour**, not just averag
 
 ---
 
+## Thermal management & cycle‑life degradation (opt‑in)
+
+Beyond the in‑flight electro‑thermal model above, the Class‑II battery offers an **opt‑in,
+post‑design** analysis of ground fast‑charge cooling and battery ageing. It runs on an
+*already‑sized* pack and is **never** part of the WTO loop, so enabling it cannot change a
+baseline design.
+
+```python
+aircraft.configure(config)                              # size as usual (Class-II battery)
+ageing = aircraft.battery.thermal_degradation_analysis(charge_c_rate=2.0)
+#   -> {'recharge_time_min', 'T_final', 'peak_cooling_w', 'peak_heat_w', 'dod', 'n_cycles'}
+```
+
+The results are cached on `battery.ageing` and surfaced in
+`AircraftResults.extras['battery_ageing']`. See example
+`17_battery_thermal_and_degradation.py`.
+
+### Ground fast‑charge thermal model
+
+During a constant‑current recharge from the end‑of‑flight SOC back to full, the cell
+temperature is time‑stepped from a lumped balance of **Joule heating** against an **active
+liquid cold‑plate**:
+
+\[
+q_{\text{gen}} = I_{\text{ch}}^2\,R(T), \qquad
+R(T) = R_{\text{ref}}\,e^{\,b_R\left(\frac{1}{T}-\frac{1}{T_{\text{ref}}}\right)}
+\]
+
+\[
+q_{\text{cool}} = h_{\text{ground}}\,A_{\text{cell}}\,(T - T_{\text{coolant}}), \qquad
+\frac{dT}{dt} = \frac{q_{\text{gen}} - q_{\text{cool}}}{C_{\text{th}}}
+\]
+
+It returns the recharge time, the final cell temperature, and the **peak active‑cooling power**
+the thermal‑management system (TMS) must reject — a sizing driver for the ground/onboard
+cooling system. Faster charging shortens the turnaround but raises the temperature and the
+cooling load.
+
+### Cycle‑life degradation (Wang et al. + Miner)
+
+The number of full cycles to end‑of‑life follows the Wang et al. capacity‑fade law, in which
+the charge throughput to a given capacity loss depends on the C‑rate, the depth‑of‑discharge
+(DoD) and the temperature:
+
+\[
+A_h = \left[\frac{\Delta Q_{\text{EoL}}\,[\%]}{A\,\exp\!\frac{-E_a + B\,C_{\text{rate}}}{R\,T}}\right]^{1/z},
+\qquad
+N_{\text{cycles to EoL}} = \frac{A_h}{\text{DoD}\cdot Q_{\text{cell}}}
+\]
+
+The flight (discharge) and the recharge each contribute damage; these accumulate linearly
+(Miner's rule, or a Marco–Starkey \(L_p\) norm) to give the expected cycle life. Higher
+temperatures and deeper / faster cycling all shorten it.
+
+*Adapted from the Class‑II battery heat‑management & degradation work by Francesco Campagna.*
+
+---
+
 ## Inputs
 
-Battery configuration comes from `CellInput`:
+Battery configuration comes from `CellInput` (typed: `CellConfig`):
 
 - `"Class"` — `"I"` (simple) or `"II"` (electro‑thermal)  
 - `"Model"` — reference into `Cell_Models`  
@@ -193,6 +251,16 @@ Battery configuration comes from `CellInput`:
 - `"Minimum SOC"`  
 - `"Initial temperature"`  
 - `"Max operative temperature"`
+
+Optional fields for the **thermal‑management / degradation** analysis (defaults applied when
+the analysis is invoked):
+
+- `"Charge C-Rate"` — ground fast‑charge C‑rate [1/h]  
+- `"Discharge C-Rate"` — representative in‑flight discharge C‑rate [1/h]  
+- `"Maximum SOC"` — SOC at full charge (default 1.0)  
+- `"EoL Capacity"` — end‑of‑life capacity fraction (e.g. 0.8)  
+- `"Coolant Temperature"` — ground coolant inlet temperature [°C]  
+- `"Ground Cooling Coefficient"` — cold‑plate \(h\) [W/m²K]
 
 Cell models include:
 
@@ -254,9 +322,10 @@ battery.T  += dTdt * dt
 ## Limitations
 
 - Single‑node temperature model (no spatial gradients).  
-- No ageing/SEI model.  
-- Cooling system mass is not sized.  
-- Discharge‑only model (no charging).  
+- Ageing and ground recharge/cooling are modelled only in the **opt‑in post‑design** analysis
+  (Wang/Miner cycle life, cold‑plate cooling), not inside the in‑flight sizing loop, which
+  remains discharge‑only.  
+- The cooling‑system **mass** is reported (peak cooling power) but not yet added to the WTO.  
 
 ---
 
@@ -270,3 +339,6 @@ battery.T  += dTdt * dt
 
 - Saw, L., Somasundaram, K., Ye, Y., & Tay, A. *Electro-thermal analysis of Lithium Iron Phosphate battery for electric vehicles.*  
    Journal of Power Sources, 249:231–238, 2014.
+
+- Wang, J. et al. *Cycle-life model for graphite-LiFePO4 cells.*  
+   Journal of Power Sources, 196(8):3942–3948, 2011. (capacity-fade law used for cycle life)

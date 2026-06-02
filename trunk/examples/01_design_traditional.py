@@ -32,7 +32,13 @@ def main():
     aircraft.configure(config)            # runs the full DesignAircraft loop
 
     # 4. Print a full, human-readable summary (scalars + take-off mass breakdown).
-    print_results(aircraft, "Conventional ATR-like turboprop")
+    results = print_results(aircraft, "Conventional ATR-like turboprop")
+
+    # 4b. Keep a record of *what was actually solved*: results.input_summary() echoes every
+    #     configuration flag and input block (mission, aerodynamics, constraints, energy,
+    #     flight segments, ...). results.inputs holds the same data as a dict.
+    print()
+    print(results.input_summary())
 
     # 5. Plot a dashboard: flight profile, cumulative fuel energy, the constraint diagram
     #    with the design point, and the mass breakdown.

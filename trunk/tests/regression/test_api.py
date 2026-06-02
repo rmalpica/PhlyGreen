@@ -48,3 +48,16 @@ def test_evaluate_applies_params_without_mutating_base():
     long = pg.evaluate(base, set_range, 1000).WTO
     assert long > short                      # more range -> heavier aircraft
     assert base.mission.range_mission == base_range   # base untouched
+
+
+@pytest.mark.slow
+def test_results_input_snapshot_records_what_was_solved():
+    results = pg.run_design(_traditional_aircraft_config())
+    # The snapshot captures the config flags and the legacy input blocks.
+    assert results.inputs["flags"]["Configuration"] == "Traditional"
+    assert "MissionInput" in results.inputs and "MissionStages" in results.inputs
+    assert results.inputs["MissionInput"]["Range Mission"] == 750
+    # The human-readable summary mentions the configuration and a flight segment.
+    summary = results.input_summary()
+    assert "Design inputs" in summary
+    assert "Cruise" in summary

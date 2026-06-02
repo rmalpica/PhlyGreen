@@ -23,7 +23,12 @@ def main():
     aircraft.configure(config)
 
     # Full summary (incl. battery pack specs, well-to-wake, and the mass breakdown).
-    print_results(aircraft, "Parallel hybrid-electric ATR-like turboprop")
+    results = print_results(aircraft, "Parallel hybrid-electric ATR-like turboprop")
+
+    # Echo every input that produced this design — handy to confirm exactly what was solved
+    # (here: Hybrid/Parallel, Class-II battery, the cruise phi ramp, etc.).
+    print()
+    print(results.input_summary())
 
     # Dashboard: the energy panel also shows battery energy and state-of-charge; the
     # constraint diagram and mass breakdown round it out.

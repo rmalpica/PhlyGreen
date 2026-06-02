@@ -22,6 +22,73 @@ The powertrain system performance is evaluated at every timestep during the Miss
 
 ---
 
+## Component efficiency models
+
+Each component's efficiency is an **`EfficiencyModel`** (`Systems/Powertrain/efficiency.py`)
+evaluated through one accessor:
+
+```python
+eta = powertrain.eta('gas_turbine', altitude, velocity, power, rpm)
+```
+
+Internally each call builds an `OperatingPoint(altitude, velocity, power, rpm)` and passes it
+to that component's model. Two fidelities are available **per component**:
+
+- **Class‑I — `ConstantEfficiency`** (the default): a fixed user value, independent of the
+  operating point. This reproduces the legacy behaviour exactly and is what the golden
+  regression cases use.
+- **Class‑II — operating‑point‑dependent**: efficiency varies with altitude / velocity /
+  power / rpm via a physics model or a fitted response surface.
+
+You select the model **per component** in `EnergyInput` (typed: `EnergyConfig`):
+
+```python
+EnergyInput = {
+    'Eta Gas Turbine Model':   'ResponseSurface',  # or 'constant' (+ 'Eta Gas Turbine')
+    'Eta Electric Motor Model':'Smart',            # d-q model, or 'constant'
+    'Eta Propulsive Model':    'Hamilton',         # or 'Surrogate' (RBF), or 'constant'
+    # Class-II GT/EM also need a *nominal* (design) power, fixed before the mission:
+    'GT Design Power': 8.5e6,   'EM Design Power': 1.5e6,
+    'EM Design Voltage': 800.0, 'EM Design RPM': 11000.0,
+}
+```
+
+The available Class‑II models are:
+
+### Gas turbine — `GasTurbineEfficiencyModel`
+Wraps a **universal** RBF response surface (`gas_turbine_surrogate.py`,
+`GasTurbineResponseSurface`) trained offline by `train_gas_turbine_surrogate.py` from a
+pycycle turboshaft map. The map is *size‑independent* (efficiency vs altitude, Mach and power
+fraction for one reference engine). At run time:
+
+1. the available shaft power lapses with altitude (ISA pressure ratio): \(P_{\text{avail}} =
+   P_{\text{design}}\,\delta(h)\);
+2. the efficiency is read at the current **power fraction** \(P_{\text{req}}/P_{\text{avail}}\);
+3. it is then **scaled to the actual engine size** — smaller engines are less efficient — via
+   \((1-\eta) = (1-\eta_{\text{ref}})\,(P_{\text{ref}}/P_{\text{design}})^{n}\), with the
+   exponent \(n\) calibrated once from real turboshaft SFC‑vs‑power data.
+
+Because the model works as a *percentage of a fixed nominal power*, that nominal power
+(`GT Design Power`) must be chosen **before** the mission. After sizing,
+`powertrain.report_class_ii_sizing()` flags whether the engine is power‑limited at altitude
+(undersized) or oversized — see example `16_class_ii_propulsion_sizing.py`.
+
+### Electric motor — `MotorEfficiencyModel`
+Wraps the d‑q `ElectricMotor` physics model (`EM.py`): given the design power, voltage and
+rpm it returns efficiency as a function of the operating point (copper, iron and switching
+losses), so the battery power ratio changes with load. Also needs a fixed nominal power.
+
+### Propeller — `HamiltonPropellerEfficiency` / `PropellerSurrogateEfficiency`
+Two interchangeable models: the analytic **Hamilton‑Standard** method
+(`propeller_hamilton.py` + `propeller_hamilton_tables.py`) and a data‑trained **RBF
+surrogate** (`propeller_surrogate.py`, needs pandas), both giving propeller efficiency vs
+true airspeed, altitude and power (and, for the surrogate, blade pitch / rpm).
+
+All of these (plus the electric motor) can be plotted as efficiency maps in example
+`05_powertrain_graph_and_efficiency_models.py`.
+
+---
+
 ## Power Ratios
 
 The main objective of the powertrain module is to compute the fuel/battery power required to deliver a certain propulsive power. At any instant in time, the required **propulsive power** is computed by the Mission module (see [Mission](mission.md/#4-mission-power-calculation)):
@@ -195,23 +262,10 @@ P_p/P_p
 \end{bmatrix}.
 \]
 
-The calculation is performed using the following code, that solves the linear system \(A\,x = b\):
-
-
-```python
-A = np.array([[- self.EtaGT, 1, 0, 0, 0, 0, 0, 0],
-              [0, - self.EtaEM1, 0, 1, 0, 0, 0, 0],
-              [0, 0, 0, -self.EtaPM, 1, -self.EtaPM, 0, 0],
-              [0, 0, 1, 0,  - self.EtaEM2, 0, 0, 0],
-              [0, 0, - self.EtaGB, 0, 0, 0, 1, 0],
-              [0, 0, 0, 0, 0, 0, - self.EtaPPmodel(alt,vel,pwr), 1],
-              [phi, 0, 0, 0, 0, phi - 1, 0, 0],
-                      [0, 0, 0, 0, 0, 0, 0, 1]])
-       
-b = np.array([0, 0, 0, 0, 0, 0, 0, 1])
-
-PowerRatio = np.linalg.solve(A,b)
-```
+As for the traditional chain, this system is assembled by `graph.py` from composable
+primitives rather than hand-coded; every \(\eta\) above is obtained from
+`Powertrain.eta(component, alt, vel, pwr)`, so it may be a constant (Class-I) or an
+operating-point-dependent Class-II model.
 
 ---
 
@@ -274,22 +328,32 @@ P_p/P_p
 \end{bmatrix}.
 \]
 
-The calculation is performed using the following code, that solves the linear system \(A\,x = b\):
+As before, the system is assembled by `graph.py` and solved through `Powertrain.Hybrid(phi,
+alt, vel, pwr)`; each \(\eta\) comes from `Powertrain.eta(component, …)` and is constant
+(Class-I) or operating-point-dependent (Class-II). The gas-turbine and propeller terms above,
+\(\eta_{GT}(h,V,P)\) and \(\eta_{PP}(h,V,P)\), are the Class-II models described earlier.
 
+---
+
+### 4. Fuel cell + battery
+
+The `'FuelCellBattery'` architecture replaces the gas turbine with a **fuel cell** on a shared
+electrical bus with a battery. It is assembled from the same graph primitives
+(`graph.fuelcell_battery_graph`) and solved through `Powertrain.PowerRatioFuelCellBattery(phi,
+alt, vel, P)`. The supplied‑power ratio φ sets the **battery share** of the propulsive power;
+the fuel cell supplies the rest, using its physics system efficiency (see
+[Hydrogen](hydrogen.md)). The solution exposes the hydrogen chemical power `PfH2` and the
+battery power `Pbat` (per unit propulsive power), so the mission integrates hydrogen and
+battery energy consistently. A pure `'Hydrogen'` design is the φ = 0 limit.
 
 ```python
-A = np.array([[- self.EtaGTmodel(alt,vel,pwr), 1, 0, 0, 0, 0, 0],
-              [0, -self.EtaGB, -self.EtaGB, 1, 0, 0, 0],
-              [0, 0, 0, 0, 1, -self.EtaPM, 0],
-              [0, 0, 1, 0, - self.EtaEM, 0, 0],
-              [0, 0, 0, - self.EtaPPmodel(alt,vel,pwr), 0, 0, 1],
-              [phi, 0, 0, 0, 0, phi - 1, 0],
-              [0, 0, 0, 0, 0, 0, 1]])
-       
-b = np.array([0, 0, 0, 0, 0, 0, 1])
-
-PowerRatio = np.linalg.solve(A,b)
+from PhlyGreen.Systems.Powertrain.graph import fuelcell_battery_graph
+g = fuelcell_battery_graph(eta_fc=0.55, eta_pm=0.99, eta_em=0.98,
+                           eta_gb=0.96, eta_pp=0.85, phi=0.3)
+sol = g.solution()        # -> {'PfH2': ..., 'Pbat': ..., ...}
 ```
+
+See examples `05` (architecture at the power‑ratio level) and `23_fuelcell_battery_hybrid.py`.
 
 ---
 

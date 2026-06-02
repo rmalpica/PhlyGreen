@@ -59,6 +59,10 @@ class AircraftResults:
 
     extras: Dict[str, Any] = field(default_factory=dict)
 
+    # A snapshot of every input that produced this design (config flags + the legacy input
+    # dicts), so you can keep track of *what was actually solved*. See :meth:`input_summary`.
+    inputs: Dict[str, Any] = field(default_factory=dict)
+
     # Reference to the source aircraft, set by :meth:`from_aircraft`. Not a dataclass field
     # (no annotation), so it stays out of ``to_dict``/``asdict`` and equality.
     _aircraft = None
@@ -118,12 +122,30 @@ class AircraftResults:
         if ageing:
             r.extras['battery_ageing'] = dict(ageing)
 
+        # Snapshot the inputs that produced this design.
+        r.inputs = _collect_inputs(aircraft)
+
         r._aircraft = aircraft
         return r
 
     def to_dict(self):
         """Return a plain dict of all fields (suitable for JSON serialization)."""
         return asdict(self)
+
+    def input_summary(self):
+        """Return a human-readable summary of *all* inputs that produced this design.
+
+        Includes the configuration flags (Configuration / HybridType / AircraftType /
+        weight & battery class) and every legacy input block that was set on the aircraft
+        (mission, aerodynamics, constraints, energy, cell, well-to-tank, climate, propeller,
+        FLOPS, tank) plus the mission / diversion / loiter flight segments. Use it to keep
+        track of exactly what was solved; pair it with :meth:`to_dict` for the outputs.
+        """
+        return _format_inputs(self.inputs)
+
+    def print_input_summary(self):
+        """Print :meth:`input_summary` to stdout."""
+        print(self.input_summary())
 
     def write_timeseries(self, path, include_components=True):
         """Dump every time-evolving mission variable to a CSV file (debug helper).
@@ -161,3 +183,92 @@ def _get(obj, name):
     if isinstance(value, np.generic):
         return float(value)
     return value
+
+
+# Input blocks captured for the design snapshot, in display order.
+_INPUT_BLOCKS = [
+    'MissionInput', 'AerodynamicsInput', 'ConstraintsInput', 'EnergyInput', 'CellInput',
+    'PropellerInput', 'WellToTankInput', 'ClimateImpactInput', 'FLOPSInput', 'TankInput',
+    'MissionStages', 'DiversionStages', 'LoiterStages',
+]
+
+
+def _collect_inputs(aircraft):
+    """Snapshot the configuration flags and every input block set on the aircraft."""
+    import copy
+    snapshot = {}
+    snapshot['flags'] = {
+        'Configuration': getattr(aircraft, 'Configuration', None),
+        'HybridType': getattr(aircraft, 'HybridType', None),
+        'AircraftType': getattr(aircraft, 'AircraftType', None),
+        'WeightClass': getattr(getattr(aircraft, 'weight', None), 'Class', None),
+        'BatteryClass': getattr(getattr(aircraft, 'battery', None), 'BatteryClass', None),
+    }
+    for name in _INPUT_BLOCKS:
+        value = getattr(aircraft, name, None)
+        if value is not None:
+            try:
+                snapshot[name] = copy.deepcopy(value)
+            except Exception:
+                snapshot[name] = value
+    return snapshot
+
+
+def _format_value(value):
+    if isinstance(value, float):
+        return f"{value:g}"
+    return str(value)
+
+
+def _format_inputs(inputs):
+    """Render the input snapshot from :func:`_collect_inputs` as a readable text block."""
+    if not inputs:
+        return "(no input snapshot — build results via Aircraft.results())"
+
+    lines = ["=== Design inputs (what was solved) ==="]
+    flags = inputs.get('flags', {})
+    lines.append("Configuration:")
+    for key, val in flags.items():
+        if val is not None:
+            lines.append(f"  {key:14s}: {val}")
+
+    for name in _INPUT_BLOCKS:
+        block = inputs.get(name)
+        if not block:
+            continue
+        lines.append(f"\n[{name}]")
+        if name in ('MissionStages', 'DiversionStages', 'LoiterStages'):
+            lines.extend(_format_stages(block))
+        elif isinstance(block, dict):
+            lines.extend(_format_dict(block, indent="  "))
+        else:
+            lines.append(f"  {block}")
+    return "\n".join(lines)
+
+
+def _format_dict(block, indent="  ", depth=0):
+    """Recursively format a (possibly nested) input dict, one key per line."""
+    out = []
+    for key, val in block.items():
+        if isinstance(val, dict) and depth < 2:
+            out.append(f"{indent}{key}:")
+            out.extend(_format_dict(val, indent + "  ", depth + 1))
+        else:
+            out.append(f"{indent}{key}: {_format_value(val)}")
+    return out
+
+
+def _format_stages(stages):
+    """Compact one-line-per-segment view of a flight-stage ordered dict."""
+    out = []
+    for seg_name, seg in stages.items():
+        seg_type = seg.get('type', '?') if isinstance(seg, dict) else '?'
+        phi = seg.get('Supplied Power Ratio', {}) if isinstance(seg, dict) else {}
+        phi_txt = ""
+        if phi:
+            if 'phi' in phi:
+                phi_txt = f"  phi={phi['phi']:g}"
+            else:
+                phi_txt = f"  phi={phi.get('phi_start', 0):g}->{phi.get('phi_end', 0):g}"
+        out.append(f"  {seg_name:12s} {seg_type}{phi_txt}")
+    return out
