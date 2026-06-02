@@ -10,7 +10,10 @@ Authors:
 
 Students who contributed to the code development:
 
-- Joao Delille (Battery model)
+- Joao Delille (Class II Battery model)
 - Valeria Falcone (Climate Impact)
+- Francesco Ballirano (Class II gas turbine and electric motor models)
+- Alan Liss (Fuel cell and cryogenic hydrogen tank models)
+- Francesco Campagna (Class II Battery model heat management and degradation)
 
 [![Documentation Status](https://img.shields.io/badge/docs-online-success)](https://rmalpica.github.io/PhlyGreen/)
