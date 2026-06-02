@@ -1057,7 +1057,13 @@
 <span class=normal>1107</span>
 <span class=normal>1108</span>
 <span class=normal>1109</span>
-<span class=normal>1110</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>HybridConfigurationClassII</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span><span class=n>WTO</span><span class=p>):</span>
+<span class=normal>1110</span>
+<span class=normal>1111</span>
+<span class=normal>1112</span>
+<span class=normal>1113</span>
+<span class=normal>1114</span>
+<span class=normal>1115</span>
+<span class=normal>1116</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>HybridConfigurationClassII</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span><span class=n>WTO</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;</span>
 <span class=sd>    Evaluate the mission for a Hybrid-Electric aircraft using a Class II battery model.</span>
 
@@ -1462,13 +1468,19 @@
     <span class=bp>self</span><span class=o>.</span><span class=n>Max_PEng_alt</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>profile</span><span class=o>.</span><span class=n>Altitude</span><span class=p>(</span><span class=n>times</span><span class=p>[</span><span class=n>np</span><span class=o>.</span><span class=n>argmax</span><span class=p>(</span><span class=n>np</span><span class=o>.</span><span class=n>multiply</span><span class=p>(</span><span class=n>PP</span><span class=p>,</span><span class=n>PRatio</span><span class=p>[:,</span><span class=mi>1</span><span class=p>]))])</span> <span class=c1>#altitude at which peak power occurs</span>
     <span class=bp>self</span><span class=o>.</span><span class=n>Max_PBat</span> <span class=o>=</span> <span class=n>np</span><span class=o>.</span><span class=n>max</span><span class=p>(</span><span class=n>np</span><span class=o>.</span><span class=n>multiply</span><span class=p>(</span><span class=n>PP</span><span class=p>,</span><span class=n>PRatio</span><span class=p>[:,</span><span class=mi>5</span><span class=p>]))</span>
 
-    <span class=c1># Peak in-flight battery waste heat (pack level), for sizing the battery thermal-</span>
-    <span class=c1># management system. Re-walk the converged solution and evaluate the cell electro-</span>
-    <span class=c1># thermal model at each point (the heat generated is what the cooling system must</span>
-    <span class=c1># reject); reuse the propulsive-power split already computed above.</span>
+    <span class=c1># Peak battery heat the thermal-management system actually has to reject, for TMS</span>
+    <span class=c1># sizing. With the bang-bang thermostat the cooling only acts when the pack is held at</span>
+    <span class=c1># its maximum operating temperature (T = ceiling, dT/dt = 0); below the ceiling the</span>
+    <span class=c1># heat is absorbed adiabatically by the thermal mass and nothing is rejected. So we</span>
+    <span class=c1># take the peak generated heat *only over the points clamped at the ceiling* (reusing</span>
+    <span class=c1># the propulsive-power split computed above). If the pack never reaches the ceiling,</span>
+    <span class=c1># no cooling is required and the TMS heat is zero.</span>
+    <span class=n>ceiling</span> <span class=o>=</span> <span class=mf>273.15</span> <span class=o>+</span> <span class=bp>self</span><span class=o>.</span><span class=n>T_battery_limit</span>
     <span class=n>b</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>battery</span>
     <span class=n>q_pack_peak</span> <span class=o>=</span> <span class=mf>0.0</span>
     <span class=k>for</span> <span class=n>i</span> <span class=ow>in</span> <span class=nb>range</span><span class=p>(</span><span class=nb>len</span><span class=p>(</span><span class=n>times</span><span class=p>)):</span>
+        <span class=k>if</span> <span class=n>T_arr</span><span class=p>[</span><span class=n>i</span><span class=p>]</span> <span class=o>&lt;</span> <span class=n>ceiling</span> <span class=o>-</span> <span class=mf>0.5</span><span class=p>:</span>        <span class=c1># cooling is active only at the ceiling</span>
+            <span class=k>continue</span>
         <span class=k>try</span><span class=p>:</span>
             <span class=n>b</span><span class=o>.</span><span class=n>T</span> <span class=o>=</span> <span class=n>T_arr</span><span class=p>[</span><span class=n>i</span><span class=p>]</span>
             <span class=n>b</span><span class=o>.</span><span class=n>it</span> <span class=o>=</span> <span class=n>it_arr</span><span class=p>[</span><span class=n>i</span><span class=p>]</span> <span class=o>/</span> <span class=mi>3600</span>
