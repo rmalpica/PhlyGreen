@@ -47,19 +47,10 @@ def test_constant_mach_cruise_fills_remaining_range():
     assert r.duration == np.ceil((phase_range - already) / r.velocity)
 
 
-def test_cas_climb_velocity_uses_calibrated_airspeed():
-    seg = make_segment("Climb1", "ConstantCASClimb",
-                       {"StartAltitude": 0, "EndAltitude": 3000, "CB": 0.1, "CAS": 100})
-    r = seg.compute(phase_range=1e6, distance_so_far=0)
-    # At sea level CAS == TAS, so the velocity equals the CAS there.
-    assert r.velocity == pytest.approx(Speed.CAS2TAS(100, 0))
-
-
 # --- registry ---------------------------------------------------------------
 
 def test_known_types_are_registered():
-    for name in ("ConstantRateClimb", "ConstantRateDescent", "ConstantMachCruise",
-                 "ConstantCASClimb", "ConstantEASClimb"):
+    for name in ("ConstantRateClimb", "ConstantRateDescent", "ConstantMachCruise"):
         assert name in SEGMENT_TYPES
 
 

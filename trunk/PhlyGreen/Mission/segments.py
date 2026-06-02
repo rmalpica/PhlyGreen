@@ -68,16 +68,13 @@ class FlightSegment(ABC):
 
 
 class _ConstantRateSegment(FlightSegment):
-    """Shared logic for constant-rate, constant-(true)speed climb/descent."""
-
-    def _velocity(self, start_altitude):
-        return self.inputs["Speed"]
+    """Shared logic for a constant-gradient, constant-true-airspeed climb/descent."""
 
     def compute(self, phase_range, distance_so_far):
         start = self.inputs["StartAltitude"]
         end = self.inputs["EndAltitude"]
         cb = self.inputs["CB"]
-        velocity = self._velocity(start)
+        velocity = self.inputs["Speed"]
 
         vertical_rate = cb * velocity
         duration = np.ceil(abs((end - start) / vertical_rate))
@@ -100,22 +97,6 @@ class ConstantRateClimbSegment(_ConstantRateSegment):
 class ConstantRateDescentSegment(_ConstantRateSegment):
     """Constant descent gradient (CB < 0) at constant true airspeed."""
     category = DESCENT
-
-
-class ConstantCASClimbSegment(_ConstantRateSegment):
-    """Constant climb gradient at constant calibrated airspeed (TAS taken at start)."""
-    category = CLIMB
-
-    def _velocity(self, start_altitude):
-        return Speed.CAS2TAS(self.inputs["CAS"], start_altitude)
-
-
-class ConstantEASClimbSegment(_ConstantRateSegment):
-    """Constant climb gradient at constant equivalent airspeed (TAS taken at start)."""
-    category = CLIMB
-
-    def _velocity(self, start_altitude):
-        return Speed.EAS2TAS(self.inputs["EAS"], start_altitude)
 
 
 class ConstantMachCruiseSegment(FlightSegment):
@@ -143,8 +124,6 @@ SEGMENT_TYPES = {
     "ConstantRateClimb": ConstantRateClimbSegment,
     "ConstantRateDescent": ConstantRateDescentSegment,
     "ConstantMachCruise": ConstantMachCruiseSegment,
-    "ConstantCASClimb": ConstantCASClimbSegment,
-    "ConstantEASClimb": ConstantEASClimbSegment,
 }
 
 
