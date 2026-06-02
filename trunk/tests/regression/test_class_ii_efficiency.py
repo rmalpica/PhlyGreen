@@ -72,3 +72,23 @@ def test_fuelcell_database_available():
     from PhlyGreen.Systems.FuelCell import FC_Database
     assert "PEMFC_GoodPerformance" in FC_Database
     assert FC_Database["PEMFC_GoodPerformance"]["Voc"] == pytest.approx(1.145)
+
+
+def test_gas_turbine_universal_map_scales_with_engine_size():
+    """The map is universal; runtime applies the size penalty keyed on nominal power."""
+    from PhlyGreen.Systems.Powertrain.gas_turbine_surrogate import GasTurbineResponseSurface
+    gt = GasTurbineResponseSurface()
+    # Same operating point (SL, M0.2, ~70 % load) -> smaller engine is less efficient.
+    etas = [gt.predict(hp, 0.0, 0.2, 0.7 * hp)[0] for hp in (500, 1000, 2750, 6000)]
+    assert all(a < b for a, b in zip(etas, etas[1:]))     # monotonically increasing with size
+    # At the reference size the scaling is a no-op (factor 1).
+    assert 0.05 < etas[2] < 0.45
+
+
+def test_gas_turbine_power_lapses_with_altitude():
+    from PhlyGreen.Systems.Powertrain.gas_turbine_surrogate import GasTurbineResponseSurface
+    gt = GasTurbineResponseSurface()
+    pmax_sl = gt.predict(2750, 0.0, 0.3, 1500)[2]
+    pmax_alt = gt.predict(2750, 20000, 0.3, 1500)[2]
+    assert pmax_alt < pmax_sl                              # available power lapses
+    assert gt.predict(2750, 20000, 0.3, 1500)[3] is True   # and becomes power-limited

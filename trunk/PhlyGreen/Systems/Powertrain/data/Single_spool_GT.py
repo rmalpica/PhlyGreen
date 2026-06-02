@@ -1,4 +1,5 @@
 import sys
+import os
 import numpy as np
 import openmdao.api as om
 import pycycle.api as pyc
@@ -283,50 +284,49 @@ class EngineWeightCalculator:
 if __name__ == "__main__":
 
     # ------------------------------------------------------------------
-    # STEP 1: CALIBRATE THE SCALING EXPONENT
+    # STEP 1: SETUP PYCYCLE
     # ------------------------------------------------------------------
-    CALIBRATED_N = calibrate_scaling_exponent()
-    
-    # Pause briefly so user can read the calibration table
-    time.sleep(2)
-
-    # ------------------------------------------------------------------
-    # STEP 2: SETUP PYCYCLE
-    # ------------------------------------------------------------------
+    # NOTE: the size-dependent efficiency scaling (get_scaled_efficiency /
+    # calibrate_scaling_exponent) is intentionally NOT applied at generation time. This
+    # script now produces a SINGLE reference-engine, UNIVERSAL map: thermal efficiency vs
+    # (altitude, Mach, power fraction). The dependence of efficiency on engine *size* is
+    # applied at RUNTIME (keyed on the nominal power chosen before sizing) in
+    # PhlyGreen.Systems.Powertrain.gas_turbine_surrogate, so the map itself stays universal.
+    # The two helpers above are kept only as the reference implementation reused at runtime.
     prob = om.Problem()
     prob.model = mp_single_spool = MPSingleSpool()
     prob.setup()
 
     # ------------------------------------------------------------------
-    # STEP 3: RUN THE UNIVERSAL GRID (Using the Calibrated N)
+    # STEP 2: RUN THE UNIVERSAL GRID (single reference engine, no size scaling)
     # ------------------------------------------------------------------
-    # This part is used for the creation of the CSV map that will be used later to train the surrogate model.
-    # Here the user can define any range of powers to run PyCycle codes for each design point.
-    design_powers_to_run = [500.0, 2750.0, 6000.0] 
+    # This creates the CSV map used later to train the universal surrogate. Only the
+    # reference engine is run, with reference (unscaled) component efficiencies; the map is
+    # stored as a function of the POWER FRACTION (req/available), so it applies to any size.
+    design_powers_to_run = [2750.0]   # single UNIVERSAL reference engine
 
-    # Reference Constants (ATR-72 Class Baseline)
-    REF_PWR = 2750.0  
+    # Reference Constants (ATR-72 Class Baseline) — also the runtime scaling reference.
+    REF_PWR = 2750.0
     REF_EFF_COMP, REF_EFF_HPT, REF_EFF_LPT = 0.86, 0.885, 0.915
-    
+
     # Storage for CSV file.
-    training_data = [] 
-    
+    training_data = []
+
     total_start = time.time()
-    
+
     print("\n" + "="*70)
-    print(" 2. STARTING UNIVERSAL MAP GENERATION")
-    print(f"    Using Calibrated Scaling Exponent n = {CALIBRATED_N:.4f}")
+    print(" 2. STARTING UNIVERSAL MAP GENERATION (reference engine, unscaled)")
     print("="*70)
 
-    # LOOP: ENGINE SIZING
+    # LOOP: ENGINE SIZING (single reference engine)
     for des_pwr in design_powers_to_run:
-        print(f"\n--- SIZING ENGINE: {des_pwr:.0f} HP ---")
+        print(f"\n--- SIZING REFERENCE ENGINE: {des_pwr:.0f} HP ---")
 
-        # A. SCALE EFFICIENCIES USING CALIBRATED N
-        scaled_comp_eff = get_scaled_efficiency(des_pwr, REF_PWR, REF_EFF_COMP, n=CALIBRATED_N)
-        scaled_hpt_eff  = get_scaled_efficiency(des_pwr, REF_PWR, REF_EFF_HPT, n=CALIBRATED_N)
-        scaled_lpt_eff  = get_scaled_efficiency(des_pwr, REF_PWR, REF_EFF_LPT, n=CALIBRATED_N)
-        
+        # A. REFERENCE EFFICIENCIES (no size scaling — that is a runtime effect)
+        scaled_comp_eff = REF_EFF_COMP
+        scaled_hpt_eff  = REF_EFF_HPT
+        scaled_lpt_eff  = REF_EFF_LPT
+
         print(f"  Efficiencies -> Comp: {scaled_comp_eff:.3f}, HPT: {scaled_hpt_eff:.3f}, LPT: {scaled_lpt_eff:.3f}")
 
         # B. SET DESIGN INPUTS
@@ -394,11 +394,16 @@ if __name__ == "__main__":
                         prob.run_model()
                         
                         Wfuel = prob.get_val(f'{od}.perf.Wfuel')[0]
-                        P_out_watts = pwr * 745.7 
+                        P_out_watts = pwr * 745.7
                         eta = P_out_watts / (max(Wfuel, 1e-6) * 0.45359237 * 43e6)
-                        
+
+                        # Store the POWER FRACTION (req / available-at-condition) so the map
+                        # is universal (size-independent): runtime scales available power by
+                        # the nominal power and looks efficiency up at this fraction.
+                        power_fraction = pwr / max_pwr_at_alt if max_pwr_at_alt > 0 else 0.0
+
                         if 0.05 < eta < 0.6:
-                            training_data.append([des_pwr, alt, mach, pwr, eta])
+                            training_data.append([alt, mach, power_fraction, eta])
                             sys.stdout.write(".")
                         else:
                             sys.stdout.write("x") 
@@ -410,7 +415,9 @@ if __name__ == "__main__":
     # SAVE DATA 
     print(f"\nTotal Run Time: {(time.time()-total_start)/60:.1f} minutes")
     
-    header = "Design_Power_hp,Altitude_ft,Mach,Actual_Power_hp,Efficiency"
-    np.savetxt("GT_Universal_Map.csv", training_data, delimiter=",", header=header, comments="")
+    header = "Altitude_ft,Mach,Power,Efficiency"
+    out_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "GT_Universal_Map.csv")
+    np.savetxt(out_path, training_data, delimiter=",", header=header, comments="")
+    print(f"SUCCESS: '{out_path}' created ({len(training_data)} universal map points).")
     
     print("\nSUCCESS: 'GT_Universal_Map.csv' created.")
