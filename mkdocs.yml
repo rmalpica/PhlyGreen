@@ -120,17 +120,23 @@ nav:
       - Flowcharts: developer-guide/flowcharts.md
       - Module Reference: developer-guide/module-reference.md
       - Extending the Model: developer-guide/extending-the-model.md
+      - Battery Merge Assessment: developer-guide/battery-merge-assessment.md
       - Troubleshooting: developer-guide/troubleshooting.md
   - API Reference:
+      - Outer Loop & Results: api/outer-loop.md
       - Configuration: api/config.md
       - Mission: api/mission.md
       - Powertrain: api/powertrain.md
       - Battery: api/battery.md
       - Fuel Cell: api/fuelcell.md
       - LH2 Tank: api/tank.md
+      - Thermal Network: api/thermal.md
       - Weight: api/weight.md
       - Performance: api/performance.md
       - Constraints: api/constraints.md
+      - Aerodynamics: api/aerodynamics.md
+      - Structures: api/structures.md
       - Well-to-Wake: api/welltowake.md
+      - Climate Impact: api/climate-impact.md
       - Utilities & API: api/utilities.md
 
