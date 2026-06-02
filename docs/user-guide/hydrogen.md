@@ -117,10 +117,14 @@ difference between the thermo-neutral voltage (~1.48 V) and the operating cell v
 Q_{\text{thermal}} = N_{\text{cells}}\,I\,(1.48 - V_{\text{cell}}) .
 \]
 
-This drives the **cooling-system mass** (`WHeat_Exchanger`) that the weight loop accounts for,
-and registers as a heat source for the thermal-management scaffold (below). Because
-\(V_{\text{cell}}\) falls with load and altitude, the heat load — and hence the required
-cooling — peaks where the system works hardest.
+Because \(V_{\text{cell}}\) falls with load and altitude, the heat load peaks where the system
+works hardest. The weight loop sizes the **cooling-system mass** (`WHeat_Exchanger`) from the
+peak mission heat and a **specific power** (heat per kg of HEX),
+\(W_{\text{cool}} = Q_{\text{peak}} / \text{HEX specific power}\). Because the cryogenic H2 is a
+very effective heat sink, the fuel-cell HEX is light per kW: `EnergyConfig.hex_specific_power_h2`
+defaults to **5000 W/kg** (vs ~1500 W/kg for a battery HEX rejecting to ambient — see
+[Battery](battery.md)). Even so, a multi-MW fuel cell rejects a large heat load, so the TMS is a
+significant mass. The heat also registers as a source for the thermal-management scaffold (below).
 
 ---
 

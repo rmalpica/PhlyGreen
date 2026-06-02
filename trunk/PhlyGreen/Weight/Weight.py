@@ -272,12 +272,11 @@ class Weight:
                 self.WTank = self.WH2_Fuel * (1.0 / grav_index - 1.0)
 
             # 4. Thermal-management (heat-exchanger) mass from the peak fuel-cell heat load.
+            # The cryogenic H2 is an effective heat sink, so the HEX is light per kW of heat
+            # rejected (high specific power [W/kg]; user input 'HEX Specific Power H2').
             Q_max = self.aircraft.mission.Max_FC_Thermal_Pwr
-            if Q_max > 0:
-                delta_T = max(self.aircraft.fuelcell.T_op - (288.15 + 20.0), 10.0)
-                self.WHeat_Exchanger = Q_max / (100.0 * delta_T)
-            else:
-                self.WHeat_Exchanger = 0.0
+            hex_sp_h2 = self.aircraft.EnergyInput.get('HEX Specific Power H2', 5000.0)
+            self.WHeat_Exchanger = Q_max / hex_sp_h2 if Q_max > 0 else 0.0
 
             # 5. Structure.
             if self.Class == 'I':
@@ -372,13 +371,11 @@ class Weight:
             else:
                 self.WTank = self.WH2_Fuel * (1.0 / grav_index - 1.0)
 
-            # Cooling (heat exchanger) mass from peak fuel-cell heat.
+            # Cooling (heat-exchanger) mass from peak fuel-cell heat — H2-cooled HEX specific
+            # power [W/kg] (user input 'HEX Specific Power H2').
             Q_max = self.aircraft.mission.Max_FC_Thermal_Pwr
-            if Q_max > 0:
-                delta_T = max(self.aircraft.fuelcell.T_op - (288.15 + 20.0), 10.0)
-                self.WHeat_Exchanger = Q_max / (100.0 * delta_T)
-            else:
-                self.WHeat_Exchanger = 0.0
+            hex_sp_h2 = self.aircraft.EnergyInput.get('HEX Specific Power H2', 5000.0)
+            self.WHeat_Exchanger = Q_max / hex_sp_h2 if Q_max > 0 else 0.0
 
             # Structure.
             if self.Class == 'I':
@@ -473,14 +470,12 @@ class Weight:
 
                 # Battery thermal-management (cooling) mass from the peak *in-flight* battery
                 # waste heat (Class-II battery only; the Class-I battery has no thermal model).
-                # Same heat-exchanger specific-performance model as the fuel cell.
+                # The battery HEX rejects to ambient via a liquid loop + ram-air, so it is less
+                # mass-effective than the cryo-H2 fuel-cell HEX -> a lower specific power [W/kg]
+                # (user input 'HEX Specific Power Battery').
                 Q_bat = self.aircraft.mission.Max_Bat_Thermal_Pwr
-                if Q_bat and Q_bat > 0:
-                    T_lim = getattr(self.aircraft.mission, 'T_battery_limit', 50.0) + 273.15
-                    delta_T = max(T_lim - 288.15, 10.0)          # reject to ~ISA ambient
-                    self.WHeat_Exchanger = Q_bat / (100.0 * delta_T)
-                else:
-                    self.WHeat_Exchanger = 0.0
+                hex_sp_bat = self.aircraft.EnergyInput.get('HEX Specific Power Battery', 1500.0)
+                self.WHeat_Exchanger = Q_bat / hex_sp_bat if (Q_bat and Q_bat > 0) else 0.0
 
                 self.final_reserve = self._contingency if self._contingency else 0.05 * self.Wf
 

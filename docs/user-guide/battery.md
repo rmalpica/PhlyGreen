@@ -324,11 +324,19 @@ battery.T  += dTdt * dt
 For a Class-II battery the **in-flight** thermal-management (cooling) system *is* sized and
 included in the take-off-weight balance. During the mission the cell electro-thermal model
 gives the waste heat generated at each instant; the weight loop takes the **peak in-flight
-pack heat** and sizes a cooling-system mass from it with the same heat-exchanger
-specific-performance model as the fuel cell (`Q_peak / (100 · ΔT)`, with ΔT from the cell's
-maximum operating temperature down to ambient). It appears as the `cooling` item in the mass
-breakdown / `WHeat_Exchanger`. (The Class-I battery has no thermal model, so it carries no
-cooling mass.) The separate *ground fast-charge* cooling load from
+pack heat** \(Q_{\text{peak}}\) and sizes the cooling mass from a **specific power**
+(heat rejected per kg of heat-exchanger system):
+
+\[
+W_{\text{cool}} = \frac{Q_{\text{peak}}}{\text{HEX specific power [W/kg]}} .
+\]
+
+The battery HEX rejects to ambient through a liquid loop + ram-air, which is *less*
+mass-effective than the cryogenic-H2-cooled fuel-cell HEX, so the two use **separate** inputs:
+`EnergyConfig.hex_specific_power_battery` (default **1500 W/kg**) for the battery and
+`hex_specific_power_h2` (default **5000 W/kg**) for the fuel cell. The result appears as the
+`cooling` item in the mass breakdown / `WHeat_Exchanger`. (The Class-I battery has no thermal
+model, so it carries no cooling mass.) The separate *ground fast-charge* cooling load from
 `thermal_degradation_analysis` is a post-design study and is **not** added to the WTO.
 
 ## Limitations

@@ -86,6 +86,11 @@ class EnergyConfig(DictConfig):
     stack_power_density: Optional[float] = None  # [W/kg]
     bop_mass_ratio: Optional[float] = None       # balance-of-plant mass / stack mass
     h2_gravimetric_index: Optional[float] = None  # usable H2 / (H2 + tank) mass
+    # --- thermal-management (heat-exchanger) specific powers [W of heat / kg of HEX] ---
+    # The cryogenic-H2-cooled fuel-cell HEX is far more mass-effective than the battery HEX
+    # (which must reject to ambient via a liquid loop + ram-air), so they are separate inputs.
+    hex_specific_power_h2: Optional[float] = None       # fuel-cell (H2-cooled) HEX [W/kg]
+    hex_specific_power_battery: Optional[float] = None  # battery HEX [W/kg]
     # --- simple (Class I) battery for fuel-cell + battery hybrids ---
     battery_specific_energy: Optional[float] = None  # [Wh/kg]
     battery_specific_power: Optional[float] = None   # [W/kg]
@@ -117,6 +122,8 @@ class EnergyConfig(DictConfig):
         "stack_power_density": "Stack Power Density",
         "bop_mass_ratio": "BoP Mass Ratio",
         "h2_gravimetric_index": "H2 Gravimetric Index",
+        "hex_specific_power_h2": "HEX Specific Power H2",
+        "hex_specific_power_battery": "HEX Specific Power Battery",
         "battery_specific_energy": "Battery Specific Energy",
         "battery_specific_power": "Battery Specific Power",
         "battery_usable_soc": "Battery Usable SOC",
