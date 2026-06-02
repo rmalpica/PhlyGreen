@@ -112,6 +112,12 @@ class AircraftResults:
             r.S_number = _get(b, 'S_number')
             r.P_number = _get(b, 'P_number')
 
+        # Opt-in battery thermal-management / degradation results, if the post-design
+        # analysis (battery.thermal_degradation_analysis) was run before results().
+        ageing = getattr(getattr(aircraft, 'battery', None), 'ageing', None)
+        if ageing:
+            r.extras['battery_ageing'] = dict(ageing)
+
         r._aircraft = aircraft
         return r
 

@@ -153,6 +153,17 @@ class CellConfig(DictConfig):
     Ebat: Optional[float] = None           # J (Class I)
     pbat: Optional[float] = None           # W/kg (Class I)
 
+    # --- optional Class-II thermal-management & degradation analysis (post-design only) ---
+    # These never affect the baseline sizing; they parametrize
+    # ``aircraft.battery.thermal_degradation_analysis()`` (ground fast-charge cooling load and
+    # cycle-life). All default to off / sensible values when the analysis is invoked.
+    charge_c_rate: Optional[float] = None           # ground fast-charge C-rate [1/h]
+    discharge_c_rate: Optional[float] = None         # representative discharge C-rate [1/h]
+    maximum_soc: Optional[float] = None              # SOC at full charge (default 1.0)
+    eol_capacity: Optional[float] = None             # end-of-life capacity fraction (e.g. 0.8)
+    coolant_temperature: Optional[float] = None      # ground coolant inlet temperature [C]
+    ground_cooling_coefficient: Optional[float] = None  # ground cold-plate h [W/m^2K]
+
     _KEY_MAP = {
         "cell_class": "Class",
         "model": "Model",
@@ -164,6 +175,12 @@ class CellConfig(DictConfig):
         "max_operative_temperature": "Max operative temperature",
         "Ebat": "Ebat",
         "pbat": "pbat",
+        "charge_c_rate": "Charge C-Rate",
+        "discharge_c_rate": "Discharge C-Rate",
+        "maximum_soc": "Maximum SOC",
+        "eol_capacity": "EoL Capacity",
+        "coolant_temperature": "Coolant Temperature",
+        "ground_cooling_coefficient": "Ground Cooling Coefficient",
     }
 
     def __post_init__(self):

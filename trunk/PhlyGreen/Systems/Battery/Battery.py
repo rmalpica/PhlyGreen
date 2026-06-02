@@ -510,3 +510,46 @@ class Battery:
             dTdt = P / Cth + (Ta - T) / (Rth * Cth)
         # print(f"h: {h}   R:{Rth}     surface:{self.cell_area_surface}    crosssec:{self.module_area_section}")
         return dTdt, P
+
+    def thermal_degradation_analysis(self, charge_c_rate=None, discharge_c_rate=None,
+                                     soc_start=None, flight_temp_k=None, **overrides):
+        """Estimate ground fast-charge cooling load and battery cycle life (opt-in, Class II).
+
+        *Post-design* analysis — never part of the take-off-weight sizing, so it cannot change
+        a baseline design. Reads optional parameters from ``CellInput`` (typed via
+        :class:`~PhlyGreen.config.CellConfig`): ``Charge C-Rate``, ``Discharge C-Rate``,
+        ``Maximum SOC``, ``EoL Capacity``, ``Coolant Temperature`` [C] and
+        ``Ground Cooling Coefficient``. Returns the dict from
+        :meth:`~PhlyGreen.Systems.Battery.degradation.BatteryAgeingModel.analyze`
+        (``recharge_time_min``, ``T_final``, ``peak_cooling_w``, ``peak_heat_w``, ``dod``,
+        ``n_cycles``) and caches it on ``self.ageing``.
+        """
+        if getattr(self, 'BatteryClass', None) != 'II':
+            raise BatteryError(
+                "thermal_degradation_analysis requires a Class-II battery.",
+                code="REQUIRES_CLASS_II")
+        ci = getattr(self.aircraft, 'CellInput', None) or {}
+        charge_c_rate = charge_c_rate if charge_c_rate is not None else ci.get('Charge C-Rate')
+        if not charge_c_rate or charge_c_rate <= 0:
+            raise BatteryError(
+                "thermal_degradation_analysis needs a positive 'Charge C-Rate' "
+                "(CellConfig.charge_c_rate) or a charge_c_rate=... argument.",
+                code="NO_CHARGE_C_RATE")
+
+        from .degradation import BatteryAgeingModel
+        model = BatteryAgeingModel(
+            self, charge_c_rate,
+            discharge_c_rate=(discharge_c_rate if discharge_c_rate is not None
+                              else ci.get('Discharge C-Rate')),
+            soc_start=soc_start if soc_start is not None else self.SOC_min,
+            soc_max=ci.get('Maximum SOC', 1.0),
+            eol_capacity=ci.get('EoL Capacity', 0.8),
+            coolant_temperature=ci.get('Coolant Temperature', 20.0) + 273.15,
+            ground_h=ci.get('Ground Cooling Coefficient', 150.0),
+            **overrides)
+        result = model.analyze()
+        if flight_temp_k is not None:
+            result['n_cycles'] = model.cycle_life(flight_temp_k=flight_temp_k,
+                                                  charge_temp_k=result['T_final'])
+        self.ageing = result
+        return result

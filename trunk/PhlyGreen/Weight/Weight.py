@@ -67,7 +67,48 @@ class Weight:
             self.AircraftComponents = FLOPS_model(self.aircraft)
 
         return None
-        
+
+    def _solve_wto(self, func, lower=1000, upper=300000, step=10000, xtol=None):
+        """Robustly solve ``f(WTO) = 0`` for the take-off weight with Brent's method.
+
+        First tries Brent on the full ``[lower, upper]`` bracket — the historical behaviour,
+        so well-posed designs converge to exactly the same root as before. If that fails
+        (the endpoints do not bracket a sign change, or ``func`` errors mid-range — common in
+        parametric sweeps near the edge of the feasible space), it scans ``[lower, upper]`` in
+        ``step``-kg increments for the *first* sign-change bracket and runs Brent on that
+        narrow, valid interval. This makes the WTO loop converge smoothly across sweeps
+        without changing any result that already converged.
+
+        ``lower``/``upper`` can be overridden per design via the ``MissionInput`` keys
+        ``'Brenth Lower Limit'`` / ``'Brenth Upper Limit'``.
+        """
+        if xtol is None:
+            xtol = self.tol
+        mi = getattr(self.aircraft, 'MissionInput', None) or {}
+        lower = mi.get('Brenth Lower Limit', lower)
+        upper = mi.get('Brenth Upper Limit', upper)
+
+        try:
+            return brenth(func, lower, upper, xtol=xtol)
+        except Exception as exc_full:
+            # Robust fallback: grid-scan for the first interval that brackets a root.
+            weights = np.arange(lower, upper + step, step)
+            prev_w = weights[0]
+            try:
+                prev_f = func(prev_w)
+            except Exception:
+                prev_f = np.nan
+            for curr_w in weights[1:]:
+                try:
+                    curr_f = func(curr_w)
+                except Exception:
+                    curr_f = np.nan
+                if np.isfinite(prev_f) and np.isfinite(curr_f) and prev_f * curr_f < 0:
+                    return brenth(func, prev_w, curr_w, xtol=xtol)
+                prev_w, prev_f = curr_w, curr_f
+            # No valid bracket found anywhere — surface the original failure.
+            raise exc_full
+
     def WeightEstimation(self):
         """
          Perform full aircraft weight estimation for the selected configuration.
@@ -160,8 +201,8 @@ class Weight:
                     self.final_reserve = 0.05*self.Wf
                 
                 return (self.Wf + self.final_reserve + self.WPT + self.WStructure + self.WPayload + self.WCrew - WTO)
-        
-        self.WTO = brenth(func, 1000, 300000, xtol=0.1)
+
+        self.WTO = self._solve_wto(func, 1000, 300000, xtol=0.1)
 
 
     def Hydrogen(self):
@@ -243,8 +284,8 @@ class Weight:
                     + self.final_reserve - WTO)
 
         try:
-            self.WTO = brenth(func, 1000, 300000, xtol=self.tol)
-        except ValueError:
+            self.WTO = self._solve_wto(func, 1000, 300000, xtol=self.tol)
+        except (ValueError, RuntimeError):
             raise RuntimeError(
                 "Hydrogen weight loop did not converge: the design did not close within "
                 "1000-300000 kg (the fuel-cell system mass may be snowballing — try a lower "
@@ -332,8 +373,8 @@ class Weight:
                     + self.final_reserve - WTO)
 
         try:
-            self.WTO = brenth(func, 1000, 300000, xtol=self.tol)
-        except ValueError:
+            self.WTO = self._solve_wto(func, 1000, 300000, xtol=self.tol)
+        except (ValueError, RuntimeError):
             raise RuntimeError(
                 "Fuel-cell+battery weight loop did not converge within 1000-300000 kg "
                 "(try a lower fuel-cell design voltage, more battery hybridization, or a "
@@ -406,5 +447,5 @@ class Weight:
                     self.final_reserve = 0.05*self.Wf
 
                 return (self.Wf + self.final_reserve + self.WBat + self.WPT + self.WStructure + self.WPayload + self.WCrew - WTO)
-        # this iterates the weight estimator function with the brent method until it converges on a value of takeoff weight
-        self.WTO = brenth(func, 10000, 60000, xtol=0.1) 
+        # iterate the weight estimator with Brent's method until WTO converges (robust bracketing)
+        self.WTO = self._solve_wto(func, 10000, 60000, xtol=0.1)

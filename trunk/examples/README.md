@@ -29,6 +29,7 @@ change a number, and re-run an example to see the effect.
 | `14_welltowake_and_climate.py` | Well-to-wake source energy, mission emissions, climate impact (ATR) |
 | `15_class_i_vs_class_ii.py` | Class-I vs Class-II structures (FLOPS) and battery models |
 | `16_class_ii_propulsion_sizing.py` | Size the Class-II gas turbine / electric motor (nominal power) with over/under-size check |
+| `17_battery_thermal_and_degradation.py` | Class-II battery ground fast-charge cooling load (TMS) and cycle-life degradation |
 | `20_hydrogen_fuel_cell.py` | Size a hydrogen fuel-cell aircraft and fly the full mission; polarization curve |
 | `21_hydrogen_design_voltage_sweep.py` | Sweep the fuel-cell design voltage; find the take-off-weight optimum |
 | `22_hydrogen_tank.py` | Size the cryogenic LH2 tank and track its pressure/mass/venting over the mission (needs CoolProp) |
