@@ -6,3 +6,5 @@ pytest-cov
 CoolProp
 # Optional: the Class-II propeller RBF surrogate reads its training CSV with pandas.
 pandas
+# Optional: multi-objective optimization example (11b) uses pymoo (NSGA-II).
+pymoo
