@@ -39,7 +39,8 @@ class AircraftResults:
     TO_PP: Optional[float] = None            # take-off propulsive peak power [W]
     Max_PEng: Optional[float] = None         # climb/cruise engine peak power [W]
     Max_PEng_alt: Optional[float] = None     # altitude of Max_PEng [m]
-    engineRating: Optional[float] = None     # thermal powertrain SLS shaft rating [W]
+    engineRating: Optional[float] = None     # thermal powertrain SLS shaft rating [W] — TOTAL
+    #                                          (all engines); divide by the engine count for per-engine
 
     # --- energy / climate ---------------------------------------------------
     SourceEnergy: Optional[float] = None     # well-to-wake source energy [J]

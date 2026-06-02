@@ -37,6 +37,40 @@ def test_mass_breakdown_sums_to_wto():
 
 
 @pytest.mark.slow
+def test_power_timeseries_traditional():
+    aircraft = design_from_config(*sc.traditional_config())
+    ps = pp.power_timeseries(aircraft)
+    n = len(ps["time"])
+    for k in ("propulsive_power", "gt_power", "em_power"):
+        assert len(ps[k]) == n
+    # Sane magnitudes (MW-class, not GW) and no battery on a fuel-only aircraft.
+    assert 1e5 < np.nanmax(ps["propulsive_power"]) < 2e7
+    # Gas-turbine shaft power exceeds propulsive (gearbox + propeller losses).
+    assert np.nanmax(ps["gt_power"]) >= np.nanmax(ps["propulsive_power"])
+    assert np.allclose(ps["em_power"], 0.0)
+
+
+@pytest.mark.slow
+def test_power_timeseries_hybrid_has_electric_and_sane_magnitudes():
+    aircraft = design_from_config(*sc.hybrid_parallel_config())
+    ps = pp.power_timeseries(aircraft)
+    # Beta (mass fraction) must be read from the right ODE index even for the 5-state
+    # Class-II hybrid, so the propulsive power stays MW-class (regression for that bug).
+    assert np.nanmax(ps["propulsive_power"]) < 2e7
+    assert np.nanmax(ps["em_power"]) > 0.0          # the battery does supply power
+
+
+@pytest.mark.slow
+def test_write_timeseries_includes_power_columns(tmp_path):
+    aircraft = design_from_config(*sc.traditional_config())
+    path = aircraft.results().write_timeseries(tmp_path / "ts.csv")
+    with open(path) as f:
+        header = f.readline().strip().split(",")
+    for col in ("propulsive_power", "gt_power", "em_power"):
+        assert col in header
+
+
+@pytest.mark.slow
 def test_write_timeseries_dumps_all_states(tmp_path):
     aircraft = design_from_config(*sc.traditional_config())
     path = aircraft.results().write_timeseries(tmp_path / "ts.csv")

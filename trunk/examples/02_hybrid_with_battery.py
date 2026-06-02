@@ -35,8 +35,36 @@ def main():
     print("\nFigures:")
     design_dashboard(aircraft, "02_hybrid_dashboard.png", "Hybrid-electric design")
 
+    # Power flow over the mission: propulsive power and its split into gas-turbine and
+    # electric-motor (battery) power — totals for the whole aircraft.
+    _plot_power(aircraft, "02_power_timeseries.png", "Hybrid — mission power")
+
+    # The same propulsive / gas-turbine / electric-motor power columns are in the debug CSV.
+    import os
+    from common import OUTPUT_DIR
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    csv = results.write_timeseries(os.path.join(OUTPUT_DIR, "02_timeseries.csv"))
+    print(f"  saved {csv}  (all mission states + powers vs time)")
+
     # Try it: in common.py raise the cruise phi_end (e.g. 0.5 -> 0.7) and re-run.
     # The battery gets heavier while mission fuel drops — the core hybrid trade.
+
+
+def _plot_power(aircraft, name, title):
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        from PhlyGreen import postprocess as pp
+    except Exception:
+        return
+    from common import savefig
+    ax = pp.plot_power_timeseries(aircraft)
+    ax.set_title(title)
+    fig = ax.figure
+    fig.tight_layout()
+    savefig(fig, name)
+    plt.close(fig)
 
 
 if __name__ == "__main__":

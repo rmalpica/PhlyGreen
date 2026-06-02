@@ -27,8 +27,8 @@ needs pandas — each degrades gracefully if the dependency is missing.
 
 | Script | What it shows | Figures |
 |--------|---------------|---------|
-| `01_design_traditional.py` | Build → configure → size a fuel-only aircraft; full results + CSV time-series dump | dashboard |
-| `02_hybrid_with_battery.py` | A parallel hybrid-electric design with a battery pack (energy + SOC) | dashboard |
+| `01_design_traditional.py` | Build → configure → size a fuel-only aircraft; full results + input snapshot + CSV dump | dashboard, power time-series |
+| `02_hybrid_with_battery.py` | A parallel hybrid-electric design with a battery pack (energy + SOC) | dashboard, power time-series |
 | `03_typed_config_and_results.py` | Typed config, validation, config↔dict, results as a dict | mass groups |
 | `04_flight_profile_and_custom_segment.py` | Query altitude/speed/phi(t); register a new segment type | profile timeline |
 | `05_powertrain_graph_and_efficiency_models.py` | Power-balance graph; operating-point efficiencies; GT/EM/propeller performance maps | component maps |

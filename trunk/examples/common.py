@@ -289,7 +289,11 @@ def print_results(aircraft, title="Design results"):
     if r.WingSurface is not None:
         print(f"  Wing area         : {r.WingSurface:10.1f} m^2")
     if r.engineRating is not None:
-        print(f"  Engine rating     : {r.engineRating/1000:10.1f} kW")
+        # engineRating is the TOTAL thermal shaft rating (all engines summed).
+        n_eng = (aircraft.PropellerInput or {}).get('Number of Engines', 1) \
+            if getattr(aircraft, 'PropellerInput', None) else 1
+        print(f"  Engine rating     : {r.engineRating/1000:10.1f} kW (total, all engines"
+              + (f"; {r.engineRating/1000/n_eng:.1f} kW/engine for {int(n_eng)})" if n_eng and n_eng > 1 else ")"))
     if r.pack_energy is not None:
         print(f"  Battery pack      : {r.pack_energy/3.6e6:.1f} kWh, "
               f"{r.pack_power_max/1000:.1f} kW (S{r.S_number:.0f}/P{r.P_number:.0f})")

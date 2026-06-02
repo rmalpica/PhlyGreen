@@ -45,10 +45,32 @@ def main():
     print("\nFigures:")
     design_dashboard(aircraft, "01_traditional_dashboard.png", "Traditional design")
 
-    # 6. For debugging you can dump *every* time-evolving mission variable to a CSV.
+    # 5b. Power flow over the mission: propulsive, gas-turbine and electric-motor power
+    #     (totals for the whole aircraft; the electric motor is zero for a fuel-only design).
+    _plot_power(aircraft, "01_power_timeseries.png", "Traditional — mission power")
+
+    # 6. For debugging you can dump *every* time-evolving mission variable to a CSV — including
+    #    the propulsive / gas-turbine / electric-motor power columns.
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     csv = aircraft.results().write_timeseries(os.path.join(OUTPUT_DIR, "01_timeseries.csv"))
-    print(f"  saved {csv}  (all mission states vs time)")
+    print(f"  saved {csv}  (all mission states + powers vs time)")
+
+
+def _plot_power(aircraft, name, title):
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        from PhlyGreen import postprocess as pp
+    except Exception:
+        return
+    from common import savefig
+    ax = pp.plot_power_timeseries(aircraft)
+    ax.set_title(title)
+    fig = ax.figure
+    fig.tight_layout()
+    savefig(fig, name)
+    plt.close(fig)
 
 
 if __name__ == "__main__":

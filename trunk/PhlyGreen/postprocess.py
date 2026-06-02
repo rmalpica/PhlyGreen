@@ -28,7 +28,12 @@ def mission_timeseries(aircraft):
 
     time = np.concatenate([s.t for s in sols])
     y_fuel = np.concatenate([s.y[0] for s in sols])
-    beta = np.concatenate([s.y[-1] for s in sols])
+    # Mass fraction (Beta) index in the ODE state vector: [Ef, Beta] (2 states) ->
+    # index 1; [Ef, EBat, Beta] (Class-I hybrid) and [Ef, EBat, Beta, it, T] (Class-II
+    # hybrid) -> index 2. (For the 5-state case y[-1] is the temperature, not Beta.)
+    nstates = sols[0].y.shape[0]
+    beta_idx = 1 if nstates == 2 else 2
+    beta = np.concatenate([s.y[beta_idx] for s in sols])
 
     out = {
         "time": time,
@@ -67,6 +72,45 @@ def mission_timeseries(aircraft):
     return out
 
 
+def power_timeseries(aircraft):
+    """Mission power flow: propulsive, gas-turbine and electric-motor power vs time.
+
+    Returns equal-length arrays ``time`` [s], ``propulsive_power`` [W] (total shaft power the
+    propellers must deliver), ``gt_power`` [W] (gas-turbine shaft power) and ``em_power`` [W]
+    (electric-motor / battery power). These come straight from the powertrain power-ratio solve
+    (``Powertrain.Traditional`` / ``Powertrain.Hybrid``) at every mission time point, so they
+    are correct for both Class-I (constant) and Class-II efficiencies and need no surrogates.
+
+    All powers are **totals for the whole aircraft** (summed over the engines). For a fuel-only
+    aircraft ``em_power`` is zero; for configurations without a gas turbine
+    (Hydrogen / FuelCellBattery) ``gt_power``/``em_power`` are returned as ``NaN``.
+    """
+    ts = mission_timeseries(aircraft)
+    t, alt, vel = ts["time"], ts["altitude"], ts["velocity"]
+    pe, beta = ts["power_excess"], ts["mass_fraction"]
+    phi = ts.get("phi", np.zeros_like(t))
+
+    perf, pt = aircraft.performance, aircraft.powertrain
+    WTO, WS, DISA = aircraft.weight.WTO, aircraft.DesignWTOoS, aircraft.mission.DISA
+
+    PP = np.array([WTO * perf.PoWTO(WS, beta[i], pe[i], 1, alt[i], DISA, vel[i], 'TAS')
+                   for i in range(len(t))])
+    config = getattr(aircraft, "Configuration", None)
+    if config == "Hybrid":
+        PR = np.array([pt.Hybrid(float(phi[i]), alt[i], vel[i], PP[i]) for i in range(len(t))])
+        gt_power = PR[:, 1] * PP     # gas-turbine shaft power
+        em_power = PR[:, 5] * PP     # battery / electric-motor power
+    elif config == "Traditional":
+        PR = np.array([pt.Traditional(alt[i], vel[i], PP[i]) for i in range(len(t))])
+        gt_power = PR[:, 1] * PP     # all propulsion is thermal
+        em_power = np.zeros_like(PP)
+    else:                            # Hydrogen / FuelCellBattery: no gas turbine
+        gt_power = np.full_like(PP, np.nan)
+        em_power = np.full_like(PP, np.nan)
+
+    return {"time": t, "propulsive_power": PP, "gt_power": gt_power, "em_power": em_power}
+
+
 def component_timeseries(aircraft, n_engines=None, gt_design_hp=None, em_design=None,
                          propeller_rpm=1200.0):
     """Evaluate the Class-II propulsion models along the flown mission.
@@ -74,8 +118,9 @@ def component_timeseries(aircraft, n_engines=None, gt_design_hp=None, em_design=
     Walks the converged mission timeline and, at each instant, computes the propulsive power
     and its thermal/electric split (via the powertrain graph), then evaluates the gas-turbine
     response surface, the d-q electric-motor model and the propeller RBF surrogate. Returns
-    per-time arrays: component efficiencies, gas-turbine throttle (used/available power),
-    propeller pitch, motor rpm, and the thermal/electric shaft powers.
+    per-time arrays: ``propulsive_power``/``gt_power``/``em_power`` [W] (the power flow, also
+    available cheaply via :func:`power_timeseries`), the component efficiencies, the gas-turbine
+    throttle (used/available power), the propeller pitch and the motor rpm.
 
     By default the GT/EM nominal powers and the engine count are taken from the *designed*
     aircraft (``powertrain.gt_design_power``/``em_design_power``/``n_engines``), so the
@@ -148,7 +193,7 @@ def component_timeseries(aircraft, n_engines=None, gt_design_hp=None, em_design=
             eta_em.append(np.nan)
 
     out = {
-        "time": t, "p_thermal": p_thermal, "p_electric": p_electric,
+        "time": t, "propulsive_power": PP, "gt_power": p_thermal, "em_power": p_electric,
         "eta_gas_turbine": np.array(eta_gt), "gt_throttle": np.array(gt_throttle),
         "eta_electric_motor": np.array(eta_em), "em_throttle": np.array(em_throttle),
         "rpm": np.full_like(t, em_design[2]),
@@ -184,6 +229,8 @@ def timeseries_table(aircraft, include_components=True):
       ``mission.integral_solution`` — nothing is lost or smoothed;
     * the derived mission quantities from :func:`mission_timeseries` (altitude, velocity,
       power excess, SOC, phi, …);
+    * the power flow from :func:`power_timeseries` (``propulsive_power``, ``gt_power``,
+      ``em_power`` [W]);
     * the Class-II component quantities from :func:`component_timeseries` when applicable
       (gas-turbine / electric-motor / propeller efficiencies, throttles, shaft powers) —
       skipped silently for non-hybrid configurations or if the optional models are missing.
@@ -200,6 +247,19 @@ def timeseries_table(aircraft, include_components=True):
             data.setdefault(f"state_{i}", np.concatenate([s.y[i] for s in sols]))
 
     n = len(data["time"])
+
+    # Power flow (propulsive / gas-turbine / electric-motor power) — cheap and always available
+    # for Traditional/Hybrid, no surrogates needed.
+    try:
+        for k, v in power_timeseries(aircraft).items():
+            if k == "time":
+                continue
+            arr = np.asarray(v)
+            if arr.ndim == 1 and arr.shape[0] == n:
+                data.setdefault(k, arr)
+    except Exception:
+        pass
+
     if include_components:
         try:
             cs = component_timeseries(aircraft)
@@ -233,6 +293,22 @@ def write_timeseries(aircraft, path, include_components=True):
     matrix = np.column_stack(columns) if columns else np.empty((0, 0))
     np.savetxt(path, matrix, delimiter=",", header=",".join(header), comments="")
     return path
+
+
+def plot_power_timeseries(aircraft, ax=None):
+    """Plot propulsive, gas-turbine and electric-motor power vs time (totals, kW)."""
+    import matplotlib.pyplot as plt
+    ps = power_timeseries(aircraft)
+    t = ps["time"] / 60.0
+    if ax is None:
+        _, ax = plt.subplots(figsize=(8, 4.5))
+    ax.plot(t, ps["propulsive_power"] / 1e3, color="tab:green", label="propulsive")
+    ax.plot(t, ps["gt_power"] / 1e3, color="tab:red", label="gas turbine")
+    if np.any(np.nan_to_num(ps["em_power"]) != 0):
+        ax.plot(t, ps["em_power"] / 1e3, color="tab:blue", label="electric motor")
+    ax.set_xlabel("time [min]"); ax.set_ylabel("power [kW] (total)")
+    ax.grid(alpha=0.3); ax.legend()
+    return ax
 
 
 def plot_component_timeseries(aircraft, **kwargs):

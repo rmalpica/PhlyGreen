@@ -323,7 +323,7 @@ class Aircraft:
         print(' ')
         
         print(f'Sizing phase for thermal powertrain: ', 'Climb/Cruise peak power (adjusted with altitude power lapse)' if self.mission.Max_PEng > self.mission.TO_PP else 'Takeoff peak power'  )
-        print(f'Thermal powertrain rating shaft power SLS rating: {self.powertrain.engineRating/1000.:.1f} [kW]')
+        print(f'Thermal powertrain rating shaft power SLS rating (total, all engines): {self.powertrain.engineRating/1000.:.1f} [kW]')
         print(' ')
 
         if self.Configuration == 'Hybrid':

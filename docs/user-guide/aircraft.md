@@ -107,9 +107,10 @@ every input block (mission, aerodynamics, constraints, energy, cell, flight segm
 design is fully traceable.
 
 For plots and time histories use `PhlyGreen.postprocess` — `mission_timeseries`,
+`power_timeseries` (propulsive / gas-turbine / electric-motor power, totals for the aircraft),
 `component_timeseries`, and the ready-made `plot_mission_profile`, `plot_energy_timeseries`,
-`plot_constraint_diagram`, `plot_mass_breakdown`, `plot_component_timeseries`,
-`plot_tank_state`.
+`plot_power_timeseries`, `plot_constraint_diagram`, `plot_mass_breakdown`,
+`plot_component_timeseries`, `plot_tank_state`.
 
 ---
 
