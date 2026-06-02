@@ -39,6 +39,7 @@ def main():
         aircraft = design_from_config(flags, kwargs)
         results = aircraft.results().to_dict()
         results.pop("extras", None)
+        results.pop("inputs", None)   # large input snapshot; not part of the frozen outputs
         path = os.path.join(GOLDEN_DIR, f"{name}.json")
         with open(path, "w") as f:
             json.dump(results, f, indent=2, sort_keys=True)

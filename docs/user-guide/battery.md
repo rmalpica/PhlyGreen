@@ -319,13 +319,24 @@ battery.T  += dTdt * dt
 
 ---
 
+## Thermal-management mass in the take-off weight
+
+For a Class-II battery the **in-flight** thermal-management (cooling) system *is* sized and
+included in the take-off-weight balance. During the mission the cell electro-thermal model
+gives the waste heat generated at each instant; the weight loop takes the **peak in-flight
+pack heat** and sizes a cooling-system mass from it with the same heat-exchanger
+specific-performance model as the fuel cell (`Q_peak / (100 · ΔT)`, with ΔT from the cell's
+maximum operating temperature down to ambient). It appears as the `cooling` item in the mass
+breakdown / `WHeat_Exchanger`. (The Class-I battery has no thermal model, so it carries no
+cooling mass.) The separate *ground fast-charge* cooling load from
+`thermal_degradation_analysis` is a post-design study and is **not** added to the WTO.
+
 ## Limitations
 
 - Single‑node temperature model (no spatial gradients).  
-- Ageing and ground recharge/cooling are modelled only in the **opt‑in post‑design** analysis
-  (Wang/Miner cycle life, cold‑plate cooling), not inside the in‑flight sizing loop, which
+- Ageing and the ground recharge/cooling load are modelled only in the **opt‑in post‑design**
+  analysis (Wang/Miner cycle life, cold‑plate cooling); the in‑flight sizing loop itself
   remains discharge‑only.  
-- The cooling‑system **mass** is reported (peak cooling power) but not yet added to the WTO.  
 
 ---
 

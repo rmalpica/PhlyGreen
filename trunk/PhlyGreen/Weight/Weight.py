@@ -66,7 +66,12 @@ class Weight:
         self.WPayload = self.aircraft.MissionInput['Payload Weight']
         self.WCrew = self.aircraft.MissionInput['Crew Weight']
         self.ef = self.aircraft.EnergyInput['Ef']
-        self.final_reserve = self.aircraft.EnergyInput.get('Contingency Fuel', 0)
+        # Contingency / final-reserve fuel: a fixed input mass if given, else a fraction of the
+        # mission fuel applied each weight iteration (see the weight loops). Store the input
+        # separately so the fallback is recomputed on the *converged* fuel, not frozen at the
+        # first Brent probe.
+        self._contingency = self.aircraft.EnergyInput.get('Contingency Fuel', 0)
+        self.final_reserve = self._contingency
 
         if self.Class == 'II':
             self.AircraftComponents = FLOPS_model(self.aircraft)
@@ -202,9 +207,8 @@ class Weight:
                                                     + self.AircraftComponents.Propeller.propellermass) 
 
 
-                if self.final_reserve == 0:
-                    self.final_reserve = 0.05*self.Wf
-                
+                self.final_reserve = self._contingency if self._contingency else 0.05 * self.Wf
+
                 return (self.Wf + self.final_reserve + self.WPT + self.WStructure + self.WPayload + self.WCrew - WTO)
 
         self.WTO = self._solve_wto(func, 1000, 300000, xtol=0.1)
@@ -289,9 +293,8 @@ class Weight:
                     + c.Paint.paintmass + c.SystemEquipment.system_equipment_mass
                     + c.Propeller.propellermass)
 
-            # 6. Reserve (default 5% of usable H2 if none specified) and sum.
-            if not self.final_reserve:
-                self.final_reserve = 0.05 * self.WH2_Fuel
+            # 6. Reserve (fixed input mass, else 5% of the usable H2) and sum.
+            self.final_reserve = self._contingency if self._contingency else 0.05 * self.Wf
 
             return (self.WStructure + self.WPT + self.WH2_Fuel + self.WTank
                     + self.WHeat_Exchanger + self.WPayload + self.WCrew
@@ -391,8 +394,7 @@ class Weight:
                     + c.Paint.paintmass + c.SystemEquipment.system_equipment_mass
                     + c.Propeller.propellermass)
 
-            if not self.final_reserve:
-                self.final_reserve = 0.05 * self.WH2_Fuel
+            self.final_reserve = self._contingency if self._contingency else 0.05 * self.Wf
 
             return (self.WStructure + self.WPT + self.WBat + self.WH2_Fuel + self.WTank
                     + self.WHeat_Exchanger + self.WPayload + self.WCrew
@@ -469,9 +471,20 @@ class Weight:
                                                     + self.AircraftComponents.Paint.paintmass + self.AircraftComponents.SystemEquipment.system_equipment_mass
                                                     + self.AircraftComponents.Propeller.propellermass) 
 
-                if self.final_reserve == 0:
-                    self.final_reserve = 0.05*self.Wf
+                # Battery thermal-management (cooling) mass from the peak *in-flight* battery
+                # waste heat (Class-II battery only; the Class-I battery has no thermal model).
+                # Same heat-exchanger specific-performance model as the fuel cell.
+                Q_bat = self.aircraft.mission.Max_Bat_Thermal_Pwr
+                if Q_bat and Q_bat > 0:
+                    T_lim = getattr(self.aircraft.mission, 'T_battery_limit', 50.0) + 273.15
+                    delta_T = max(T_lim - 288.15, 10.0)          # reject to ~ISA ambient
+                    self.WHeat_Exchanger = Q_bat / (100.0 * delta_T)
+                else:
+                    self.WHeat_Exchanger = 0.0
 
-                return (self.Wf + self.final_reserve + self.WBat + self.WPT + self.WStructure + self.WPayload + self.WCrew - WTO)
+                self.final_reserve = self._contingency if self._contingency else 0.05 * self.Wf
+
+                return (self.Wf + self.final_reserve + self.WBat + self.WPT + self.WStructure
+                        + self.WHeat_Exchanger + self.WPayload + self.WCrew - WTO)
         # iterate the weight estimator with Brent's method until WTO converges (robust bracketing)
         self.WTO = self._solve_wto(func, 10000, 60000, xtol=0.1)

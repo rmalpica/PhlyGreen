@@ -45,11 +45,13 @@ class Mission:
         self.beta0 = None 
         self.DISA = 0
         self.WTO = None
-        self.Max_PBat = -1  
-        self.Max_PEng = -1  
+        self.Max_PBat = -1
+        self.Max_PEng = -1
         self.Max_PEng_alt = 0
         self.TO_PBat = 0
         self.TO_PP = 0
+        # peak in-flight battery waste heat [W] (Class-II battery), for TMS sizing
+        self.Max_Bat_Thermal_Pwr = -1.0
         # hydrogen fuel-cell mission tracking
         self.Max_FC_Thermal_Pwr = 0.0
         self.Max_FC_Thermal_Pwr_alt = 0.0
@@ -1068,17 +1070,41 @@ class Mission:
         # compute peak Propulsive power along mission
         times = []
         beta = []
+        it_arr = []
+        T_arr = []
         for array in self.integral_solution:
             times = np.concatenate([times, array.t])
             beta = np.concatenate([beta, array.y[2]])
+            it_arr = np.concatenate([it_arr, array.y[3]])
+            T_arr = np.concatenate([T_arr, array.y[4]])
 
-        self.MissionTimes = times 
-        
+        self.MissionTimes = times
+
         PP = np.array([WTO * self.aircraft.performance.PoWTO(self.aircraft.DesignWTOoS,beta[i],self.profile.PowerExcess(times[i]),1,self.profile.Altitude(times[i]),self.DISA,self.profile.Velocity(times[i]),'TAS') for i in range(len(times))])
         PRatio = np.array([self.aircraft.powertrain.Hybrid(self.aircraft.mission.profile.SuppliedPowerRatio(times[i]),self.profile.Altitude(times[i]),self.profile.Velocity(times[i]),PP[i]) for i in range(len(times))] )
         self.Max_PEng = np.max(np.multiply(PP,PRatio[:,1]))
-        self.Max_PEng_alt = self.profile.Altitude(times[np.argmax(np.multiply(PP,PRatio[:,1]))]) #altitude at which peak power occurs 
+        self.Max_PEng_alt = self.profile.Altitude(times[np.argmax(np.multiply(PP,PRatio[:,1]))]) #altitude at which peak power occurs
         self.Max_PBat = np.max(np.multiply(PP,PRatio[:,5]))
 
+        # Peak in-flight battery waste heat (pack level), for sizing the battery thermal-
+        # management system. Re-walk the converged solution and evaluate the cell electro-
+        # thermal model at each point (the heat generated is what the cooling system must
+        # reject); reuse the propulsive-power split already computed above.
+        b = self.aircraft.battery
+        q_pack_peak = 0.0
+        for i in range(len(times)):
+            try:
+                b.T = T_arr[i]
+                b.it = it_arr[i] / 3600
+                b.i = b.Power_2_current(PP[i] * PRatio[i, 5])
+                alt = self.profile.Altitude(times[i])
+                Mach = Speed.TAS2Mach(self.profile.Velocity(times[i]), alt, DISA=self.DISA)
+                Tamb = ISA.atmosphere.T0std(alt, Mach)
+                rho = ISA.atmosphere.RHO0std(alt, Mach, self.DISA)
+                _, q_cell = b.heatLoss(Tamb, rho)
+                q_pack_peak = max(q_pack_peak, q_cell * b.cells_total)
+            except Exception:
+                continue
+        self.Max_Bat_Thermal_Pwr = q_pack_peak
 
         return self.Ef[-1], self.EBat[-1]
