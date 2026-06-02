@@ -322,10 +322,12 @@ battery.T  += dTdt * dt
 ## Thermal-management mass in the take-off weight
 
 For a Class-II battery the **in-flight** thermal-management (cooling) system *is* sized and
-included in the take-off-weight balance. During the mission the cell electro-thermal model
-gives the waste heat generated at each instant; the weight loop takes the **peak in-flight
-pack heat** \(Q_{\text{peak}}\) and sizes the cooling mass from a **specific power**
-(heat rejected per kg of heat-exchanger system):
+included in the take-off-weight balance. The pack is held at its maximum operating temperature
+by a thermostat: below the ceiling the heat is absorbed adiabatically by the thermal mass and
+nothing is rejected, and only once the pack is **clamped at the ceiling** does the cooling
+system reject the generated heat. The weight loop therefore sizes the cooling mass from the
+**peak heat rejected while at the ceiling** \(Q_{\text{peak}}\) (zero if the pack never reaches
+its limit), via a **specific power** (heat rejected per kg of heat-exchanger system):
 
 \[
 W_{\text{cool}} = \frac{Q_{\text{peak}}}{\text{HEX specific power [W/kg]}} .

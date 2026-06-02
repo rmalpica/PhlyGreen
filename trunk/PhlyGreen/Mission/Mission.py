@@ -1086,13 +1086,19 @@ class Mission:
         self.Max_PEng_alt = self.profile.Altitude(times[np.argmax(np.multiply(PP,PRatio[:,1]))]) #altitude at which peak power occurs
         self.Max_PBat = np.max(np.multiply(PP,PRatio[:,5]))
 
-        # Peak in-flight battery waste heat (pack level), for sizing the battery thermal-
-        # management system. Re-walk the converged solution and evaluate the cell electro-
-        # thermal model at each point (the heat generated is what the cooling system must
-        # reject); reuse the propulsive-power split already computed above.
+        # Peak battery heat the thermal-management system actually has to reject, for TMS
+        # sizing. With the bang-bang thermostat the cooling only acts when the pack is held at
+        # its maximum operating temperature (T = ceiling, dT/dt = 0); below the ceiling the
+        # heat is absorbed adiabatically by the thermal mass and nothing is rejected. So we
+        # take the peak generated heat *only over the points clamped at the ceiling* (reusing
+        # the propulsive-power split computed above). If the pack never reaches the ceiling,
+        # no cooling is required and the TMS heat is zero.
+        ceiling = 273.15 + self.T_battery_limit
         b = self.aircraft.battery
         q_pack_peak = 0.0
         for i in range(len(times)):
+            if T_arr[i] < ceiling - 0.5:        # cooling is active only at the ceiling
+                continue
             try:
                 b.T = T_arr[i]
                 b.it = it_arr[i] / 3600
