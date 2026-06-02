@@ -148,13 +148,16 @@ class AircraftResults:
         """Print :meth:`input_summary` to stdout."""
         print(self.input_summary())
 
-    def write_timeseries(self, path, include_components=True):
+    def write_timeseries(self, path, include_components="auto"):
         """Dump every time-evolving mission variable to a CSV file (debug helper).
 
         Writes one row per solver time point with the raw ODE states, the derived mission
-        quantities (altitude, velocity, SOC, phi, …) and, when applicable, the Class-II
-        component quantities (efficiencies, throttles, shaft powers). Requires the results to
-        have been built via :meth:`from_aircraft` / :meth:`Aircraft.results`. Returns the path.
+        quantities (altitude, velocity, SOC, phi, …), the power flow (propulsive / gas-turbine
+        / electric-motor power) and the Class-II component quantities. ``include_components``
+        defaults to ``"auto"`` — only components that actually used a Class-II model in this
+        design are added (a constant-efficiency design loads no surrogates); pass ``True`` to
+        force all or ``False`` to omit. Requires the results to have been built via
+        :meth:`from_aircraft` / :meth:`Aircraft.results`. Returns the path.
         """
         if self._aircraft is None:
             raise ValueError(

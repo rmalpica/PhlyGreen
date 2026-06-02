@@ -71,6 +71,24 @@ def test_write_timeseries_includes_power_columns(tmp_path):
 
 
 @pytest.mark.slow
+def test_write_timeseries_auto_detects_class_ii_components(tmp_path):
+    aircraft = design_from_config(*sc.traditional_config())
+    # A constant-efficiency design has no Class-II components.
+    assert pp.class_ii_components(aircraft) == set()
+    # "auto" (default): power columns present, but NO surrogate-based component columns.
+    auto = aircraft.results().write_timeseries(tmp_path / "auto.csv")
+    with open(auto) as f:
+        header = f.readline().strip().split(",")
+    assert {"propulsive_power", "gt_power", "em_power"}.issubset(header)
+    assert "eta_gas_turbine" not in header and "eta_propeller" not in header
+    # Forcing the components adds them.
+    forced = aircraft.results().write_timeseries(tmp_path / "forced.csv", include_components=True)
+    with open(forced) as f:
+        fheader = f.readline().strip().split(",")
+    assert "eta_gas_turbine" in fheader
+
+
+@pytest.mark.slow
 def test_write_timeseries_dumps_all_states(tmp_path):
     aircraft = design_from_config(*sc.traditional_config())
     path = aircraft.results().write_timeseries(tmp_path / "ts.csv")

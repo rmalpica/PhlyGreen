@@ -40,14 +40,13 @@ def main():
     _plot_power(aircraft, "02_power_timeseries.png", "Hybrid — mission power")
 
     # The propulsive / gas-turbine / electric-motor power columns are in the debug CSV, along
-    # with the Class-II battery states (SOC, temperature). include_components=False because the
-    # propulsion here uses constant GT/EM efficiency (only the battery is Class-II), so the
-    # GT/EM/propeller surrogate columns — and loading those surrogates — are not relevant.
+    # with the Class-II battery states (SOC, temperature). write_timeseries auto-detects which
+    # components used a Class-II model: here only the battery is Class-II (the GT/EM use constant
+    # efficiency), so no GT/EM/propeller surrogate is loaded.
     import os
     from common import OUTPUT_DIR
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    csv = results.write_timeseries(os.path.join(OUTPUT_DIR, "02_timeseries.csv"),
-                                   include_components=False)
+    csv = results.write_timeseries(os.path.join(OUTPUT_DIR, "02_timeseries.csv"))
     print(f"  saved {csv}  (mission states + powers vs time)")
 
     # Try it: in common.py raise the cruise phi_end (e.g. 0.5 -> 0.7) and re-run.

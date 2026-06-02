@@ -51,11 +51,10 @@ def main():
 
     # 6. For debugging you can dump the time-evolving mission variables to a CSV — the raw ODE
     #    states, the derived mission quantities and the propulsive / gas-turbine / electric-motor
-    #    power. include_components=False here because this is a *constant-efficiency* design, so
-    #    the Class-II GT/EM/propeller surrogate columns (and their loading) are not relevant.
+    #    power. write_timeseries automatically detects which components used a Class-II model;
+    #    this constant-efficiency design has none, so no surrogate is loaded.
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    csv = aircraft.results().write_timeseries(os.path.join(OUTPUT_DIR, "01_timeseries.csv"),
-                                              include_components=False)
+    csv = aircraft.results().write_timeseries(os.path.join(OUTPUT_DIR, "01_timeseries.csv"))
     print(f"  saved {csv}  (mission states + powers vs time)")
 
 

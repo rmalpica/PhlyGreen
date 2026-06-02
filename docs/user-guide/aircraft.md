@@ -98,7 +98,9 @@ results.to_dict()                       # JSON-serializable dict of every field
 print(results.input_summary())          # a snapshot of *what was solved* (all inputs/flags)
 results.inputs                          # the same snapshot as a dict
 
-results.write_timeseries("debug.csv")   # dump every time-evolving mission variable
+results.write_timeseries("debug.csv")   # dump every time-evolving variable (raw states,
+#                                         derived quantities, propulsive/GT/EM power, and —
+#                                         auto-detected — the Class-II component columns)
 ```
 
 `AircraftResults` (`PhlyGreen/results.py`) collects masses, geometry, powers, energy/climate

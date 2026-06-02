@@ -111,28 +111,55 @@ def power_timeseries(aircraft):
     return {"time": t, "propulsive_power": PP, "gt_power": gt_power, "em_power": em_power}
 
 
-def component_timeseries(aircraft, n_engines=None, gt_design_hp=None, em_design=None,
-                         propeller_rpm=1200.0):
+def class_ii_components(aircraft):
+    """Return the set of powertrain components that used a **Class-II** (operating-point
+    dependent) efficiency model in this design.
+
+    Determined by inspecting the powertrain's per-component efficiency models: a
+    :class:`~PhlyGreen.Systems.Powertrain.efficiency.ConstantEfficiency` is Class-I, anything
+    else is Class-II. An externally-set ``em_model`` / ``fc_model`` also counts as Class-II.
+    Used to decide *automatically* which component time series are meaningful for a given
+    design (so a constant-efficiency design pulls in no surrogate columns).
+    """
+    from .Systems.Powertrain.efficiency import ConstantEfficiency
+    pt = getattr(aircraft, "powertrain", None)
+    found = set()
+    if pt is None:
+        return found
+    for name, model in (getattr(pt, "efficiency", None) or {}).items():
+        if not isinstance(model, ConstantEfficiency):
+            found.add(name)
+    if getattr(pt, "em_model", None) is not None:
+        found.add("electric_motor")
+    if getattr(pt, "fc_model", None) is not None:
+        found.add("fuel_cell")
+    return found
+
+
+def component_timeseries(aircraft, components=None, n_engines=None, gt_design_hp=None,
+                         em_design=None, propeller_rpm=1200.0):
     """Evaluate the Class-II propulsion models along the flown mission.
 
-    Walks the converged mission timeline and, at each instant, computes the propulsive power
-    and its thermal/electric split (via the powertrain graph), then evaluates the gas-turbine
-    response surface, the d-q electric-motor model and the propeller RBF surrogate. Returns
-    per-time arrays: ``propulsive_power``/``gt_power``/``em_power`` [W] (the power flow, also
-    available cheaply via :func:`power_timeseries`), the component efficiencies, the gas-turbine
-    throttle (used/available power), the propeller pitch and the motor rpm.
+    Walks the converged mission timeline and computes the power flow
+    (``propulsive_power``/``gt_power``/``em_power`` [W], also available cheaply via
+    :func:`power_timeseries`) plus, for each requested component, its Class-II model outputs:
+    gas-turbine efficiency & throttle, electric-motor efficiency & throttle (+ rpm), and
+    propeller efficiency & pitch.
+
+    ``components`` selects which Class-II models to evaluate — a subset of
+    ``{'gas_turbine', 'electric_motor', 'propeller'}``. ``None`` (default) evaluates all three
+    (forced exploration). Only the requested components load their surrogate, so e.g. the
+    propeller RBF is *not* loaded unless the propeller is requested.
 
     By default the GT/EM nominal powers and the engine count are taken from the *designed*
-    aircraft (``powertrain.gt_design_power``/``em_design_power``/``n_engines``), so the
-    throttle is the real result for the sized engines; pass overrides to explore other sizes.
-
-    Requires the optional GT artifact and (for the propeller) pandas; propeller fields are
-    omitted if unavailable.
+    aircraft (``powertrain.gt_design_power``/``em_design_power``/``n_engines``); pass overrides
+    to explore other sizes. A component is skipped silently if its model/data is unavailable.
     """
-    from .Systems.Powertrain.efficiency import OperatingPoint, MotorEfficiencyModel
-    from .Systems.Powertrain.gas_turbine_surrogate import GasTurbineResponseSurface
     import PhlyGreen.Utilities.Units as Units
     import PhlyGreen.Utilities.Speed as Speed
+
+    requested = ({'gas_turbine', 'electric_motor', 'propeller'}
+                 if components is None else set(components))
 
     ts = mission_timeseries(aircraft)
     t, alt, vel = ts["time"], ts["altitude"], ts["velocity"]
@@ -158,66 +185,81 @@ def component_timeseries(aircraft, n_engines=None, gt_design_hp=None, em_design=
         p_thermal = PR[:, 1] * PP    # gas-turbine shaft power (all propulsion is thermal)
         p_electric = np.zeros_like(PP)
 
-    # Nominal powers: use the designed Class-II values if available, else a sensible default.
-    if gt_design_hp is None:
-        if getattr(pt, "gt_design_power", None):
-            gt_design_hp = Units.wTohp(pt.gt_design_power) / n_engines
-        else:
-            rating = getattr(pt, "engineRating", None) or float(np.max(p_thermal)) or 1.0
-            gt_design_hp = 1.5 * Units.wTohp(rating) / n_engines
-    if em_design is None:
-        if getattr(pt, "em_design_power", None):
-            em_kw = (pt.em_design_power / n_engines) / 1000.0
-        else:
-            em_kw = max(float(np.max(p_electric)) / n_engines / 1000.0, 1.0)
-        em_design = (em_kw, 800.0, 11000.0)
+    out = {"time": t, "propulsive_power": PP, "gt_power": p_thermal, "em_power": p_electric}
 
-    gt = GasTurbineResponseSurface()
-    em = MotorEfficiencyModel(*em_design, n_engines=n_engines)
-    em_nominal_total = em_design[0] * 1000.0 * n_engines   # [W]
+    # --- Gas turbine (Class-II response surface) ---
+    if 'gas_turbine' in requested:
+        try:
+            from .Systems.Powertrain.gas_turbine_surrogate import GasTurbineResponseSurface
+            if gt_design_hp is None:
+                if getattr(pt, "gt_design_power", None):
+                    gt_design_hp = Units.wTohp(pt.gt_design_power) / n_engines
+                else:
+                    rating = getattr(pt, "engineRating", None) or float(np.max(p_thermal)) or 1.0
+                    gt_design_hp = 1.5 * Units.wTohp(rating) / n_engines
+            gt = GasTurbineResponseSurface()
+            eta_gt, gt_throttle = [], []
+            for i in range(len(t)):
+                a = Speed.soundspeed(alt[i], 0.0)
+                mach = vel[i] / a if a > 0 else 0.0
+                req_hp = Units.wTohp(p_thermal[i]) / n_engines
+                e, _, pmax, _ = gt.predict(gt_design_hp, Units.mToft(alt[i]), mach, req_hp)
+                eta_gt.append(e)
+                # GT throttle = required / available power (1.0 means power-limited here).
+                gt_throttle.append(min(req_hp / pmax, 1.0) if pmax > 0 else 0.0)
+            out["eta_gas_turbine"] = np.array(eta_gt)
+            out["gt_throttle"] = np.array(gt_throttle)
+        except Exception:
+            pass
 
-    eta_gt, gt_throttle, eta_em, em_throttle = [], [], [], []
-    for i in range(len(t)):
-        a = Speed.soundspeed(alt[i], 0.0)
-        mach = vel[i] / a if a > 0 else 0.0
-        req_hp = Units.wTohp(p_thermal[i]) / n_engines
-        e, _, pmax, _ = gt.predict(gt_design_hp, Units.mToft(alt[i]), mach, req_hp)
-        eta_gt.append(e)
-        # GT throttle = required / available power (1.0 means power-limited at this point).
-        gt_throttle.append(min(req_hp / pmax, 1.0) if pmax > 0 else 0.0)
-        # EM throttle = electric demand / nominal; efficiency only when the motor is loaded.
-        em_throttle.append(p_electric[i] / em_nominal_total if em_nominal_total > 0 else 0.0)
-        if p_electric[i] > 1.0:
-            eta_em.append(em.eta(OperatingPoint(power=p_electric[i], rpm=em_design[2])))
-        else:
-            eta_em.append(np.nan)
+    # --- Electric motor (Class-II d-q model) ---
+    if 'electric_motor' in requested:
+        try:
+            from .Systems.Powertrain.efficiency import OperatingPoint, MotorEfficiencyModel
+            if em_design is None:
+                if getattr(pt, "em_design_power", None):
+                    em_kw = (pt.em_design_power / n_engines) / 1000.0
+                else:
+                    em_kw = max(float(np.max(p_electric)) / n_engines / 1000.0, 1.0)
+                em_design = (em_kw, 800.0, 11000.0)
+            em = MotorEfficiencyModel(*em_design, n_engines=n_engines)
+            em_nominal_total = em_design[0] * 1000.0 * n_engines   # [W]
+            eta_em, em_throttle = [], []
+            for i in range(len(t)):
+                # EM throttle = electric demand / nominal; efficiency only when loaded.
+                em_throttle.append(p_electric[i] / em_nominal_total if em_nominal_total > 0 else 0.0)
+                if p_electric[i] > 1.0:
+                    eta_em.append(em.eta(OperatingPoint(power=p_electric[i], rpm=em_design[2])))
+                else:
+                    eta_em.append(np.nan)
+            out["eta_electric_motor"] = np.array(eta_em)
+            out["em_throttle"] = np.array(em_throttle)
+            out["rpm"] = np.full_like(t, em_design[2])
+        except Exception:
+            pass
 
-    out = {
-        "time": t, "propulsive_power": PP, "gt_power": p_thermal, "em_power": p_electric,
-        "eta_gas_turbine": np.array(eta_gt), "gt_throttle": np.array(gt_throttle),
-        "eta_electric_motor": np.array(eta_em), "em_throttle": np.array(em_throttle),
-        "rpm": np.full_like(t, em_design[2]),
-    }
+    # --- Propeller (Class-II RBF surrogate) ---
+    if 'propeller' in requested:
+        try:
+            import os
+            from .Systems.Powertrain import propeller_surrogate as _prbf
+            csv = os.path.join(os.path.dirname(_prbf.__file__), "data", "propeller_data_rbf.csv")
+            prop = _prbf.PropellerSurrogate(csv)
+            eta_pp, pitch = [], []
+            for i in range(len(t)):
+                pk = (PP[i] / n_engines) / 1000.0
+                pit = prop.solve_pitch(pk, alt[i], vel[i], propeller_rpm)
+                eta_pp.append(prop.get_efficiency(pk, alt[i], vel[i], pit, propeller_rpm))
+                pitch.append(pit)
+            out["eta_propeller"] = np.array(eta_pp)
+            out["propeller_pitch"] = np.array(pitch)
+        except Exception:
+            pass
 
-    try:
-        import os
-        from .Systems.Powertrain import propeller_surrogate as _prbf
-        csv = os.path.join(os.path.dirname(_prbf.__file__), "data", "propeller_data_rbf.csv")
-        prop = _prbf.PropellerSurrogate(csv)
-        eta_pp, pitch = [], []
-        for i in range(len(t)):
-            pk = (PP[i] / n_engines) / 1000.0
-            pit = prop.solve_pitch(pk, alt[i], vel[i], propeller_rpm)
-            eta_pp.append(prop.get_efficiency(pk, alt[i], vel[i], pit, propeller_rpm))
-            pitch.append(pit)
-        out["eta_propeller"] = np.array(eta_pp)
-        out["propeller_pitch"] = np.array(pitch)
-    except Exception:
-        pass
     return out
 
 
-def timeseries_table(aircraft, include_components=True):
+def timeseries_table(aircraft, include_components="auto"):
     """Collect *every* time-evolving mission variable into one aligned table (debug).
 
     Returns ``(header, columns)`` where ``header`` is a list of column names and ``columns``
@@ -231,9 +273,16 @@ def timeseries_table(aircraft, include_components=True):
       power excess, SOC, phi, …);
     * the power flow from :func:`power_timeseries` (``propulsive_power``, ``gt_power``,
       ``em_power`` [W]);
-    * the Class-II component quantities from :func:`component_timeseries` when applicable
-      (gas-turbine / electric-motor / propeller efficiencies, throttles, shaft powers) —
-      skipped silently for non-hybrid configurations or if the optional models are missing.
+    * the Class-II component quantities from :func:`component_timeseries`
+      (gas-turbine / electric-motor / propeller efficiencies, throttles, pitch).
+
+    ``include_components`` controls the last group:
+
+    * ``"auto"`` (default) — include only the components that *actually used* a Class-II model
+      in this design (detected with :func:`class_ii_components`); a fully constant-efficiency
+      design therefore pulls in no surrogate columns and loads no surrogate.
+    * ``True`` — force all three component models (loads every surrogate).
+    * ``False`` — omit the component columns entirely.
 
     ``time`` is always the first column; the remaining columns are sorted by name.
     """
@@ -260,9 +309,23 @@ def timeseries_table(aircraft, include_components=True):
     except Exception:
         pass
 
-    if include_components:
+    # Class-II component columns. In "auto" mode include only the components that the design
+    # actually used as Class-II (so no surrogate is loaded for a constant-efficiency design).
+    propulsion = {"gas_turbine", "electric_motor", "propeller"}
+    if include_components == "auto":
+        wanted = class_ii_components(aircraft) & propulsion
+        components = wanted if wanted else None   # None signals "nothing to do" below
+        do_components = bool(wanted)
+    elif include_components:
+        components = None                          # forced: all three
+        do_components = True
+    else:
+        components = None
+        do_components = False
+
+    if do_components:
         try:
-            cs = component_timeseries(aircraft)
+            cs = component_timeseries(aircraft, components=components)
             for k, v in cs.items():
                 if k == "time":
                     continue
@@ -270,8 +333,7 @@ def timeseries_table(aircraft, include_components=True):
                 if arr.ndim == 1 and arr.shape[0] == n:
                     data.setdefault(k, arr)
         except Exception:
-            # Non-hybrid config or optional Class-II models unavailable — derived/raw
-            # columns are still written.
+            # Optional Class-II models unavailable — derived/raw columns are still written.
             pass
 
     cols = [(k, np.asarray(v, dtype=float)) for k, v in data.items()
@@ -282,12 +344,15 @@ def timeseries_table(aircraft, include_components=True):
     return header, columns
 
 
-def write_timeseries(aircraft, path, include_components=True):
+def write_timeseries(aircraft, path, include_components="auto"):
     """Dump every time-evolving mission variable to a CSV file (debug helper).
 
     Writes one row per solver time point and one column per variable returned by
-    :func:`timeseries_table` (raw ODE states + derived mission quantities + Class-II
-    component quantities when available). Returns the path written.
+    :func:`timeseries_table` (raw ODE states + derived mission quantities + the power flow +
+    Class-II component quantities). ``include_components`` defaults to ``"auto"``: only the
+    components that actually used a Class-II model in this design are added (so a
+    constant-efficiency design loads no surrogates). Pass ``True`` to force all component
+    models or ``False`` to omit them. Returns the path written.
     """
     header, columns = timeseries_table(aircraft, include_components=include_components)
     matrix = np.column_stack(columns) if columns else np.empty((0, 0))
@@ -312,23 +377,31 @@ def plot_power_timeseries(aircraft, ax=None):
 
 
 def plot_component_timeseries(aircraft, **kwargs):
-    """Plot the Class-II component time series from :func:`component_timeseries`."""
+    """Plot the Class-II component time series from :func:`component_timeseries`.
+
+    By default (no ``components`` kwarg) all three component models are forced, so this works
+    as an explicit "show me the component behaviour" request; only the curves actually present
+    are drawn.
+    """
     import matplotlib.pyplot as plt
     cs = component_timeseries(aircraft, **kwargs)
     t = cs["time"] / 60.0
     fig, axes = plt.subplots(3, 1, sharex=True, figsize=(8, 9))
-    axes[0].plot(t, cs["eta_gas_turbine"], label="gas turbine")
-    axes[0].plot(t, cs["eta_electric_motor"], label="electric motor")
-    if "eta_propeller" in cs:
-        axes[0].plot(t, cs["eta_propeller"], label="propeller")
+    for key, label in (("eta_gas_turbine", "gas turbine"),
+                       ("eta_electric_motor", "electric motor"),
+                       ("eta_propeller", "propeller")):
+        if key in cs:
+            axes[0].plot(t, cs[key], label=label)
     axes[0].set_ylabel("efficiency [-]"); axes[0].legend(fontsize=8)
-    axes[1].plot(t, cs["gt_throttle"], color="tab:red", label="gas turbine")
-    axes[1].plot(t, cs["em_throttle"], color="tab:blue", label="electric motor")
+    if "gt_throttle" in cs:
+        axes[1].plot(t, cs["gt_throttle"], color="tab:red", label="gas turbine")
+    if "em_throttle" in cs:
+        axes[1].plot(t, cs["em_throttle"], color="tab:blue", label="electric motor")
     axes[1].set_ylabel("throttle [-]"); axes[1].set_ylim(0, 1.05); axes[1].legend(fontsize=8)
     if "propeller_pitch" in cs:
         axes[2].plot(t, cs["propeller_pitch"], color="tab:purple")
         axes[2].set_ylabel("propeller pitch [deg]")
-    else:
+    elif "rpm" in cs:
         axes[2].plot(t, cs["rpm"], color="tab:gray"); axes[2].set_ylabel("motor rpm")
     axes[-1].set_xlabel("time [min]")
     for ax in axes:
