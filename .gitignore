@@ -168,3 +168,7 @@ cython_debug/
 # Example & docs build output
 examples/_output/
 trunk/examples/_output/
+
+# openmdao / pycycle report output from the GT map generator
+*_out/
+reports/
