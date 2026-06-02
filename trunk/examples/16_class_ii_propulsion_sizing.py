@@ -56,6 +56,10 @@ def gas_turbine():
           f"{rep2['worst_load_ratio']:.2f}  ->  {rep2['status']}")
     print(f"  WTO = {aircraft.weight.WTO:.0f} kg, mission fuel = {aircraft.weight.Wf:.1f} kg")
 
+    # 4. Plot the time-resolved gas-turbine throttle and efficiency over the mission for the
+    #    correctly-sized engine (throttle stays below 1 — no longer power-limited).
+    _plot_components(aircraft, "16_gas_turbine_timeseries.png", "Class-II gas turbine (sized)")
+
 
 def electric_motor():
     print("\n=== Class-II electric motor (d-q model) ===")
@@ -68,11 +72,40 @@ def electric_motor():
     cfg.energy.em_design_power = p_nominal
     cfg.energy.em_design_voltage = 800.0
     cfg.energy.em_design_rpm = 11000.0
-    rep = _design(cfg).powertrain.report_class_ii_sizing()['electric motor']
+    aircraft = _design(cfg)
+    rep = aircraft.powertrain.report_class_ii_sizing()['electric motor']
     print(f"EM sizing: nominal {rep['nominal']/1e3:.0f} kW, peak {rep['peak_demand']/1e3:.0f} kW "
           f"-> {rep['status']} (load ratio {rep['worst_load_ratio']:.2f})")
     print("(the tentative DesignPW*WTO is generous for the motor, which only carries the "
           "battery share — the 'oversized' flag says you can reduce its nominal power.)")
+
+    # Time-resolved GT + electric-motor throttle/efficiency over the hybrid mission.
+    _plot_components(aircraft, "16_hybrid_propulsion_timeseries.png",
+                     "Class-II GT + electric motor (hybrid)")
+
+
+def _plot_components(aircraft, name, title):
+    """Save the Class-II component time series (throttle, efficiency, propeller pitch)."""
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        from PhlyGreen import postprocess as pp
+    except Exception:
+        print("  (matplotlib unavailable — skipping component plot)")
+        return
+    try:
+        axes = pp.plot_component_timeseries(aircraft)
+    except Exception as exc:
+        print(f"  (component plot skipped: {type(exc).__name__})")
+        return
+    fig = axes[0].figure
+    fig.suptitle(title)
+    fig.tight_layout()
+    from common import savefig
+    print("Figures:")
+    savefig(fig, name)
+    plt.close(fig)
 
 
 if __name__ == "__main__":

@@ -19,7 +19,7 @@ Run it:
 import numpy as np
 
 import PhlyGreen as pg
-from common import hydrogen_config
+from common import hydrogen_config, print_results, design_dashboard, savefig
 
 
 def main():
@@ -28,7 +28,9 @@ def main():
     aircraft.configure(hydrogen_config(tank=True))
     tank = aircraft.tank
 
-    print("=== LH2 tank (sized for the design hydrogen load) ===")
+    print_results(aircraft, "Hydrogen aircraft with cryogenic LH2 tank")
+
+    print("\n=== LH2 tank (sized for the design hydrogen load) ===")
     print(f"Stored hydrogen     : {aircraft.weight.WH2_Fuel:8.1f} kg")
     print(f"Tank empty mass     : {aircraft.weight.WTank:8.1f} kg ({tank.n_tanks} tank(s))")
     print(f"Geometry            : {tank.shape}, r_inner = {tank.r_inner:.2f} m, "
@@ -51,28 +53,35 @@ def main():
     print(f"Total vented        : {h['m_vent_cum'][-1]:.2f} kg")
     print(f"Peak heat leak      : {max(h['Q_in']):.0f} W;  peak heater: {max(h['Q_heater']):.0f} W")
 
+    print("\nFigures:")
     _maybe_plot(t, P, m, vent, h)
+    design_dashboard(aircraft, "22_hydrogen_dashboard.png", "Hydrogen + LH2 tank design")
 
 
 def _maybe_plot(t, P, m, vent, h):
     try:
-        import os
         import matplotlib
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
     except Exception:
         return
-    fig, axes = plt.subplots(3, 1, sharex=True, figsize=(8, 9))
+    Q_in = np.array(h['Q_in'])
+    Q_heat = np.array(h['Q_heater'])
+    fig, axes = plt.subplots(4, 1, sharex=True, figsize=(8, 11))
     axes[0].plot(t, P, color="tab:blue"); axes[0].set_ylabel("pressure [bar]")
     axes[0].axhline(P.min(), ls=":", c="grey"); axes[0].axhline(P.max(), ls=":", c="grey")
     axes[1].plot(t, m, color="tab:green"); axes[1].set_ylabel("stored H2 [kg]")
     axes[2].plot(t, vent, color="tab:red"); axes[2].set_ylabel("vent flow [kg/s]")
-    axes[2].set_xlabel("time [min]")
+    axes[3].plot(t, Q_in, color="tab:orange", label="heat leak")
+    axes[3].plot(t, Q_heat, color="tab:purple", label="heater")
+    axes[3].set_ylabel("heat flow [W]"); axes[3].legend(fontsize=8)
+    axes[3].set_xlabel("time [min]")
     for ax in axes:
         ax.grid(alpha=0.3)
-    os.makedirs("examples/_output", exist_ok=True)
-    fig.savefig("examples/_output/hydrogen_tank.png", dpi=120, bbox_inches="tight")
-    print("\nSaved examples/_output/hydrogen_tank.png")
+    fig.suptitle("LH2 tank state over the mission")
+    fig.tight_layout()
+    savefig(fig, "22_hydrogen_tank.png")
+    plt.close(fig)
 
 
 if __name__ == "__main__":

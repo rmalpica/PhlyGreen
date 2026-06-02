@@ -9,15 +9,18 @@ Run it:
 """
 
 import PhlyGreen as pg
-from common import hybrid_config
+from common import hybrid_config, print_results, design_dashboard, savefig
 
 
 def main():
     aircraft = pg.build_aircraft()
     aircraft.configure(hybrid_config())   # hybrid carries WellToTank + ClimateImpact inputs
 
+    # Full design summary first (incl. the well-to-wake line and the mass breakdown).
+    print_results(aircraft, "Hybrid design — energy & climate study")
+
     # --- Well-to-wake energy (fuel + electricity traced back to the primary source) ---
-    print("=== Well-to-wake ===")
+    print("\n=== Well-to-wake ===")
     print(f"source energy : {aircraft.welltowake.SourceEnergy/1e6:10.1f} MJ")
     print(f"Psi (electric source fraction) : {aircraft.welltowake.Psi:6.4f}")
 
@@ -32,12 +35,13 @@ def main():
     atr = aircraft.climateimpact.ATR()
     print(f"\nClimate impact (ATR): {atr:.3e} K")
 
-    _maybe_plot(emissions)
+    print("\nFigures:")
+    _plot_emissions(emissions)
+    design_dashboard(aircraft, "14_energy_dashboard.png", "Hybrid — energy & climate")
 
 
-def _maybe_plot(emissions):
+def _plot_emissions(emissions):
     try:
-        import os
         import matplotlib
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
@@ -47,10 +51,10 @@ def _maybe_plot(emissions):
     ax.bar([k.upper() for k in emissions], [float(v) for v in emissions.values()],
            color="tab:brown")
     ax.set_ylabel("mission emissions [kg]"); ax.set_yscale("log")
-    ax.grid(axis="y", alpha=0.3)
-    os.makedirs("examples/_output", exist_ok=True)
-    fig.savefig("examples/_output/emissions.png", dpi=120, bbox_inches="tight")
-    print("\nSaved examples/_output/emissions.png")
+    ax.set_title("Mission emissions by species"); ax.grid(axis="y", alpha=0.3)
+    fig.tight_layout()
+    savefig(fig, "14_emissions.png")
+    plt.close(fig)
 
 
 if __name__ == "__main__":

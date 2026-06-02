@@ -11,10 +11,11 @@ Run it:
     cd trunk && python examples/11_optimization.py
 """
 
+import numpy as np
 from scipy.optimize import minimize_scalar
 
 import PhlyGreen as pg
-from common import traditional_config
+from common import traditional_config, savefig
 
 
 def set_cruise_mach(config, mach):
@@ -39,13 +40,31 @@ def main():
     print(f"\nOptimum cruise Mach : {result.x:.3f}")
     print(f"Minimum block fuel  : {result.fun:.1f} kg")
 
-    # Production multi-objective version (Pareto front), if pymoo is installed:
-    #   from pymoo.core.problem import ElementwiseProblem
-    #   class P(ElementwiseProblem):
-    #       def _evaluate(self, x, out, *a, **k):
-    #           r = pg.evaluate(base, set_cruise_mach, x[0])
-    #           out["F"] = [r.WTO, r.block_fuel]
-    #   ... then minimize(P(n_var=1, n_obj=2, xl=[0.32], xu=[0.50]), NSGA2(), ...)
+    # Map the whole objective curve so the optimum is visible, not just asserted.
+    machs = np.linspace(0.32, 0.50, 10)
+    fuels = [pg.evaluate(base, set_cruise_mach, m).block_fuel for m in machs]
+    _plot(machs, fuels, result.x, result.fun)
+
+    # Production multi-objective version (Pareto front) lives in example 11b
+    # (pymoo NSGA-II over several design variables, in parallel).
+
+
+def _plot(machs, fuels, x_opt, f_opt):
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except Exception:
+        return
+    fig, ax = plt.subplots(figsize=(7, 4.5))
+    ax.plot(machs, fuels, "o-", color="tab:blue", label="block fuel")
+    ax.plot([x_opt], [f_opt], "*", ms=16, color="tab:red", label="optimum")
+    ax.set_xlabel("cruise Mach"); ax.set_ylabel("block fuel [kg]")
+    ax.set_title("Block fuel vs cruise Mach"); ax.grid(alpha=0.3); ax.legend()
+    fig.tight_layout()
+    print("\nFigures:")
+    savefig(fig, "11_optimization_curve.png")
+    plt.close(fig)
 
 
 if __name__ == "__main__":

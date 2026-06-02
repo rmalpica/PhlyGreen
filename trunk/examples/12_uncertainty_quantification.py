@@ -42,7 +42,10 @@ def main():
     print(f"Take-off weight over {N_SAMPLES} random designs:")
     print(f"  mean   : {wto.mean():8.1f} kg")
     print(f"  std    : {wto.std():8.1f} kg")
+    print(f"  min/max: {wto.min():8.1f} / {wto.max():8.1f} kg")
     print(f"  5-95%  : {np.percentile(wto, 5):8.1f} - {np.percentile(wto, 95):8.1f} kg")
+
+    _plot(wto, eta_gt)
 
     # Polynomial-chaos version (if chaospy is installed):
     #   import chaospy
@@ -53,6 +56,32 @@ def main():
     #   surrogate = chaospy.fit_quadrature(chaospy.generate_expansion(3, dist),
     #                                      nodes, weights, evals)
     #   print(chaospy.E(surrogate, dist), chaospy.Std(surrogate, dist))
+
+
+def _plot(wto, eta_gt):
+    """Histogram of the WTO spread + its sensitivity to the gas-turbine efficiency."""
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except Exception:
+        return
+    from common import savefig
+    fig, (axH, axS) = plt.subplots(1, 2, figsize=(13, 4.5))
+    axH.hist(wto, bins=16, color="tab:blue", edgecolor="white")
+    axH.axvline(wto.mean(), color="tab:red", ls="--", label=f"mean {wto.mean():.0f} kg")
+    axH.set_xlabel("take-off weight [kg]"); axH.set_ylabel("count")
+    axH.set_title(f"WTO distribution ({len(wto)} samples)"); axH.legend()
+
+    axS.scatter(eta_gt, wto, s=18, color="tab:green", alpha=0.7)
+    axS.set_xlabel("gas-turbine efficiency [-]"); axS.set_ylabel("WTO [kg]")
+    axS.set_title("Sensitivity to GT efficiency")
+    for ax in (axH, axS):
+        ax.grid(alpha=0.3)
+    fig.tight_layout()
+    print("\nFigures:")
+    savefig(fig, "12_uncertainty.png")
+    plt.close(fig)
 
 
 if __name__ == "__main__":

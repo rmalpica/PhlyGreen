@@ -10,8 +10,10 @@ Then try: open common.py and change `range_mission` or `payload_weight`, re-run,
 the take-off weight change.
 """
 
+import os
+
 import PhlyGreen as pg
-from common import traditional_config
+from common import traditional_config, print_results, design_dashboard, OUTPUT_DIR
 
 
 def main():
@@ -29,13 +31,18 @@ def main():
     #    convergence (Brent's method) so component masses are mutually consistent.
     aircraft.configure(config)            # runs the full DesignAircraft loop
 
-    # 4. Read the outcome as a structured object (no parsing of printed text).
-    results = aircraft.results()
-    print(f"Take-off weight : {results.WTO:8.1f} kg")
-    print(f"Mission fuel    : {results.Wf:8.1f} kg")
-    print(f"Empty weight    : {results.empty_weight:8.1f} kg")
-    print(f"Wing area       : {results.WingSurface:8.1f} m^2")
-    print(f"Engine rating   : {results.engineRating/1000:8.1f} kW")
+    # 4. Print a full, human-readable summary (scalars + take-off mass breakdown).
+    print_results(aircraft, "Conventional ATR-like turboprop")
+
+    # 5. Plot a dashboard: flight profile, cumulative fuel energy, the constraint diagram
+    #    with the design point, and the mass breakdown.
+    print("\nFigures:")
+    design_dashboard(aircraft, "01_traditional_dashboard.png", "Traditional design")
+
+    # 6. For debugging you can dump *every* time-evolving mission variable to a CSV.
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    csv = aircraft.results().write_timeseries(os.path.join(OUTPUT_DIR, "01_timeseries.csv"))
+    print(f"  saved {csv}  (all mission states vs time)")
 
 
 if __name__ == "__main__":

@@ -11,27 +11,19 @@ Run it:
 """
 
 import PhlyGreen as pg
-from common import hydrogen_config
+from common import hydrogen_config, print_results, design_dashboard, savefig
 
 
 def main():
     aircraft = pg.build_aircraft()
     aircraft.configure(hydrogen_config())     # size + fly the mission
 
-    r = aircraft.results()
     fc = aircraft.fuelcell
-    w = aircraft.weight
 
-    print("=== Hydrogen fuel-cell aircraft ===")
-    print(f"Take-off weight    : {r.WTO:9.1f} kg")
-    print(f"Usable H2 fuel     : {w.WH2_Fuel:9.1f} kg")
-    print(f"Fuel-cell system   : {r.WPT:9.1f} kg")
-    print(f"H2 tank (empty)    : {w.WTank:9.1f} kg")
-    print(f"Cooling system     : {w.WHeat_Exchanger:9.1f} kg")
-    print(f"Structure          : {r.WStructure:9.1f} kg")
-    print(f"Wing area          : {r.WingSurface:9.1f} m^2")
-    print()
-    print("--- Fuel-cell stack ---")
+    # Full design summary (the mass breakdown now includes the H2 tank and cooling).
+    print_results(aircraft, "Hydrogen fuel-cell aircraft")
+
+    print("\n--- Fuel-cell stack ---")
     print(f"Rated net power    : {fc.P_fc_rated/1000:9.1f} kW")
     print(f"Number of cells    : {fc.N_cells:9d}")
     print(f"Design cell voltage: {fc.V_cell_design:9.3f} V")
@@ -42,6 +34,35 @@ def main():
     print(f"{'i [A/cm^2]':>10} {'V_cell [V]':>10}")
     for i_dens in (0.1, 0.5, 1.0, 1.5, 2.0):
         print(f"{i_dens:10.2f} {fc.PolarizationCurve(i_dens, fc.Target_Press):10.3f}")
+
+    print("\nFigures:")
+    _plot_polarization(fc)
+    design_dashboard(aircraft, "20_hydrogen_dashboard.png", "Hydrogen fuel-cell design")
+
+
+def _plot_polarization(fc):
+    """Plot the polarization curve and the resulting power-density curve."""
+    try:
+        import numpy as np
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except Exception:
+        return
+    i = np.linspace(0.02, 2.0, 120)
+    v = np.array([fc.PolarizationCurve(x, fc.Target_Press) for x in i])
+    p = i * v                                   # power density [W/cm^2]
+    fig, ax = plt.subplots(figsize=(7.5, 5))
+    ax.plot(i, v, color="tab:blue", label="cell voltage")
+    ax.axvline(fc.i_rated if hasattr(fc, "i_rated") else np.nan, ls=":", c="grey")
+    ax.set_xlabel("current density [A/cm$^2$]"); ax.set_ylabel("cell voltage [V]", color="tab:blue")
+    ax2 = ax.twinx()
+    ax2.plot(i, p, color="tab:red", ls="--", label="power density")
+    ax2.set_ylabel("power density [W/cm$^2$]", color="tab:red")
+    ax.set_title("Fuel-cell polarization & power density"); ax.grid(alpha=0.3)
+    fig.tight_layout()
+    savefig(fig, "20_polarization_curve.png")
+    plt.close(fig)
 
 
 if __name__ == "__main__":

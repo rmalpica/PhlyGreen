@@ -9,7 +9,7 @@ Run it:
 """
 
 import PhlyGreen as pg
-from common import hybrid_config
+from common import hybrid_config, print_results, design_dashboard
 
 
 def main():
@@ -21,15 +21,14 @@ def main():
     # config.design_wing_loading = 3000.0
 
     aircraft.configure(config)
-    r = aircraft.results()
 
-    print(f"Take-off weight   : {r.WTO:8.1f} kg")
-    print(f"Mission fuel      : {r.Wf:8.1f} kg")
-    print(f"Battery mass      : {r.WBat:8.1f} kg")
-    print(f"Powertrain mass   : {r.WPT:8.1f} kg")
-    print(f"Battery pack      : {r.pack_energy/3.6e6:8.1f} kWh, "
-          f"{r.pack_power_max/1000:8.1f} kW (S{r.S_number:.0f}/P{r.P_number:.0f})")
-    print(f"Well-to-wake Psi  : {r.Psi:8.4f}")
+    # Full summary (incl. battery pack specs, well-to-wake, and the mass breakdown).
+    print_results(aircraft, "Parallel hybrid-electric ATR-like turboprop")
+
+    # Dashboard: the energy panel also shows battery energy and state-of-charge; the
+    # constraint diagram and mass breakdown round it out.
+    print("\nFigures:")
+    design_dashboard(aircraft, "02_hybrid_dashboard.png", "Hybrid-electric design")
 
     # Try it: in common.py raise the cruise phi_end (e.g. 0.5 -> 0.7) and re-run.
     # The battery gets heavier while mission fuel drops — the core hybrid trade.

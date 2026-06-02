@@ -241,3 +241,124 @@ def atr_flops_input():
                    'N_WING_ENGINES': 2, 'N_FUSELAGE_ENGINES': 0},
         'PROPELLER': {'N_BLADES': 6., 'DIAMETER': 13, 'SCALER': 1.},
     }
+
+
+# ===========================================================================
+# Shared output / plotting helpers (used by all the examples)
+# ===========================================================================
+import os as _os
+
+# All figures land here, resolved relative to this file so the examples work from any CWD.
+OUTPUT_DIR = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "_output")
+
+
+def savefig(fig, name):
+    """Save a matplotlib figure into ``examples/_output/`` and print the path."""
+    _os.makedirs(OUTPUT_DIR, exist_ok=True)
+    path = _os.path.join(OUTPUT_DIR, name)
+    fig.savefig(path, dpi=120, bbox_inches="tight")
+    print(f"  saved {path}")
+    return path
+
+
+def print_results(aircraft, title="Design results"):
+    """Print a rich, human-readable summary of a *designed* aircraft.
+
+    Covers the common scalar outputs plus the full take-off mass breakdown and (when the
+    aircraft carries the relevant inputs) the battery pack, hydrogen/tank and well-to-wake
+    quantities — so every example is verbose about what it produced.
+    """
+    from PhlyGreen import postprocess as pp
+    r = aircraft.results()
+    w = aircraft.weight
+    print(f"\n=== {title} ===")
+    print(f"  Take-off weight   : {r.WTO:10.1f} kg")
+    if r.empty_weight is not None:
+        print(f"  Operating empty   : {r.empty_weight:10.1f} kg")
+    if r.zero_fuel_weight is not None:
+        print(f"  Zero-fuel weight  : {r.zero_fuel_weight:10.1f} kg")
+    print(f"  Structure         : {r.WStructure:10.1f} kg")
+    print(f"  Powertrain        : {r.WPT:10.1f} kg")
+    if r.Wf is not None:
+        label = "Hydrogen fuel" if getattr(w, "WH2_Fuel", None) else "Mission fuel"
+        print(f"  {label:17s} : {r.Wf:10.1f} kg")
+    if r.WBat:
+        print(f"  Battery           : {r.WBat:10.1f} kg")
+    if getattr(w, "WTank", None):
+        print(f"  H2 tank (empty)   : {w.WTank:10.1f} kg")
+    if r.WingSurface is not None:
+        print(f"  Wing area         : {r.WingSurface:10.1f} m^2")
+    if r.engineRating is not None:
+        print(f"  Engine rating     : {r.engineRating/1000:10.1f} kW")
+    if r.pack_energy is not None:
+        print(f"  Battery pack      : {r.pack_energy/3.6e6:.1f} kWh, "
+              f"{r.pack_power_max/1000:.1f} kW (S{r.S_number:.0f}/P{r.P_number:.0f})")
+    if r.SourceEnergy is not None:
+        print(f"  Well-to-wake      : {r.SourceEnergy/1e6:.1f} MJ source energy, Psi {r.Psi:.4f}")
+    print("  --- take-off mass breakdown ---")
+    for name, mass in pp.mass_breakdown(aircraft).items():
+        print(f"    {name:14s}: {mass:9.1f} kg  ({100*mass/r.WTO:4.1f} %)")
+    return r
+
+
+def design_dashboard(aircraft, name, title=None):
+    """Save a 4-panel dashboard for a *designed* aircraft (mission, energy, sizing, mass).
+
+    Uses the generic :mod:`PhlyGreen.postprocess` helpers so it works for every
+    configuration (Traditional / Hybrid / Hydrogen / FuelCellBattery). Returns the figure
+    path, or ``None`` if matplotlib is unavailable or the mission was not solved.
+    """
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        from PhlyGreen import postprocess as pp
+    except Exception:
+        print("  (matplotlib unavailable — skipping dashboard)")
+        return None
+
+    try:
+        ts = pp.mission_timeseries(aircraft)
+    except Exception:
+        print("  (no mission solution — skipping dashboard)")
+        return None
+
+    fig, axes = plt.subplots(2, 2, figsize=(13, 9))
+    if title:
+        fig.suptitle(title, fontsize=13)
+
+    # (0,0) altitude + true airspeed vs time
+    t_min = ts["time"] / 60.0
+    ax = axes[0, 0]
+    ax.plot(t_min, ts["altitude"], color="tab:blue", label="altitude [m]")
+    ax.set_xlabel("time [min]"); ax.set_ylabel("altitude [m]", color="tab:blue")
+    axv = ax.twinx()
+    axv.plot(t_min, ts["velocity"], color="tab:orange", label="TAS [m/s]")
+    axv.set_ylabel("TAS [m/s]", color="tab:orange")
+    ax.set_title("Flight profile"); ax.grid(alpha=0.3)
+
+    # (0,1) energy / SOC time series
+    try:
+        pp.plot_energy_timeseries(aircraft, ax=axes[0, 1])
+        axes[0, 1].set_title("Energy / state of charge")
+    except Exception:
+        axes[0, 1].set_visible(False)
+
+    # (1,0) constraint diagram with the design point
+    try:
+        pp.plot_constraint_diagram(aircraft, ax=axes[1, 0])
+        axes[1, 0].set_title("Constraint diagram")
+    except Exception:
+        axes[1, 0].set_visible(False)
+
+    # (1,1) take-off mass breakdown
+    try:
+        pp.plot_mass_breakdown(aircraft, ax=axes[1, 1])
+        axes[1, 1].set_title("Take-off mass breakdown")
+    except Exception:
+        axes[1, 1].set_visible(False)
+
+    fig.tight_layout()
+    path = savefig(fig, name)
+    plt.close(fig)
+    return path

@@ -99,12 +99,19 @@ def component_timeseries(aircraft, n_engines=None, gt_design_hp=None, em_design=
     if n_engines is None:
         n_engines = getattr(pt, "n_engines", 1) or 1
 
-    # Propulsive power and its thermal(Pgt)/electric(Pbat) split (parallel-hybrid graph).
+    # Propulsive power and its thermal(Pgt)/electric(Pbat) split. Use the hybrid graph for a
+    # Hybrid configuration, else the traditional (gas-turbine-only) chain so the function also
+    # works for a Class-II gas turbine on a conventional aircraft (no battery).
     PP = np.array([WTO * perf.PoWTO(WS, beta[i], pe[i], 1, alt[i], DISA, vel[i], 'TAS')
                    for i in range(len(t))])
-    PR = np.array([pt.Hybrid(float(phi[i]), alt[i], vel[i], PP[i]) for i in range(len(t))])
-    p_thermal = PR[:, 1] * PP    # gas-turbine shaft power
-    p_electric = PR[:, 5] * PP   # battery (electric) power
+    if getattr(aircraft, "Configuration", None) == "Hybrid":
+        PR = np.array([pt.Hybrid(float(phi[i]), alt[i], vel[i], PP[i]) for i in range(len(t))])
+        p_thermal = PR[:, 1] * PP    # gas-turbine shaft power
+        p_electric = PR[:, 5] * PP   # battery (electric) power
+    else:
+        PR = np.array([pt.Traditional(alt[i], vel[i], PP[i]) for i in range(len(t))])
+        p_thermal = PR[:, 1] * PP    # gas-turbine shaft power (all propulsion is thermal)
+        p_electric = np.zeros_like(PP)
 
     # Nominal powers: use the designed Class-II values if available, else a sensible default.
     if gt_design_hp is None:
