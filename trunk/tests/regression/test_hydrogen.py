@@ -87,6 +87,22 @@ def test_hydrogen_design_closes():
 
 
 @pytest.mark.slow
+def test_fuelcell_sized_for_takeoff_and_oei():
+    """The fuel cell must supply the worst of (mission peak, take-off, OEI climb), even though
+    take-off/OEI are not flown by the mission profile."""
+    aircraft = pg.build_aircraft()
+    aircraft.configure(_hydrogen_config())
+    fc, m = aircraft.fuelcell, aircraft.mission
+    eta_chain = fc.EtaEM * fc.EtaPM * fc.EtaGB
+    fc_propulsive_capability = fc.P_fc_rated * eta_chain
+    # TO_PP holds the worst of take-off and OEI climb (evaluated at the constraint conditions).
+    assert fc_propulsive_capability >= m.Max_PEng * (1 - 1e-6)   # covers the mission peak
+    assert fc_propulsive_capability >= m.TO_PP * (1 - 1e-6)      # covers take-off / OEI
+    # For the ATR baseline the take-off/OEI floor is the binding case (not the mission peak).
+    assert m.TO_PP > m.Max_PEng
+
+
+@pytest.mark.slow
 def test_design_voltage_changes_the_design():
     wto_low = pg.run_design(_hydrogen_config(v_cell_design=0.45)).WTO
     wto_high = pg.run_design(_hydrogen_config(v_cell_design=0.60)).WTO

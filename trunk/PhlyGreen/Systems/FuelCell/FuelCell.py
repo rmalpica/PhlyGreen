@@ -233,43 +233,48 @@ class FuelCell:
         
         return P_net / P_chem if P_chem > 0 else 0.0
 
-    def ComputeAndStoreWeights(self, WTO):
-        if self.i_max_density is None: self.SetInput()
+    # Single, explicit power-sizing margin for the fuel cell (replaces the former opaque
+    # 1/0.8 and 1/0.85 factors). The *conservative* sizing case comes from the take-off / OEI
+    # constraints the caller passes in, not from hidden fudge factors.
+    SizingMargin = 1.0
 
-        def find_current_from_voltage(i_guess):
-            return self.PolarizationCurve(i_guess, self.Target_Press) - self.V_cell_design
+    def _size_stack(self, P_propulsive_design):
+        """Size the stack / BoP / electric motor from a required *propulsive* power [W].
 
+        Sets the cell geometry (``N_cells``, ``A_cell_reale``), the rated electrical power
+        ``P_fc_rated`` and the system mass ``_Weight`` (and the ``weight`` component split),
+        and returns the mass. This single kernel is used by :meth:`SizeForPropulsivePower`
+        and :meth:`SizeFromConstraint`.
+        """
+        if self.i_max_density is None:
+            self.SetInput()
+
+        # Design current density at the design cell voltage.
         try:
-            self.i_max_density = brentq(find_current_from_voltage, 0.0001, 5.0)
+            self.i_max_density = brentq(
+                lambda i: self.PolarizationCurve(i, self.Target_Press) - self.V_cell_design,
+                0.0001, 5.0)
         except ValueError:
             self.V_cell_design = self.PolarizationCurve(self.i_max_density, self.Target_Press)
 
-        pw_constraint = getattr(self.aircraft, 'DesignPW', 0.0)
-        Target_PW_Base = max(pw_constraint, 155.0)
-        pw_val = Target_PW_Base * 1.65 # Oversizing Factor
-
-        Sizing_Mass = 25000.0 if WTO < 10000.0 else WTO
-
-        P_shaft_design = Sizing_Mass * pw_val 
         eta_downstream = self.EtaEM * self.EtaPM * self.EtaGB
-        self.P_fc_rated = P_shaft_design / eta_downstream 
+        self.P_fc_rated = P_propulsive_design / eta_downstream   # net electrical rating [W]
 
         self.N_cells = max(int(1000.0 / self.V_cell_design), 100)
 
+        # Gross stack power = net + balance-of-plant (air-system) allowance.
         Efficiency_BoP_Estimate = 0.65
-        P_gross_design = (self.P_fc_rated * 1.30) / Efficiency_BoP_Estimate 
+        P_gross_design = (self.P_fc_rated * 1.30) / Efficiency_BoP_Estimate
         surf_power_dens = self.V_cell_design * self.i_max_density
         Total_Active_Area = P_gross_design / surf_power_dens
-
-        self.A_cell_reale = Total_Active_Area / self.N_cells 
+        self.A_cell_reale = Total_Active_Area / self.N_cells
 
         try:
             i_ref = brentq(lambda i: self.PolarizationCurve(i, self.Target_Press) - 0.7, 0.0001, 5.0)
         except ValueError:
             i_ref = 1.0
-            
-        kg_per_cm2 = (0.7 * i_ref) / self.Stack_PD 
-        
+        kg_per_cm2 = (0.7 * i_ref) / self.Stack_PD
+
         M_Stack = Total_Active_Area * kg_per_cm2
         M_BoP = M_Stack * self.BoP_Mass_Ratio
         M_EM = (self.P_fc_rated * self.EtaPM) / 5000.0
@@ -277,8 +282,34 @@ class FuelCell:
 
         self._Weight = M_Stack + M_BoP + M_EM + M_PM
         self.Sizing_Done = True
-
+        if hasattr(self.aircraft, 'weight'):
+            self.aircraft.weight.WPT = self._Weight
+            self.aircraft.weight.WThermal = M_Stack + M_BoP + M_PM
+            self.aircraft.weight.WElectric = M_EM
         return self._Weight
+
+    def SizeForPropulsivePower(self, P_propulsive_req):
+        """Size the fuel cell to deliver a required *propulsive* power [W].
+
+        ``P_propulsive_req`` is the worst case of (mission peak, take-off, OEI climb), assembled
+        by the caller (the weight loop). The only sizing margin applied is :attr:`SizingMargin`.
+        """
+        return self._size_stack(P_propulsive_req * self.SizingMargin)
+
+    def SizeFromConstraint(self, WTO):
+        """Seed the fuel-cell geometry from the constraint power-to-weight ``DesignPW``.
+
+        ``DesignPW`` is the constraint-diagram envelope (which already includes the take-off
+        and OEI requirements), so this gives a representative fuel cell for the *first* mission
+        pass before the mission-peak resize loop refines it self-consistently.
+        """
+        pw = max(getattr(self.aircraft, 'DesignPW', 0.0), 155.0)
+        sizing_mass = 25000.0 if WTO < 10000.0 else WTO
+        return self._size_stack(pw * sizing_mass)
+
+    def ComputeAndStoreWeights(self, WTO):
+        """Backwards-compatible alias for :meth:`SizeFromConstraint`."""
+        return self.SizeFromConstraint(WTO)
 
     @property
     def Weight(self):
@@ -366,42 +397,9 @@ class FuelCell:
             self.P_comp_net_last = P_chem_total * 0.10
             return np.array([P_chem_total / max(P_req_net, 1.0), 1.0])
 
-    def FinalizeMassFromMission(self):
-        """Updates Powertrain Mass considering mission peaks."""
-        try:
-            p_max_mission_shaft = np.max([
-                self.aircraft.mission.Max_PEng,
-                self.aircraft.mission.TO_PP / 0.85
-            ])
-        except AttributeError:
-            p_max_mission_shaft = 2000000.0
-
-        eta_chain = self.EtaEM * self.EtaPM * self.EtaGB
-        self.P_fc_rated = p_max_mission_shaft / eta_chain
-        
-        P_gross_design = (self.P_fc_rated * 1.30) / 0.65 
-
-        if self.V_cell_design is None: self.SetInput()
-
-        Total_Active_Area = P_gross_design / (self.V_cell_design * self.i_max_density)
-        self.A_cell_reale = Total_Active_Area / self.N_cells
-
-        try:
-            i_ref = brentq(lambda i: self.PolarizationCurve(i, self.Target_Press) - 0.7, 0.0001, 5.0)
-        except ValueError: 
-            i_ref = 1.0
-            
-        kg_per_cm2 = (0.7 * i_ref) / self.Stack_PD 
-        M_Stack = Total_Active_Area * kg_per_cm2
-        M_BoP = M_Stack * self.BoP_Mass_Ratio
-        M_EM = (self.P_fc_rated * self.EtaPM) / 5000.0
-        M_PM = self.P_fc_rated / 10000.0
-
-        self._Weight = M_Stack + M_BoP + M_EM + M_PM
-
-        if hasattr(self.aircraft, 'weight'):
-            self.aircraft.weight.WPT = self._Weight
-            self.aircraft.weight.WThermal = M_Stack + M_BoP + M_PM 
-            self.aircraft.weight.WElectric = M_EM
-
-        return self._Weight
+    # NOTE: the former FinalizeMassFromMission (which shrank the stack to the mission peak
+    # *after* the mission, using opaque 1/0.8 and 1/0.85 margins and dropping the take-off/OEI
+    # basis) has been removed. The fuel cell is now sized once, self-consistently, by the
+    # weight loop: SizeFromConstraint (seed) -> fly -> SizeForPropulsivePower(max(mission peak,
+    # take-off, OEI)) -> re-fly, so the fuel cell that flies the mission is the one that is
+    # weighed, and the take-off/OEI requirement is a hard floor.

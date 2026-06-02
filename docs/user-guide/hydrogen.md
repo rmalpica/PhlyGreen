@@ -126,14 +126,22 @@ cooling — peaks where the system works hardest.
 
 ## 5. Mission and weight closure
 
-`Mission.HydrogenConfiguration` integrates the hydrogen chemical energy over the mission; the
-weight loop `Weight.Hydrogen` sizes the fuel cell to the **actual mission peak**
-(`FuelCell.FinalizeMassFromMission`) and closes the take-off weight over
+`Mission.HydrogenConfiguration` integrates the hydrogen chemical energy over the mission, and
+the weight loop `Weight.Hydrogen` closes the take-off weight over
 
 \[
 W_{TO} = W_{\text{struct}} + W_{\text{FC system}} + W_{\text{H}_2} + W_{\text{tank}}
          + W_{\text{cooling}} + W_{\text{payload}} + W_{\text{crew}} + W_{\text{reserve}} .
 \]
+
+**Fuel-cell sizing is self-consistent and constraint-aware.** Inside each weight iteration the
+stack is *not* sized to the mission peak alone: it is sized to the worst case of the **mission
+peak, the take-off** (field length) **and the OEI climb** — the latter two evaluated at the
+constraint conditions, since they are not flown by the mission profile but the fuel cell must
+still supply their power. To keep the *flown* fuel cell and the *weighed* fuel cell the same,
+the loop is `SizeFromConstraint` (seed) → fly → `SizeForPropulsivePower(max(mission, take-off,
+OEI))` → re-fly until the required power converges. A single, explicit margin
+(`FuelCell.SizingMargin`, default 1.0) is applied — there are no hidden oversizing factors.
 
 See example `20_hydrogen_fuel_cell.py`.
 
@@ -178,10 +186,12 @@ See example `22_hydrogen_tank.py` and notebook `03_hydrogen_fuel_cell.ipynb`.
 
 `'FuelCellBattery'` splits the propulsive power between the fuel cell and a (Class-I) battery
 via the profile's supplied-power ratio φ (the battery fraction). The fuel cell uses its physics
-efficiency above; the battery is sized from its energy and power needs, and the fuel cell is
-re-sized to the actual mission peak so the battery *shrinks the stack*. Because the battery
-stores little energy per kg, hybridization helps short power-limited segments more than
-sustained cruise. A φ = 0 `FuelCellBattery` design reproduces a pure `Hydrogen` design exactly.
+efficiency above; the battery is sized from its energy and power needs. The fuel cell is sized
+(by the same self-consistent loop as the pure-hydrogen path) to the worst of its *own share*
+`(1−φ)` of the mission peak, take-off and OEI — so a larger φ *shrinks the stack*, but never
+below the `(1−φ)` share of the take-off/OEI floor. Because the battery stores little energy per
+kg, hybridization helps short power-limited segments more than sustained cruise. A φ = 0
+`FuelCellBattery` design reproduces a pure `Hydrogen` design exactly.
 See example `23_fuelcell_battery_hybrid.py`.
 
 ---

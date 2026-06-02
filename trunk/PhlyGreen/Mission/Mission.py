@@ -221,8 +221,10 @@ class Mission:
                 self.Max_FC_Thermal_Pwr_alt = self.profile.Altitude(t)
             return [dEdt_chem, dbetadt]
 
-        # Peak (take-off / one-engine-inoperative climb) propulsive power, used to size
-        # the fuel-cell rated power and the take-off operating point.
+        # Worst-case off-mission propulsive power for fuel-cell sizing: the take-off field
+        # length and the one-engine-inoperative climb, evaluated at the *constraint* conditions
+        # (these scenarios are not flown by the mission profile, but the fuel cell must supply
+        # their power). Taken as the worst case.
         P_TO = WTO * self.aircraft.performance.TakeOff(
             self.aircraft.DesignWTOoS, self.aircraft.constraint.TakeOffConstraints['Beta'],
             self.aircraft.constraint.TakeOffConstraints['Altitude'],
@@ -230,11 +232,17 @@ class Mission:
             self.aircraft.constraint.TakeOffConstraints['sTO'], self.aircraft.constraint.DISA,
             self.aircraft.constraint.TakeOffConstraints['Speed'],
             self.aircraft.constraint.TakeOffConstraints['Speed Type'])
+        P_OEI = WTO * self.aircraft.performance.OEIClimb(
+            self.aircraft.DesignWTOoS, self.aircraft.constraint.OEIClimbConstraints['Beta'],
+            self.aircraft.constraint.OEIClimbConstraints['Speed'] * self.aircraft.constraint.OEIClimbConstraints['Climb Gradient'],
+            1., self.aircraft.constraint.OEIClimbConstraints['Altitude'],
+            self.aircraft.constraint.DISA, self.aircraft.constraint.OEIClimbConstraints['Speed'],
+            self.aircraft.constraint.OEIClimbConstraints['Speed Type'])
+        self.TO_PP = max(P_TO, P_OEI)
         PRatio_TO = self.aircraft.fuelcell.ComputePRatio(
             self.aircraft.constraint.TakeOffConstraints['Altitude'],
-            self.aircraft.constraint.TakeOffConstraints['Speed'], P_TO)
-        self.TO_PP = P_TO
-        self.TO_P_H2_Thermal = P_TO * PRatio_TO[0]
+            self.aircraft.constraint.TakeOffConstraints['Speed'], self.TO_PP)
+        self.TO_P_H2_Thermal = self.TO_PP * PRatio_TO[0]
         self.Max_FC_Thermal_Pwr = -1.0
 
         # Optionally advance the LH2 tank thermodynamic state through the mission.
@@ -267,12 +275,13 @@ class Mission:
         self.Ef = sol.y[0]
         self.Beta = sol.y[1]
 
-        # Peak mission shaft power (with a small installation margin), for FC mass sizing.
+        # Peak mission propulsive power (no hidden margin — the sizing margin and the
+        # take-off/OEI floor are applied by the weight loop / FuelCell sizing).
         pp_peak = 0.0
         for arr in self.integral_solution:
             for k in range(len(arr.t)):
                 pp_peak = max(pp_peak, PowerPropulsive(arr.y[1][k], arr.t[k]))
-        self.Max_PEng = pp_peak / 0.8
+        self.Max_PEng = pp_peak
         self.Max_PEng_alt = 0.0
         return self.Ef[-1]
 
@@ -323,6 +332,8 @@ class Mission:
                 self.Max_FC_Thermal_Pwr_alt = alt
             return [dEh2, dbetadt]
 
+        # Worst-case off-mission propulsive power (take-off field length / OEI climb) at the
+        # constraint conditions, split between the fuel cell and the battery by the take-off phi.
         P_TO = WTO * self.aircraft.performance.TakeOff(
             self.aircraft.DesignWTOoS, self.aircraft.constraint.TakeOffConstraints['Beta'],
             self.aircraft.constraint.TakeOffConstraints['Altitude'],
@@ -330,9 +341,16 @@ class Mission:
             self.aircraft.constraint.TakeOffConstraints['sTO'], self.aircraft.constraint.DISA,
             self.aircraft.constraint.TakeOffConstraints['Speed'],
             self.aircraft.constraint.TakeOffConstraints['Speed Type'])
+        P_OEI = WTO * self.aircraft.performance.OEIClimb(
+            self.aircraft.DesignWTOoS, self.aircraft.constraint.OEIClimbConstraints['Beta'],
+            self.aircraft.constraint.OEIClimbConstraints['Speed'] * self.aircraft.constraint.OEIClimbConstraints['Climb Gradient'],
+            1., self.aircraft.constraint.OEIClimbConstraints['Altitude'],
+            self.aircraft.constraint.DISA, self.aircraft.constraint.OEIClimbConstraints['Speed'],
+            self.aircraft.constraint.OEIClimbConstraints['Speed Type'])
+        P_total_TO = max(P_TO, P_OEI)
         phi_TO = float(self.profile.SPW[0][0]) if self.profile.SPW is not None else 0.0
-        self.TO_PP = (1.0 - phi_TO) * P_TO          # fuel-cell shaft power at take-off
-        self.TO_PBat = phi_TO * P_TO                # battery shaft power at take-off
+        self.TO_PP = (1.0 - phi_TO) * P_total_TO    # fuel-cell propulsive share at take-off/OEI
+        self.TO_PBat = phi_TO * P_total_TO          # battery propulsive share at take-off/OEI
         self.Max_FC_Thermal_Pwr = -1.0
 
         y0 = [0.0, self.beta0]
@@ -359,7 +377,7 @@ class Mission:
             pp_bat_peak = max(pp_bat_peak, float(p_bat.max()) if len(p_bat) else 0.0)
             pp_fc_peak = max(pp_fc_peak, float(p_fc.max()) if len(p_fc) else 0.0)
         self.EBat = E_bat
-        self.Max_PEng = pp_fc_peak / 0.8
+        self.Max_PEng = pp_fc_peak           # fuel-cell propulsive peak (no hidden margin)
         self.Max_PEng_alt = 0.0
         self.Max_PBat = max(pp_bat_peak, self.TO_PBat)
         return self.Ef[-1], self.EBat

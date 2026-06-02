@@ -166,11 +166,16 @@ inputs live in `EnergyConfig`
 The `'FuelCellBattery'` configuration hybridizes the fuel cell with a (Class-I) battery:
 `Mission.FuelCellBatteryConfiguration` splits propulsive power by the profile's `phi`
 (battery fraction), the fuel cell uses its physics efficiency and the battery a simple
-electric chain; `Weight.FuelCellBattery` sizes the battery from its energy/power needs and
-re-sizes the fuel cell to the actual mission peak via `FuelCell.FinalizeMassFromMission`
-(so the battery shrinks the stack). Note the `'Hydrogen'` and `'FuelCellBattery'` paths size
-the stack differently (conservative P/W heuristic vs mission-peak), so a phi=0
-`FuelCellBattery` design is not identical to a `'Hydrogen'` one. See example `23`.
+electric chain; `Weight.FuelCellBattery` sizes the battery from its energy/power needs.
+
+The fuel cell (for both `'Hydrogen'` and `'FuelCellBattery'`) is sized **self-consistently and
+constraint-aware** by the weight loop: `FuelCell.SizeFromConstraint` seeds the geometry, the
+mission is flown, then `FuelCell.SizeForPropulsivePower(max(mission peak, take-off, OEI))`
+re-sizes it and the mission is re-flown until the required power converges — so the fuel cell
+that flies the mission is the one that is weighed, and the take-off / OEI requirement is a hard
+floor (a single `FuelCell.SizingMargin`, default 1.0; no hidden oversizing factors). Both paths
+use the *same* rule, so a phi=0 `FuelCellBattery` design is **bit-identical** to a `'Hydrogen'`
+one. See example `23`.
 
 Heavy Class-II models from the source forks — the pycycle/openmdao gas turbine, the
 pandas/CSV propeller RBF surrogate, and the CoolProp LH2 tank — integrate through this same

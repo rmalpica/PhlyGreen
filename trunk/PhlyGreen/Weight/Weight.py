@@ -6,6 +6,11 @@ from scipy.optimize import brentq, brenth, ridder, newton
 from pprint import pprint
 from .FLOPS_model import FLOPS_model
 
+# Max inner passes of the fuel-cell "size -> fly -> resize -> re-fly" loop (the fuel-cell
+# rated power converges in 2-3 passes since efficiency depends only weakly on stack size).
+_FC_RESIZE_ITERS = 3
+
+
 class Weight:
     """
     Aircraft weight estimation module.
@@ -231,18 +236,27 @@ class Weight:
                 LH2_Tank = None
 
         def func(WTO):
-            # 1. Initialize the fuel-cell geometry (needed before the mission queries it).
-            self.aircraft.fuelcell.ComputeAndStoreWeights(WTO)
+            # Size the fuel cell self-consistently: seed from the constraints, then
+            # fly -> resize to max(mission peak, take-off, OEI) -> re-fly until the required
+            # power converges, so the fuel cell that flies the mission is the one that is
+            # weighed (the take-off/OEI requirement is a hard floor on its power).
+            fc = self.aircraft.fuelcell
+            fc.SizeFromConstraint(WTO)
+            P_req, converged = None, False
+            for _ in range(_FC_RESIZE_ITERS):
+                E_h2_chem = self.aircraft.mission.EvaluateMission(WTO)
+                demand = max(self.aircraft.mission.TO_PP, self.aircraft.mission.Max_PEng)
+                if P_req is not None and abs(demand - P_req) <= 1e-3 * max(P_req, 1.0):
+                    converged = True
+                    break
+                P_req = demand
+                fc.SizeForPropulsivePower(P_req)
+            if not converged:                 # ensure the final stack size was actually flown
+                E_h2_chem = self.aircraft.mission.EvaluateMission(WTO)
+            self.WPT = fc.Weight
 
-            # 2. Fly the mission -> hydrogen chemical energy -> usable H2 mass.
-            E_h2_chem = self.aircraft.mission.EvaluateMission(WTO)
             self.WH2_Fuel = (E_h2_chem / self.ef) * 1.05
             self.Wf = self.WH2_Fuel
-
-            # 3. Size the fuel cell to the actual mission peak (same rule as the
-            # fuel-cell + battery path, so a battery-free FuelCellBattery design and a
-            # pure Hydrogen design coincide).
-            self.WPT = self.aircraft.fuelcell.FinalizeMassFromMission()
 
             # 3. Hydrogen tank (empty) mass.
             if self.WH2_Fuel <= 0:
@@ -317,17 +331,29 @@ class Weight:
                 LH2_Tank = None
 
         def func(WTO):
-            # Initialize the fuel-cell geometry (needed before the mission can query it).
-            self.aircraft.fuelcell.ComputeAndStoreWeights(WTO)
+            # Size the fuel cell self-consistently (same rule as the pure-hydrogen path, so a
+            # phi=0 design coincides with it): seed from the constraints, then fly -> resize
+            # the fuel cell to max(mission FC peak, take-off, OEI) of its propulsive share ->
+            # re-fly until converged. The battery offloads the fuel cell (its share is
+            # 1 - phi), so a larger phi shrinks the stack — but never below the take-off/OEI
+            # share, which is a hard floor.
+            fc = self.aircraft.fuelcell
+            fc.SizeFromConstraint(WTO)
+            P_req, converged = None, False
+            for _ in range(_FC_RESIZE_ITERS):
+                E_h2_chem, E_bat = self.aircraft.mission.EvaluateMission(WTO)
+                demand = max(self.aircraft.mission.TO_PP, self.aircraft.mission.Max_PEng)
+                if P_req is not None and abs(demand - P_req) <= 1e-3 * max(P_req, 1.0):
+                    converged = True
+                    break
+                P_req = demand
+                fc.SizeForPropulsivePower(P_req)
+            if not converged:
+                E_h2_chem, E_bat = self.aircraft.mission.EvaluateMission(WTO)
+            self.WPT = fc.Weight
 
-            # Mission -> hydrogen + battery energies (and the fuel-cell / battery peaks).
-            E_h2_chem, E_bat = self.aircraft.mission.EvaluateMission(WTO)
             self.WH2_Fuel = (E_h2_chem / self.ef) * 1.05
             self.Wf = self.WH2_Fuel
-
-            # Re-size the fuel cell to the *actual* mission peak (the battery offloads it,
-            # so it is smaller than a fuel-cell-only design).
-            self.WPT = self.aircraft.fuelcell.FinalizeMassFromMission()
 
             # Battery mass: max of energy- and power-limited sizing (Class I).
             WBat_energy = (E_bat / 3600.0) / (spec_energy_Wh * usable_soc)
