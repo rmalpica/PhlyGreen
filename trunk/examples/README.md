@@ -36,7 +36,7 @@ needs pandas — each degrades gracefully if the dependency is missing.
 | `14_welltowake_and_climate.py` | Well-to-wake source energy, mission emissions, climate impact (ATR) | emissions + dashboard |
 | `15_class_i_vs_class_ii.py` | Class-I vs Class-II structures (FLOPS) and battery models | comparison bars |
 | `16_class_ii_propulsion_sizing.py` | Size the Class-II gas turbine / electric motor with over/under-size check; throttle vs time | component time-series |
-| `17_battery_thermal_and_degradation.py` | Class-II battery ground fast-charge cooling load (TMS) and cycle-life vs charge C-rate | sweep panels |
+| `17_battery_thermal_and_degradation.py` | Class-II battery: in-flight temperature history, ground fast-charge cooling load (TMS) and cycle-life vs charge C-rate | temperature vs time + sweep panels |
 | `20_hydrogen_fuel_cell.py` | Size a hydrogen fuel-cell aircraft and fly the full mission | polarization + dashboard |
 | `21_hydrogen_design_voltage_sweep.py` | Sweep the fuel-cell design voltage; find the take-off-weight optimum | sweep panels |
 | `22_hydrogen_tank.py` | Size the cryogenic LH2 tank and track its pressure/mass/venting/heat over the mission (needs CoolProp) | tank state + dashboard |

@@ -61,7 +61,40 @@ def main():
     print("\nFaster charging shortens the turnaround but raises the cell temperature, the "
           "cooling power the TMS must reject, and the battery degradation (fewer cycles).")
 
+    print("\nFigures:")
+    _plot_temperature(aircraft)          # in-flight battery temperature vs time
     _plot(c_rates, recharge, tfinal, cooling, cycles)
+
+
+def _plot_temperature(aircraft):
+    """Plot the in-flight battery cell temperature (and SOC) over the mission."""
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        from PhlyGreen import postprocess as pp
+    except Exception:
+        return
+    from common import savefig
+    ts = pp.mission_timeseries(aircraft)
+    if "battery_temperature" not in ts:      # only the Class-II battery integrates temperature
+        return
+    t = ts["time"] / 60.0
+    T = ts["battery_temperature"] - 273.15   # state y[4] is in Kelvin
+    fig, ax = plt.subplots(figsize=(8, 4.5))
+    ax.plot(t, T, color="tab:red", label="cell temperature")
+    limit = aircraft.mission.T_battery_limit          # max operative temperature [C]
+    ax.axhline(limit, ls="--", color="grey", label=f"max operative ({limit:.0f} C)")
+    ax.set_xlabel("time [min]"); ax.set_ylabel("battery temperature [C]")
+    ax.set_title("In-flight battery temperature"); ax.grid(alpha=0.3)
+    if "soc" in ts:                          # overlay state of charge on a second axis
+        ax2 = ax.twinx()
+        ax2.plot(t, ts["soc"], color="tab:blue", ls=":", label="SOC")
+        ax2.set_ylabel("state of charge [-]", color="tab:blue")
+    ax.legend(loc="upper left")
+    fig.tight_layout()
+    savefig(fig, "17_battery_temperature.png")
+    plt.close(fig)
 
 
 def _plot(c_rates, recharge, tfinal, cooling, cycles):
@@ -85,7 +118,6 @@ def _plot(c_rates, recharge, tfinal, cooling, cycles):
         a.set_xlabel("charge C-rate [1/h]"); a.grid(alpha=0.3)
     fig.suptitle("Ground fast-charge: cooling vs turnaround vs battery life")
     fig.tight_layout()
-    print("\nFigures:")
     savefig(fig, "17_battery_thermal_sweep.png")
     plt.close(fig)
 
