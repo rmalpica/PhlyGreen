@@ -107,5 +107,4 @@ print("ATR:", aircraft.climateimpact.ATR(), "K")
 
 - Filippone, A. *Comprehensive analysis of transport aircraft flight performance.* (EI\_NOx
   correlation.)
-- Dallara, E. S., Kroo, I. M., & Waitz, I. A. *Metrics for comparing the environmental impact
-  of aircraft.* (ATR / climate-response framework.)
+- Dallara, E. S., Kroo, I. M., & Waitz, I. A. *Metric for Comparing Lifetime average Climate Impact of Aircraft.* (ATR / climate-response framework.)
