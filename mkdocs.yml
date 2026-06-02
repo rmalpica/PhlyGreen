@@ -115,6 +115,7 @@ nav:
       - Aerodynamics Module: user-guide/aerodynamics.md
       - Structures Module: user-guide/structures.md
       - Well-To-Wake Analysis: user-guide/well-to-wake.md
+      - Emissions & Climate Impact: user-guide/emissions.md
   - Developer Guide:
       - Architecture Overview: developer-guide/architecture-overview.md
       - Flowcharts: developer-guide/flowcharts.md

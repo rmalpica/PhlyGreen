@@ -44,7 +44,9 @@ major code paths:
   `'Hydrogen'` (fuel-cell electric), or `'FuelCellBattery'` (fuel cell + battery).
 - `HybridType` — `'Parallel'` or `'Serial'` (Hybrid only).
 - `weight.Class` — `'I'` (regression Structures model) or `'II'` (FLOPS component masses).
-- `AircraftType` — `'ATR'` or `'DO228'` (selects the Class-I structural model).
+- `AircraftType` — selects the **Class-I** structural correlation: `'ATR'`, `'DO228'`, `'Jet'`
+  or `'TwinTP'` (generic twin turboprop). Ignored when `weight.Class == 'II'` (FLOPS). See
+  [Structures](structures.md).
 - `CellInput['Class']` — battery `'I'` (specific energy/power) or `'II'` (cell-level thermal).
 
 ---

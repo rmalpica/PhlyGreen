@@ -47,7 +47,7 @@ class Aircraft:
             PropellerInput (dictionary): contains propeller input keys and values
             Configuration (string): 'Traditional' or 'Hybrid'. Defines powertrain efficiency chain in powertrain.DefinePowertrainSystem and affects mission integration in mission.EvaluateMission.  
             HybridType (string): 'Parallel' or 'Serial'. Specifies powertrain efficiency chain in powertrain.DefinePowertrainSystem 
-            AircraftType (string): 'ATR' or 'DO228'. Defines Class I structural model in structures.StructuralWeight
+            AircraftType (string): 'ATR', 'DO228', 'Jet' or 'TwinTP'. Selects the Class I structural model in structures.StructuralWeight (ignored when weight.Class == 'II', i.e. FLOPS).
             WingSurface (float): aircraft wing surface [m^2] 
             DesignPW (float): aircraft design power-to-weight ratio [W/kg] 
             DesignWTOoS (float): aircraft design wing loading  

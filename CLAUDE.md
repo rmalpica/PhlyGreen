@@ -131,7 +131,7 @@ These switch major code paths — check them when changing subsystem logic:
 - `HybridType`: `'Parallel'` or `'Serial'` (only when Hybrid).
 - `weight.Class`: `'I'` (regression-based Structures model) or `'II'` (FLOPS component masses,
   `trunk/PhlyGreen/Weight/FLOPS_model.py`).
-- `AircraftType`: `'ATR'` or `'DO228'` — selects the Class I structural model.
+- `AircraftType`: `'ATR'`, `'DO228'`, `'Jet'` or `'TwinTP'` — selects the Class I structural model (only used when `weight.Class == 'I'`).
 - Battery `CellInput['Class']`: `'I'` (specific energy/power lookup) or `'II'`
   (cell-level thermal model, `trunk/PhlyGreen/Systems/Battery/Cell_Models.py`).
 

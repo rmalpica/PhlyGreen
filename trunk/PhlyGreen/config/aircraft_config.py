@@ -21,10 +21,10 @@ class AircraftConfig:
     """Complete, validated specification of an aircraft design problem."""
 
     # configuration flags (formerly set directly on the Aircraft instance)
-    configuration: str = None          # 'Traditional' | 'Hybrid'
+    configuration: str = None          # 'Traditional' | 'Hybrid' | 'Hydrogen' | 'FuelCellBattery'
     hybrid_type: Optional[str] = None  # 'Parallel' | 'Serial'
-    aircraft_type: str = None          # 'ATR' | 'DO228'
-    weight_class: str = "I"            # 'I' | 'II'
+    aircraft_type: str = None          # Class-I structural model: 'ATR' | 'DO228' | 'Jet' | 'TwinTP'
+    weight_class: str = "I"            # 'I' (regression) | 'II' (FLOPS)
     design_wing_loading: Optional[float] = None  # fix W/S [N/m^2] (else optimized)
 
     # required sections
