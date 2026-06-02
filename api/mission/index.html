@@ -137,16 +137,7 @@
     <span class=k>else</span><span class=p>:</span>
         <span class=k>raise</span> <span class=ne>Exception</span><span class=p>(</span><span class=s2>&quot;Unknown aircraft configuration: </span><span class=si>%s</span><span class=s2>&quot;</span> <span class=o>%</span><span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>Configuration</span><span class=p>)</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.Mission.Mission.Mission.FuelCellBatteryConfiguration class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">FuelCellBatteryConfiguration</span> <a href=#PhlyGreen.Mission.Mission.Mission.FuelCellBatteryConfiguration class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>FuelCellBatteryConfiguration</span><span class=p>(</span><span class=n>WTO</span><span class=p>)</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Evaluate the full mission for a fuel-cell + battery hybrid (electric) system.</p> <p>The propulsive power at each instant is split between a hydrogen fuel cell and a battery according to the profile's supplied-power ratio phi (the battery fraction): the battery covers <code>phi</code> of the propulsive power and the fuel cell the remaining <code>1 - phi</code>. The fuel-cell branch uses the physics-based fuel-cell efficiency (<code>fuelcell.ComputePRatio</code>); the battery branch uses the electric chain efficiency.</p> <p>Integrates three states: hydrogen chemical energy, battery (electrical) energy, and the mass fraction Beta (only hydrogen burn changes the aircraft mass).</p> <p><span class=doc-section-title>Returns:</span></p> <ul> <li class="doc-section-item field-body"> <b><code>tuple</code></b> ( <code>(<span title=float>float</span>, <span title=float>float</span>)</code> ) – <div class=doc-md-description> <p>(hydrogen chemical energy [J], battery energy [J]).</p> </div> </li> </ul> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Mission/Mission.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>280</span>
-<span class=normal>281</span>
-<span class=normal>282</span>
-<span class=normal>283</span>
-<span class=normal>284</span>
-<span class=normal>285</span>
-<span class=normal>286</span>
-<span class=normal>287</span>
-<span class=normal>288</span>
-<span class=normal>289</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Evaluate the full mission for a fuel-cell + battery hybrid (electric) system.</p> <p>The propulsive power at each instant is split between a hydrogen fuel cell and a battery according to the profile's supplied-power ratio phi (the battery fraction): the battery covers <code>phi</code> of the propulsive power and the fuel cell the remaining <code>1 - phi</code>. The fuel-cell branch uses the physics-based fuel-cell efficiency (<code>fuelcell.ComputePRatio</code>); the battery branch uses the electric chain efficiency.</p> <p>Integrates three states: hydrogen chemical energy, battery (electrical) energy, and the mass fraction Beta (only hydrogen burn changes the aircraft mass).</p> <p><span class=doc-section-title>Returns:</span></p> <ul> <li class="doc-section-item field-body"> <b><code>tuple</code></b> ( <code>(<span title=float>float</span>, <span title=float>float</span>)</code> ) – <div class=doc-md-description> <p>(hydrogen chemical energy [J], battery energy [J]).</p> </div> </li> </ul> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Mission/Mission.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>289</span>
 <span class=normal>290</span>
 <span class=normal>291</span>
 <span class=normal>292</span>
@@ -222,7 +213,25 @@
 <span class=normal>362</span>
 <span class=normal>363</span>
 <span class=normal>364</span>
-<span class=normal>365</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>FuelCellBatteryConfiguration</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>WTO</span><span class=p>):</span>
+<span class=normal>365</span>
+<span class=normal>366</span>
+<span class=normal>367</span>
+<span class=normal>368</span>
+<span class=normal>369</span>
+<span class=normal>370</span>
+<span class=normal>371</span>
+<span class=normal>372</span>
+<span class=normal>373</span>
+<span class=normal>374</span>
+<span class=normal>375</span>
+<span class=normal>376</span>
+<span class=normal>377</span>
+<span class=normal>378</span>
+<span class=normal>379</span>
+<span class=normal>380</span>
+<span class=normal>381</span>
+<span class=normal>382</span>
+<span class=normal>383</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>FuelCellBatteryConfiguration</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>WTO</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;Evaluate the full mission for a fuel-cell + battery hybrid (electric) system.</span>
 
 <span class=sd>    The propulsive power at each instant is split between a hydrogen fuel cell and a</span>
@@ -268,6 +277,8 @@
             <span class=bp>self</span><span class=o>.</span><span class=n>Max_FC_Thermal_Pwr_alt</span> <span class=o>=</span> <span class=n>alt</span>
         <span class=k>return</span> <span class=p>[</span><span class=n>dEh2</span><span class=p>,</span> <span class=n>dbetadt</span><span class=p>]</span>
 
+    <span class=c1># Worst-case off-mission propulsive power (take-off field length / OEI climb) at the</span>
+    <span class=c1># constraint conditions, split between the fuel cell and the battery by the take-off phi.</span>
     <span class=n>P_TO</span> <span class=o>=</span> <span class=n>WTO</span> <span class=o>*</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>performance</span><span class=o>.</span><span class=n>TakeOff</span><span class=p>(</span>
         <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>DesignWTOoS</span><span class=p>,</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>constraint</span><span class=o>.</span><span class=n>TakeOffConstraints</span><span class=p>[</span><span class=s1>&#39;Beta&#39;</span><span class=p>],</span>
         <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>constraint</span><span class=o>.</span><span class=n>TakeOffConstraints</span><span class=p>[</span><span class=s1>&#39;Altitude&#39;</span><span class=p>],</span>
@@ -275,9 +286,16 @@
         <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>constraint</span><span class=o>.</span><span class=n>TakeOffConstraints</span><span class=p>[</span><span class=s1>&#39;sTO&#39;</span><span class=p>],</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>constraint</span><span class=o>.</span><span class=n>DISA</span><span class=p>,</span>
         <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>constraint</span><span class=o>.</span><span class=n>TakeOffConstraints</span><span class=p>[</span><span class=s1>&#39;Speed&#39;</span><span class=p>],</span>
         <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>constraint</span><span class=o>.</span><span class=n>TakeOffConstraints</span><span class=p>[</span><span class=s1>&#39;Speed Type&#39;</span><span class=p>])</span>
+    <span class=n>P_OEI</span> <span class=o>=</span> <span class=n>WTO</span> <span class=o>*</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>performance</span><span class=o>.</span><span class=n>OEIClimb</span><span class=p>(</span>
+        <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>DesignWTOoS</span><span class=p>,</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>constraint</span><span class=o>.</span><span class=n>OEIClimbConstraints</span><span class=p>[</span><span class=s1>&#39;Beta&#39;</span><span class=p>],</span>
+        <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>constraint</span><span class=o>.</span><span class=n>OEIClimbConstraints</span><span class=p>[</span><span class=s1>&#39;Speed&#39;</span><span class=p>]</span> <span class=o>*</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>constraint</span><span class=o>.</span><span class=n>OEIClimbConstraints</span><span class=p>[</span><span class=s1>&#39;Climb Gradient&#39;</span><span class=p>],</span>
+        <span class=mf>1.</span><span class=p>,</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>constraint</span><span class=o>.</span><span class=n>OEIClimbConstraints</span><span class=p>[</span><span class=s1>&#39;Altitude&#39;</span><span class=p>],</span>
+        <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>constraint</span><span class=o>.</span><span class=n>DISA</span><span class=p>,</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>constraint</span><span class=o>.</span><span class=n>OEIClimbConstraints</span><span class=p>[</span><span class=s1>&#39;Speed&#39;</span><span class=p>],</span>
+        <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>constraint</span><span class=o>.</span><span class=n>OEIClimbConstraints</span><span class=p>[</span><span class=s1>&#39;Speed Type&#39;</span><span class=p>])</span>
+    <span class=n>P_total_TO</span> <span class=o>=</span> <span class=nb>max</span><span class=p>(</span><span class=n>P_TO</span><span class=p>,</span> <span class=n>P_OEI</span><span class=p>)</span>
     <span class=n>phi_TO</span> <span class=o>=</span> <span class=nb>float</span><span class=p>(</span><span class=bp>self</span><span class=o>.</span><span class=n>profile</span><span class=o>.</span><span class=n>SPW</span><span class=p>[</span><span class=mi>0</span><span class=p>][</span><span class=mi>0</span><span class=p>])</span> <span class=k>if</span> <span class=bp>self</span><span class=o>.</span><span class=n>profile</span><span class=o>.</span><span class=n>SPW</span> <span class=ow>is</span> <span class=ow>not</span> <span class=kc>None</span> <span class=k>else</span> <span class=mf>0.0</span>
-    <span class=bp>self</span><span class=o>.</span><span class=n>TO_PP</span> <span class=o>=</span> <span class=p>(</span><span class=mf>1.0</span> <span class=o>-</span> <span class=n>phi_TO</span><span class=p>)</span> <span class=o>*</span> <span class=n>P_TO</span>          <span class=c1># fuel-cell shaft power at take-off</span>
-    <span class=bp>self</span><span class=o>.</span><span class=n>TO_PBat</span> <span class=o>=</span> <span class=n>phi_TO</span> <span class=o>*</span> <span class=n>P_TO</span>                <span class=c1># battery shaft power at take-off</span>
+    <span class=bp>self</span><span class=o>.</span><span class=n>TO_PP</span> <span class=o>=</span> <span class=p>(</span><span class=mf>1.0</span> <span class=o>-</span> <span class=n>phi_TO</span><span class=p>)</span> <span class=o>*</span> <span class=n>P_total_TO</span>    <span class=c1># fuel-cell propulsive share at take-off/OEI</span>
+    <span class=bp>self</span><span class=o>.</span><span class=n>TO_PBat</span> <span class=o>=</span> <span class=n>phi_TO</span> <span class=o>*</span> <span class=n>P_total_TO</span>          <span class=c1># battery propulsive share at take-off/OEI</span>
     <span class=bp>self</span><span class=o>.</span><span class=n>Max_FC_Thermal_Pwr</span> <span class=o>=</span> <span class=o>-</span><span class=mf>1.0</span>
 
     <span class=n>y0</span> <span class=o>=</span> <span class=p>[</span><span class=mf>0.0</span><span class=p>,</span> <span class=bp>self</span><span class=o>.</span><span class=n>beta0</span><span class=p>]</span>
@@ -304,30 +322,12 @@
         <span class=n>pp_bat_peak</span> <span class=o>=</span> <span class=nb>max</span><span class=p>(</span><span class=n>pp_bat_peak</span><span class=p>,</span> <span class=nb>float</span><span class=p>(</span><span class=n>p_bat</span><span class=o>.</span><span class=n>max</span><span class=p>())</span> <span class=k>if</span> <span class=nb>len</span><span class=p>(</span><span class=n>p_bat</span><span class=p>)</span> <span class=k>else</span> <span class=mf>0.0</span><span class=p>)</span>
         <span class=n>pp_fc_peak</span> <span class=o>=</span> <span class=nb>max</span><span class=p>(</span><span class=n>pp_fc_peak</span><span class=p>,</span> <span class=nb>float</span><span class=p>(</span><span class=n>p_fc</span><span class=o>.</span><span class=n>max</span><span class=p>())</span> <span class=k>if</span> <span class=nb>len</span><span class=p>(</span><span class=n>p_fc</span><span class=p>)</span> <span class=k>else</span> <span class=mf>0.0</span><span class=p>)</span>
     <span class=bp>self</span><span class=o>.</span><span class=n>EBat</span> <span class=o>=</span> <span class=n>E_bat</span>
-    <span class=bp>self</span><span class=o>.</span><span class=n>Max_PEng</span> <span class=o>=</span> <span class=n>pp_fc_peak</span> <span class=o>/</span> <span class=mf>0.8</span>
+    <span class=bp>self</span><span class=o>.</span><span class=n>Max_PEng</span> <span class=o>=</span> <span class=n>pp_fc_peak</span>           <span class=c1># fuel-cell propulsive peak (no hidden margin)</span>
     <span class=bp>self</span><span class=o>.</span><span class=n>Max_PEng_alt</span> <span class=o>=</span> <span class=mf>0.0</span>
     <span class=bp>self</span><span class=o>.</span><span class=n>Max_PBat</span> <span class=o>=</span> <span class=nb>max</span><span class=p>(</span><span class=n>pp_bat_peak</span><span class=p>,</span> <span class=bp>self</span><span class=o>.</span><span class=n>TO_PBat</span><span class=p>)</span>
     <span class=k>return</span> <span class=bp>self</span><span class=o>.</span><span class=n>Ef</span><span class=p>[</span><span class=o>-</span><span class=mi>1</span><span class=p>],</span> <span class=bp>self</span><span class=o>.</span><span class=n>EBat</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.Mission.Mission.Mission.HybridConfigurationClassI class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">HybridConfigurationClassI</span> <a href=#PhlyGreen.Mission.Mission.Mission.HybridConfigurationClassI class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>HybridConfigurationClassI</span><span class=p>(</span><span class=n>WTO</span><span class=p>)</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Evaluate the mission for a Hybrid-Electric aircraft using a Class I battery model.</p> <details class=class-i-battery open> <summary>Class I battery</summary> <ul> <li>Does NOT enforce electrochemical or thermal limits.</li> <li>Battery energy is updated simply from power * efficiency relationships.</li> <li>No P-number sizing loop is used.</li> </ul> </details> <details class=output open> <summary>Output</summary> <ul> <li>Fuel consumption (Ef)</li> <li>Battery energy consumption (EBat)</li> <li>Mission-level peak thermal and electric power</li> </ul> </details> <h5 id=PhlyGreen.Mission.Mission.Mission.HybridConfigurationClassI--parameters>Parameters<a class=headerlink href=#PhlyGreen.Mission.Mission.Mission.HybridConfigurationClassI--parameters title="Permanent link">&para;</a></h5> <p>WTO : float Takeoff weight [kg].</p> <h5 id=PhlyGreen.Mission.Mission.Mission.HybridConfigurationClassI--returns>Returns<a class=headerlink href=#PhlyGreen.Mission.Mission.Mission.HybridConfigurationClassI--returns title="Permanent link">&para;</a></h5> <p>tuple (final cumulative fuel energy [J], final cumulative battery energy [J])</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Mission/Mission.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>511</span>
-<span class=normal>512</span>
-<span class=normal>513</span>
-<span class=normal>514</span>
-<span class=normal>515</span>
-<span class=normal>516</span>
-<span class=normal>517</span>
-<span class=normal>518</span>
-<span class=normal>519</span>
-<span class=normal>520</span>
-<span class=normal>521</span>
-<span class=normal>522</span>
-<span class=normal>523</span>
-<span class=normal>524</span>
-<span class=normal>525</span>
-<span class=normal>526</span>
-<span class=normal>527</span>
-<span class=normal>528</span>
-<span class=normal>529</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Evaluate the mission for a Hybrid-Electric aircraft using a Class I battery model.</p> <details class=class-i-battery open> <summary>Class I battery</summary> <ul> <li>Does NOT enforce electrochemical or thermal limits.</li> <li>Battery energy is updated simply from power * efficiency relationships.</li> <li>No P-number sizing loop is used.</li> </ul> </details> <details class=output open> <summary>Output</summary> <ul> <li>Fuel consumption (Ef)</li> <li>Battery energy consumption (EBat)</li> <li>Mission-level peak thermal and electric power</li> </ul> </details> <h5 id=PhlyGreen.Mission.Mission.Mission.HybridConfigurationClassI--parameters>Parameters<a class=headerlink href=#PhlyGreen.Mission.Mission.Mission.HybridConfigurationClassI--parameters title="Permanent link">&para;</a></h5> <p>WTO : float Takeoff weight [kg].</p> <h5 id=PhlyGreen.Mission.Mission.Mission.HybridConfigurationClassI--returns>Returns<a class=headerlink href=#PhlyGreen.Mission.Mission.Mission.HybridConfigurationClassI--returns title="Permanent link">&para;</a></h5> <p>tuple (final cumulative fuel energy [J], final cumulative battery energy [J])</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Mission/Mission.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>529</span>
 <span class=normal>530</span>
 <span class=normal>531</span>
 <span class=normal>532</span>
@@ -458,7 +458,25 @@
 <span class=normal>657</span>
 <span class=normal>658</span>
 <span class=normal>659</span>
-<span class=normal>660</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>HybridConfigurationClassI</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span><span class=n>WTO</span><span class=p>):</span>
+<span class=normal>660</span>
+<span class=normal>661</span>
+<span class=normal>662</span>
+<span class=normal>663</span>
+<span class=normal>664</span>
+<span class=normal>665</span>
+<span class=normal>666</span>
+<span class=normal>667</span>
+<span class=normal>668</span>
+<span class=normal>669</span>
+<span class=normal>670</span>
+<span class=normal>671</span>
+<span class=normal>672</span>
+<span class=normal>673</span>
+<span class=normal>674</span>
+<span class=normal>675</span>
+<span class=normal>676</span>
+<span class=normal>677</span>
+<span class=normal>678</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>HybridConfigurationClassI</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span><span class=n>WTO</span><span class=p>):</span>
 <span class=w>        </span><span class=sd>&quot;&quot;&quot;</span>
 <span class=sd>        Evaluate the mission for a Hybrid-Electric aircraft using a Class I battery model.</span>
 
@@ -609,25 +627,7 @@
 
         <span class=k>return</span> <span class=bp>self</span><span class=o>.</span><span class=n>Ef</span><span class=p>[</span><span class=o>-</span><span class=mi>1</span><span class=p>],</span> <span class=bp>self</span><span class=o>.</span><span class=n>EBat</span><span class=p>[</span><span class=o>-</span><span class=mi>1</span><span class=p>]</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.Mission.Mission.Mission.HybridConfigurationClassII class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">HybridConfigurationClassII</span> <a href=#PhlyGreen.Mission.Mission.Mission.HybridConfigurationClassII class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>HybridConfigurationClassII</span><span class=p>(</span><span class=n>WTO</span><span class=p>)</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Evaluate the mission for a Hybrid-Electric aircraft using a Class II battery model.</p> <details class=class-ii-battery open> <summary>Class II battery</summary> <ul> <li>Enforces current, voltage, SOC, and thermal constraints.</li> <li>Requires P-number sizing (battery discretization).</li> <li>Mission evaluation is repeatedly performed until a feasible P-number (battery size) is found.</li> </ul> </details> <details class=outputs open> <summary>Outputs</summary> <ul> <li>Fuel energy (Ef)</li> <li>Battery energy (EBat)</li> <li>Peak thermal and electric power</li> <li>Updated optimal P-number</li> </ul> </details> <h5 id=PhlyGreen.Mission.Mission.Mission.HybridConfigurationClassII--parameters>Parameters<a class=headerlink href=#PhlyGreen.Mission.Mission.Mission.HybridConfigurationClassII--parameters title="Permanent link">&para;</a></h5> <p>WTO : float Takeoff weight [kg].</p> <h5 id=PhlyGreen.Mission.Mission.Mission.HybridConfigurationClassII--returns>Returns<a class=headerlink href=#PhlyGreen.Mission.Mission.Mission.HybridConfigurationClassII--returns title="Permanent link">&para;</a></h5> <p>tuple (final cumulative fuel energy [J], final cumulative battery energy [J])</p> <h5 id=PhlyGreen.Mission.Mission.Mission.HybridConfigurationClassII--notes>Notes<a class=headerlink href=#PhlyGreen.Mission.Mission.Mission.HybridConfigurationClassII--notes title="Permanent link">&para;</a></h5> <p>The algorithm: 1. Uses a P-number guess (or previous optimal). 2. Scales P-number based on weight from previous iteration (if available). 3. Evaluates mission for that P-number: - battery thermal model - battery electrochemical model - SOC/voltage/current limits 4. If infeasible, P-number is adjusted using a bounded search. 5. Continues until a feasible P-number is found.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Mission/Mission.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal> 664</span>
-<span class=normal> 665</span>
-<span class=normal> 666</span>
-<span class=normal> 667</span>
-<span class=normal> 668</span>
-<span class=normal> 669</span>
-<span class=normal> 670</span>
-<span class=normal> 671</span>
-<span class=normal> 672</span>
-<span class=normal> 673</span>
-<span class=normal> 674</span>
-<span class=normal> 675</span>
-<span class=normal> 676</span>
-<span class=normal> 677</span>
-<span class=normal> 678</span>
-<span class=normal> 679</span>
-<span class=normal> 680</span>
-<span class=normal> 681</span>
-<span class=normal> 682</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Evaluate the mission for a Hybrid-Electric aircraft using a Class II battery model.</p> <details class=class-ii-battery open> <summary>Class II battery</summary> <ul> <li>Enforces current, voltage, SOC, and thermal constraints.</li> <li>Requires P-number sizing (battery discretization).</li> <li>Mission evaluation is repeatedly performed until a feasible P-number (battery size) is found.</li> </ul> </details> <details class=outputs open> <summary>Outputs</summary> <ul> <li>Fuel energy (Ef)</li> <li>Battery energy (EBat)</li> <li>Peak thermal and electric power</li> <li>Updated optimal P-number</li> </ul> </details> <h5 id=PhlyGreen.Mission.Mission.Mission.HybridConfigurationClassII--parameters>Parameters<a class=headerlink href=#PhlyGreen.Mission.Mission.Mission.HybridConfigurationClassII--parameters title="Permanent link">&para;</a></h5> <p>WTO : float Takeoff weight [kg].</p> <h5 id=PhlyGreen.Mission.Mission.Mission.HybridConfigurationClassII--returns>Returns<a class=headerlink href=#PhlyGreen.Mission.Mission.Mission.HybridConfigurationClassII--returns title="Permanent link">&para;</a></h5> <p>tuple (final cumulative fuel energy [J], final cumulative battery energy [J])</p> <h5 id=PhlyGreen.Mission.Mission.Mission.HybridConfigurationClassII--notes>Notes<a class=headerlink href=#PhlyGreen.Mission.Mission.Mission.HybridConfigurationClassII--notes title="Permanent link">&para;</a></h5> <p>The algorithm: 1. Uses a P-number guess (or previous optimal). 2. Scales P-number based on weight from previous iteration (if available). 3. Evaluates mission for that P-number: - battery thermal model - battery electrochemical model - SOC/voltage/current limits 4. If infeasible, P-number is adjusted using a bounded search. 5. Continues until a feasible P-number is found.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Mission/Mission.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal> 682</span>
 <span class=normal> 683</span>
 <span class=normal> 684</span>
 <span class=normal> 685</span>
@@ -1011,7 +1011,25 @@
 <span class=normal>1063</span>
 <span class=normal>1064</span>
 <span class=normal>1065</span>
-<span class=normal>1066</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>HybridConfigurationClassII</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span><span class=n>WTO</span><span class=p>):</span>
+<span class=normal>1066</span>
+<span class=normal>1067</span>
+<span class=normal>1068</span>
+<span class=normal>1069</span>
+<span class=normal>1070</span>
+<span class=normal>1071</span>
+<span class=normal>1072</span>
+<span class=normal>1073</span>
+<span class=normal>1074</span>
+<span class=normal>1075</span>
+<span class=normal>1076</span>
+<span class=normal>1077</span>
+<span class=normal>1078</span>
+<span class=normal>1079</span>
+<span class=normal>1080</span>
+<span class=normal>1081</span>
+<span class=normal>1082</span>
+<span class=normal>1083</span>
+<span class=normal>1084</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>HybridConfigurationClassII</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span><span class=n>WTO</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;</span>
 <span class=sd>    Evaluate the mission for a Hybrid-Electric aircraft using a Class II battery model.</span>
 
@@ -1502,7 +1520,16 @@
 <span class=normal>274</span>
 <span class=normal>275</span>
 <span class=normal>276</span>
-<span class=normal>277</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>HydrogenConfiguration</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>WTO</span><span class=p>):</span>
+<span class=normal>277</span>
+<span class=normal>278</span>
+<span class=normal>279</span>
+<span class=normal>280</span>
+<span class=normal>281</span>
+<span class=normal>282</span>
+<span class=normal>283</span>
+<span class=normal>284</span>
+<span class=normal>285</span>
+<span class=normal>286</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>HydrogenConfiguration</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>WTO</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;Evaluate the full mission for a hydrogen fuel-cell (electric) propulsion system.</span>
 
 <span class=sd>    Integrates two states over the mission: cumulative hydrogen *chemical* energy and</span>
@@ -1536,8 +1563,10 @@
             <span class=bp>self</span><span class=o>.</span><span class=n>Max_FC_Thermal_Pwr_alt</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>profile</span><span class=o>.</span><span class=n>Altitude</span><span class=p>(</span><span class=n>t</span><span class=p>)</span>
         <span class=k>return</span> <span class=p>[</span><span class=n>dEdt_chem</span><span class=p>,</span> <span class=n>dbetadt</span><span class=p>]</span>
 
-    <span class=c1># Peak (take-off / one-engine-inoperative climb) propulsive power, used to size</span>
-    <span class=c1># the fuel-cell rated power and the take-off operating point.</span>
+    <span class=c1># Worst-case off-mission propulsive power for fuel-cell sizing: the take-off field</span>
+    <span class=c1># length and the one-engine-inoperative climb, evaluated at the *constraint* conditions</span>
+    <span class=c1># (these scenarios are not flown by the mission profile, but the fuel cell must supply</span>
+    <span class=c1># their power). Taken as the worst case.</span>
     <span class=n>P_TO</span> <span class=o>=</span> <span class=n>WTO</span> <span class=o>*</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>performance</span><span class=o>.</span><span class=n>TakeOff</span><span class=p>(</span>
         <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>DesignWTOoS</span><span class=p>,</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>constraint</span><span class=o>.</span><span class=n>TakeOffConstraints</span><span class=p>[</span><span class=s1>&#39;Beta&#39;</span><span class=p>],</span>
         <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>constraint</span><span class=o>.</span><span class=n>TakeOffConstraints</span><span class=p>[</span><span class=s1>&#39;Altitude&#39;</span><span class=p>],</span>
@@ -1545,11 +1574,17 @@
         <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>constraint</span><span class=o>.</span><span class=n>TakeOffConstraints</span><span class=p>[</span><span class=s1>&#39;sTO&#39;</span><span class=p>],</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>constraint</span><span class=o>.</span><span class=n>DISA</span><span class=p>,</span>
         <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>constraint</span><span class=o>.</span><span class=n>TakeOffConstraints</span><span class=p>[</span><span class=s1>&#39;Speed&#39;</span><span class=p>],</span>
         <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>constraint</span><span class=o>.</span><span class=n>TakeOffConstraints</span><span class=p>[</span><span class=s1>&#39;Speed Type&#39;</span><span class=p>])</span>
+    <span class=n>P_OEI</span> <span class=o>=</span> <span class=n>WTO</span> <span class=o>*</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>performance</span><span class=o>.</span><span class=n>OEIClimb</span><span class=p>(</span>
+        <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>DesignWTOoS</span><span class=p>,</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>constraint</span><span class=o>.</span><span class=n>OEIClimbConstraints</span><span class=p>[</span><span class=s1>&#39;Beta&#39;</span><span class=p>],</span>
+        <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>constraint</span><span class=o>.</span><span class=n>OEIClimbConstraints</span><span class=p>[</span><span class=s1>&#39;Speed&#39;</span><span class=p>]</span> <span class=o>*</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>constraint</span><span class=o>.</span><span class=n>OEIClimbConstraints</span><span class=p>[</span><span class=s1>&#39;Climb Gradient&#39;</span><span class=p>],</span>
+        <span class=mf>1.</span><span class=p>,</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>constraint</span><span class=o>.</span><span class=n>OEIClimbConstraints</span><span class=p>[</span><span class=s1>&#39;Altitude&#39;</span><span class=p>],</span>
+        <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>constraint</span><span class=o>.</span><span class=n>DISA</span><span class=p>,</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>constraint</span><span class=o>.</span><span class=n>OEIClimbConstraints</span><span class=p>[</span><span class=s1>&#39;Speed&#39;</span><span class=p>],</span>
+        <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>constraint</span><span class=o>.</span><span class=n>OEIClimbConstraints</span><span class=p>[</span><span class=s1>&#39;Speed Type&#39;</span><span class=p>])</span>
+    <span class=bp>self</span><span class=o>.</span><span class=n>TO_PP</span> <span class=o>=</span> <span class=nb>max</span><span class=p>(</span><span class=n>P_TO</span><span class=p>,</span> <span class=n>P_OEI</span><span class=p>)</span>
     <span class=n>PRatio_TO</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>fuelcell</span><span class=o>.</span><span class=n>ComputePRatio</span><span class=p>(</span>
         <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>constraint</span><span class=o>.</span><span class=n>TakeOffConstraints</span><span class=p>[</span><span class=s1>&#39;Altitude&#39;</span><span class=p>],</span>
-        <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>constraint</span><span class=o>.</span><span class=n>TakeOffConstraints</span><span class=p>[</span><span class=s1>&#39;Speed&#39;</span><span class=p>],</span> <span class=n>P_TO</span><span class=p>)</span>
-    <span class=bp>self</span><span class=o>.</span><span class=n>TO_PP</span> <span class=o>=</span> <span class=n>P_TO</span>
-    <span class=bp>self</span><span class=o>.</span><span class=n>TO_P_H2_Thermal</span> <span class=o>=</span> <span class=n>P_TO</span> <span class=o>*</span> <span class=n>PRatio_TO</span><span class=p>[</span><span class=mi>0</span><span class=p>]</span>
+        <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>constraint</span><span class=o>.</span><span class=n>TakeOffConstraints</span><span class=p>[</span><span class=s1>&#39;Speed&#39;</span><span class=p>],</span> <span class=bp>self</span><span class=o>.</span><span class=n>TO_PP</span><span class=p>)</span>
+    <span class=bp>self</span><span class=o>.</span><span class=n>TO_P_H2_Thermal</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>TO_PP</span> <span class=o>*</span> <span class=n>PRatio_TO</span><span class=p>[</span><span class=mi>0</span><span class=p>]</span>
     <span class=bp>self</span><span class=o>.</span><span class=n>Max_FC_Thermal_Pwr</span> <span class=o>=</span> <span class=o>-</span><span class=mf>1.0</span>
 
     <span class=c1># Optionally advance the LH2 tank thermodynamic state through the mission.</span>
@@ -1582,12 +1617,13 @@
     <span class=bp>self</span><span class=o>.</span><span class=n>Ef</span> <span class=o>=</span> <span class=n>sol</span><span class=o>.</span><span class=n>y</span><span class=p>[</span><span class=mi>0</span><span class=p>]</span>
     <span class=bp>self</span><span class=o>.</span><span class=n>Beta</span> <span class=o>=</span> <span class=n>sol</span><span class=o>.</span><span class=n>y</span><span class=p>[</span><span class=mi>1</span><span class=p>]</span>
 
-    <span class=c1># Peak mission shaft power (with a small installation margin), for FC mass sizing.</span>
+    <span class=c1># Peak mission propulsive power (no hidden margin — the sizing margin and the</span>
+    <span class=c1># take-off/OEI floor are applied by the weight loop / FuelCell sizing).</span>
     <span class=n>pp_peak</span> <span class=o>=</span> <span class=mf>0.0</span>
     <span class=k>for</span> <span class=n>arr</span> <span class=ow>in</span> <span class=bp>self</span><span class=o>.</span><span class=n>integral_solution</span><span class=p>:</span>
         <span class=k>for</span> <span class=n>k</span> <span class=ow>in</span> <span class=nb>range</span><span class=p>(</span><span class=nb>len</span><span class=p>(</span><span class=n>arr</span><span class=o>.</span><span class=n>t</span><span class=p>)):</span>
             <span class=n>pp_peak</span> <span class=o>=</span> <span class=nb>max</span><span class=p>(</span><span class=n>pp_peak</span><span class=p>,</span> <span class=n>PowerPropulsive</span><span class=p>(</span><span class=n>arr</span><span class=o>.</span><span class=n>y</span><span class=p>[</span><span class=mi>1</span><span class=p>][</span><span class=n>k</span><span class=p>],</span> <span class=n>arr</span><span class=o>.</span><span class=n>t</span><span class=p>[</span><span class=n>k</span><span class=p>]))</span>
-    <span class=bp>self</span><span class=o>.</span><span class=n>Max_PEng</span> <span class=o>=</span> <span class=n>pp_peak</span> <span class=o>/</span> <span class=mf>0.8</span>
+    <span class=bp>self</span><span class=o>.</span><span class=n>Max_PEng</span> <span class=o>=</span> <span class=n>pp_peak</span>
     <span class=bp>self</span><span class=o>.</span><span class=n>Max_PEng_alt</span> <span class=o>=</span> <span class=mf>0.0</span>
     <span class=k>return</span> <span class=bp>self</span><span class=o>.</span><span class=n>Ef</span><span class=p>[</span><span class=o>-</span><span class=mi>1</span><span class=p>]</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.Mission.Mission.Mission.InitializeProfile class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">InitializeProfile</span> <a href=#PhlyGreen.Mission.Mission.Mission.InitializeProfile class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>InitializeProfile</span><span class=p>()</span>
@@ -1633,25 +1669,7 @@
     <span class=bp>self</span><span class=o>.</span><span class=n>beta0</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>MissionInput</span><span class=p>[</span><span class=s1>&#39;Beta start&#39;</span><span class=p>]</span>
     <span class=bp>self</span><span class=o>.</span><span class=n>ef</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>EnergyInput</span><span class=p>[</span><span class=s1>&#39;Ef&#39;</span><span class=p>]</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.Mission.Mission.Mission.TraditionalConfiguration class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">TraditionalConfiguration</span> <a href=#PhlyGreen.Mission.Mission.Mission.TraditionalConfiguration class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>TraditionalConfiguration</span><span class=p>(</span><span class=n>WTO</span><span class=p>)</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Evaluate the complete mission for a traditional (non-hybrid) propulsion system.</p> <p>Includes: - instantaneous propulsive power calculation - fuel-burn ODE integration - peak thermal shaft power evaluation</p> <h5 id=PhlyGreen.Mission.Mission.Mission.TraditionalConfiguration--parameters>Parameters<a class=headerlink href=#PhlyGreen.Mission.Mission.Mission.TraditionalConfiguration--parameters title="Permanent link">&para;</a></h5> <p>WTO : float Takeoff weight [kg].</p> <h5 id=PhlyGreen.Mission.Mission.Mission.TraditionalConfiguration--returns>Returns<a class=headerlink href=#PhlyGreen.Mission.Mission.Mission.TraditionalConfiguration--returns title="Permanent link">&para;</a></h5> <p>float Final cumulative fuel energy [J].</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Mission/Mission.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>368</span>
-<span class=normal>369</span>
-<span class=normal>370</span>
-<span class=normal>371</span>
-<span class=normal>372</span>
-<span class=normal>373</span>
-<span class=normal>374</span>
-<span class=normal>375</span>
-<span class=normal>376</span>
-<span class=normal>377</span>
-<span class=normal>378</span>
-<span class=normal>379</span>
-<span class=normal>380</span>
-<span class=normal>381</span>
-<span class=normal>382</span>
-<span class=normal>383</span>
-<span class=normal>384</span>
-<span class=normal>385</span>
-<span class=normal>386</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Evaluate the complete mission for a traditional (non-hybrid) propulsion system.</p> <p>Includes: - instantaneous propulsive power calculation - fuel-burn ODE integration - peak thermal shaft power evaluation</p> <h5 id=PhlyGreen.Mission.Mission.Mission.TraditionalConfiguration--parameters>Parameters<a class=headerlink href=#PhlyGreen.Mission.Mission.Mission.TraditionalConfiguration--parameters title="Permanent link">&para;</a></h5> <p>WTO : float Takeoff weight [kg].</p> <h5 id=PhlyGreen.Mission.Mission.Mission.TraditionalConfiguration--returns>Returns<a class=headerlink href=#PhlyGreen.Mission.Mission.Mission.TraditionalConfiguration--returns title="Permanent link">&para;</a></h5> <p>float Final cumulative fuel energy [J].</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Mission/Mission.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>386</span>
 <span class=normal>387</span>
 <span class=normal>388</span>
 <span class=normal>389</span>
@@ -1773,7 +1791,25 @@
 <span class=normal>505</span>
 <span class=normal>506</span>
 <span class=normal>507</span>
-<span class=normal>508</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>TraditionalConfiguration</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span><span class=n>WTO</span><span class=p>):</span>
+<span class=normal>508</span>
+<span class=normal>509</span>
+<span class=normal>510</span>
+<span class=normal>511</span>
+<span class=normal>512</span>
+<span class=normal>513</span>
+<span class=normal>514</span>
+<span class=normal>515</span>
+<span class=normal>516</span>
+<span class=normal>517</span>
+<span class=normal>518</span>
+<span class=normal>519</span>
+<span class=normal>520</span>
+<span class=normal>521</span>
+<span class=normal>522</span>
+<span class=normal>523</span>
+<span class=normal>524</span>
+<span class=normal>525</span>
+<span class=normal>526</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>TraditionalConfiguration</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span><span class=n>WTO</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;</span>
 <span class=sd>    Evaluate the complete mission for a traditional (non-hybrid) propulsion system.</span>
 

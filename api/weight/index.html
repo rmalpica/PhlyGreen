@@ -1,10 +1,10 @@
 <!doctype html><html lang=en class=no-js> <head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><meta name=description content="User & Developer Manual for the PhlyGreen Aircraft Design Toolkit"><meta name=author content="Riccardo Malpica Galassi"><link href=https://rmalpica.github.io/PhlyGreen/api/weight/ rel=canonical><link href=../thermal/ rel=prev><link href=../performance/ rel=next><link rel=icon href=../../assets/images/favicon.png><meta name=generator content="mkdocs-1.6.1, mkdocs-material-9.7.6"><title>Weight - PhlyGreen Documentation</title><link rel=stylesheet href=../../assets/stylesheets/main.484c7ddc.min.css><link rel=stylesheet href=../../assets/stylesheets/palette.ab4e12ef.min.css><link rel=preconnect href=https://fonts.gstatic.com crossorigin><link rel=stylesheet href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CFira+Code:400,400i,700,700i&display=fallback"><style>:root{--md-text-font:"Inter";--md-code-font:"Fira Code"}</style><link rel=stylesheet href=../../assets/_mkdocstrings.css><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css><link rel=stylesheet href=../../css/custom.css><link rel=stylesheet href=../../css/extra.css><script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script></head> <body dir=ltr data-md-color-scheme=default data-md-color-primary=teal data-md-color-accent=cyan> <input class=md-toggle data-md-toggle=drawer type=checkbox id=__drawer autocomplete=off> <input class=md-toggle data-md-toggle=search type=checkbox id=__search autocomplete=off> <label class=md-overlay for=__drawer></label> <div data-md-component=skip> <a href=#weight-api class=md-skip> Skip to content </a> </div> <div data-md-component=announce> </div> <header class="md-header md-header--shadow" data-md-component=header> <nav class="md-header__inner md-grid" aria-label=Header> <a href=../.. title="PhlyGreen Documentation" class="md-header__button md-logo" aria-label="PhlyGreen Documentation" data-md-component=logo> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg> </a> <label class="md-header__button md-icon" for=__drawer> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg> </label> <div class=md-header__title data-md-component=header-title> <div class=md-header__ellipsis> <div class=md-header__topic> <span class=md-ellipsis> PhlyGreen Documentation </span> </div> <div class=md-header__topic data-md-component=header-topic> <span class=md-ellipsis> Weight </span> </div> </div> </div> <form class=md-header__option data-md-component=palette> <input class=md-option data-md-color-media data-md-color-scheme=default data-md-color-primary=teal data-md-color-accent=cyan aria-hidden=true type=radio name=__palette id=__palette_0> <input class=md-option data-md-color-media data-md-color-scheme=slate data-md-color-primary=teal data-md-color-accent=cyan aria-label="Switch to light mode" type=radio name=__palette id=__palette_1> <label class="md-header__button md-icon" title="Switch to light mode" for=__palette_0 hidden> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg> </label> </form> <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script> <label class="md-header__button md-icon" for=__search> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg> </label> <div class=md-search data-md-component=search role=dialog> <label class=md-search__overlay for=__search></label> <div class=md-search__inner role=search> <form class=md-search__form name=search> <input type=text class=md-search__input name=query aria-label=Search placeholder=Search autocapitalize=off autocorrect=off autocomplete=off spellcheck=false data-md-component=search-query required> <label class="md-search__icon md-icon" for=__search> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg> </label> <nav class=md-search__options aria-label=Search> <button type=reset class="md-search__icon md-icon" title=Clear aria-label=Clear tabindex=-1> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg> </button> </nav> </form> <div class=md-search__output> <div class=md-search__scrollwrap tabindex=0 data-md-scrollfix> <div class=md-search-result data-md-component=search-result> <div class=md-search-result__meta> Initializing search </div> <ol class=md-search-result__list role=presentation></ol> </div> </div> </div> </div> </div> <div class=md-header__source> <a href=https://github.com/rmalpica/PhlyGreen title="Go to repository" class=md-source data-md-component=source> <div class="md-source__icon md-icon"> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 512 512"><!-- Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg> </div> <div class=md-source__repository> GitHub </div> </a> </div> </nav> </header> <div class=md-container data-md-component=container> <main class=md-main data-md-component=main> <div class="md-main__inner md-grid"> <div class="md-sidebar md-sidebar--primary" data-md-component=sidebar data-md-type=navigation> <div class=md-sidebar__scrollwrap> <div class=md-sidebar__inner> <nav class="md-nav md-nav--primary md-nav--integrated" aria-label=Navigation data-md-level=0> <label class=md-nav__title for=__drawer> <a href=../.. title="PhlyGreen Documentation" class="md-nav__button md-logo" aria-label="PhlyGreen Documentation" data-md-component=logo> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg> </a> PhlyGreen Documentation </label> <div class=md-nav__source> <a href=https://github.com/rmalpica/PhlyGreen title="Go to repository" class=md-source data-md-component=source> <div class="md-source__icon md-icon"> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 512 512"><!-- Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg> </div> <div class=md-source__repository> GitHub </div> </a> </div> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../.. class=md-nav__link> <span class=md-ellipsis> Home </span> </a> </li> <li class="md-nav__item md-nav__item--section md-nav__item--nested"> <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type=checkbox id=__nav_2> <label class=md-nav__link for=__nav_2 id=__nav_2_label tabindex> <span class=md-ellipsis> Getting Started </span> <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav data-md-level=1 aria-labelledby=__nav_2_label aria-expanded=false> <label class=md-nav__title for=__nav_2> <span class="md-nav__icon md-icon"></span> Getting Started </label> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../../getting-started/installation/ class=md-nav__link> <span class=md-ellipsis> Installation </span> </a> </li> <li class=md-nav__item> <a href=../../getting-started/theory/ class=md-nav__link> <span class=md-ellipsis> Theoretical Reference </span> </a> </li> <li class=md-nav__item> <a href=../../getting-started/logic/ class=md-nav__link> <span class=md-ellipsis> Program Logic </span> </a> </li> <li class=md-nav__item> <a href=../../getting-started/running-your-first-mission/ class=md-nav__link> <span class=md-ellipsis> Running your first mission </span> </a> </li> </ul> </nav> </li> <li class="md-nav__item md-nav__item--section md-nav__item--nested"> <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type=checkbox id=__nav_3> <label class=md-nav__link for=__nav_3 id=__nav_3_label tabindex> <span class=md-ellipsis> User Guide </span> <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav data-md-level=1 aria-labelledby=__nav_3_label aria-expanded=false> <label class=md-nav__title for=__nav_3> <span class="md-nav__icon md-icon"></span> User Guide </label> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../../user-guide/configuration/ class=md-nav__link> <span class=md-ellipsis> Configuration & Workflow </span> </a> </li> <li class=md-nav__item> <a href=../../user-guide/aircraft/ class=md-nav__link> <span class=md-ellipsis> Aircraft Module </span> </a> </li> <li class=md-nav__item> <a href=../../user-guide/constraints/ class=md-nav__link> <span class=md-ellipsis> Constraints Analysis </span> </a> </li> <li class=md-nav__item> <a href=../../user-guide/mission/ class=md-nav__link> <span class=md-ellipsis> Mission Module </span> </a> </li> <li class=md-nav__item> <a href=../../user-guide/weight/ class=md-nav__link> <span class=md-ellipsis> Weight Estimation </span> </a> </li> <li class=md-nav__item> <a href=../../user-guide/performance/ class=md-nav__link> <span class=md-ellipsis> Performance Module </span> </a> </li> <li class=md-nav__item> <a href=../../user-guide/powertrain/ class=md-nav__link> <span class=md-ellipsis> Powertrain Module </span> </a> </li> <li class=md-nav__item> <a href=../../user-guide/battery/ class=md-nav__link> <span class=md-ellipsis> Battery Module </span> </a> </li> <li class=md-nav__item> <a href=../../user-guide/hydrogen/ class=md-nav__link> <span class=md-ellipsis> Hydrogen (Fuel Cell & Tank) </span> </a> </li> <li class=md-nav__item> <a href=../../user-guide/aerodynamics/ class=md-nav__link> <span class=md-ellipsis> Aerodynamics Module </span> </a> </li> <li class=md-nav__item> <a href=../../user-guide/structures/ class=md-nav__link> <span class=md-ellipsis> Structures Module </span> </a> </li> <li class=md-nav__item> <a href=../../user-guide/well-to-wake/ class=md-nav__link> <span class=md-ellipsis> Well-To-Wake Analysis </span> </a> </li> <li class=md-nav__item> <a href=../../user-guide/emissions/ class=md-nav__link> <span class=md-ellipsis> Emissions & Climate Impact </span> </a> </li> </ul> </nav> </li> <li class="md-nav__item md-nav__item--section md-nav__item--nested"> <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type=checkbox id=__nav_4> <label class=md-nav__link for=__nav_4 id=__nav_4_label tabindex> <span class=md-ellipsis> Developer Guide </span> <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav data-md-level=1 aria-labelledby=__nav_4_label aria-expanded=false> <label class=md-nav__title for=__nav_4> <span class="md-nav__icon md-icon"></span> Developer Guide </label> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../../developer-guide/architecture-overview/ class=md-nav__link> <span class=md-ellipsis> Architecture Overview </span> </a> </li> <li class=md-nav__item> <a href=../../developer-guide/flowcharts/ class=md-nav__link> <span class=md-ellipsis> Flowcharts </span> </a> </li> <li class=md-nav__item> <a href=../../developer-guide/module-reference/ class=md-nav__link> <span class=md-ellipsis> Module Reference </span> </a> </li> <li class=md-nav__item> <a href=../../developer-guide/extending-the-model/ class=md-nav__link> <span class=md-ellipsis> Extending the Model </span> </a> </li> <li class=md-nav__item> <a href=../../developer-guide/battery-merge-assessment/ class=md-nav__link> <span class=md-ellipsis> Battery Merge Assessment </span> </a> </li> <li class=md-nav__item> <a href=../../developer-guide/troubleshooting/ class=md-nav__link> <span class=md-ellipsis> Troubleshooting </span> </a> </li> </ul> </nav> </li> <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested"> <input class="md-nav__toggle md-toggle " type=checkbox id=__nav_5 checked> <label class=md-nav__link for=__nav_5 id=__nav_5_label tabindex> <span class=md-ellipsis> API Reference </span> <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav data-md-level=1 aria-labelledby=__nav_5_label aria-expanded=true> <label class=md-nav__title for=__nav_5> <span class="md-nav__icon md-icon"></span> API Reference </label> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../outer-loop/ class=md-nav__link> <span class=md-ellipsis> Outer Loop & Results </span> </a> </li> <li class=md-nav__item> <a href=../config/ class=md-nav__link> <span class=md-ellipsis> Configuration </span> </a> </li> <li class=md-nav__item> <a href=../mission/ class=md-nav__link> <span class=md-ellipsis> Mission </span> </a> </li> <li class=md-nav__item> <a href=../powertrain/ class=md-nav__link> <span class=md-ellipsis> Powertrain </span> </a> </li> <li class=md-nav__item> <a href=../battery/ class=md-nav__link> <span class=md-ellipsis> Battery </span> </a> </li> <li class=md-nav__item> <a href=../fuelcell/ class=md-nav__link> <span class=md-ellipsis> Fuel Cell </span> </a> </li> <li class=md-nav__item> <a href=../tank/ class=md-nav__link> <span class=md-ellipsis> LH2 Tank </span> </a> </li> <li class=md-nav__item> <a href=../thermal/ class=md-nav__link> <span class=md-ellipsis> Thermal Network </span> </a> </li> <li class="md-nav__item md-nav__item--active"> <input class="md-nav__toggle md-toggle" type=checkbox id=__toc> <label class="md-nav__link md-nav__link--active" for=__toc> <span class=md-ellipsis> Weight </span> <span class="md-nav__icon md-icon"></span> </label> <a href=./ class="md-nav__link md-nav__link--active"> <span class=md-ellipsis> Weight </span> </a> <nav class="md-nav md-nav--secondary" aria-label="Table of contents"> <label class=md-nav__title for=__toc> <span class="md-nav__icon md-icon"></span> Table of contents </label> <ul class=md-nav__list data-md-component=toc data-md-scrollfix> <li class=md-nav__item> <a href=#PhlyGreen.Weight.Weight class=md-nav__link> <span class=md-ellipsis> Weight </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.Weight.Weight.Weight class=md-nav__link> <span class=md-ellipsis> Weight </span> </a> <nav class=md-nav aria-label=Weight> <ul class=md-nav__list> <li class=md-nav__item> <a href=#PhlyGreen.Weight.Weight.Weight--parameters class=md-nav__link> <span class=md-ellipsis> Parameters </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.Weight.Weight.Weight.FuelCellBattery class=md-nav__link> <span class=md-ellipsis> FuelCellBattery </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.Weight.Weight.Weight.Hybrid class=md-nav__link> <span class=md-ellipsis> Hybrid </span> </a> <nav class=md-nav aria-label=Hybrid> <ul class=md-nav__list> <li class=md-nav__item> <a href=#PhlyGreen.Weight.Weight.Weight.Hybrid--returns class=md-nav__link> <span class=md-ellipsis> Returns </span> </a> </li> </ul> </nav> </li> <li class=md-nav__item> <a href=#PhlyGreen.Weight.Weight.Weight.Hydrogen class=md-nav__link> <span class=md-ellipsis> Hydrogen </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.Weight.Weight.Weight.SetInput class=md-nav__link> <span class=md-ellipsis> SetInput </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.Weight.Weight.Weight.Traditional class=md-nav__link> <span class=md-ellipsis> Traditional </span> </a> <nav class=md-nav aria-label=Traditional> <ul class=md-nav__list> <li class=md-nav__item> <a href=#PhlyGreen.Weight.Weight.Weight.Traditional--returns class=md-nav__link> <span class=md-ellipsis> Returns </span> </a> </li> </ul> </nav> </li> <li class=md-nav__item> <a href=#PhlyGreen.Weight.Weight.Weight.WeightEstimation class=md-nav__link> <span class=md-ellipsis> WeightEstimation </span> </a> <nav class=md-nav aria-label=WeightEstimation> <ul class=md-nav__list> <li class=md-nav__item> <a href=#PhlyGreen.Weight.Weight.Weight.WeightEstimation--returns class=md-nav__link> <span class=md-ellipsis> Returns </span> </a> </li> </ul> </nav> </li> </ul> </nav> </li> </ul> </nav> </li> <li class=md-nav__item> <a href=../performance/ class=md-nav__link> <span class=md-ellipsis> Performance </span> </a> </li> <li class=md-nav__item> <a href=../constraints/ class=md-nav__link> <span class=md-ellipsis> Constraints </span> </a> </li> <li class=md-nav__item> <a href=../aerodynamics/ class=md-nav__link> <span class=md-ellipsis> Aerodynamics </span> </a> </li> <li class=md-nav__item> <a href=../structures/ class=md-nav__link> <span class=md-ellipsis> Structures </span> </a> </li> <li class=md-nav__item> <a href=../welltowake/ class=md-nav__link> <span class=md-ellipsis> Well-to-Wake </span> </a> </li> <li class=md-nav__item> <a href=../climate-impact/ class=md-nav__link> <span class=md-ellipsis> Climate Impact </span> </a> </li> <li class=md-nav__item> <a href=../utilities/ class=md-nav__link> <span class=md-ellipsis> Utilities & API </span> </a> </li> </ul> </nav> </li> </ul> </nav> </div> </div> </div> <div class=md-content data-md-component=content> <article class="md-content__inner md-typeset"> <a href=https://github.com/rmalpica/PhlyGreen/edit/master/docs/api/weight.md title="Edit this page" class="md-content__button md-icon" rel=edit> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg> </a> <h1 id=weight-api>Weight API<a class=headerlink href=#weight-api title="Permanent link">&para;</a></h1> <div class="doc doc-object doc-module"> <a id=PhlyGreen.Weight.Weight></a> <div class="doc doc-contents first"> <div class="doc doc-children"> <div class="doc doc-object doc-class"> <h2 id=PhlyGreen.Weight.Weight.Weight class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-class"></code> <span class="doc doc-object-name doc-class-name">Weight</span> <a href=#PhlyGreen.Weight.Weight.Weight class=headerlink title="Permanent link">&para;</a></h2> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>Weight</span><span class=p>(</span><span class=n>aircraft</span><span class=p>)</span>
 </code></pre></div> <div class="doc doc-contents "> <p>Aircraft weight estimation module.</p> <p>This class estimates the aircraft Take-Off Weight (WTO) by solving the coupled mission-powertrain-structure design problem:</p> <pre><code>WTO = W_fuel(WTO) + W_battery(WTO) + W_struct(WTO) + W_powertrain(WTO) + W_payload + W_crew
-</code></pre> <p>The aircraft model and the mission profile determine fuel and battery energy consumption, the powertrain model provides propulsion system mass, and the structural model (or FLOPS surrogate model) provides airframe component masses.</p> <p>Two weight estimation classes are supported:</p> <ul> <li>Class I: Simplified regression model from the user's Structures module.</li> <li>Class II: Uses FLOPS-based component mass estimation (empirical).</li> </ul> <p>Two propulsion configurations are supported:</p> <ul> <li>Traditional (thermal only)</li> <li>Hybrid-electric (thermal + electric battery pack)</li> </ul> <p>Brent's root-finding method is used to find the WTO that satisfies the mass consistency equation above.</p> <h4 id=PhlyGreen.Weight.Weight.Weight--parameters>Parameters<a class=headerlink href=#PhlyGreen.Weight.Weight.Weight--parameters title="Permanent link">&para;</a></h4> <p>aircraft : Aircraft Parent aircraft object containing mission, powertrain, structure, and battery models.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Weight/Weight.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>41</span>
-<span class=normal>42</span>
-<span class=normal>43</span>
-<span class=normal>44</span>
-<span class=normal>45</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=fm>__init__</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>aircraft</span><span class=p>):</span>
+</code></pre> <p>The aircraft model and the mission profile determine fuel and battery energy consumption, the powertrain model provides propulsion system mass, and the structural model (or FLOPS surrogate model) provides airframe component masses.</p> <p>Two weight estimation classes are supported:</p> <ul> <li>Class I: Simplified regression model from the user's Structures module.</li> <li>Class II: Uses FLOPS-based component mass estimation (empirical).</li> </ul> <p>Two propulsion configurations are supported:</p> <ul> <li>Traditional (thermal only)</li> <li>Hybrid-electric (thermal + electric battery pack)</li> </ul> <p>Brent's root-finding method is used to find the WTO that satisfies the mass consistency equation above.</p> <h4 id=PhlyGreen.Weight.Weight.Weight--parameters>Parameters<a class=headerlink href=#PhlyGreen.Weight.Weight.Weight--parameters title="Permanent link">&para;</a></h4> <p>aircraft : Aircraft Parent aircraft object containing mission, powertrain, structure, and battery models.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Weight/Weight.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>46</span>
+<span class=normal>47</span>
+<span class=normal>48</span>
+<span class=normal>49</span>
+<span class=normal>50</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=fm>__init__</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>aircraft</span><span class=p>):</span>
     <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span> <span class=o>=</span> <span class=n>aircraft</span>
     <span class=bp>self</span><span class=o>.</span><span class=n>tol</span> <span class=o>=</span> <span class=mf>0.1</span>
     <span class=bp>self</span><span class=o>.</span><span class=n>final_reserve</span> <span class=o>=</span> <span class=kc>None</span>  
@@ -12,21 +12,7 @@
 </code></pre></div></td></tr></table></div> </details> <div class="doc doc-children"> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.Weight.Weight.Weight.FuelCellBattery class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">FuelCellBattery</span> <a href=#PhlyGreen.Weight.Weight.Weight.FuelCellBattery class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>FuelCellBattery</span><span class=p>()</span>
 </code></pre></div> <div class="doc doc-contents "> <p>Solve the take-off-weight equation for a fuel-cell + battery hybrid aircraft.</p> <pre><code>f(WTO) = W_structure + W_fuelcell + W_battery + W_H2 + W_tank + W_HX
          + W_payload + W_crew + W_reserve - WTO
-</code></pre> <p>The fuel cell is sized by <code>FuelCell.ComputeAndStoreWeights</code>; the mission returns the hydrogen and battery energies. The battery is sized (Class I) by the larger of its energy and power requirements, using specific energy/power from EnergyInput.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Weight/Weight.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>296</span>
-<span class=normal>297</span>
-<span class=normal>298</span>
-<span class=normal>299</span>
-<span class=normal>300</span>
-<span class=normal>301</span>
-<span class=normal>302</span>
-<span class=normal>303</span>
-<span class=normal>304</span>
-<span class=normal>305</span>
-<span class=normal>306</span>
-<span class=normal>307</span>
-<span class=normal>308</span>
-<span class=normal>309</span>
-<span class=normal>310</span>
+</code></pre> <p>The fuel cell is sized by <code>FuelCell.ComputeAndStoreWeights</code>; the mission returns the hydrogen and battery energies. The battery is sized (Class I) by the larger of its energy and power requirements, using specific energy/power from EnergyInput.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Weight/Weight.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>310</span>
 <span class=normal>311</span>
 <span class=normal>312</span>
 <span class=normal>313</span>
@@ -98,7 +84,33 @@
 <span class=normal>379</span>
 <span class=normal>380</span>
 <span class=normal>381</span>
-<span class=normal>382</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>FuelCellBattery</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
+<span class=normal>382</span>
+<span class=normal>383</span>
+<span class=normal>384</span>
+<span class=normal>385</span>
+<span class=normal>386</span>
+<span class=normal>387</span>
+<span class=normal>388</span>
+<span class=normal>389</span>
+<span class=normal>390</span>
+<span class=normal>391</span>
+<span class=normal>392</span>
+<span class=normal>393</span>
+<span class=normal>394</span>
+<span class=normal>395</span>
+<span class=normal>396</span>
+<span class=normal>397</span>
+<span class=normal>398</span>
+<span class=normal>399</span>
+<span class=normal>400</span>
+<span class=normal>401</span>
+<span class=normal>402</span>
+<span class=normal>403</span>
+<span class=normal>404</span>
+<span class=normal>405</span>
+<span class=normal>406</span>
+<span class=normal>407</span>
+<span class=normal>408</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>FuelCellBattery</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;Solve the take-off-weight equation for a fuel-cell + battery hybrid aircraft.</span>
 
 <span class=sd>        f(WTO) = W_structure + W_fuelcell + W_battery + W_H2 + W_tank + W_HX</span>
@@ -122,17 +134,29 @@
             <span class=n>LH2_Tank</span> <span class=o>=</span> <span class=kc>None</span>
 
     <span class=k>def</span><span class=w> </span><span class=nf>func</span><span class=p>(</span><span class=n>WTO</span><span class=p>):</span>
-        <span class=c1># Initialize the fuel-cell geometry (needed before the mission can query it).</span>
-        <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>fuelcell</span><span class=o>.</span><span class=n>ComputeAndStoreWeights</span><span class=p>(</span><span class=n>WTO</span><span class=p>)</span>
+        <span class=c1># Size the fuel cell self-consistently (same rule as the pure-hydrogen path, so a</span>
+        <span class=c1># phi=0 design coincides with it): seed from the constraints, then fly -&gt; resize</span>
+        <span class=c1># the fuel cell to max(mission FC peak, take-off, OEI) of its propulsive share -&gt;</span>
+        <span class=c1># re-fly until converged. The battery offloads the fuel cell (its share is</span>
+        <span class=c1># 1 - phi), so a larger phi shrinks the stack — but never below the take-off/OEI</span>
+        <span class=c1># share, which is a hard floor.</span>
+        <span class=n>fc</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>fuelcell</span>
+        <span class=n>fc</span><span class=o>.</span><span class=n>SizeFromConstraint</span><span class=p>(</span><span class=n>WTO</span><span class=p>)</span>
+        <span class=n>P_req</span><span class=p>,</span> <span class=n>converged</span> <span class=o>=</span> <span class=kc>None</span><span class=p>,</span> <span class=kc>False</span>
+        <span class=k>for</span> <span class=n>_</span> <span class=ow>in</span> <span class=nb>range</span><span class=p>(</span><span class=n>_FC_RESIZE_ITERS</span><span class=p>):</span>
+            <span class=n>E_h2_chem</span><span class=p>,</span> <span class=n>E_bat</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>mission</span><span class=o>.</span><span class=n>EvaluateMission</span><span class=p>(</span><span class=n>WTO</span><span class=p>)</span>
+            <span class=n>demand</span> <span class=o>=</span> <span class=nb>max</span><span class=p>(</span><span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>mission</span><span class=o>.</span><span class=n>TO_PP</span><span class=p>,</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>mission</span><span class=o>.</span><span class=n>Max_PEng</span><span class=p>)</span>
+            <span class=k>if</span> <span class=n>P_req</span> <span class=ow>is</span> <span class=ow>not</span> <span class=kc>None</span> <span class=ow>and</span> <span class=nb>abs</span><span class=p>(</span><span class=n>demand</span> <span class=o>-</span> <span class=n>P_req</span><span class=p>)</span> <span class=o>&lt;=</span> <span class=mf>1e-3</span> <span class=o>*</span> <span class=nb>max</span><span class=p>(</span><span class=n>P_req</span><span class=p>,</span> <span class=mf>1.0</span><span class=p>):</span>
+                <span class=n>converged</span> <span class=o>=</span> <span class=kc>True</span>
+                <span class=k>break</span>
+            <span class=n>P_req</span> <span class=o>=</span> <span class=n>demand</span>
+            <span class=n>fc</span><span class=o>.</span><span class=n>SizeForPropulsivePower</span><span class=p>(</span><span class=n>P_req</span><span class=p>)</span>
+        <span class=k>if</span> <span class=ow>not</span> <span class=n>converged</span><span class=p>:</span>
+            <span class=n>E_h2_chem</span><span class=p>,</span> <span class=n>E_bat</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>mission</span><span class=o>.</span><span class=n>EvaluateMission</span><span class=p>(</span><span class=n>WTO</span><span class=p>)</span>
+        <span class=bp>self</span><span class=o>.</span><span class=n>WPT</span> <span class=o>=</span> <span class=n>fc</span><span class=o>.</span><span class=n>Weight</span>
 
-        <span class=c1># Mission -&gt; hydrogen + battery energies (and the fuel-cell / battery peaks).</span>
-        <span class=n>E_h2_chem</span><span class=p>,</span> <span class=n>E_bat</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>mission</span><span class=o>.</span><span class=n>EvaluateMission</span><span class=p>(</span><span class=n>WTO</span><span class=p>)</span>
         <span class=bp>self</span><span class=o>.</span><span class=n>WH2_Fuel</span> <span class=o>=</span> <span class=p>(</span><span class=n>E_h2_chem</span> <span class=o>/</span> <span class=bp>self</span><span class=o>.</span><span class=n>ef</span><span class=p>)</span> <span class=o>*</span> <span class=mf>1.05</span>
         <span class=bp>self</span><span class=o>.</span><span class=n>Wf</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>WH2_Fuel</span>
-
-        <span class=c1># Re-size the fuel cell to the *actual* mission peak (the battery offloads it,</span>
-        <span class=c1># so it is smaller than a fuel-cell-only design).</span>
-        <span class=bp>self</span><span class=o>.</span><span class=n>WPT</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>fuelcell</span><span class=o>.</span><span class=n>FinalizeMassFromMission</span><span class=p>()</span>
 
         <span class=c1># Battery mass: max of energy- and power-limited sizing (Class I).</span>
         <span class=n>WBat_energy</span> <span class=o>=</span> <span class=p>(</span><span class=n>E_bat</span> <span class=o>/</span> <span class=mf>3600.0</span><span class=p>)</span> <span class=o>/</span> <span class=p>(</span><span class=n>spec_energy_Wh</span> <span class=o>*</span> <span class=n>usable_soc</span><span class=p>)</span>
@@ -186,33 +210,7 @@
             <span class=s2>&quot;shorter mission).&quot;</span><span class=p>)</span>
     <span class=k>return</span> <span class=bp>self</span><span class=o>.</span><span class=n>WTO</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.Weight.Weight.Weight.Hybrid class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">Hybrid</span> <a href=#PhlyGreen.Weight.Weight.Weight.Hybrid class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>Hybrid</span><span class=p>()</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Solve the weight equation for a hybrid-electric aircraft.</p> <p>Same logic as Traditional(), but includes battery sizing.</p> <p>Battery mass is computed differently depending on battery class:</p> <ul> <li>Class I : analytical battery mass formula</li> <li>Class II : battery pack weight determined by P-number sizing loop inside the mission model</li> </ul> <h5 id=PhlyGreen.Weight.Weight.Weight.Hybrid--returns>Returns<a class=headerlink href=#PhlyGreen.Weight.Weight.Weight.Hybrid--returns title="Permanent link">&para;</a></h5> <p>float Converged take-off weight WTO</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Weight/Weight.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>385</span>
-<span class=normal>386</span>
-<span class=normal>387</span>
-<span class=normal>388</span>
-<span class=normal>389</span>
-<span class=normal>390</span>
-<span class=normal>391</span>
-<span class=normal>392</span>
-<span class=normal>393</span>
-<span class=normal>394</span>
-<span class=normal>395</span>
-<span class=normal>396</span>
-<span class=normal>397</span>
-<span class=normal>398</span>
-<span class=normal>399</span>
-<span class=normal>400</span>
-<span class=normal>401</span>
-<span class=normal>402</span>
-<span class=normal>403</span>
-<span class=normal>404</span>
-<span class=normal>405</span>
-<span class=normal>406</span>
-<span class=normal>407</span>
-<span class=normal>408</span>
-<span class=normal>409</span>
-<span class=normal>410</span>
-<span class=normal>411</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Solve the weight equation for a hybrid-electric aircraft.</p> <p>Same logic as Traditional(), but includes battery sizing.</p> <p>Battery mass is computed differently depending on battery class:</p> <ul> <li>Class I : analytical battery mass formula</li> <li>Class II : battery pack weight determined by P-number sizing loop inside the mission model</li> </ul> <h5 id=PhlyGreen.Weight.Weight.Weight.Hybrid--returns>Returns<a class=headerlink href=#PhlyGreen.Weight.Weight.Weight.Hybrid--returns title="Permanent link">&para;</a></h5> <p>float Converged take-off weight WTO</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Weight/Weight.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>411</span>
 <span class=normal>412</span>
 <span class=normal>413</span>
 <span class=normal>414</span>
@@ -252,7 +250,33 @@
 <span class=normal>448</span>
 <span class=normal>449</span>
 <span class=normal>450</span>
-<span class=normal>451</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>Hybrid</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
+<span class=normal>451</span>
+<span class=normal>452</span>
+<span class=normal>453</span>
+<span class=normal>454</span>
+<span class=normal>455</span>
+<span class=normal>456</span>
+<span class=normal>457</span>
+<span class=normal>458</span>
+<span class=normal>459</span>
+<span class=normal>460</span>
+<span class=normal>461</span>
+<span class=normal>462</span>
+<span class=normal>463</span>
+<span class=normal>464</span>
+<span class=normal>465</span>
+<span class=normal>466</span>
+<span class=normal>467</span>
+<span class=normal>468</span>
+<span class=normal>469</span>
+<span class=normal>470</span>
+<span class=normal>471</span>
+<span class=normal>472</span>
+<span class=normal>473</span>
+<span class=normal>474</span>
+<span class=normal>475</span>
+<span class=normal>476</span>
+<span class=normal>477</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>Hybrid</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;</span>
 <span class=sd>    Solve the weight equation for a hybrid-electric aircraft.</span>
 
@@ -322,12 +346,7 @@
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.Weight.Weight.Weight.Hydrogen class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">Hydrogen</span> <a href=#PhlyGreen.Weight.Weight.Weight.Hydrogen class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>Hydrogen</span><span class=p>()</span>
 </code></pre></div> <div class="doc doc-contents "> <p>Solve the take-off-weight equation for a hydrogen fuel-cell aircraft.</p> <pre><code>f(WTO) = W_structure + W_fuelcell + W_H2 + W_tank + W_HX
          + W_payload + W_crew + W_reserve - WTO
-</code></pre> <p>The fuel-cell system mass is sized by <code>FuelCell.ComputeAndStoreWeights</code> (which also sets <code>aircraft.weight.WPT</code>); the mission returns the hydrogen chemical energy, converted to usable H2 mass via the hydrogen LHV (<code>self.ef</code>) with a 5% installation/feed margin. Hydrogen storage mass uses the cryogenic <code>LH2_Tank</code> if available, otherwise a simple gravimetric-index model so the design always closes.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Weight/Weight.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>208</span>
-<span class=normal>209</span>
-<span class=normal>210</span>
-<span class=normal>211</span>
-<span class=normal>212</span>
-<span class=normal>213</span>
+</code></pre> <p>The fuel-cell system mass is sized by <code>FuelCell.ComputeAndStoreWeights</code> (which also sets <code>aircraft.weight.WPT</code>); the mission returns the hydrogen chemical energy, converted to usable H2 mass via the hydrogen LHV (<code>self.ef</code>) with a 5% installation/feed margin. Hydrogen storage mass uses the cryogenic <code>LH2_Tank</code> if available, otherwise a simple gravimetric-index model so the design always closes.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Weight/Weight.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>213</span>
 <span class=normal>214</span>
 <span class=normal>215</span>
 <span class=normal>216</span>
@@ -407,7 +426,21 @@
 <span class=normal>290</span>
 <span class=normal>291</span>
 <span class=normal>292</span>
-<span class=normal>293</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>Hydrogen</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
+<span class=normal>293</span>
+<span class=normal>294</span>
+<span class=normal>295</span>
+<span class=normal>296</span>
+<span class=normal>297</span>
+<span class=normal>298</span>
+<span class=normal>299</span>
+<span class=normal>300</span>
+<span class=normal>301</span>
+<span class=normal>302</span>
+<span class=normal>303</span>
+<span class=normal>304</span>
+<span class=normal>305</span>
+<span class=normal>306</span>
+<span class=normal>307</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>Hydrogen</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;Solve the take-off-weight equation for a hydrogen fuel-cell aircraft.</span>
 
 <span class=sd>        f(WTO) = W_structure + W_fuelcell + W_H2 + W_tank + W_HX</span>
@@ -433,18 +466,27 @@
             <span class=n>LH2_Tank</span> <span class=o>=</span> <span class=kc>None</span>
 
     <span class=k>def</span><span class=w> </span><span class=nf>func</span><span class=p>(</span><span class=n>WTO</span><span class=p>):</span>
-        <span class=c1># 1. Initialize the fuel-cell geometry (needed before the mission queries it).</span>
-        <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>fuelcell</span><span class=o>.</span><span class=n>ComputeAndStoreWeights</span><span class=p>(</span><span class=n>WTO</span><span class=p>)</span>
+        <span class=c1># Size the fuel cell self-consistently: seed from the constraints, then</span>
+        <span class=c1># fly -&gt; resize to max(mission peak, take-off, OEI) -&gt; re-fly until the required</span>
+        <span class=c1># power converges, so the fuel cell that flies the mission is the one that is</span>
+        <span class=c1># weighed (the take-off/OEI requirement is a hard floor on its power).</span>
+        <span class=n>fc</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>fuelcell</span>
+        <span class=n>fc</span><span class=o>.</span><span class=n>SizeFromConstraint</span><span class=p>(</span><span class=n>WTO</span><span class=p>)</span>
+        <span class=n>P_req</span><span class=p>,</span> <span class=n>converged</span> <span class=o>=</span> <span class=kc>None</span><span class=p>,</span> <span class=kc>False</span>
+        <span class=k>for</span> <span class=n>_</span> <span class=ow>in</span> <span class=nb>range</span><span class=p>(</span><span class=n>_FC_RESIZE_ITERS</span><span class=p>):</span>
+            <span class=n>E_h2_chem</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>mission</span><span class=o>.</span><span class=n>EvaluateMission</span><span class=p>(</span><span class=n>WTO</span><span class=p>)</span>
+            <span class=n>demand</span> <span class=o>=</span> <span class=nb>max</span><span class=p>(</span><span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>mission</span><span class=o>.</span><span class=n>TO_PP</span><span class=p>,</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>mission</span><span class=o>.</span><span class=n>Max_PEng</span><span class=p>)</span>
+            <span class=k>if</span> <span class=n>P_req</span> <span class=ow>is</span> <span class=ow>not</span> <span class=kc>None</span> <span class=ow>and</span> <span class=nb>abs</span><span class=p>(</span><span class=n>demand</span> <span class=o>-</span> <span class=n>P_req</span><span class=p>)</span> <span class=o>&lt;=</span> <span class=mf>1e-3</span> <span class=o>*</span> <span class=nb>max</span><span class=p>(</span><span class=n>P_req</span><span class=p>,</span> <span class=mf>1.0</span><span class=p>):</span>
+                <span class=n>converged</span> <span class=o>=</span> <span class=kc>True</span>
+                <span class=k>break</span>
+            <span class=n>P_req</span> <span class=o>=</span> <span class=n>demand</span>
+            <span class=n>fc</span><span class=o>.</span><span class=n>SizeForPropulsivePower</span><span class=p>(</span><span class=n>P_req</span><span class=p>)</span>
+        <span class=k>if</span> <span class=ow>not</span> <span class=n>converged</span><span class=p>:</span>                 <span class=c1># ensure the final stack size was actually flown</span>
+            <span class=n>E_h2_chem</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>mission</span><span class=o>.</span><span class=n>EvaluateMission</span><span class=p>(</span><span class=n>WTO</span><span class=p>)</span>
+        <span class=bp>self</span><span class=o>.</span><span class=n>WPT</span> <span class=o>=</span> <span class=n>fc</span><span class=o>.</span><span class=n>Weight</span>
 
-        <span class=c1># 2. Fly the mission -&gt; hydrogen chemical energy -&gt; usable H2 mass.</span>
-        <span class=n>E_h2_chem</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>mission</span><span class=o>.</span><span class=n>EvaluateMission</span><span class=p>(</span><span class=n>WTO</span><span class=p>)</span>
         <span class=bp>self</span><span class=o>.</span><span class=n>WH2_Fuel</span> <span class=o>=</span> <span class=p>(</span><span class=n>E_h2_chem</span> <span class=o>/</span> <span class=bp>self</span><span class=o>.</span><span class=n>ef</span><span class=p>)</span> <span class=o>*</span> <span class=mf>1.05</span>
         <span class=bp>self</span><span class=o>.</span><span class=n>Wf</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>WH2_Fuel</span>
-
-        <span class=c1># 3. Size the fuel cell to the actual mission peak (same rule as the</span>
-        <span class=c1># fuel-cell + battery path, so a battery-free FuelCellBattery design and a</span>
-        <span class=c1># pure Hydrogen design coincide).</span>
-        <span class=bp>self</span><span class=o>.</span><span class=n>WPT</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>fuelcell</span><span class=o>.</span><span class=n>FinalizeMassFromMission</span><span class=p>()</span>
 
         <span class=c1># 3. Hydrogen tank (empty) mass.</span>
         <span class=k>if</span> <span class=bp>self</span><span class=o>.</span><span class=n>WH2_Fuel</span> <span class=o>&lt;=</span> <span class=mi>0</span><span class=p>:</span>
@@ -494,12 +536,7 @@
             <span class=s2>&quot;design cell voltage, a higher stack power density, or a shorter mission).&quot;</span><span class=p>)</span>
     <span class=k>return</span> <span class=bp>self</span><span class=o>.</span><span class=n>WTO</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.Weight.Weight.Weight.SetInput class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">SetInput</span> <a href=#PhlyGreen.Weight.Weight.Weight.SetInput class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>SetInput</span><span class=p>()</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Load required user inputs from the aircraft data structure.</p> <p>Sets: - Payload weight - Crew weight - Fuel specific energy - Contingency fuel or final reserve - FLOPS model components (Class II only)</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Weight/Weight.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>49</span>
-<span class=normal>50</span>
-<span class=normal>51</span>
-<span class=normal>52</span>
-<span class=normal>53</span>
-<span class=normal>54</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Load required user inputs from the aircraft data structure.</p> <p>Sets: - Payload weight - Crew weight - Fuel specific energy - Contingency fuel or final reserve - FLOPS model components (Class II only)</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Weight/Weight.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>54</span>
 <span class=normal>55</span>
 <span class=normal>56</span>
 <span class=normal>57</span>
@@ -514,7 +551,12 @@
 <span class=normal>66</span>
 <span class=normal>67</span>
 <span class=normal>68</span>
-<span class=normal>69</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>SetInput</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
+<span class=normal>69</span>
+<span class=normal>70</span>
+<span class=normal>71</span>
+<span class=normal>72</span>
+<span class=normal>73</span>
+<span class=normal>74</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>SetInput</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;</span>
 <span class=sd>    Load required user inputs from the aircraft data structure.</span>
 
@@ -538,12 +580,7 @@
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.Weight.Weight.Weight.Traditional class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">Traditional</span> <a href=#PhlyGreen.Weight.Weight.Weight.Traditional class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>Traditional</span><span class=p>()</span>
 </code></pre></div> <div class="doc doc-contents "> <p>Solve the weight equation for a traditional (non-hybrid) propulsion system.</p> <p>The objective function is:</p> <pre><code>f(WTO) = W_fuel + W_final_reserve + W_powertrain + W_structure
          + W_payload + W_crew - WTO
-</code></pre> <p>The root of f(WTO) is the correct takeoff weight.</p> <h5 id=PhlyGreen.Weight.Weight.Weight.Traditional--returns>Returns<a class=headerlink href=#PhlyGreen.Weight.Weight.Weight.Traditional--returns title="Permanent link">&para;</a></h5> <p>float Converged take-off weight WTO.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Weight/Weight.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>145</span>
-<span class=normal>146</span>
-<span class=normal>147</span>
-<span class=normal>148</span>
-<span class=normal>149</span>
-<span class=normal>150</span>
+</code></pre> <p>The root of f(WTO) is the correct takeoff weight.</p> <h5 id=PhlyGreen.Weight.Weight.Weight.Traditional--returns>Returns<a class=headerlink href=#PhlyGreen.Weight.Weight.Weight.Traditional--returns title="Permanent link">&para;</a></h5> <p>float Converged take-off weight WTO.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Weight/Weight.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>150</span>
 <span class=normal>151</span>
 <span class=normal>152</span>
 <span class=normal>153</span>
@@ -598,7 +635,12 @@
 <span class=normal>202</span>
 <span class=normal>203</span>
 <span class=normal>204</span>
-<span class=normal>205</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>Traditional</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
+<span class=normal>205</span>
+<span class=normal>206</span>
+<span class=normal>207</span>
+<span class=normal>208</span>
+<span class=normal>209</span>
+<span class=normal>210</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>Traditional</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;</span>
 <span class=sd>    Solve the weight equation for a traditional (non-hybrid) </span>
 <span class=sd>    propulsion system.</span>
@@ -660,12 +702,7 @@
 
     <span class=bp>self</span><span class=o>.</span><span class=n>WTO</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>_solve_wto</span><span class=p>(</span><span class=n>func</span><span class=p>,</span> <span class=mi>1000</span><span class=p>,</span> <span class=mi>300000</span><span class=p>,</span> <span class=n>xtol</span><span class=o>=</span><span class=mf>0.1</span><span class=p>)</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.Weight.Weight.Weight.WeightEstimation class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">WeightEstimation</span> <a href=#PhlyGreen.Weight.Weight.Weight.WeightEstimation class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>WeightEstimation</span><span class=p>()</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Perform full aircraft weight estimation for the selected configuration.</p> <h5 id=PhlyGreen.Weight.Weight.Weight.WeightEstimation--returns>Returns<a class=headerlink href=#PhlyGreen.Weight.Weight.Weight.WeightEstimation--returns title="Permanent link">&para;</a></h5> <p>float or str Converged take-off weight WTO, or a string if configuration is invalid.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Weight/Weight.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>112</span>
-<span class=normal>113</span>
-<span class=normal>114</span>
-<span class=normal>115</span>
-<span class=normal>116</span>
-<span class=normal>117</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Perform full aircraft weight estimation for the selected configuration.</p> <h5 id=PhlyGreen.Weight.Weight.Weight.WeightEstimation--returns>Returns<a class=headerlink href=#PhlyGreen.Weight.Weight.Weight.WeightEstimation--returns title="Permanent link">&para;</a></h5> <p>float or str Converged take-off weight WTO, or a string if configuration is invalid.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Weight/Weight.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>117</span>
 <span class=normal>118</span>
 <span class=normal>119</span>
 <span class=normal>120</span>
@@ -690,7 +727,12 @@
 <span class=normal>139</span>
 <span class=normal>140</span>
 <span class=normal>141</span>
-<span class=normal>142</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>WeightEstimation</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
+<span class=normal>142</span>
+<span class=normal>143</span>
+<span class=normal>144</span>
+<span class=normal>145</span>
+<span class=normal>146</span>
+<span class=normal>147</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>WeightEstimation</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;</span>
 <span class=sd>     Perform full aircraft weight estimation for the selected configuration.</span>
 
