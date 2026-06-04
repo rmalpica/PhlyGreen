@@ -8,6 +8,7 @@ tank's thermodynamic state, and plots:
 
   * tank pressure vs time (regulated between P_min and P_max),
   * stored hydrogen mass vs time (depletes as it is consumed + vented),
+  * H2 mass flow leaving the tank into the fuel cell (the propulsive demand),
   * vent flow and heat flows vs time.
 
 Requires CoolProp (para-hydrogen properties). Install with: pip install CoolProp
@@ -47,18 +48,20 @@ def main():
     P = np.array(h['P'])                 # bar
     m = np.array(h['m_tot'])             # kg
     vent = np.array(h['Vent'])           # kg/s
+    feed = np.array(h['Consumption'])    # kg/s — H2 drawn from the tank to feed the fuel cell
     print("\n=== Mission tank behavior ===")
     print(f"Pressure swing      : {P.min():.3f} - {P.max():.3f} bar")
     print(f"Hydrogen mass       : {m[0]:.1f} -> {m[-1]:.1f} kg")
     print(f"Total vented        : {h['m_vent_cum'][-1]:.2f} kg")
+    print(f"H2 feed to fuel cell: {feed.min()*1000:.2f} - {feed.max()*1000:.2f} g/s")
     print(f"Peak heat leak      : {max(h['Q_in']):.0f} W;  peak heater: {max(h['Q_heater']):.0f} W")
 
     print("\nFigures:")
-    _maybe_plot(t, P, m, vent, h)
+    _maybe_plot(t, P, m, vent, feed, h)
     design_dashboard(aircraft, "22_hydrogen_dashboard.png", "Hydrogen + LH2 tank design")
 
 
-def _maybe_plot(t, P, m, vent, h):
+def _maybe_plot(t, P, m, vent, feed, h):
     try:
         import matplotlib
         matplotlib.use("Agg")
@@ -67,15 +70,17 @@ def _maybe_plot(t, P, m, vent, h):
         return
     Q_in = np.array(h['Q_in'])
     Q_heat = np.array(h['Q_heater'])
-    fig, axes = plt.subplots(4, 1, sharex=True, figsize=(8, 11))
+    fig, axes = plt.subplots(5, 1, sharex=True, figsize=(8, 13))
     axes[0].plot(t, P, color="tab:blue"); axes[0].set_ylabel("pressure [bar]")
     axes[0].axhline(P.min(), ls=":", c="grey"); axes[0].axhline(P.max(), ls=":", c="grey")
     axes[1].plot(t, m, color="tab:green"); axes[1].set_ylabel("stored H2 [kg]")
-    axes[2].plot(t, vent, color="tab:red"); axes[2].set_ylabel("vent flow [kg/s]")
-    axes[3].plot(t, Q_in, color="tab:orange", label="heat leak")
-    axes[3].plot(t, Q_heat, color="tab:purple", label="heater")
-    axes[3].set_ylabel("heat flow [W]"); axes[3].legend(fontsize=8)
-    axes[3].set_xlabel("time [min]")
+    # H2 mass flow leaving the tank and going into the fuel cell (the propulsive demand).
+    axes[2].plot(t, feed * 1000.0, color="tab:cyan"); axes[2].set_ylabel("H2 to fuel cell [g/s]")
+    axes[3].plot(t, vent, color="tab:red"); axes[3].set_ylabel("vent flow [kg/s]")
+    axes[4].plot(t, Q_in, color="tab:orange", label="heat leak")
+    axes[4].plot(t, Q_heat, color="tab:purple", label="heater")
+    axes[4].set_ylabel("heat flow [W]"); axes[4].legend(fontsize=8)
+    axes[4].set_xlabel("time [min]")
     for ax in axes:
         ax.grid(alpha=0.3)
     fig.suptitle("LH2 tank state over the mission")

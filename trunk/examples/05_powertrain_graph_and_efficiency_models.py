@@ -12,7 +12,7 @@ Run it:
 import PhlyGreen as pg
 from PhlyGreen.Systems.Powertrain.graph import parallel_hybrid_graph, fuelcell_battery_graph
 from PhlyGreen.Systems.Powertrain.efficiency import MotorEfficiencyModel, OperatingPoint
-from common import hybrid_config
+from common import hybrid_config, savefig
 
 
 def builtin_architecture():
@@ -60,7 +60,6 @@ def component_performance_maps():
     pandas for the propeller surrogate); skipped gracefully if unavailable.
     """
     try:
-        import os
         import numpy as np
         import matplotlib
         matplotlib.use("Agg")
@@ -116,10 +115,11 @@ def component_performance_maps():
                      ha="center", va="center")
         axes[2].set_title("Propeller")
 
-    os.makedirs("examples/_output", exist_ok=True)
     fig.tight_layout()
-    fig.savefig("examples/_output/component_performance_maps.png", dpi=120, bbox_inches="tight")
-    print("\nSaved examples/_output/component_performance_maps.png")
+    # Use the shared helper so the figure always lands in trunk/examples/_output, regardless
+    # of the current working directory.
+    print()
+    savefig(fig, "component_performance_maps.png")
 
 
 if __name__ == "__main__":

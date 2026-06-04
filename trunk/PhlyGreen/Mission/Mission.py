@@ -254,7 +254,7 @@ class Mission:
             tank.m_curr = tank.capacity_single        # start full
             tank.P_curr = tank.P_min
             tank.history = {'t': [], 'P': [], 'm_tot': [], 'Vent': [], 'Q_in': [],
-                            'Alt': [], 'Q_heater': [], 'm_vent_cum': []}
+                            'Alt': [], 'Q_heater': [], 'm_vent_cum': [], 'Consumption': []}
             tank.cum_vented_mass = 0.0
 
         y0 = [0, self.beta0]

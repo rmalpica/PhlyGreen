@@ -203,8 +203,8 @@ class LH2_Tank:
         self.m_curr = self.capacity_single
         self.P_curr = self.P_min
         
-        self.history = {'t':[], 'P':[], 'm_tot':[], 'Vent':[], 'Q_in':[], 'Alt':[], 
-                        'Q_heater':[], 'm_vent_cum':[]}
+        self.history = {'t':[], 'P':[], 'm_tot':[], 'Vent':[], 'Q_in':[], 'Alt':[],
+                        'Q_heater':[], 'm_vent_cum':[], 'Consumption':[]}
         self.cum_vented_mass = 0.0
 
     def _calculate_structure(self):
@@ -291,6 +291,7 @@ class LH2_Tank:
             self.history['Q_in'].append(0.0)
             self.history['Q_heater'].append(0.0)
             self.history['m_vent_cum'].append(self.cum_vented_mass)
+            self.history['Consumption'].append(0.0)   # tank empty: no feed to the fuel cell
             return self.P_curr, 0.0, 0.0
 
         m_dot_fuel = m_dot_req_total / self.n_tanks
@@ -368,5 +369,7 @@ class LH2_Tank:
         self.history['Q_in'].append(Q_mli * self.n_tanks)
         self.history['Q_heater'].append(Q_heater * self.n_tanks)
         self.history['m_vent_cum'].append(self.cum_vented_mass)
-        
+        # H2 mass flow drawn from the tank to feed the fuel cell (total over all tanks).
+        self.history['Consumption'].append(m_dot_req_total)
+
         return self.P_curr, self.m_curr * self.n_tanks, m_dot_g * self.n_tanks
