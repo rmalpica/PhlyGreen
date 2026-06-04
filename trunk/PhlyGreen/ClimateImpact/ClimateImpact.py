@@ -2,8 +2,6 @@ import os
 import numpy as np
 import numbers
 import scipy.integrate as integrate
-import joblib
-from sklearn.preprocessing import PolynomialFeatures
 import matplotlib.pyplot as plt
 import statistics
 import PhlyGreen.Utilities.Atmosphere as ISA
@@ -22,9 +20,8 @@ class ClimateImpact:
         • Temperature response ΔT(t) from convolution of RF *(t) with the climate kernel
         • ATR(H): Average Temperature Response over the time horizon H
 
-    The model supports two NOx estimation approaches:
-        - Filippone semi-empirical model
-        - GasTurb-based regression model (4th-degree polynomial via scikit-learn)
+    NOx is estimated with the Filippone semi-empirical model. (A dedicated emissions model
+    may be added in the future.)
 
     Inputs expected in `aircraft.ClimateImpactInput`:
         H             : time horizon [yr]
@@ -32,7 +29,7 @@ class ClimateImpact:
         Y             : operative years
         Grid_CO2      : CO2 intensity of electricity [kg CO2 / MJ]
         WTW_CO2       : well-to-wake CO2 intensity of fuel [kg CO2 / MJ]
-        EINOx_model   : {'unset', 'Filippone', 'GasTurb'}
+        EINOx_model   : {'unset', 'Filippone'}
 
     The class relies on mission profiles produced by the Mission module, including:
         • continuous or discrete altitude/velocity profiles
@@ -85,12 +82,12 @@ class ClimateImpact:
 
     @property
     def EINOx_model(self):
-        """Selected NOx model: {'unset', 'GasTurb', 'Filippone'}"""
+        """Selected NOx model: {'unset', 'Filippone'}"""
         return self._EINOx_model
-          
+
     @EINOx_model.setter
     def EINOx_model(self,value):
-        if value == 'GasTurb' or value == 'Filippone' or value == 'unset':
+        if value == 'Filippone' or value == 'unset':
             self._EINOx_model = value
         else:
             raise ValueError("Error: %s EINOx model not implemented. Exiting" %value)
@@ -143,8 +140,6 @@ class ClimateImpact:
 
         Expected fields:
             H, N, Y, Grid_CO2, WTW_CO2, EINOx_model
-
-        If EINOx_model == 'GasTurb', the regression model is loaded from disk.
         """
         required_keys = {'H', 'N', 'Y', 'EINOx_model'}
         if required_keys.issubset(self.aircraft.ClimateImpactInput.keys()):
@@ -154,9 +149,6 @@ class ClimateImpact:
             self.Grid_CO2 = self.aircraft.ClimateImpactInput.get("Grid_CO2")
             self.WTW_CO2 = self.aircraft.ClimateImpactInput.get("WTW_CO2")
             self.EINOx_model = self.aircraft.ClimateImpactInput.get("EINOx_model")
-            if self.EINOx_model == 'GasTurb':
-                file_path = os.path.join(os.path.dirname(__file__), 'EINOx_gasturb.joblib')
-                self.model = joblib.load(file_path)
         else:
             raise ValueError("Error: Missing required climate impact input keys")
 
@@ -223,9 +215,7 @@ class ClimateImpact:
             • Upstream WTW fuel CO₂
             • Upstream grid CO₂ for battery energy (hybrid only)
 
-        NOx is computed using:
-            • Filippone empirical model, OR
-            • GasTurb-based regression model
+        NOx is computed using the Filippone empirical model.
         """
         Wf = self.aircraft.weight.Wf  # [kg]
         
@@ -343,53 +333,7 @@ class ClimateImpact:
                     # l'elemento n-esimo del vettore massa_di_NOx è l'integrale definito dell'integranda tra t = 0 e t = times[n]
                     E_nox_1m = massa_di_NOx[-1]
 
-                
-                    return E_nox_1m* 10**(-3)
-                    
-                
-                
-                if self.EINOx_model == 'GasTurb':
-                    times = np.array([])
-                    beta = np.array([])
-                    for array in self.aircraft.mission.integral_solution:
-                        times = np.concatenate([times, array.t])
-                        if self.aircraft.Configuration == 'Traditional':
-                            beta = np.concatenate([beta, array.y[1]])
-                        elif self.aircraft.Configuration == 'Hybrid':
-                            beta = np.concatenate([beta, array.y[2]])  
 
-                    v0 = self.aircraft.mission.profile.Velocity(times)  # [m/s]
-                    alt = self.aircraft.mission.profile.Altitude(times)  # [m]
-                    if self.aircraft.Configuration == 'Hybrid':
-                        spr = [self.aircraft.mission.profile.SuppliedPowerRatio(t) for t in times]
-
-                    pwsd = np.zeros(len(times))  # [kW]
-                    EI_NOx = np.zeros(len(times))  # [g/kg(fuel)]
-                    portata = np.zeros(len(times))  # [kg(fuel)/s]
-                    
-
-                    for t in range(len(times)):
-                        power = (self.aircraft.weight.WTO) * self.aircraft.performance.PoWTO(self.aircraft.DesignWTOoS,beta[t],self.aircraft.mission.profile.PowerExcess(times[t]),1,alt[t],self.aircraft.mission.DISA,v0[t],'TAS')
-                        pwsd[t]= 1e-3*0.5*self.aircraft.powertrain.EtaPPmodel(alt[t],v0[t],power)*power
-
-                        data_for_prediction = np.array([[pwsd[t], v0[t], alt[t]]])
-                        poly_features = PolynomialFeatures(degree=4)
-                        data_for_prediction_poly = poly_features.fit_transform(data_for_prediction)
-                        EI_NOx[t] = self.model.predict(data_for_prediction_poly)[0]
-
-                    
-                        if self.aircraft.Configuration == 'Traditional':
-                            PRatio = self.aircraft.powertrain.Traditional(alt[t],v0[t],power) 
-                        elif self.aircraft.Configuration == 'Hybrid':
-                            PRatio = self.aircraft.powertrain.Hybrid(spr[t],alt[t],v0[t],power)
-                        portata[t] = power * PRatio[0]/self.aircraft.weight.ef
-
-                    integranda = portata*EI_NOx
-                    massa_di_NOx = integrate.cumulative_trapezoid(integranda, times, initial=0.0)
-                    # l'elemento n-esimo del vettore massa_di_NOx è l'integrale definito dell'integranda tra t = 0 e t = times[n]
-                    E_nox_1m = massa_di_NOx[-1]
-
-                
                     return E_nox_1m* 10**(-3)
 
 
@@ -468,50 +412,7 @@ class ClimateImpact:
                     # l'elemento n-esimo del vettore massa_di_NOx è l'integrale definito dell'integranda tra t = 0 e t = times[n]
                     E_nox_1m = massa_di_NOx[-1]
 
-                
-                    return E_nox_1m* 10**(-3)
-                    
-                
-                
-                if self.EINOx_model == 'GasTurb':
-                    beta = self.aircraft.mission.beta_values
-                    times = self.aircraft.mission.profile.DiscretizedTime
-                   
 
-                    v0 = self.aircraft.mission.profile.DiscretizedVelocities  # [m/s]
-                    alt = self.aircraft.mission.profile.DiscretizedAltitudes  # [m]
-
-                    if self.aircraft.Configuration == 'Hybrid':
-                        spr = [self.aircraft.mission.profile.SuppliedPowerRatio(t) for t in times]
-
-
-                    pwsd = np.zeros(len(times))  # [kW]
-                    EI_NOx = np.zeros(len(times))  # [g/kg(fuel)]
-                    portata = np.zeros(len(times))  # [kg(fuel)/s]
-                    
-
-                    for t in range(len(times)):
-                        power = (self.aircraft.weight.WTO) * self.aircraft.performance.PoWTO(self.aircraft.DesignWTOoS,beta[t],self.aircraft.mission.profile.DiscretizedPowerExcess[t],1,alt[t],self.aircraft.mission.DISA,v0[t],'TAS')      
-                        pwsd[t]= 1e-3*0.5*self.aircraft.powertrain.EtaPPmodel(alt[t],v0[t],power)*power
-
-                        data_for_prediction = np.array([[pwsd[t], v0[t], alt[t]]])
-                        poly_features = PolynomialFeatures(degree=4)
-                        data_for_prediction_poly = poly_features.fit_transform(data_for_prediction)
-                        EI_NOx[t] = self.model.predict(data_for_prediction_poly)[0]
-
-                    
-                        if self.aircraft.Configuration == 'Traditional':
-                            PRatio = self.aircraft.powertrain.Traditional(alt[t],v0[t],power) 
-                        elif self.aircraft.Configuration == 'Hybrid':
-                            PRatio = self.aircraft.powertrain.Hybrid(spr[t],alt[t],v0[t],power)
-                        portata[t] = power * PRatio[0]/self.aircraft.weight.ef
-
-                    integranda = portata*EI_NOx
-                    massa_di_NOx = integrate.cumulative_trapezoid(integranda, times, initial=0.0)
-                    # l'elemento n-esimo del vettore massa_di_NOx è l'integrale definito dell'integranda tra t = 0 e t = times[n]
-                    E_nox_1m = massa_di_NOx[-1]
-
-                
                     return E_nox_1m* 10**(-3)
 
 

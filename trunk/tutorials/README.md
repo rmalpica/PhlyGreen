@@ -6,12 +6,12 @@ black-box design tool: each notebook uses PhlyGreen to build intuition about the
 trade-offs and limitations* behind sustainable propulsion — why it is hard, not just how to run
 the code.
 
-> **Educational scope.** Where the full PhlyGreen capability is not exposed (formal constraint
-> feasibility, a non-CO₂ climate weighting) the notebooks use small, **clearly-labelled
-> pedagogical proxies** computed inline. They are teaching devices, not validated engineering
-> models — every proxy is commented as such. The heavy lifting always goes through the real
-> public API (`pg.run_design` / `pg.evaluate`) and the baseline configs in
-> [`examples/common.py`](../examples/common.py).
+> **Educational scope.** The notebooks lean on PhlyGreen's **real** models — sizing, gas-turbine
+> emissions, and the climate Average Temperature Response (ATR). The single deliberate
+> simplification is the hand-drawn constraint-feasibility map in notebook 02, which is clearly
+> labelled (PhlyGreen's real constraint diagram is shown alongside it). The heavy lifting always
+> goes through the public API (`pg.run_design` / `pg.evaluate`), the `ClimateImpact` module, and
+> the baseline configs in [`examples/common.py`](../examples/common.py).
 
 ## Setup
 
@@ -38,13 +38,14 @@ and use **no absolute paths**, so they run from anywhere under the repo.
 | 03 | `03_compare_propulsion_architectures_same_mission.ipynb` | Compare 5 architectures *fairly* | architecture, mass, energy, CO₂ | comparison table + bar charts |
 | 04 | `04_why_batteries_are_hard_for_aviation.ipynb` | The battery specific-energy wall | battery Wh/kg | mass fraction & feasibility vs Wh/kg |
 | 05 | `05_hydrogen_is_not_free.ipynb` | Hydrogen's mass *and volume* and storage penalty | H₂ mass, tank gravimetric index | fuel/volume/mass comparisons |
-| 06 | `06_climate_vs_fuel_tradeoff.ipynb` | Minimum fuel ≠ minimum climate | cruise altitude | fuel & climate vs altitude, Pareto |
+| 06 | `06_climate_vs_fuel_tradeoff.ipynb` | Does minimum fuel mean minimum climate? (real CO₂ + non-CO₂ ATR) | cruise altitude | fuel & ATR vs altitude, non-CO₂ share, Pareto |
 
 ## Helper module
 
 [`_learning_utils.py`](_learning_utils.py) holds the few shared helpers (path setup, a
-crash-safe `safe_design`, a couple of config mutators, the closed-form Breguet equation and the
-labelled climate proxy). It exists only to remove repetition across notebooks.
+crash-safe `safe_design`, a couple of config mutators, the closed-form Breguet equation, and thin
+wrappers around PhlyGreen's real `ClimateImpact` model — `attach_climate_model` / `climate_atr`).
+It exists only to remove repetition across notebooks.
 
 ## Tone
 

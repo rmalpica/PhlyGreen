@@ -1,15 +1,15 @@
 """Shared helpers for the PhlyGreen *learning* tutorials (``trunk/tutorials/``).
 
 These notebooks are **educational**. They use the real PhlyGreen design API wherever a
-capability exists, and fall back to small, *transparent* and clearly-labelled pedagogical
-proxies where the full capability is not exposed (formal constraint feasibility, a non-CO2
-climate weighting). Every proxy in this file is commented as such — it is a teaching device,
-not a validated engineering model.
+capability exists, and fall back to a small, *transparent* and clearly-labelled pedagogical
+proxy only where the full capability is not exposed (a formal constraint-feasibility map in
+notebook 02). Climate impact (notebook 06) uses PhlyGreen's real ClimateImpact model — no
+proxy.
 
 The functions here only exist to remove repetition across notebooks (path setup, a
-crash-safe design call, a couple of config mutators, the closed-form Breguet equation and a
-toy climate proxy). The heavy lifting always goes through the public API
-(``PhlyGreen.run_design`` / ``PhlyGreen.evaluate``) and the baseline configs in
+crash-safe design call, a couple of config mutators, the closed-form Breguet equation and
+thin wrappers around the real climate model). The heavy lifting always goes through the
+public API (``PhlyGreen.run_design`` / ``PhlyGreen.evaluate``) and the baseline configs in
 ``examples/common.py``.
 """
 
@@ -126,36 +126,51 @@ def breguet_range(fuel_fraction, overall_efficiency, lift_to_drag,
 
 
 # ---------------------------------------------------------------------------
-# 4. A *pedagogical* climate proxy — used by notebook 06.
+# 4. PhlyGreen's *real* climate-impact model — used by notebook 06.
 # ---------------------------------------------------------------------------
-# WARNING — TEACHING PROXY, NOT A VALIDATED CLIMATE MODEL.
-# Real non-CO2 aviation forcing (persistent contrails, contrail cirrus, altitude-amplified
-# NOx ozone production) depends on the local atmospheric state (temperature, ice
-# super-saturation), not on a single number. The crude monotonic curve below only captures
-# the *qualitative* fact that non-CO2 effects grow with cruise altitude in the upper
-# troposphere. Use it to reason about trade-offs, never to quote a figure.
-def nonco2_multiplier(altitude_m, base=0.2, top=2.2, ceiling_m=9500.0):
-    """Illustrative non-CO2 'effective forcing' multiplier vs cruise altitude [-].
+# No proxy here: notebook 06 uses PhlyGreen's ClimateImpact module, which models real
+# gas-turbine emissions (CO2, H2O, SO4, soot and NOx — the latter from the Filippone
+# semi-empirical gas-turbine correlation), the radiative forcing of every species
+# (including altitude-dependent NOx-ozone chemistry and persistent contrails / AIC), and
+# rolls them into an Average Temperature Response (ATR). The two helpers below just make it
+# easy to attach the model to a config and to read the ATR out of a designed aircraft.
+def attach_climate_model(config, einox_model='Filippone', H=100, N=1.6e7, Y=30,
+                         wtw_co2=8.30e-3, grid_co2=9.36e-2):
+    """Attach PhlyGreen's real ClimateImpact (+ WellToTank) inputs to ``config``.
 
-    Rises roughly linearly from ``base`` near the ground to ``top`` at ``ceiling_m`` — a
-    stand-in for the way contrail/NOx climate forcing intensifies at higher, colder cruise
-    altitudes. Clearly a teaching device (see module warning above).
+    Lets a kerosene (Traditional) design compute its mission emissions and ATR with the
+    *same* machinery as ``examples/14`` — no proxy. NOx uses the Filippone semi-empirical
+    gas-turbine correlation (``einox_model='Filippone'``). ``H``/``N``/``Y`` are the climate
+    time horizon, flights per year and operative years; ``wtw_co2``/``grid_co2`` the
+    well-to-wake fuel and grid CO2 intensities. Defaults match the hybrid baseline in
+    ``examples/common.py``.
     """
-    frac = max(0.0, min(1.0, altitude_m / ceiling_m))
-    return base + (top - base) * frac
+    from PhlyGreen.config import ClimateImpactConfig, WellToTankConfig
+    config.climate_impact = ClimateImpactConfig(H=H, N=N, Y=Y, einox_model=einox_model,
+                                                wtw_co2=wtw_co2, grid_co2=grid_co2)
+    config.well_to_tank = WellToTankConfig(eta_charge=0.95, eta_grid=1., eta_extraction=1.,
+                                           eta_production=1., eta_transportation=0.25)
+    return config
 
 
-def climate_proxy(block_fuel_kg, altitude_m, co2_per_kg_fuel=3.16):
-    """Illustrative total-climate proxy in 'CO2-equivalent kg' for one mission.
+def climate_atr(aircraft, co2_only=False):
+    """Return the Average Temperature Response [K] of a *designed* aircraft.
 
-    Combines the well-mixed CO2 from burning the fuel (``~3.16 kg CO2 / kg Jet-A``) with the
-    altitude-dependent non-CO2 multiplier from :func:`nonco2_multiplier`:
-
-        climate ~ CO2_fuel * (1 + nonco2_multiplier(altitude))
-
-    So two designs with the *same* fuel burn can have different climate impact purely
-    because they cruise at different altitudes — the whole point of notebook 06. Pedagogical
-    only.
+    Computes the mission emissions on first call. With ``co2_only=True`` it temporarily
+    restricts the total radiative forcing to the CO2 term, so you can compare the full
+    (CO2 + non-CO2) ATR against the CO2-only ATR and read off how much warming a
+    *CO2-only* accounting would miss. The aircraft must carry a ClimateImpact model (see
+    :func:`attach_climate_model`).
     """
-    co2 = block_fuel_kg * co2_per_kg_fuel
-    return co2 * (1.0 + nonco2_multiplier(altitude_m))
+    ci = aircraft.climateimpact
+    if not ci.mission_emissions_calculated:
+        aircraft.MissionType = 'Continue'
+        ci.calculate_mission_emissions()
+    if not co2_only:
+        return ci.ATR()
+    original_rf = ci.rf
+    ci.rf = lambda year: ci.rf_co2(year)     # isolate the well-mixed CO2 forcing
+    try:
+        return ci.ATR()
+    finally:
+        ci.rf = original_rf
