@@ -58,3 +58,11 @@ run one independent design per call (safe to loop or parallelize).
 The single-objective outer-loop examples deliberately use only SciPy/NumPy so they run
 anywhere; `11b` shows the production multi-objective path with pymoo. Figures are written to
 `examples/_output/`.
+
+## Learning tutorials
+
+These examples are a **capability tour** (what the code can do). For a **pedagogical course**
+that teaches the underlying engineering through guided experiments — Breguet vs PhlyGreen,
+design constraints, a fair architecture comparison, the battery specific-energy wall, hydrogen's
+hidden costs, and the fuel-vs-climate trade-off — see [`../tutorials/`](../tutorials/) (start at
+`tutorials/README.md`). Those notebooks reuse the baselines in `common.py`.

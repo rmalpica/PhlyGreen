@@ -43,6 +43,11 @@ python examples/01_design_traditional.py
 See `trunk/examples/` (start at `examples/README.md`) and the
 [documentation](https://rmalpica.github.io/PhlyGreen/).
 
+**Learning the engineering, not just the API?** The pedagogical course in
+`trunk/tutorials/` (start at `tutorials/README.md`) is a set of guided experiments for
+Master's students — Breguet vs PhlyGreen, design constraints, a fair architecture comparison,
+why batteries are hard, hydrogen's hidden costs, and the fuel-vs-climate trade-off.
+
 Authors:
 
 - Riccardo Malpica Galassi
