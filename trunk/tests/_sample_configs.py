@@ -88,6 +88,25 @@ WELL_TO_TANK_INPUT = {
 
 CLIMATE_IMPACT_INPUT = {'H': 100, 'N': 1.6e7, 'Y': 30, 'EINOx_model': 'Filippone', 'WTW_CO2': 8.30e-3, 'Grid_CO2': 9.36e-2}
 
+HYDROGEN_ENERGY_INPUT = {
+    'Ef': 120 * 10**6,  # hydrogen LHV [J/kg]
+    'Eta Gearbox': 0.96,
+    'Eta PMAD': 0.99,
+    'Eta Electric Motor': 0.96,
+    'Eta Gas Turbine Model': 'constant',
+    'Eta Gas Turbine': 0.22,
+    'Eta Propulsive Model': 'constant',
+    'Eta Propulsive': 0.9,
+    'Specific Power Powertrain': [3900, 7700],
+    # --- fuel-cell stack ---
+    'Model': 'PEMFC_GoodPerformance',
+    'i Rated': 2.5,
+    'V Cell Design': 0.5,
+    'Stack Power Density': 3000,
+    'BoP Mass Ratio': 0.40,
+    'H2 Gravimetric Index': 0.35,
+}
+
 
 def hybrid_parallel_config():
     """Return (flags, read_input_kwargs) for the tutorial Hybrid/Parallel ATR design."""
@@ -114,6 +133,20 @@ def traditional_config():
         ConstraintsInput=CONSTRAINTS_INPUT,
         MissionInput=MISSION_INPUT,
         EnergyInput=ENERGY_INPUT,
+        MissionStages=MISSION_STAGES,
+        DiversionStages=DIVERSION_STAGES,
+    )
+    return flags, kwargs
+
+
+def hydrogen_config():
+    """Return (flags, read_input_kwargs) for a Hydrogen fuel-cell ATR design."""
+    flags = {'Configuration': 'Hydrogen', 'HybridType': None, 'AircraftType': 'ATR', 'weight_class': 'I'}
+    kwargs = dict(
+        AerodynamicsInput=AERODYNAMICS_INPUT,
+        ConstraintsInput=CONSTRAINTS_INPUT,
+        MissionInput=MISSION_INPUT,
+        EnergyInput=HYDROGEN_ENERGY_INPUT,
         MissionStages=MISSION_STAGES,
         DiversionStages=DIVERSION_STAGES,
     )

@@ -60,6 +60,7 @@ def component_performance_maps():
     pandas for the propeller surrogate); skipped gracefully if unavailable.
     """
     try:
+        import os
         import numpy as np
         import matplotlib
         matplotlib.use("Agg")

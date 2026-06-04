@@ -82,6 +82,15 @@ class FuelCell:
         self.P_comp_net_last = 0.0
         self.P_turb_last = 0.0
 
+        # --- ADEQUACY TRACKING (worst-case power-limit over the last flown mission) ---
+        # Populated by ComputePRatio at every operating point and read by report_sizing().
+        # Reset whenever the stack is (re)sized in _size_stack, so they always describe the
+        # final, flown stack.
+        self._worst_load_ratio = 0.0     # max over the mission of (required / available) net power
+        self._worst_alt = None           # altitude [m] of the worst-case point
+        self._worst_P_req = 0.0          # required propulsive power [W] at the worst-case point
+        self._power_limited = False      # True if any point exceeded the stack's deliverable power
+
         self.EtaPM = None
         self.EtaEM = None
         self.EtaGB = None
@@ -282,6 +291,12 @@ class FuelCell:
 
         self._Weight = M_Stack + M_BoP + M_EM + M_PM
         self.Sizing_Done = True
+        # New stack capability -> reset the adequacy trackers; the next mission fly repopulates
+        # them against this stack (so report_sizing() always reflects the final, flown stack).
+        self._worst_load_ratio = 0.0
+        self._worst_alt = None
+        self._worst_P_req = 0.0
+        self._power_limited = False
         if hasattr(self.aircraft, 'weight'):
             self.aircraft.weight.WPT = self._Weight
             self.aircraft.weight.WThermal = M_Stack + M_BoP + M_PM
@@ -356,6 +371,22 @@ class FuelCell:
         res_values = np.array([residual(x) for x in test_points])
         idx_change = np.where(np.diff(np.sign(res_values)))[0]
 
+        # --- Adequacy tracking ---------------------------------------------------------
+        # residual(i) = P_net_available(i) - P_elec_target, so the most the stack can deliver
+        # at this altitude (within the limiting current density) is max(res_values)+P_elec_target.
+        # The load ratio required/available > 1 means the cell cannot meet the demand here.
+        P_net_max = float(np.max(res_values)) + P_elec_target
+        if P_net_max > 0.0:
+            load_ratio = P_elec_target / P_net_max
+        else:
+            load_ratio = float('inf')
+        if load_ratio > self._worst_load_ratio:
+            self._worst_load_ratio = load_ratio
+            self._worst_alt = float(alt)
+            self._worst_P_req = float(P_req_net)
+        if load_ratio > 1.0 + 1e-6:
+            self._power_limited = True
+
         if len(idx_change) > 0:
             idx = idx_change[0]
             try:
@@ -396,6 +427,55 @@ class FuelCell:
             self.P_gross_last = P_chem_total * 0.40
             self.P_comp_net_last = P_chem_total * 0.10
             return np.array([P_chem_total / max(P_req_net, 1.0), 1.0])
+
+    def report_sizing(self, raise_on_undersize=False):
+        """Check that the sized fuel cell can deliver the power the mission demands.
+
+        Mirrors :meth:`Powertrain.report_class_ii_sizing` for the fuel cell. Run *after* the
+        weight-sizing loop has flown the mission: :meth:`ComputePRatio` records, at every
+        operating point, the ratio of required to *available* net power (the available power
+        falls with altitude as the air-system draws more), so a stack whose sea-level rating
+        looks sufficient can still be **power-limited at altitude**. Without this check that
+        shortfall is hidden — ``ComputePRatio`` silently substitutes an analytical fallback.
+
+        Returns a ``dict`` with the rated power, the worst-case load ratio and its altitude,
+        whether the stack is ``power_limited`` and the ``min_rating`` needed to avoid it, and
+        warns (or, with ``raise_on_undersize=True``, raises) when the cell is undersized.
+        """
+        import warnings
+
+        ratio = self._worst_load_ratio
+        flown = ratio > 0.0
+        power_limited = self._power_limited or ratio > 1.0 + 1e-6
+        if not flown:
+            status = "unknown"
+        elif power_limited:
+            status = "UNDERSIZED"
+        elif ratio < 0.5:
+            status = "oversized"
+        else:
+            status = "ok"
+        min_rating = self.P_fc_rated * max(ratio, 1.0)
+        report = {
+            "rated_power": self.P_fc_rated,
+            "worst_load_ratio": ratio,
+            "worst_altitude": self._worst_alt,
+            "peak_demand": self._worst_P_req,
+            "power_limited": power_limited,
+            "min_rating": min_rating,
+            "status": status,
+        }
+        if power_limited:
+            where = f" at {self._worst_alt:.0f} m" if self._worst_alt is not None else ""
+            msg = (f"fuel cell is undersized (power-limited{where}): the required power exceeds "
+                   f"the stack's available power by up to {(ratio - 1) * 100:.0f}% — the cell "
+                   f"cannot sustain that flight condition. Increase the stack size (rated power "
+                   f"to at least {min_rating / 1e3:.0f} kW), e.g. lower the design cell voltage "
+                   f"'v_cell_design' or raise the rated current density 'i_rated'.")
+            if raise_on_undersize:
+                raise ValueError(msg)
+            warnings.warn(msg)
+        return report
 
     # NOTE: the former FinalizeMassFromMission (which shrank the stack to the mission peak
     # *after* the mission, using opaque 1/0.8 and 1/0.85 margins and dropping the take-off/OEI

@@ -251,6 +251,12 @@ class Aircraft:
         if getattr(self.powertrain, 'gt_design_power', None) or getattr(self.powertrain, 'em_design_power', None):
             self.powertrain.report_class_ii_sizing()
 
+        # For fuel-cell powertrains, check the auto-sized stack can actually deliver the
+        # mission power at every point (it can be power-limited at altitude). Mirrors the
+        # gas-turbine check above; warns if undersized.
+        if self.Configuration in ('Hydrogen', 'FuelCellBattery') and getattr(self, 'fuelcell', None) is not None:
+            self.fuelcell.report_sizing()
+
         if PrintOutput: self.Print_Aircraft_Design_Summary()
 
 
