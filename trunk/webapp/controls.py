@@ -74,8 +74,48 @@ def _get_cruise_phi(cfg):
 def _set_cruise_phi(cfg, v):
     seg = _cruise_segment(cfg)
     if seg:
+        seg.phi = None
         seg.phi_start = float(v)
         seg.phi_end = float(v)
+
+
+# Battery / power-split share (phi) is set *per phase*: take-off, climb and cruise can each take a
+# different fraction of propulsive power from the battery (important for a fuel-cell + battery
+# design, where you may want the battery to cover the take-off / climb peaks).
+def _segments(cfg, pred):
+    return [s for s in cfg.mission_stages.segments if pred(s)]
+
+
+def _get_takeoff_phi(cfg):
+    segs = _segments(cfg, lambda s: s.name == "Takeoff")
+    if not segs:
+        return 0.0
+    s = segs[0]
+    return s.phi if s.phi is not None else (s.phi_end if s.phi_end is not None else 0.0)
+
+
+def _set_takeoff_phi(cfg, v):
+    for s in _segments(cfg, lambda s: s.name == "Takeoff"):
+        s.phi = float(v)            # take-off uses a single (constant) phi
+        s.phi_start = s.phi_end = None
+
+
+def _get_climb_phi(cfg):
+    segs = _segments(cfg, lambda s: s.segment_type == "ConstantRateClimb")
+    if not segs:
+        return 0.0
+    s = segs[0]
+    return s.phi_end if s.phi_end is not None else (s.phi if s.phi is not None else 0.0)
+
+
+def _set_climb_phi(cfg, v):
+    for s in _segments(cfg, lambda s: s.segment_type == "ConstantRateClimb"):
+        s.phi = None
+        s.phi_start = s.phi_end = float(v)
+
+
+def _has_battery(cfg):
+    return cfg.configuration in ("Hybrid", "FuelCellBattery")
 
 
 def _get_ar(cfg):
@@ -135,13 +175,18 @@ KNOBS = [
     Knob("eta_gt", "Gas-turbine efficiency [-]", lambda c: c.energy.eta_gas_turbine,
          lambda c, v: setattr(c.energy, "eta_gas_turbine", float(v)),
          0.18, 0.40, 0.01, applies=_is_fuel),
-    # battery hybrids only
-    Knob("batt_phi", "Cruise battery share phi [-]", _get_cruise_phi, _set_cruise_phi,
-         0.0, 0.6, 0.05, applies=lambda c: c.configuration in ("Hybrid", "FuelCellBattery"),
+    # battery hybrids only — the battery power share (phi) per flight phase
+    Knob("takeoff_phi", "Take-off battery share φ [-]", _get_takeoff_phi, _set_takeoff_phi,
+         0.0, 0.6, 0.05, applies=_has_battery,
+         help="Fraction of take-off propulsive power from the battery."),
+    Knob("climb_phi", "Climb battery share φ [-]", _get_climb_phi, _set_climb_phi,
+         0.0, 0.6, 0.05, applies=_has_battery,
+         help="Fraction of climb propulsive power from the battery (all climb segments)."),
+    Knob("cruise_phi", "Cruise battery share φ [-]", _get_cruise_phi, _set_cruise_phi,
+         0.0, 0.6, 0.05, applies=_has_battery,
          help="Fraction of cruise propulsive power from the battery."),
     Knob("batt_e", "Battery specific energy [Wh/kg]", _get_batt_specific_energy,
-         _set_batt_specific_energy, 600, 2000, 50,
-         applies=lambda c: c.configuration in ("Hybrid", "FuelCellBattery")),
+         _set_batt_specific_energy, 600, 2000, 50, applies=_has_battery),
     # hydrogen / fuel-cell only
     Knob("v_cell", "Fuel-cell design voltage [V]", lambda c: c.energy.v_cell_design,
          lambda c, v: setattr(c.energy, "v_cell_design", float(v)),

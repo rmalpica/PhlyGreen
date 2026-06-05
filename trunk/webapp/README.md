@@ -19,15 +19,32 @@ streamlit run trunk/webapp/app.py
 
 Streamlit opens the lab in your browser at `http://localhost:8501`.
 
+## Inputs
+
+The sidebar has three layers:
+
+- **Main inputs** — the handful of parameters you tune most (range, payload, cruise Mach/altitude,
+  Cd0, aspect ratio, efficiencies, and — for the battery architectures — the **take-off, climb and
+  cruise battery shares φ** separately, plus battery specific energy / fuel-cell voltage).
+- **⚙️ Advanced inputs** — *every* parameter and **model choice**: the gas-turbine / propeller /
+  electric-motor efficiency models, the NOₓ model, the battery class, the weight model (Class I/II),
+  the aircraft type, optional fixed wing loading, and all the per-section scalars.
+- **📐 Constraint analysis** — the editable sizing requirements (DISA + the eight constraint
+  points). Change a point and re-run to watch the design point move on the constraint diagram.
+
+Nothing is sized until you press a tab's run button — changing an input does **not** re-run the
+design automatically.
+
 ## What's in it
 
 - **Design** — choose one of four architectures (conventional turboprop, parallel hybrid,
-  hydrogen fuel cell, fuel cell + battery), tune the sidebar inputs, and read off the sized
-  aircraft: take-off weight, fuel/hydrogen, masses, the flight profile, the constraint diagram and
-  the take-off mass breakdown. Download the config, the results (JSON) and the mission time series
-  (CSV).
-- **Compare** — size several architectures on the *same* mission (shared range & payload) and
-  compare their masses side by side.
+  hydrogen fuel cell, fuel cell + battery), tune the inputs, press **▶ Run design**, and read off
+  the sized aircraft: take-off weight, fuel/hydrogen, masses, the flight profile, the constraint
+  diagram and the take-off mass breakdown. Download the config, the results (JSON) and the mission
+  time series (CSV).
+- **Compare** — size several architectures on the *same* mission, **using the inputs set in the
+  sidebar**, and compare their masses side by side. Use this tab's **Run comparison** button (the
+  Design tab's Run button sizes only the single current design).
 - **Sweep** — vary one input over a range and plot how an output responds.
 
 Each design solves the take-off-weight convergence loop (~1 s). Inputs that push a design too hard
@@ -39,7 +56,8 @@ simply report *"did not close"* — relax the range, payload, or battery/fuel-ce
 |------|------|
 | `app.py` | Streamlit entry: sidebar + Design / Compare / Sweep / About tabs. |
 | `templates.py` | The four "starting designs" (from `examples/common.py`) + config⇄dict serializer. |
-| `controls.py` | The curated set of tunable inputs (knobs); one source of truth for Design + Sweep. |
+| `controls.py` | The curated **main inputs** (knobs); one source of truth for Design + Sweep. |
+| `advanced.py` | The **advanced** forms (every parameter + model choice) and the editable constraint diagram. |
 | `runner.py` | Crash-safe, memoized wrappers around `pg.run_design` / `pg.evaluate`. |
 | `render.py` | Dashboard figures, headline metrics, comparison/sweep charts, CSV export. |
 

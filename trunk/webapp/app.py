@@ -38,15 +38,15 @@ def _show_figure(fig):
 
 # --- sidebar: architecture, Run button, all inputs ---------------------------------------------
 def build_inputs():
-    """Render the sidebar (architecture + inputs) and return ``(arch, config, run_clicked)``.
+    """Render the sidebar (architecture + inputs) and return ``(arch, config, overrides)``.
 
-    Building the config is cheap (no sizing); the design is only run when ``run_clicked`` is True.
-    Widget keys are namespaced by architecture, so switching architecture resets the inputs to that
-    template's baseline.
+    Building the config is cheap (no sizing); sizing happens only when a tab's run button is
+    pressed. Widget keys are namespaced by architecture, so switching architecture resets the
+    inputs to that template's baseline. ``overrides`` (the main-input values) is returned so the
+    Compare tab can apply the *same* sidebar inputs to every architecture.
     """
     st.sidebar.title("✈️ Design Lab")
     arch = st.sidebar.selectbox("Propulsion architecture", templates.TEMPLATE_LABELS, key="arch")
-    run_clicked = st.sidebar.button("▶ Run design", type="primary", use_container_width=True)
     st.sidebar.caption(templates.template_blurb(arch))
 
     base = templates.make_config(arch)
@@ -65,11 +65,20 @@ def build_inputs():
     advanced.render_advanced(st.sidebar, cfg, prefix)
     advanced.render_constraints(st.sidebar, cfg.constraints, prefix)
 
-    return arch, cfg, run_clicked
+    return arch, cfg, overrides
 
 
-# --- Design tab (renders the last run; never sizes on its own) ----------------------------------
-def design_tab(current_key):
+# --- Design tab (owns the Run-design button; sizes only on click) -------------------------------
+def design_tab(arch, cfg):
+    current_key = runner.config_key(cfg)
+    if st.button("▶ Run design", type="primary"):
+        with st.spinner("Sizing the aircraft…"):
+            aircraft, error = runner.safe_design(cfg)
+        st.session_state["last_run"] = {
+            "arch": arch, "key": current_key, "aircraft": aircraft, "error": error,
+            "results": aircraft.results().to_dict() if aircraft is not None else None, "cfg": cfg,
+        }
+
     run = st.session_state.get("last_run")
     if not run:
         st.info("Set your inputs in the sidebar, then press **▶ Run design**.")
@@ -105,22 +114,22 @@ def design_tab(current_key):
 
 
 # --- Compare tab --------------------------------------------------------------------------------
-def compare_tab():
-    st.markdown("Compare architectures **on the same mission** (shared range & payload).")
+def compare_tab(overrides):
+    st.markdown("Compare architectures **on the same mission — using the inputs set in the sidebar.**")
+    st.caption("The sidebar **Main inputs** (range, payload, cruise, aerodynamics, battery shares, …) "
+               "are applied to every architecture below. Architecture-specific inputs that don't "
+               "apply to a given design are left at that template's default. Use **Run comparison** "
+               "here — the **Run design** button on the Design tab sizes only the single current design.")
     picks = st.multiselect("Architectures", templates.TEMPLATE_LABELS,
                            default=templates.TEMPLATE_LABELS[:3])
-    c1, c2 = st.columns(2)
-    rng = c1.number_input("Range [nm]", 200, 1500, 750, step=10)
-    pay = c2.number_input("Payload [kg]", 1000, 7000, 4560, step=50)
     if not picks:
         st.info("Pick at least one architecture.")
         return
     if not st.button("Run comparison", type="primary"):
         return
 
-    shared = {"range": rng, "payload": pay}
     with st.spinner("Sizing designs…"):
-        configs = [(lab, controls.apply_overrides(templates.make_config(lab), shared))
+        configs = [(lab, controls.apply_overrides(templates.make_config(lab), overrides))
                    for lab in picks]
         rows = runner.compare(configs)
 
@@ -188,22 +197,14 @@ def about_tab():
 
 
 def main():
-    arch, cfg, run_clicked = build_inputs()
-    if run_clicked:
-        with st.spinner("Sizing the aircraft…"):
-            aircraft, error = runner.safe_design(cfg)
-        st.session_state["last_run"] = {
-            "arch": arch, "key": runner.config_key(cfg), "aircraft": aircraft, "error": error,
-            "results": aircraft.results().to_dict() if aircraft is not None else None, "cfg": cfg,
-        }
-
+    arch, cfg, overrides = build_inputs()
     st.title("Virtual Aircraft Design Lab")
     tab_design, tab_compare, tab_sweep, tab_about = st.tabs(
         ["Design", "Compare", "Sweep", "About"])
     with tab_design:
-        design_tab(runner.config_key(cfg))
+        design_tab(arch, cfg)
     with tab_compare:
-        compare_tab()
+        compare_tab(overrides)
     with tab_sweep:
         sweep_tab(arch, cfg)
     with tab_about:
