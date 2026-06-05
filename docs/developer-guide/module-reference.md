@@ -63,9 +63,4 @@ the input boundary.
 shipped response‑surface artifacts (need pycycle/openmdao, Cantera, pandas). The fitted `.pkl`/`.csv`
 are loaded at run time with no heavy dependency — see [Surrogate Models](../user-guide/surrogate-models.md).
 
-## Not part of the package
 
-`to_be_merged/`, `misc/`, `trunk/JofAircraft/`, and `works_on_batt/` are unmerged forks / legacy
-code (H2, advanced propeller, Class‑II battery). The `*_legacy.py` files inside the package
-(`Profile_legacy.py`, `_traditional_legacy`/`_hybrid_legacy`) are kept **only** as numerical
-references for the equivalence tests — don't build on them.
