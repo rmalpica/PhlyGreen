@@ -60,6 +60,12 @@ def gas_turbine():
     #    correctly-sized engine (throttle stays below 1 — no longer power-limited).
     _plot_components(aircraft, "16_gas_turbine_timeseries.png", "Class-II gas turbine (sized)")
 
+    # 5. Pollutant emission indices along the mission, from the GT emission-index surrogate:
+    #    EI varies with the operating point — high NOx at high power (climb), high CO/UHC at the
+    #    low-power, high-altitude cruise. (Emission INDEX is engine-size-independent, so it does
+    #    not depend on the nominal power chosen above — only the fuel mass does.)
+    _plot_emissions(aircraft, "16_gas_turbine_emissions.png", "Class-II gas turbine — emissions")
+
 
 def electric_motor():
     print("\n=== Class-II electric motor (d-q model) ===")
@@ -101,6 +107,44 @@ def _plot_components(aircraft, name, title):
         return
     fig = axes[0].figure
     fig.suptitle(title)
+    fig.tight_layout()
+    from common import savefig
+    print("Figures:")
+    savefig(fig, name)
+    plt.close(fig)
+
+
+def _plot_emissions(aircraft, name, title):
+    """Walk the mission, evaluate the GT emission surrogate at each point, and plot EI(t)."""
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import PhlyGreen.Utilities.Atmosphere as ISA
+        from PhlyGreen.Systems.Powertrain.emissions_surrogate import EmissionSurrogate
+    except Exception:
+        print("  (emission surrogate / matplotlib unavailable — skipping emissions plot)")
+        return
+
+    m = aircraft.mission
+    times = np.concatenate([a.t for a in m.integral_solution])
+    beta = np.concatenate([a.y[1] for a in m.integral_solution])      # Traditional weight fraction
+    v0 = m.profile.Velocity(times); alt = m.profile.Altitude(times); DISA = m.DISA
+    power = np.array([aircraft.weight.WTO * aircraft.performance.PoWTO(
+        aircraft.DesignWTOoS, beta[t], m.profile.PowerExcess(times[t]), 1, alt[t], DISA, v0[t], "TAS")
+        for t in range(len(times))])
+    mach = v0 / (20.0468 * np.sqrt(np.array([ISA.atmosphere.Tstd(float(a)) for a in alt]) + DISA))
+    pf = power / aircraft.powertrain.engineRating
+    ei = EmissionSurrogate().predict(np.column_stack([alt / 0.3048, mach, pf]))
+
+    t_min = times / 60.0
+    fig, (axN, axC) = plt.subplots(2, 1, sharex=True, figsize=(8, 6))
+    axN.plot(t_min, ei["EINOX"], color="tab:red"); axN.set_ylabel("EINOx [g/kg]")
+    axN.set_title(title); axN.grid(alpha=0.3)
+    axC.plot(t_min, ei["EICO"], color="tab:orange", label="CO")
+    axC.plot(t_min, ei["EIUHC"] * 100, color="tab:green", label="UHC ×100")
+    axC.set_ylabel("EI [g/kg]"); axC.set_xlabel("time [min]"); axC.legend(); axC.grid(alpha=0.3)
     fig.tight_layout()
     from common import savefig
     print("Figures:")

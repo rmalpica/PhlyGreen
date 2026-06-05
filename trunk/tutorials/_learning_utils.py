@@ -129,18 +129,19 @@ def breguet_range(fuel_fraction, overall_efficiency, lift_to_drag,
 # 4. PhlyGreen's *real* climate-impact model — used by notebook 06.
 # ---------------------------------------------------------------------------
 # No proxy here: notebook 06 uses PhlyGreen's ClimateImpact module, which models real
-# gas-turbine emissions (CO2, H2O, SO4, soot and NOx — the latter from the Filippone
-# semi-empirical gas-turbine correlation), the radiative forcing of every species
+# gas-turbine emissions (CO2, H2O, SO4, soot and NOx/CO/UHC from the
+# PW127 gas-turbine emission-index surrogate), the radiative forcing of every species
 # (including altitude-dependent NOx-ozone chemistry and persistent contrails / AIC), and
 # rolls them into an Average Temperature Response (ATR). The two helpers below just make it
 # easy to attach the model to a config and to read the ATR out of a designed aircraft.
-def attach_climate_model(config, einox_model='Filippone', H=100, N=1.6e7, Y=30,
+def attach_climate_model(config, einox_model='Surrogate', H=100, N=1.6e7, Y=30,
                          wtw_co2=8.30e-3, grid_co2=9.36e-2):
     """Attach PhlyGreen's real ClimateImpact (+ WellToTank) inputs to ``config``.
 
     Lets a kerosene (Traditional) design compute its mission emissions and ATR with the
-    *same* machinery as ``examples/14`` — no proxy. NOx uses the Filippone semi-empirical
-    gas-turbine correlation (``einox_model='Filippone'``). ``H``/``N``/``Y`` are the climate
+    *same* machinery as ``examples/14`` — no proxy. ``einox_model='Surrogate'`` (default) uses
+    the PW127 gas-turbine emission-index response surface for NOx/CO/UHC; ``'Filippone'`` is the
+    legacy NOx correlation. ``H``/``N``/``Y`` are the climate
     time horizon, flights per year and operative years; ``wtw_co2``/``grid_co2`` the
     well-to-wake fuel and grid CO2 intensities. Defaults match the hybrid baseline in
     ``examples/common.py``.
@@ -174,3 +175,23 @@ def climate_atr(aircraft, co2_only=False):
         return ci.ATR()
     finally:
         ci.rf = original_rf
+
+
+def climate_co2_equivalent(aircraft):
+    """Mission CO2-equivalent mass [kg] = CO2 x (full ATR / CO2-only ATR).
+
+    Expresses the *total* climate impact (CO2 + the non-CO2 effects the emission model and the
+    ClimateImpact radiative-forcing machinery capture — NOx-ozone, contrails, ...) as an
+    equivalent mass of CO2, by scaling the emitted CO2 by the ratio of the full to the CO2-only
+    Average Temperature Response. Uses whichever NOx model the config selected (with
+    ``attach_climate_model`` that is the PW127 emission surrogate).
+    """
+    ci = aircraft.climateimpact
+    if not ci.mission_emissions_calculated:
+        aircraft.MissionType = 'Continue'
+        ci.calculate_mission_emissions()
+    co2 = ci.mission_emissions['co2']
+    full = climate_atr(aircraft, co2_only=False)
+    co2_only = climate_atr(aircraft, co2_only=True)
+    uplift = full / co2_only if co2_only else 1.0
+    return co2 * uplift, uplift

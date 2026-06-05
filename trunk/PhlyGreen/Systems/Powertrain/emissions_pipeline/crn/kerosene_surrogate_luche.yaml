@@ -1,0 +1,3675 @@
+description: |-
+  ---------------------------------------------------------------------------
+    CTI File converted from Solution Object
+  ---------------------------------------------------------------------------
+
+generator: cti2yaml
+cantera-version: 3.0.0
+date: Thu, 01 Aug 2024 11:34:45 +0200
+input-files: [Luche3.cti]
+
+units: {length: cm, quantity: mol, activation-energy: cal/mol}
+
+phases:
+- name: gas
+  thermo: ideal-gas
+  elements: [C, H, O, N]
+  species: [NC10H22, STYREN, PHCH2OH, CYC9H18, PC4H9, AC5H11, AC6H13, BC6H13,
+    AC7H15, AC8H17, AC10H21, CC10H21, DC10H21, EC10H21, APHC2H4, CC9H17C,
+    EC9H17C, FC9H17C, HONO, CPHC3H6, APHC3H6, PHC3H7, PHHCO, PHCO, NH3,
+    PHCH2, TOLUEN, CH3CN, NO2, N2O, C6H6, HOCN, C5H4OH, HNO, C5H4O, C6H5O,
+    C5H5, NC4H3, NC3H7, C6H5, HCN, H2CN, NNH, HNCO, NH2, NO, CN, NC4H5,
+    N, C2H2OH, C4H6, NH, NCO, C4H4, C4H2, IC4H3, AC3H5, C3H6, AC3H4, C3H2,
+    C3H3, CH3OH, CH2OH, CH2HCO, PC3H4, C2H, CH, C2H3, C2H4, CH2CO, C2H5,
+    C2H2, C2H6, HCCO, SCH2, H2, CH3O, H, CH2O, O, HCO, H2O, OH, HO2, CH2,
+    O2, CO, CO2, CH4, CH3, N2]
+  kinetics: gas
+  reactions: all
+  state:
+    T: 1.0e-03
+    P: 5.84353993698e-05
+
+species:
+- name: NC10H22
+  composition: {H: 22, C: 10}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [-3.6326315, 0.13797385, -1.2604125e-04, 8.4876452e-08, -2.8641116e-11,
+      -3.4200144e+04, 50.137796]
+    - [22.576211, 0.061461103, -2.3262162e-05, 4.0211304e-09, -2.609846e-13,
+      -4.1874508e+04, -85.926533]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 6.87
+    well-depth: 523.6
+    rotational-relaxation: 1.0
+- name: STYREN
+  composition: {H: 8, C: 8}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [-4.726091, 0.0811451, -5.870096e-05, 1.433087e-08, 2.028527e-12,
+      1.602763e+04, 46.63407]
+    - [14.57132, 0.02860189, -1.094592e-05, 1.986668e-09, -1.365103e-13,
+      1.060253e+04, -53.34605]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 5.683
+    well-depth: 450.0
+    rotational-relaxation: 1.0
+- name: PHCH2OH
+  composition: {H: 8, C: 7, O: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [-1.819951, 0.05978095, -1.594484e-05, -2.239437e-08, 1.382714e-11,
+      -1.40399e+04, 37.3669]
+    - [12.77036, 0.03020202, -1.14478e-05, 2.065775e-09, -1.414215e-13,
+      -1.866109e+04, -40.75022]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 5.754
+    well-depth: 450.0
+    rotational-relaxation: 1.0
+- name: CYC9H18
+  composition: {H: 18, C: 9}
+  thermo:
+    model: NASA7
+    temperature-ranges: [298.15, 1000.0, 5000.0]
+    data:
+    - [-7.511653, 0.1154826, -6.191668e-05, 9.188978e-09, 1.868443e-12,
+      -2.521023e+04, 61.22126]
+    - [21.86927, 0.05042443, -1.790479e-05, 2.94622e-09, -1.855334e-13,
+      -3.476123e+04, -96.08839]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 5.719
+    well-depth: 450.0
+    rotational-relaxation: 1.0
+- name: PC4H9
+  composition: {H: 9, C: 4}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [-1.173456, 0.05581896, -5.110506e-05, 2.993024e-08, -8.019169e-12,
+      7261.32, 31.08969]
+    - [12.76943, 0.01651942, -4.400461e-06, 5.89909e-10, -3.228133e-14,
+      3137.707, -41.49373]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 5.176
+    well-depth: 357.0
+    rotational-relaxation: 1.0
+- name: AC5H11
+  composition: {H: 11, C: 5}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [0.2556355, 0.05093092, -1.079369e-05, -2.106594e-08, 1.221395e-11,
+      4860.211, 27.99386]
+    - [12.04076, 0.02823876, -1.048339e-05, 1.872132e-09, -1.27392e-13,
+      1051.479, -35.43858]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 5.51
+    well-depth: 380.4
+    rotational-relaxation: 1.0
+- name: AC6H13
+  composition: {H: 13, C: 6}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [0.6022963, 0.05893652, -8.239805e-06, -2.985283e-08, 1.626413e-11,
+      1319.036, 28.30084]
+    - [14.46066, 0.03372568, -1.257232e-05, 2.249518e-09, -1.53238e-13,
+      -3231.862, -46.6487]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 5.83
+    well-depth: 415.2
+    rotational-relaxation: 1.0
+- name: BC6H13
+  composition: {H: 13, C: 6}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [1.284288, 0.05442924, -1.228647e-06, -3.425039e-08, 1.729481e-11,
+      759.4397, 26.64276]
+    - [13.6544, 0.0344542, -1.26805e-05, 2.254188e-09, -1.529703e-13, -3442.454,
+      -40.9122]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 5.83
+    well-depth: 415.2
+    rotational-relaxation: 1.0
+- name: AC7H15
+  composition: {H: 15, C: 7}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [0.7914471, 0.06783629, -7.485939e-06, -3.702136e-08, 1.976935e-11,
+      -1145.125, 29.30553]
+    - [16.89893, 0.03919356, -1.464787e-05, 2.624035e-09, -1.788601e-13,
+      -6465.644, -57.96541]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 6.12
+    well-depth: 446.7
+    rotational-relaxation: 1.0
+- name: AC8H17
+  composition: {H: 17, C: 8}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [-5.6381039, 0.12265445, -1.1604047e-04, 7.2330457e-08, -2.2124118e-11,
+      -5203.9591, 52.905922]
+    - [20.365761, 0.045130568, -1.7071365e-05, 2.9484372e-09, -1.9118267e-13,
+      -1.2476666e+04, -81.038978]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 6.4
+    well-depth: 473.0
+    rotational-relaxation: 1.0
+- name: AC10H21
+  composition: {H: 21, C: 10}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 3000.0]
+    data:
+    - [-2.34577, 0.125761, -9.047197e-05, 3.657591e-08, -6.851028e-12, -1.005187e+04,
+      46.73484]
+    - [29.2963, 0.04484675, -1.327873e-05, 1.922447e-09, -1.109352e-13,
+      -1.965253e+04, -119.6571]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 6.87
+    well-depth: 523.6
+    rotational-relaxation: 1.0
+- name: CC10H21
+  composition: {H: 21, C: 10}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 3000.0]
+    data:
+    - [-2.780884, 0.129736, -1.026437e-04, 4.948318e-08, -1.141322e-11,
+      -1.056815e+04, 48.54409]
+    - [28.94334, 0.04486409, -1.322706e-05, 1.908301e-09, -1.098115e-13,
+      -2.002892e+04, -117.403]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 6.87
+    well-depth: 523.6
+    rotational-relaxation: 1.0
+- name: DC10H21
+  composition: {H: 21, C: 10}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 3000.0]
+    data:
+    - [-2.780884, 0.129736, -1.026437e-04, 4.948318e-08, -1.141322e-11,
+      -1.056815e+04, 48.54409]
+    - [28.94334, 0.04486409, -1.322706e-05, 1.908301e-09, -1.098115e-13,
+      -2.002892e+04, -117.403]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 6.87
+    well-depth: 523.6
+    rotational-relaxation: 1.0
+- name: EC10H21
+  composition: {H: 21, C: 10}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 3000.0]
+    data:
+    - [-2.780884, 0.129736, -1.026437e-04, 4.948318e-08, -1.141322e-11,
+      -1.056815e+04, 48.54409]
+    - [28.94334, 0.04486409, -1.322706e-05, 1.908301e-09, -1.098115e-13,
+      -2.002892e+04, -117.403]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 6.87
+    well-depth: 523.6
+    rotational-relaxation: 1.0
+- name: APHC2H4
+  composition: {H: 9, C: 8}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 3000.0]
+    data:
+    - [-5.444062, 0.09023987, -7.848159e-05, 3.719514e-08, -7.751899e-12,
+      2.597952e+04, 51.0027]
+    - [17.81274, 0.02425233, -7.325803e-06, 1.078116e-09, -6.303293e-14,
+      1.948938e+04, -69.12315]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 5.719
+    well-depth: 450.0
+    rotational-relaxation: 1.0
+- name: CC9H17C
+  composition: {H: 17, C: 9}
+  thermo:
+    model: NASA7
+    temperature-ranges: [298.15, 1000.0, 5000.0]
+    data:
+    - [-8.723704, 0.1278529, -1.006726e-04, 4.739456e-08, -1.086063e-11,
+      -1471.003, 66.988]
+    - [24.23084, 0.04248228, -1.369376e-05, 2.103376e-09, -1.262431e-13,
+      -1.15573e+04, -106.3593]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 5.719
+    well-depth: 450.0
+    rotational-relaxation: 1.0
+- name: EC9H17C
+  composition: {H: 17, C: 9}
+  thermo:
+    model: NASA7
+    temperature-ranges: [298.15, 1000.0, 5000.0]
+    data:
+    - [-7.132243, 0.1150135, -6.838236e-05, 1.647927e-08, -6.017677e-13,
+      -1402.628, 60.75674]
+    - [24.31343, 0.04311272, -1.408145e-05, 2.185279e-09, -1.321996e-13,
+      -1.151866e+04, -107.0647]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 5.719
+    well-depth: 450.0
+    rotational-relaxation: 1.0
+- name: FC9H17C
+  composition: {H: 17, C: 9}
+  thermo:
+    model: NASA7
+    temperature-ranges: [298.15, 1000.0, 5000.0]
+    data:
+    - [-7.132243, 0.1150135, -6.838236e-05, 1.647927e-08, -6.017677e-13,
+      -1402.628, 60.75674]
+    - [24.31343, 0.04311272, -1.408145e-05, 2.185279e-09, -1.321996e-13,
+      -1.151866e+04, -107.0647]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 5.719
+    well-depth: 450.0
+    rotational-relaxation: 1.0
+- name: HONO
+  composition: {H: 1, O: 2, N: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [2.290413, 0.01409922, -1.367872e-05, 7.49878e-09, -1.876905e-12,
+      -1.043195e+04, 13.28077]
+    - [5.486893, 4.218065e-03, -1.649143e-06, 2.971877e-10, -2.021148e-14,
+      -1.126865e+04, -2.997002]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 4.68
+    well-depth: 146.0
+    rotational-relaxation: 1.0
+- name: CPHC3H6
+  composition: {H: 11, C: 9}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 3000.0]
+    data:
+    - [-3.788371, 0.08974992, -6.462414e-05, 2.437379e-08, -4.071843e-12,
+      1.53855e+04, 45.25791]
+    - [20.35102, 0.02874172, -8.635462e-06, 1.262156e-09, -7.324088e-14,
+      8065.506, -81.77301]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 5.719
+    well-depth: 450.0
+    rotational-relaxation: 1.0
+- name: APHC3H6
+  composition: {H: 11, C: 9}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 3000.0]
+    data:
+    - [-5.109421, 0.09910046, -8.140862e-05, 3.666308e-08, -7.423054e-12,
+      2.29389e+04, 51.35111]
+    - [21.74148, 0.02690992, -7.900115e-06, 1.136946e-09, -6.535095e-14,
+      1.509043e+04, -88.68943]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 5.719
+    well-depth: 450.0
+    rotational-relaxation: 1.0
+- name: PHC3H7
+  composition: {H: 12, C: 9}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 3000.0]
+    data:
+    - [-4.2383, 0.09006415, -5.331408e-05, 9.883891e-09, 1.259661e-12, -1326.863,
+      46.99421]
+    - [19.56456, 0.03371875, -1.127997e-05, 1.780649e-09, -1.090086e-13,
+      -8668.846, -79.05852]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 5.719
+    well-depth: 450.0
+    rotational-relaxation: 1.0
+- name: PHHCO
+  composition: {H: 6, C: 7, O: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [1.841654, 0.0318111, 3.73716e-05, -7.17423e-08, 3.077223e-11, -6568.544,
+      20.87137]
+    - [12.47734, 0.02615634, -1.035587e-05, 1.908688e-09, -1.322235e-13,
+      -1.069956e+04, -39.9031]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 5.754
+    well-depth: 450.0
+    rotational-relaxation: 1.0
+- name: PHCO
+  composition: {H: 5, C: 7, O: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [2.047637, 0.03298198, 2.731109e-05, -6.096289e-08, 2.699006e-11,
+      1.089948e+04, 20.41304]
+    - [13.05559, 0.02289325, -9.161155e-06, 1.698238e-09, -1.180472e-13,
+      6849.638, -41.41237]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 5.754
+    well-depth: 450.0
+    rotational-relaxation: 1.0
+- name: NH3
+  composition: {H: 3, N: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [2.204352, 0.01011476, -1.465265e-05, 1.447235e-08, -5.328509e-12,
+      -6525.488, 8.127138]
+    - [2.461904, 6.059166e-03, -2.004977e-06, 3.136003e-10, -1.938317e-14,
+      -6493.27, 7.472097]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 2.92
+    well-depth: 481.0
+    dipole: 1.47000041953
+    rotational-relaxation: 10.0
+- name: PHCH2
+  composition: {H: 7, C: 7}
+  thermo:
+    model: NASA7
+    temperature-ranges: [200.0, 1000.0, 6000.0]
+    data:
+    - [0.4811154, 0.038512832, 3.2861492e-05, -7.6972721e-08, 3.5423068e-11,
+      2.3307027e+04, 23.54882]
+    - [14.04398, 0.023493873, -8.5375367e-06, 1.3890841e-09, -8.361442e-14,
+      1.8564203e+04, -51.665589]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 5.549
+    well-depth: 450.0
+    rotational-relaxation: 1.0
+- name: TOLUEN
+  composition: {H: 8, C: 7}
+  thermo:
+    model: NASA7
+    temperature-ranges: [200.0, 1000.0, 6000.0]
+    data:
+    - [1.6152663, 0.021099438, 8.5366018e-05, -1.3261066e-07, 5.5956604e-11,
+      4075.63, 20.28221]
+    - [12.940034, 0.026691287, -9.6838505e-06, 1.5738629e-09, -9.4663601e-14,
+      -697.64908, -46.728785]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 5.549
+    well-depth: 450.0
+    rotational-relaxation: 1.0
+- name: CH3CN
+  composition: {H: 3, C: 2, N: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 3000.0]
+    data:
+    - [2.5197531, 0.013567523, -2.5764077e-06, -3.0893967e-09, 1.4288692e-12,
+      8553.3762, 10.920868]
+    - [2.3924046, 0.015618873, -7.9120497e-06, 1.9372333e-09, -1.8611956e-13,
+      8499.9377, 11.145236]
+  transport:
+    model: gas
+    geometry: linear
+    diameter: 3.7
+    well-depth: 360.0
+    rotational-relaxation: 1.0
+- name: NO2
+  composition: {O: 2, N: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [2.6706, 7.838501e-03, -8.063865e-06, 6.161715e-09, -2.32015e-12,
+      2896.291, 11.61207]
+    - [4.682859, 2.462429e-03, -1.042259e-06, 1.976902e-10, -1.391717e-14,
+      2261.292, 0.9885985]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 3.5
+    well-depth: 200.0
+    rotational-relaxation: 1.0
+- name: N2O
+  composition: {O: 1, N: 2}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [2.543058, 9.492193e-03, -9.792775e-06, 6.263845e-09, -1.901826e-12,
+      8765.1, 9.511222]
+    - [4.718977, 2.873714e-03, -1.197496e-06, 2.250552e-10, -1.575337e-14,
+      8165.811, -1.65725]
+  transport:
+    model: gas
+    geometry: linear
+    diameter: 3.828
+    well-depth: 232.4
+    rotational-relaxation: 1.0
+- name: C6H6
+  composition: {H: 6, C: 6}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [-3.138012, 0.04723103, -2.962207e-06, -3.262819e-08, 1.718691e-11,
+      8890.031, 36.57573]
+    - [12.91074, 0.01723296, -5.02421e-06, 5.893497e-10, -1.947521e-14,
+      3664.511, -50.02699]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 5.349
+    well-depth: 412.3
+    rotational-relaxation: 1.0
+- name: HOCN
+  composition: {H: 1, C: 1, O: 1, N: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1400.0, 4000.0]
+    data:
+    - [3.789424, 5.387981e-03, -6.51827e-07, -1.420164e-09, 5.367969e-13,
+      -3135.335, 6.667052]
+    - [6.022112, 1.92953e-03, -1.455029e-07, -1.045811e-10, 1.794814e-14,
+      -4040.321, -5.866433]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 3.828
+    well-depth: 232.4
+    rotational-relaxation: 1.0
+- name: C5H4OH
+  composition: {H: 5, C: 5, O: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [200.0, 1000.0, 6000.0]
+    data:
+    - [-4.475607, 0.0703805, -7.09668e-05, 3.560716e-08, -6.672604e-12,
+      4959.535, 44.67179]
+    - [12.46414, 0.01696242, -6.705979e-06, 1.237998e-09, -8.593198e-14,
+      583.496, -41.24649]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 5.5
+    well-depth: 450.0
+    rotational-relaxation: 1.0
+- name: HNO
+  composition: {H: 1, O: 1, N: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [2.784403, 6.609646e-03, -9.300223e-06, 9.43798e-09, -3.753146e-12,
+      1.091878e+04, 9.035629]
+    - [3.615144, 3.212486e-03, -1.260337e-06, 2.267298e-10, -1.536236e-14,
+      1.066191e+04, 4.810264]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 3.492
+    well-depth: 116.7
+    rotational-relaxation: 1.0
+- name: C5H4O
+  composition: {H: 4, C: 5, O: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [-4.0284484, 0.061012873, -5.5617657e-05, 2.5221734e-08, -4.4957412e-12,
+      -1867.206, 40.486998]
+    - [11.414429, 0.015932396, -6.2163612e-06, 1.0960337e-09, -7.2060379e-14,
+      -6090.2545, -38.872811]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 5.5
+    well-depth: 450.0
+    rotational-relaxation: 1.0
+- name: C6H5O
+  composition: {H: 5, C: 6, O: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 4000.0]
+    data:
+    - [1.1074965, 0.03956945, 8.497295e-07, -2.436311e-08, 9.650659e-12,
+      3159.672, 19.73496]
+    - [18.22638, 0.010039851, -9.915668e-07, -5.672804e-10, 1.0683716e-13,
+      -2620.846, -73.6139]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 5.5
+    well-depth: 450.0
+    rotational-relaxation: 1.0
+- name: C5H5
+  composition: {H: 5, C: 5}
+  thermo:
+    model: NASA7
+    temperature-ranges: [200.0, 1000.0, 6000.0]
+    data:
+    - [-0.95902849, 0.031396777, 2.672405e-05, -6.8942183e-08, 3.3301983e-11,
+      3.0779441e+04, 29.07278]
+    - [10.844072, 0.015392831, -5.5630422e-06, 9.018944e-10, -5.4156619e-14,
+      2.6950886e+04, -35.254983]
+  transport:
+    model: gas
+    geometry: linear
+    diameter: 5.18
+    well-depth: 357.0
+    rotational-relaxation: 1.0
+- name: NC4H3
+  composition: {H: 3, C: 4}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [5.69868, 6.010718e-03, 2.870638e-05, -4.19072e-08, 1.694403e-11,
+      6.320122e+04, -0.4985138]
+    - [9.114356, 9.547112e-03, -3.884359e-06, 7.262327e-10, -5.073707e-14,
+      6.162152e+04, -21.29665]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 5.18
+    well-depth: 357.0
+    rotational-relaxation: 1.0
+- name: NC3H7
+  composition: {H: 7, C: 3}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [1.0515518, 0.02599198, 2.380054e-06, -1.9609569e-08, 9.373247e-12,
+      1.0631863e+04, 21.122559]
+    - [7.7026987, 0.016044203, -5.283322e-06, 7.629859e-10, -3.9392284e-14,
+      8298.4336, -15.48018]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 4.982
+    well-depth: 266.8
+    rotational-relaxation: 1.0
+- name: C6H5
+  composition: {H: 5, C: 6}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [0.11435567, 0.03627324, 1.1582856e-06, -2.196964e-08, 8.463556e-12,
+      3.836054e+04, 23.80117]
+    - [15.775887, 9.651109e-03, -9.429416e-07, -5.469111e-10, 1.0265216e-13,
+      3.302698e+04, -61.7628]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 5.349
+    well-depth: 412.3
+    rotational-relaxation: 1.0
+- name: HCN
+  composition: {H: 1, C: 1, N: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 4000.0]
+    data:
+    - [2.417787, 9.031856e-03, -1.107727e-05, 7.980141e-09, -2.311141e-12,
+      1.501044e+04, 8.222891]
+    - [3.426457, 3.92419e-03, -1.601138e-06, 3.161966e-10, -2.43285e-14,
+      1.485552e+04, 3.607795]
+  transport:
+    model: gas
+    geometry: linear
+    diameter: 3.63
+    well-depth: 569.0
+    rotational-relaxation: 1.0
+- name: H2CN
+  composition: {H: 2, C: 1, N: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 4000.0]
+    data:
+    - [2.851661, 5.695233e-03, 1.07114e-06, -1.622612e-09, -2.351108e-13,
+      2.863782e+04, 8.992751]
+    - [5.209703, 2.969291e-03, -2.855589e-07, -1.63555e-10, 3.043259e-14,
+      2.767711e+04, -4.444478]
+  transport:
+    model: gas
+    geometry: linear
+    diameter: 3.63
+    well-depth: 569.0
+    rotational-relaxation: 1.0
+- name: NNH
+  composition: {H: 1, N: 2}
+  thermo:
+    model: NASA7
+    temperature-ranges: [250.0, 1000.0, 4000.0]
+    data:
+    - [3.501344, 2.053587e-03, 7.17041e-07, 4.921348e-10, -9.67117e-13,
+      2.833347e+04, 6.391837]
+    - [4.415342, 1.614388e-03, -1.632894e-07, -8.559846e-11, 1.614791e-14,
+      2.788029e+04, 0.9042888]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 3.798
+    well-depth: 71.4
+    rotational-relaxation: 1.0
+- name: HNCO
+  composition: {H: 1, C: 1, O: 1, N: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1400.0, 4000.0]
+    data:
+    - [3.858467, 6.390342e-03, -9.016628e-07, -1.898224e-09, 7.65138e-13,
+      -1.562343e+04, 4.882493]
+    - [6.545307, 1.96576e-03, -1.562664e-07, -1.074318e-10, 1.87468e-14,
+      -1.664773e+04, -10.0388]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 3.828
+    well-depth: 232.4
+    rotational-relaxation: 1.0
+- name: NH2
+  composition: {H: 2, N: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [3.432493, 3.29954e-03, -6.6136e-06, 8.590947e-09, -3.572047e-12,
+      2.177228e+04, 3.090111]
+    - [2.961311, 2.932699e-03, -9.0636e-07, 1.617257e-10, -1.2042e-14, 2.191977e+04,
+      5.777878]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 2.65
+    well-depth: 80.0
+    polarizability: 2.26
+    rotational-relaxation: 4.0
+- name: NO
+  composition: {O: 1, N: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [3.376542, 1.253063e-03, -3.302751e-06, 5.21781e-09, -2.446263e-12,
+      9817.961, 5.82959]
+    - [3.245435, 1.269138e-03, -5.01589e-07, 9.169283e-11, -6.275419e-15,
+      9800.84, 6.417294]
+  transport:
+    model: gas
+    geometry: linear
+    diameter: 3.621
+    well-depth: 97.53
+    polarizability: 1.76
+    rotational-relaxation: 4.0
+- name: CN
+  composition: {C: 1, N: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [3.663204, -1.156529e-03, 2.163409e-06, 1.854208e-10, -8.214695e-13,
+      5.128118e+04, 3.739016]
+    - [3.72012, 1.518351e-04, 1.987381e-07, -3.798371e-11, 1.32823e-15,
+      5.111626e+04, 2.888597]
+  transport:
+    model: gas
+    geometry: linear
+    diameter: 3.856
+    well-depth: 75.0
+    rotational-relaxation: 1.0
+- name: NC4H5
+  composition: {H: 5, C: 4}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [8.618383, -0.01867358, 1.094492e-04, -1.278627e-07, 4.816399e-11,
+      4.083232e+04, -10.65144]
+    - [10.01433, 0.0148165, -6.239049e-06, 1.187355e-09, -8.381264e-14,
+      3.864115e+04, -26.89494]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 5.18
+    well-depth: 357.0
+    rotational-relaxation: 1.0
+- name: N
+  composition: {N: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [2.503071, -2.180018e-05, 5.420529e-08, -5.64756e-11, 2.099904e-14,
+      5.60989e+04, 4.167566]
+    - [2.450268, 1.066146e-04, -7.465337e-08, 1.879652e-11, -1.025984e-15,
+      5.611604e+04, 4.448758]
+  transport:
+    model: gas
+    geometry: atom
+    diameter: 3.298
+    well-depth: 71.4
+- name: C2H2OH
+  composition: {H: 3, C: 2, O: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [6.624799, -9.247874e-03, 4.29429e-05, -4.457705e-08, 1.558731e-11,
+      1.468082e+04, -3.461709]
+    - [4.723335, 9.62073e-03, -3.615893e-06, 6.457452e-10, -4.382956e-14,
+      1.448811e+04, 2.917463]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 4.162
+    well-depth: 224.7
+    rotational-relaxation: 1.0
+- name: C4H6
+  composition: {H: 6, C: 4}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 3000.0]
+    data:
+    - [11.10787, -6.302794e-03, 5.36192e-05, -5.914519e-08, 2.123863e-11,
+      9686.877, -29.92869]
+    - [9.843862, 0.01544517, -5.7172e-06, 1.014516e-09, -6.865593e-14, 9077.228,
+      -28.00343]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 5.176
+    well-depth: 357.0
+    rotational-relaxation: 1.0
+- name: NH
+  composition: {H: 1, N: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [3.339758, 1.253009e-03, -3.491646e-06, 4.218812e-09, -1.557618e-12,
+      4.185047e+04, 2.507181]
+    - [2.760249, 1.375346e-03, -4.451914e-07, 7.692792e-11, -5.017592e-15,
+      4.207828e+04, 5.857199]
+  transport:
+    model: gas
+    geometry: linear
+    diameter: 2.65
+    well-depth: 80.0
+    rotational-relaxation: 4.0
+- name: NCO
+  composition: {C: 1, O: 1, N: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1400.0, 4000.0]
+    data:
+    - [3.359593, 5.393239e-03, -8.144585e-07, -1.912868e-09, 7.836794e-13,
+      1.462809e+04, 6.549694]
+    - [6.072346, 9.227829e-04, -9.845574e-08, -4.764123e-11, 9.090445e-15,
+      1.35982e+04, -8.507293]
+  transport:
+    model: gas
+    geometry: linear
+    diameter: 3.828
+    well-depth: 232.4
+    rotational-relaxation: 1.0
+- name: C4H4
+  composition: {H: 4, C: 4}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 4000.0]
+    data:
+    - [3.233893, 0.01865634, 1.2703205e-06, -9.410096e-09, 2.95611e-12,
+      3.301097e+04, 9.922676]
+    - [10.697773, 6.982014e-03, -6.567747e-07, -3.884517e-10, 7.200946e-14,
+      3.034803e+04, -31.2843]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 5.18
+    well-depth: 357.0
+    rotational-relaxation: 1.0
+- name: C4H2
+  composition: {H: 2, C: 4}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [4.005191, 0.01981, -9.865877e-06, -6.635158e-09, 6.077413e-12, 5.424065e+04,
+      1.845736]
+    - [9.031407, 6.047252e-03, -1.948788e-06, 2.754863e-10, -1.385608e-14,
+      5.294735e+04, -23.85067]
+  transport:
+    model: gas
+    geometry: linear
+    diameter: 5.18
+    well-depth: 357.0
+    rotational-relaxation: 1.0
+- name: IC4H3
+  composition: {H: 3, C: 4}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [9.206357, -6.841258e-03, 4.942677e-05, -5.775654e-08, 2.162085e-11,
+      5.323088e+04, -15.49076]
+    - [9.757045, 8.899106e-03, -3.632154e-06, 6.796664e-10, -4.749808e-14,
+      5.222094e+04, -22.56733]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 5.18
+    well-depth: 357.0
+    rotational-relaxation: 1.0
+- name: AC3H5
+  composition: {H: 5, C: 3}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 4000.0]
+    data:
+    - [2.276486, 0.01985564, 1.1238421e-06, -1.0145757e-08, 3.441342e-12,
+      1.789496e+04, 13.725151]
+    - [9.651539, 8.075596e-03, -7.965424e-07, -4.650696e-10, 8.603281e-14,
+      1.5300955e+04, -26.86773]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 4.85
+    well-depth: 260.0
+    rotational-relaxation: 1.0
+- name: C3H6
+  composition: {H: 6, C: 3}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [1.4575157, 0.021142263, 4.0468012e-06, -1.6319003e-08, 7.0475153e-12,
+      1074.0208, 17.39946]
+    - [6.7213974, 0.014931757, -4.9652353e-06, 7.2510753e-10, -3.8001476e-14,
+      -924.53149, -12.155617]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 4.982
+    well-depth: 266.8
+    rotational-relaxation: 1.0
+- name: AC3H4
+  composition: {H: 4, C: 3}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [4.545321, 4.532069e-04, 4.164247e-05, -5.255023e-08, 2.012932e-11,
+      2.129959e+04, 1.774389]
+    - [6.321808, 0.01175513, -4.654671e-06, 8.571352e-10, -5.932754e-14,
+      1.999041e+04, -11.4058]
+  transport:
+    model: gas
+    geometry: linear
+    diameter: 4.76
+    well-depth: 252.0
+    rotational-relaxation: 1.0
+- name: C3H2
+  composition: {H: 2, C: 3}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [2.691077, 0.014803664, -3.250551e-06, -8.644363e-09, 5.284877e-12,
+      5.219072e+04, 8.757391]
+    - [6.530853, 5.870316e-03, -1.720776e-06, 2.127498e-10, -8.29191e-15,
+      5.115213e+04, -11.227278]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 4.1
+    well-depth: 209.0
+    rotational-relaxation: 1.0
+- name: C3H3
+  composition: {H: 3, C: 3}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [5.662925, 4.305276e-03, 1.821026e-05, -2.569477e-08, 1.0163e-11,
+      3.97829e+04, -3.25696]
+    - [7.369845, 7.785471e-03, -3.021696e-06, 5.509941e-10, -3.792926e-14,
+      3.889195e+04, -14.11052]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 4.76
+    well-depth: 252.0
+    rotational-relaxation: 1.0
+- name: CH3OH
+  composition: {H: 4, C: 1, O: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [2.66012, 7.34151e-03, 7.17005e-06, -8.79319e-09, 2.39057e-12, -2.53535e+04,
+      11.233]
+    - [4.02906, 9.37659e-03, -3.05025e-06, 4.3588e-10, -2.225e-14, -2.61579e+04,
+      2.378]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 3.626
+    well-depth: 481.8
+    rotational-relaxation: 1.0
+- name: CH2OH
+  composition: {H: 3, C: 1, O: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [0.6307199, 0.02522545, -3.495917e-05, 2.639359e-08, -7.968254e-12,
+      -2131.287, 20.73185]
+    - [5.593136, 5.150597e-03, -1.69369e-06, 2.918823e-10, -1.959916e-14,
+      -3209.082, -3.391799]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 3.69
+    well-depth: 417.0
+    dipole: 1.70000048517
+    rotational-relaxation: 2.0
+- name: CH2HCO
+  composition: {H: 3, C: 2, O: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [2.222313, 0.01869138, -1.154825e-05, 1.828411e-09, 8.233907e-13,
+      202.1615, 14.2837]
+    - [6.229616, 8.294253e-03, -3.000911e-06, 5.301645e-10, -3.58799e-14,
+      -959.279, -6.626748]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 3.97
+    well-depth: 436.0
+    rotational-relaxation: 2.0
+- name: PC3H4
+  composition: {H: 4, C: 3}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [6.110199, -6.741639e-03, 5.321618e-05, -6.098872e-08, 2.248793e-11,
+      2.040653e+04, -4.858232]
+    - [6.089231, 0.0118664, -4.668532e-06, 8.558878e-10, -5.905525e-14,
+      1.946662e+04, -9.357201]
+  transport:
+    model: gas
+    geometry: linear
+    diameter: 4.76
+    well-depth: 252.0
+    rotational-relaxation: 1.0
+- name: C2H
+  composition: {H: 1, C: 2}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [3.05067, 6.05167e-03, -4.95663e-06, 2.80416e-09, -8.1933e-13, 6.63001e+04,
+      5.954]
+    - [4.42769, 2.21627e-03, -6.049e-07, 9.883e-11, -7.35e-15, 6.59041e+04,
+      -1.199]
+  transport:
+    model: gas
+    geometry: linear
+    diameter: 4.1
+    well-depth: 209.0
+    rotational-relaxation: 2.5
+- name: CH
+  composition: {H: 1, C: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [3.2002, 2.07288e-03, -5.13443e-06, 5.73389e-09, -1.95553e-12, 7.04526e+04,
+      3.332]
+    - [2.19622, 2.34038e-03, -7.0582e-07, 9.008e-11, -3.86e-15, 7.08672e+04,
+      9.178]
+  transport:
+    model: gas
+    geometry: linear
+    diameter: 2.75
+    well-depth: 80.0
+- name: C2H3
+  composition: {H: 3, C: 2}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [2.138811, 8.718222e-03, 3.85898e-06, -9.365915e-09, 4.010498e-12,
+      3.50795e+04, 13.41918]
+    - [3.647653, 8.033778e-03, -2.764499e-06, 4.75309e-10, -3.164408e-14,
+      3.446883e+04, 4.72278]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 4.1
+    well-depth: 209.0
+    rotational-relaxation: 1.0
+- name: C2H4
+  composition: {H: 4, C: 2}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [-0.86149, 0.02796163, -3.388677e-05, 2.785152e-08, -9.73788e-12,
+      5573.0, 24.211]
+    - [3.52842, 0.01148518, -4.41839e-06, 7.8446e-10, -5.267e-14, 4428.3,
+      2.23]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 3.971
+    well-depth: 280.8
+    rotational-relaxation: 1.5
+- name: CH2CO
+  composition: {H: 2, C: 2, O: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [2.97497, 0.01211871, -2.34505e-06, -6.46668e-09, 3.90565e-12, -7632.6,
+      8.674]
+    - [6.03882, 5.80484e-03, -1.92095e-06, 2.7945e-10, -1.459e-14, -8583.4,
+      -7.658]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 3.97
+    well-depth: 436.0
+    rotational-relaxation: 2.0
+- name: C2H5
+  composition: {H: 5, C: 2}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [0.1608267, 0.0207828, -4.555116e-06, -8.101919e-09, 4.734146e-12,
+      1.316156e+04, 22.3023]
+    - [4.800688, 0.01184099, -4.338718e-06, 7.699828e-10, -5.220956e-14,
+      1.165976e+04, -2.675834]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 4.302
+    well-depth: 252.3
+    rotational-relaxation: 1.5
+- name: C2H2
+  composition: {H: 2, C: 2}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [2.01356, 0.01519045, -1.616319e-05, 9.07899e-09, -1.91275e-12, 2.61244e+04,
+      8.805]
+    - [4.43677, 5.37604e-03, -1.91282e-06, 3.2864e-10, -2.157e-14, 2.56677e+04,
+      -2.8]
+  transport:
+    model: gas
+    geometry: linear
+    diameter: 4.1
+    well-depth: 209.0
+    rotational-relaxation: 2.5
+- name: C2H6
+  composition: {H: 6, C: 2}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [1.46254, 0.01549467, 5.78051e-06, -1.257832e-08, 4.58627e-12, -1.12392e+04,
+      14.432]
+    - [4.82594, 0.01384043, -4.55726e-06, 6.725e-10, -3.598e-14, -1.27178e+04,
+      -5.24]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 4.302
+    well-depth: 252.3
+    rotational-relaxation: 1.5
+- name: HCCO
+  composition: {H: 1, C: 2, O: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [5.04797, 4.45348e-03, 2.2683e-07, -1.48209e-09, 2.2507e-13, 1.96589e+04,
+      0.482]
+    - [6.75807, 2.0004e-03, -2.0276e-07, -1.0411e-10, 1.965e-14, 1.90151e+04,
+      -9.071]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 2.5
+    well-depth: 150.0
+    rotational-relaxation: 1.0
+- name: SCH2
+  composition: {H: 2, C: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 4000.0]
+    data:
+    - [3.9712651, -1.6990888e-04, 1.0253689e-06, 2.4925508e-09, -1.9812663e-12,
+      4.9893676e+04, 0.057532072]
+    - [3.5528886, 2.0667883e-03, -1.914116e-07, -1.1046734e-10, 2.0213496e-14,
+      4.9849754e+04, 1.68657]
+  transport:
+    model: gas
+    geometry: linear
+    diameter: 3.8
+    well-depth: 144.0
+- name: H2
+  composition: {H: 2}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [3.29812, 8.2494e-04, -8.143e-07, -9.475e-11, 4.1349e-13, -1012.5,
+      -3.294]
+    - [2.99142, 7.0006e-04, -5.634e-08, -9.23e-12, 1.58e-15, -835.0, -1.355]
+  transport:
+    model: gas
+    geometry: linear
+    diameter: 2.92
+    well-depth: 38.0
+    polarizability: 0.79
+    rotational-relaxation: 280.0
+- name: CH3O
+  composition: {H: 3, C: 1, O: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [2.1062, 7.2166e-03, 5.33847e-06, -7.37764e-09, 2.07561e-12, 978.6,
+      13.152]
+    - [3.7708, 7.8715e-03, -2.65638e-06, 3.9444e-10, -2.113e-14, 127.8,
+      2.93]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 3.69
+    well-depth: 417.0
+    dipole: 1.70000048517
+    rotational-relaxation: 2.0
+- name: H
+  composition: {H: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [2.5, 0.0, 0.0, 0.0, 0.0, 2.54716e+04, -0.46]
+    - [2.5, 0.0, 0.0, 0.0, 0.0, 2.54716e+04, -0.46]
+  transport:
+    model: gas
+    geometry: atom
+    diameter: 2.05
+    well-depth: 145.0
+- name: CH2O
+  composition: {H: 2, C: 1, O: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [1.65273, 0.01263144, -1.888168e-05, 2.050031e-08, -8.41324e-12, -1.48654e+04,
+      13.785]
+    - [2.99561, 6.68132e-03, -2.62895e-06, 4.7372e-10, -3.213e-14, -1.53204e+04,
+      6.913]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 3.59
+    well-depth: 498.0
+    rotational-relaxation: 2.0
+- name: O
+  composition: {O: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [2.94643, -1.63817e-03, 2.42103e-06, -1.60284e-09, 3.8907e-13, 2.91476e+04,
+      2.964]
+    - [2.54206, -2.755e-05, -3.1e-09, 4.55e-12, -4.4e-16, 2.92308e+04, 4.92]
+  transport:
+    model: gas
+    geometry: atom
+    diameter: 2.75
+    well-depth: 80.0
+- name: HCO
+  composition: {H: 1, C: 1, O: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [2.89833, 6.19915e-03, -9.62308e-06, 1.089825e-08, -4.57489e-12, 4159.9,
+      8.984]
+    - [3.55727, 3.34557e-03, -1.33501e-06, 2.4706e-10, -1.714e-14, 3916.3,
+      5.552]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 3.59
+    well-depth: 498.0
+- name: H2O
+  composition: {H: 2, O: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [3.38684, 3.47498e-03, -6.3547e-06, 6.96858e-09, -2.50659e-12, -3.02081e+04,
+      2.59]
+    - [2.67215, 3.05629e-03, -8.7303e-07, 1.201e-10, -6.39e-15, -2.98992e+04,
+      6.863]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 2.605
+    well-depth: 572.4
+    dipole: 1.84400052627
+    rotational-relaxation: 4.0
+- name: OH
+  composition: {H: 1, O: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [3.63727, 1.8509e-04, -1.67616e-06, 2.3872e-09, -8.4314e-13, 3606.8,
+      1.35886]
+    - [2.88273, 1.01397e-03, -2.2769e-07, 2.175e-11, -5.1e-16, 3886.9, 5.59571]
+  transport:
+    model: gas
+    geometry: linear
+    diameter: 2.75
+    well-depth: 80.0
+- name: HO2
+  composition: {H: 1, O: 2}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [2.97996, 4.9967e-03, -3.791e-06, 2.35419e-09, -8.089e-13, 176.2,
+      9.223]
+    - [4.07219, 2.1313e-03, -5.3081e-07, 6.112e-11, -2.84e-15, -158.0, 3.476]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 3.458
+    well-depth: 107.4
+    rotational-relaxation: 1.0
+- name: CH2
+  composition: {H: 2, C: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [3.76224, 1.15982e-03, 2.4896e-07, 8.8008e-10, -7.3324e-13, 4.53679e+04,
+      1.71258]
+    - [3.63641, 1.93306e-03, -1.687e-07, -1.0099e-10, 1.808e-14, 4.53413e+04,
+      2.15656]
+  transport:
+    model: gas
+    geometry: linear
+    diameter: 3.8
+    well-depth: 144.0
+- name: O2
+  composition: {O: 2}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [3.21294, 1.12749e-03, -5.7562e-07, 1.31388e-09, -8.7686e-13, -1005.2,
+      6.035]
+    - [3.69758, 6.1352e-04, -1.2588e-07, 1.775e-11, -1.14e-15, -1233.9,
+      3.189]
+  transport:
+    model: gas
+    geometry: linear
+    diameter: 3.458
+    well-depth: 107.4
+    polarizability: 1.6
+    rotational-relaxation: 3.8
+- name: CO
+  composition: {C: 1, O: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [3.26245, 1.51194e-03, -3.88175e-06, 5.58194e-09, -2.47495e-12, -1.43105e+04,
+      4.849]
+    - [3.02508, 1.44269e-03, -5.6308e-07, 1.0186e-10, -6.91e-15, -1.42683e+04,
+      6.108]
+  transport:
+    model: gas
+    geometry: linear
+    diameter: 3.65
+    well-depth: 98.1
+    polarizability: 1.95
+    rotational-relaxation: 1.8
+- name: CO2
+  composition: {C: 1, O: 2}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [2.27572, 9.92207e-03, -1.040911e-05, 6.86669e-09, -2.11728e-12, -4.83731e+04,
+      10.188]
+    - [4.45362, 3.14017e-03, -1.27841e-06, 2.394e-10, -1.669e-14, -4.8967e+04,
+      -0.955]
+  transport:
+    model: gas
+    geometry: linear
+    diameter: 3.763
+    well-depth: 244.0
+    polarizability: 2.65
+    rotational-relaxation: 2.1
+- name: CH4
+  composition: {H: 4, C: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [0.77874, 0.01747668, -2.783409e-05, 3.049708e-08, -1.223931e-11,
+      -9825.2, 13.722]
+    - [1.68348, 0.01023724, -3.87513e-06, 6.7856e-10, -4.503e-14, -1.00808e+04,
+      9.623]
+  transport:
+    model: gas
+    geometry: nonlinear
+    diameter: 3.746
+    well-depth: 141.4
+    polarizability: 2.6
+    rotational-relaxation: 13.0
+- name: CH3
+  composition: {H: 3, C: 1}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [2.43044, 0.0111241, -1.68022e-05, 1.621829e-08, -5.86495e-12, 1.64238e+04,
+      6.79]
+    - [2.84405, 6.13797e-03, -2.23035e-06, 3.7852e-10, -2.452e-14, 1.64378e+04,
+      5.453]
+  transport:
+    model: gas
+    geometry: linear
+    diameter: 3.8
+    well-depth: 144.0
+- name: N2
+  composition: {N: 2}
+  thermo:
+    model: NASA7
+    temperature-ranges: [300.0, 1000.0, 5000.0]
+    data:
+    - [3.29868, 1.40824e-03, -3.96322e-06, 5.64151e-09, -2.44485e-12, -1020.9,
+      3.95]
+    - [2.92664, 1.48798e-03, -5.6848e-07, 1.0097e-10, -6.75e-15, -922.8,
+      5.981]
+  transport:
+    model: gas
+    geometry: linear
+    diameter: 3.621
+    well-depth: 97.53
+    polarizability: 1.76
+    rotational-relaxation: 4.0
+
+reactions:
+- equation: 2 H + M => H2 + M  # Reaction 1
+  type: three-body
+  rate-constant: {A: 7.31e+17, b: -1.0, Ea: 0.0}
+  efficiencies: {C2H6: 16.25, H2O: 16.25, CO2: 3.75, CO: 1.875, CH4: 16.25}
+- equation: H2 + M => 2 H + M  # Reaction 2
+  type: three-body
+  rate-constant: {A: 2.756e+17, b: -0.7129, Ea: 1.03608e+05}
+  efficiencies: {C2H6: 16.25, H2O: 16.25, CO2: 3.75, CO: 1.875, CH4: 16.25}
+- equation: 2 O + M => O2 + M  # Reaction 3
+  type: three-body
+  rate-constant: {A: 1.14e+17, b: -1.0, Ea: 0.0}
+  efficiencies: {C2H6: 16.25, H2O: 16.25, CO2: 3.75, CO: 1.875, CH4: 16.25}
+- equation: O2 + M => 2 O + M  # Reaction 4
+  type: three-body
+  rate-constant: {A: 1.326e+19, b: -1.189, Ea: 1.19101e+05}
+  efficiencies: {C2H6: 16.25, H2O: 16.25, CO2: 3.75, CO: 1.875, CH4: 16.25}
+- equation: H + O + M => OH + M  # Reaction 5
+  type: three-body
+  rate-constant: {A: 6.2e+16, b: -0.6, Ea: 0.0}
+  efficiencies: {C2H6: 16.25, H2O: 16.25, CO2: 3.75, CO: 1.875, CH4: 16.25}
+- equation: OH + M => H + O + M  # Reaction 6
+  type: three-body
+  rate-constant: {A: 1.431e+16, b: -0.3522, Ea: 1.01819e+05}
+  efficiencies: {C2H6: 16.25, H2O: 16.25, CO2: 3.75, CO: 1.875, CH4: 16.25}
+- equation: H2 + O2 => 2 OH  # Reaction 7
+  rate-constant: {A: 1.7e+13, b: 0.0, Ea: 4.778e+04}
+- equation: 2 OH => H2 + O2  # Reaction 8
+  rate-constant: {A: 2.063e+10, b: 0.3975, Ea: 2.8709e+04}
+- equation: H2 + O => H + OH  # Reaction 9
+  rate-constant: {A: 3.87e+04, b: 2.7, Ea: 6260.0}
+- equation: H + OH => H2 + O  # Reaction 10
+  rate-constant: {A: 2.368e+04, b: 2.6607, Ea: 4471.0}
+- equation: H + O2 => O + OH  # Reaction 11
+  rate-constant: {A: 1.85e+14, b: 0.0, Ea: 1.6812e+04}
+- equation: O + OH => H + O2  # Reaction 12
+  rate-constant: {A: 3.669e+11, b: 0.4367, Ea: -470.0}
+- equation: H + O2 + M => HO2 + M  # Reaction 13
+  type: three-body
+  rate-constant: {A: 8.0e+17, b: -0.8, Ea: 0.0}
+  efficiencies: {C2H6: 16.25, H2O: 16.25, CO2: 3.75, CO: 1.875, CH4: 16.25}
+- equation: HO2 + M => H + O2 + M  # Reaction 14
+  type: three-body
+  rate-constant: {A: 2.361e+18, b: -0.9068, Ea: 4.956e+04}
+  efficiencies: {C2H6: 16.25, H2O: 16.25, CO2: 3.75, CO: 1.875, CH4: 16.25}
+- equation: H + OH + M => H2O + M  # Reaction 15
+  type: three-body
+  rate-constant: {A: 8.615e+21, b: -2.0, Ea: 0.0}
+  efficiencies: {C2H6: 16.25, H2O: 16.25, CO2: 3.75, CO: 1.875, CH4: 16.25}
+- equation: H2O + M => H + OH + M  # Reaction 16
+  type: three-body
+  rate-constant: {A: 5.222e+22, b: -1.8657, Ea: 1.19105e+05}
+  efficiencies: {C2H6: 16.25, H2O: 16.25, CO2: 3.75, CO: 1.875, CH4: 16.25}
+- equation: H2 + OH => H + H2O  # Reaction 17
+  rate-constant: {A: 2.161e+08, b: 1.51, Ea: 3430.0}
+- equation: H + H2O => H2 + OH  # Reaction 18
+  rate-constant: {A: 3.474e+09, b: 1.3573, Ea: 1.8927e+04}
+- equation: H2O + O => 2 OH  # Reaction 19
+  rate-constant: {A: 1.5e+10, b: 1.14, Ea: 1.7259999999999996e+04}
+- equation: 2 OH => H2O + O  # Reaction 20
+  rate-constant: {A: 5.71e+08, b: 1.2535, Ea: -25.0}
+- equation: HO2 + OH => H2O + O2  # Reaction 21
+  rate-constant: {A: 2.89e+13, b: 0.0, Ea: -497.0}
+- equation: H2O + O2 => HO2 + OH  # Reaction 22
+  rate-constant: {A: 5.936e+13, b: 0.2411, Ea: 6.9048e+04}
+- equation: HO2 + O => O2 + OH  # Reaction 23
+  rate-constant: {A: 1.81e+13, b: 0.0, Ea: -400.0}
+- equation: O2 + OH => HO2 + O  # Reaction 24
+  rate-constant: {A: 1.415e+12, b: 0.3545, Ea: 5.1859e+04}
+- equation: H + HO2 => H2 + O2  # Reaction 25
+  rate-constant: {A: 4.28e+13, b: 0.0, Ea: 1411.0}
+- equation: H2 + O2 => H + HO2  # Reaction 26
+  rate-constant: {A: 5.468e+12, b: 0.3938, Ea: 5.5459e+04}
+- equation: H + HO2 => 2 OH  # Reaction 27
+  rate-constant: {A: 1.69e+14, b: 0.0, Ea: 874.0}
+- equation: 2 OH => H + HO2  # Reaction 28
+  rate-constant: {A: 2.621e+10, b: 0.7913, Ea: 3.5852e+04}
+- equation: H + HO2 => H2O + O  # Reaction 29
+  rate-constant: {A: 3.01e+13, b: 0.0, Ea: 1721.0}
+- equation: H2O + O => H + HO2  # Reaction 30
+  rate-constant: {A: 1.226e+11, b: 0.6778, Ea: 5.3984e+04}
+- equation: CO + HO2 => CO2 + OH  # Reaction 31
+  rate-constant: {A: 1.5e+14, b: 0.0, Ea: 2.365e+04}
+- equation: CO2 + OH => CO + HO2  # Reaction 32
+  rate-constant: {A: 1.428e+17, b: -0.5016, Ea: 8.4747e+04}
+- equation: CO + OH => CO2 + H  # Reaction 33
+  rate-constant: {A: 4.4e+06, b: 1.5, Ea: -740.0}
+- equation: CO2 + H => CO + OH  # Reaction 34
+  rate-constant: {A: 2.702e+13, b: 0.2071, Ea: 2.5379e+04}
+- equation: CO + O + M => CO2 + M  # Reaction 35
+  type: three-body
+  rate-constant: {A: 2.83e+13, b: 0.0, Ea: -4540.0}
+  efficiencies: {C2H6: 16.25, H2O: 16.25, CO2: 3.75, CO: 1.875, CH4: 16.25}
+- equation: CO2 + M => CO + O + M  # Reaction 36
+  type: three-body
+  rate-constant: {A: 4.01e+19, b: -1.0451, Ea: 1.23398e+05}
+  efficiencies: {C2H6: 16.25, H2O: 16.25, CO2: 3.75, CO: 1.875, CH4: 16.25}
+- equation: CO + O2 => CO2 + O  # Reaction 37
+  rate-constant: {A: 2.53e+12, b: 0.0, Ea: 4.77e+04}
+- equation: CO2 + O => CO + O2  # Reaction 38
+  rate-constant: {A: 3.081e+16, b: -0.8562, Ea: 5.6537e+04}
+- equation: HCO + M => CO + H + M  # Reaction 39
+  type: three-body
+  rate-constant: {A: 1.85e+17, b: -1.0, Ea: 1.7e+04}
+  efficiencies: {C2H6: 16.25, H2O: 16.25, CO2: 3.75, CO: 1.875, CH4: 16.25}
+- equation: CO + H + M => HCO + M  # Reaction 40
+  type: three-body
+  rate-constant: {A: 1.815e+16, b: -0.6755, Ea: 1510.0}
+  efficiencies: {C2H6: 16.25, H2O: 16.25, CO2: 3.75, CO: 1.875, CH4: 16.25}
+- equation: HCO + OH => CO + H2O  # Reaction 41
+  rate-constant: {A: 1.0e+14, b: 0.0, Ea: 0.0}
+- equation: CO + H2O => HCO + OH  # Reaction 42
+  rate-constant: {A: 5.947e+13, b: 0.4589, Ea: 1.03615e+05}
+- equation: HCO + O => CO + OH  # Reaction 43
+  rate-constant: {A: 3.0e+13, b: 0.0, Ea: 0.0}
+- equation: CO + OH => HCO + O  # Reaction 44
+  rate-constant: {A: 6.792e+11, b: 0.5723, Ea: 8.633e+04}
+- equation: HCO + O => CO2 + H  # Reaction 45
+  rate-constant: {A: 3.0e+13, b: 0.0, Ea: 0.0}
+- equation: CO2 + H => HCO + O  # Reaction 46
+  rate-constant: {A: 4.171e+18, b: -0.7206, Ea: 1.12449e+05}
+- equation: H + HCO => CO + H2  # Reaction 47
+  rate-constant: {A: 7.224e+13, b: 0.0, Ea: 0.0}
+- equation: CO + H2 => H + HCO  # Reaction 48
+  rate-constant: {A: 2.673e+12, b: 0.6116, Ea: 8.8118e+04}
+- equation: HCO + O2 => CO + HO2  # Reaction 49
+  rate-constant: {A: 2.11e+09, b: 1.12, Ea: -620.0}
+- equation: CO + HO2 => HCO + O2  # Reaction 50
+  rate-constant: {A: 6.11e+08, b: 1.3378, Ea: 3.345e+04}
+- equation: CH3 + HCO => CH4 + CO  # Reaction 51
+  rate-constant: {A: 1.2e+14, b: 0.0, Ea: 0.0}
+- equation: CH4 + CO => CH3 + HCO  # Reaction 52
+  rate-constant: {A: 4.139e+15, b: 0.1962, Ea: 9.0e+04}
+- equation: HCO + HO2 => CO2 + H + OH  # Reaction 53
+  rate-constant: {A: 3.0e+13, b: 0.0, Ea: 0.0}
+- equation: C2H5 + CH2O => C2H6 + HCO  # Reaction 54
+  rate-constant: {A: 1.601e+04, b: 2.7593, Ea: 8350.0}
+- equation: 2 HCO => CH2O + CO  # Reaction 55
+  rate-constant: {A: 1.8e+13, b: 0.0, Ea: 0.0}
+- equation: CH2O + CO => 2 HCO  # Reaction 56
+  rate-constant: {A: 8.793e+14, b: 0.0647, Ea: 7.5209e+04}
+- equation: CH4 + OH => CH3 + H2O  # Reaction 57
+  rate-constant: {A: 1.6e+06, b: 2.1, Ea: 2462.0}
+- equation: CH3 + H2O => CH4 + OH  # Reaction 58
+  rate-constant: {A: 2.759e+04, b: 2.3626, Ea: 1.6077e+04}
+- equation: CH4 + O => CH3 + OH  # Reaction 59
+  rate-constant: {A: 1.62e+06, b: 2.3, Ea: 7094.0}
+- equation: CH3 + OH => CH4 + O  # Reaction 60
+  rate-constant: {A: 1063.0, b: 2.6761, Ea: 3424.0}
+- equation: CH4 + H => CH3 + H2  # Reaction 61
+  rate-constant: {A: 2.25e+04, b: 3.0, Ea: 8757.0}
+- equation: CH3 + H2 => CH4 + H  # Reaction 62
+  rate-constant: {A: 24.13, b: 3.4154, Ea: 6875.0}
+- equation: CH2 + CH4 => 2 CH3  # Reaction 63
+  rate-constant: {A: 4.3e+12, b: 0.0, Ea: 1.0038e+04}
+- equation: 2 CH3 => CH2 + CH4  # Reaction 64
+  rate-constant: {A: 5.98e+12, b: -0.2419, Ea: 1.4691e+04}
+- equation: CH4 + O2 => CH3 + HO2  # Reaction 65
+  rate-constant: {A: 4.04e+13, b: 0.0, Ea: 5.6913e+04}
+- equation: CH3 + HO2 => CH4 + O2  # Reaction 66
+  rate-constant: {A: 3.391e+11, b: 0.0215, Ea: 983.0}
+- equation: CH3 + M => CH2 + H + M  # Reaction 67
+  type: three-body
+  rate-constant: {A: 1.9e+16, b: 0.0, Ea: 9.1599e+04}
+  efficiencies: {C2H6: 16.25, H2O: 16.25, CO2: 3.75, CO: 1.875, CH4: 16.25}
+- equation: CH2 + H + M => CH3 + M  # Reaction 68
+  type: three-body
+  rate-constant: {A: 3.886e+13, b: 0.3703, Ea: -1.8543e+04}
+  efficiencies: {C2H6: 16.25, H2O: 16.25, CO2: 3.75, CO: 1.875, CH4: 16.25}
+- equation: CH3 + M => CH + H2 + M  # Reaction 69
+  type: three-body
+  rate-constant: {A: 6.9e+14, b: 0.0, Ea: 8.2459e+04}
+  efficiencies: {C2H6: 16.25, H2O: 16.25, CO2: 3.75, CO: 1.875, CH4: 16.25}
+- equation: CH + H2 + M => CH3 + M  # Reaction 70
+  type: three-body
+  rate-constant: {A: 2.17e+11, b: 0.5509, Ea: -2.5409e+04}
+  efficiencies: {C2H6: 16.25, H2O: 16.25, CO2: 3.75, CO: 1.875, CH4: 16.25}
+- equation: CH3 + HO2 => CH3O + OH  # Reaction 71
+  rate-constant: {A: 5.0e+12, b: 0.0, Ea: 0.0}
+- equation: CH3 + O => CH2O + H  # Reaction 72
+  rate-constant: {A: 8.43e+13, b: 0.0, Ea: 0.0}
+- equation: CH2O + H => CH3 + O  # Reaction 73
+  rate-constant: {A: 1.331e+16, b: -0.2934, Ea: 7.0561e+04}
+- equation: CH3 + H => CH2 + H2  # Reaction 74
+  rate-constant: {A: 7.0e+13, b: 0.0, Ea: 1.51e+04}
+- equation: CH2 + H2 => CH3 + H  # Reaction 75
+  rate-constant: {A: 5.399e+10, b: 0.6573, Ea: 8566.0}
+- equation: CH3 + O2 => CH3O + O  # Reaction 76
+  rate-constant: {A: 1.32e+14, b: 0.0, Ea: 3.1398e+04}
+- equation: CH3O + O => CH3 + O2  # Reaction 77
+  rate-constant: {A: 3.963e+16, b: -0.5468, Ea: 3826.0}
+- equation: CH3 + O2 => CH2O + OH  # Reaction 78
+  rate-constant: {A: 4.38e+11, b: 0.0, Ea: 1.4656e+04}
+- equation: 2 CH3 => C2H5 + H  # Reaction 79
+  rate-constant: {A: 3.011e+13, b: 0.0, Ea: 1.3513e+04}
+- equation: C2H5 + H => 2 CH3  # Reaction 80
+  rate-constant: {A: 1.256e+19, b: -1.2248, Ea: 4601.0}
+- equation: CH3 + CH3O => CH2O + CH4  # Reaction 81
+  rate-constant: {A: 2.409e+13, b: 0.0, Ea: 0.0}
+- equation: CH2OH + CH3 => CH2O + CH4  # Reaction 82
+  rate-constant: {A: 2.41e+12, b: 0.0, Ea: 0.0}
+- equation: CH2 + OH => CH + H2O  # Reaction 83
+  rate-constant: {A: 1.13e+07, b: 2.0, Ea: 3000.0}
+- equation: CH + H2O => CH2 + OH  # Reaction 84
+  rate-constant: {A: 2.793e+07, b: 2.0279, Ea: 2.077e+04}
+- equation: CH2 + OH => CH2O + H  # Reaction 85
+  rate-constant: {A: 2.5e+13, b: 0.0, Ea: 0.0}
+- equation: CH2O + H => CH2 + OH  # Reaction 86
+  rate-constant: {A: 8.363e+18, b: -0.9114, Ea: 7.8884e+04}
+- equation: CH2 + O => CO + 2 H  # Reaction 87
+  rate-constant: {A: 5.0e+13, b: 0.0, Ea: 0.0}
+- equation: CH2 + O => CO + H2  # Reaction 88
+  rate-constant: {A: 6.0e+13, b: 0.0, Ea: 0.0}
+- equation: CH2 + H => CH + H2  # Reaction 89
+  rate-constant: {A: 1.0e+18, b: -1.56, Ea: 0.0}
+- equation: CH + H2 => CH2 + H  # Reaction 90
+  rate-constant: {A: 1.537e+17, b: -1.3794, Ea: 2274.0}
+- equation: CH2 + O2 => HCO + OH  # Reaction 91
+  rate-constant: {A: 4.3e+10, b: 0.0, Ea: -500.0}
+- equation: CH2 + O2 => CO2 + H2  # Reaction 92
+  rate-constant: {A: 3.45e+11, b: 0.0, Ea: 1000.0}
+- equation: CH2 + O2 => CO2 + 2 H  # Reaction 93
+  rate-constant: {A: 1.6e+12, b: 0.0, Ea: 1000.0}
+- equation: CH2 + O2 => CO + H2O  # Reaction 94
+  rate-constant: {A: 1.87e+10, b: 0.0, Ea: -1000.0}
+- equation: CH2 + O2 => CO + H + OH  # Reaction 95
+  rate-constant: {A: 8.64e+10, b: 0.0, Ea: -500.0}
+- equation: CH2 + O2 => CH2O + O  # Reaction 96
+  rate-constant: {A: 5.0e+13, b: 0.0, Ea: 9000.0}
+- equation: CH2 + CO2 => CH2O + CO  # Reaction 97
+  rate-constant: {A: 1.1e+11, b: 0.0, Ea: 1000.0}
+- equation: 2 CH2 => C2H2 + H2  # Reaction 98
+  rate-constant: {A: 3.2e+13, b: 0.0, Ea: 0.0}
+- equation: 2 CH2 => C2H2 + 2 H  # Reaction 99
+  rate-constant: {A: 4.0e+13, b: 0.0, Ea: 0.0}
+- equation: CH2 + CH3 => C2H4 + H  # Reaction 100
+  rate-constant: {A: 4.0e+13, b: 0.0, Ea: 0.0}
+- equation: C2H4 + H => CH2 + CH3  # Reaction 101
+  rate-constant: {A: 1.008e+21, b: -1.3536, Ea: 6.4531e+04}
+- equation: CH + CH2 => C2H2 + H  # Reaction 102
+  rate-constant: {A: 4.0e+13, b: 0.0, Ea: 0.0}
+- equation: C2H2 + CH2 => C3H3 + H  # Reaction 103
+  rate-constant: {A: 1.2e+13, b: 0.0, Ea: 6620.0}
+- equation: C3H3 + H => C2H2 + CH2  # Reaction 104
+  rate-constant: {A: 5.48e+18, b: -1.4674, Ea: 1.9215e+04}
+- equation: C2H4 + CH2 => C3H6  # Reaction 105
+  rate-constant: {A: 4.3e+12, b: 0.0, Ea: 1.0038e+04}
+- equation: C3H6 => C2H4 + CH2  # Reaction 106
+  rate-constant: {A: 1.424e+21, b: -1.7383, Ea: 1.11693e+05}
+- equation: C2H6 + CH2 => C2H5 + CH3  # Reaction 107
+  rate-constant: {A: 6.5e+12, b: 0.0, Ea: 7911.0}
+- equation: C2H5 + CH3 => C2H6 + CH2  # Reaction 108
+  rate-constant: {A: 2.175e+12, b: -0.0712, Ea: 1.747e+04}
+- equation: SCH2 + M => CH2 + M  # Reaction 109
+  type: three-body
+  rate-constant: {A: 1.0e+13, b: 0.0, Ea: 0.0}
+  efficiencies: {C2H6: 16.25, H2O: 16.25, CO2: 3.75, CO: 1.875, CH4: 16.25}
+- equation: CH2 + M => SCH2 + M  # Reaction 110
+  type: three-body
+  rate-constant: {A: 3.843e+12, b: 5.0e-03, Ea: 8917.0}
+  efficiencies: {C2H6: 16.25, H2O: 16.25, CO2: 3.75, CO: 1.875, CH4: 16.25}
+- equation: O2 + SCH2 => CO + H + OH  # Reaction 111
+  rate-constant: {A: 3.0e+13, b: 0.0, Ea: 0.0}
+- equation: H2 + SCH2 => CH3 + H  # Reaction 112
+  rate-constant: {A: 7.0e+13, b: 0.0, Ea: 0.0}
+- equation: CH3 + H => H2 + SCH2  # Reaction 113
+  rate-constant: {A: 3.488e+16, b: -0.6523, Ea: 1.5452e+04}
+- equation: H + SCH2 => CH2 + H  # Reaction 114
+  rate-constant: {A: 2.0e+14, b: 0.0, Ea: 0.0}
+- equation: CH2 + H => H + SCH2  # Reaction 115
+  rate-constant: {A: 7.685e+13, b: 5.0e-03, Ea: 8917.0}
+- equation: H + SCH2 => CH + H2  # Reaction 116
+  rate-constant: {A: 3.0e+13, b: 0.0, Ea: 0.0}
+- equation: CH + H2 => H + SCH2  # Reaction 117
+  rate-constant: {A: 1.772e+12, b: 0.1857, Ea: 1.1191e+04}
+- equation: O + SCH2 => CO + 2 H  # Reaction 118
+  rate-constant: {A: 1.5e+13, b: 0.0, Ea: 0.0}
+- equation: O + SCH2 => CO + H2  # Reaction 119
+  rate-constant: {A: 1.5e+13, b: 0.0, Ea: 0.0}
+- equation: OH + SCH2 => CH2O + H  # Reaction 120
+  rate-constant: {A: 3.0e+13, b: 0.0, Ea: 0.0}
+- equation: HO2 + SCH2 => CH2O + OH  # Reaction 121
+  rate-constant: {A: 3.0e+13, b: 0.0, Ea: 0.0}
+- equation: H2O + SCH2 => CH3OH  # Reaction 122
+  rate-constant: {A: 1.8e+13, b: 0.0, Ea: 0.0}
+- equation: CH3OH => H2O + SCH2  # Reaction 123
+  rate-constant: {A: 4.917e+20, b: -1.4673, Ea: 9.359e+04}
+- equation: HCO + SCH2 => CH3 + CO  # Reaction 124
+  rate-constant: {A: 1.8e+13, b: 0.0, Ea: 0.0}
+- equation: CH3 + SCH2 => C2H4 + H  # Reaction 125
+  rate-constant: {A: 1.8e+13, b: 0.0, Ea: 0.0}
+- equation: C2H4 + H => CH3 + SCH2  # Reaction 126
+  rate-constant: {A: 1.744e+20, b: -1.3486, Ea: 7.3449e+04}
+- equation: CH4 + SCH2 => 2 CH3  # Reaction 127
+  rate-constant: {A: 4.0e+13, b: 0.0, Ea: 0.0}
+- equation: 2 CH3 => CH4 + SCH2  # Reaction 128
+  rate-constant: {A: 2.138e+13, b: -0.2369, Ea: 1.357e+04}
+- equation: C2H6 + SCH2 => C2H5 + CH3  # Reaction 129
+  rate-constant: {A: 1.2e+14, b: 0.0, Ea: 0.0}
+- equation: C2H5 + CH3 => C2H6 + SCH2  # Reaction 130
+  rate-constant: {A: 1.543e+13, b: -0.0661, Ea: 1.8476e+04}
+- equation: C2H2 + SCH2 => C3H3 + H  # Reaction 131
+  rate-constant: {A: 1.8e+14, b: 0.0, Ea: 0.0}
+- equation: C3H3 + H => C2H2 + SCH2  # Reaction 132
+  rate-constant: {A: 3.159e+19, b: -1.4624, Ea: 2.1513e+04}
+- equation: H2O + SCH2 => CH2 + H2O  # Reaction 133
+  rate-constant: {A: 3.0e+13, b: 0.0, Ea: 0.0}
+- equation: CH2 + H2O => H2O + SCH2  # Reaction 134
+  rate-constant: {A: 1.153e+13, b: 5.0e-03, Ea: 8917.0}
+- equation: CO2 + SCH2 => CH2O + CO  # Reaction 135
+  rate-constant: {A: 3.0e+12, b: 0.0, Ea: 0.0}
+- equation: CH2CO + SCH2 => C2H4 + CO  # Reaction 136
+  rate-constant: {A: 1.6e+14, b: 0.0, Ea: 0.0}
+- equation: CH + OH => H + HCO  # Reaction 137
+  rate-constant: {A: 3.0e+13, b: 0.0, Ea: 0.0}
+- equation: CH + O => CO + H  # Reaction 138
+  rate-constant: {A: 1.0e+14, b: 0.0, Ea: 0.0}
+- equation: CH + O2 => HCO + O  # Reaction 139
+  rate-constant: {A: 3.3e+13, b: 0.0, Ea: 0.0}
+- equation: CH + O2 => CO + OH  # Reaction 140
+  rate-constant: {A: 2.0e+13, b: 0.0, Ea: 0.0}
+- equation: CH + CO2 => CO + HCO  # Reaction 141
+  rate-constant: {A: 3.4e+12, b: 0.0, Ea: 690.0}
+- equation: CH + CH4 => C2H4 + H  # Reaction 142
+  rate-constant: {A: 6.0e+13, b: 0.0, Ea: 0.0}
+- equation: C2H4 + H => CH + CH4  # Reaction 143
+  rate-constant: {A: 1.055e+19, b: -1.1189, Ea: 6.0376e+04}
+- equation: CH + CH3 => C2H3 + H  # Reaction 144
+  rate-constant: {A: 3.0e+13, b: 0.0, Ea: 0.0}
+- equation: CH3O + M => CH2O + H + M  # Reaction 145
+  type: three-body
+  rate-constant: {A: 4.88e+15, b: 0.0, Ea: 2.2773e+04}
+  efficiencies: {C2H6: 16.25, H2O: 16.25, CO2: 3.75, CO: 1.875, CH4: 16.25}
+- equation: CH2O + H + M => CH3O + M  # Reaction 146
+  type: three-body
+  rate-constant: {A: 2.206e+13, b: 0.4424, Ea: 1805.0}
+  efficiencies: {C2H6: 16.25, H2O: 16.25, CO2: 3.75, CO: 1.875, CH4: 16.25}
+- equation: CH3O + OH => CH2O + H2O  # Reaction 147
+  rate-constant: {A: 1.0e+13, b: 0.0, Ea: 0.0}
+- equation: CH3O + O => CH2O + OH  # Reaction 148
+  rate-constant: {A: 1.3e+13, b: 0.0, Ea: 0.0}
+- equation: CH3O + H => CH2O + H2  # Reaction 149
+  rate-constant: {A: 2.0e+13, b: 0.0, Ea: 0.0}
+- equation: CH3O + O2 => CH2O + HO2  # Reaction 150
+  rate-constant: {A: 2.349e+10, b: 0.0, Ea: 1788.0}
+- equation: CH3O + CO => CH3 + CO2  # Reaction 151
+  rate-constant: {A: 1.566e+13, b: 0.0, Ea: 1.1804e+04}
+- equation: CH3 + CO2 => CH3O + CO  # Reaction 152
+  rate-constant: {A: 6.353e+14, b: -0.3093, Ea: 4.8213e+04}
+- equation: CH3O + HCO => CH3OH + CO  # Reaction 153
+  rate-constant: {A: 9.0e+13, b: 0.0, Ea: 0.0}
+- equation: C2H5 + CH3O => C2H6 + CH2O  # Reaction 154
+  rate-constant: {A: 2.41e+13, b: 0.0, Ea: 0.0}
+- equation: CH2O + M => H + HCO + M  # Reaction 155
+  type: three-body
+  rate-constant: {A: 1.26e+16, b: 0.0, Ea: 7.7897e+04}
+  efficiencies: {C2H6: 16.25, H2O: 16.25, CO2: 3.75, CO: 1.875, CH4: 16.25}
+- equation: H + HCO + M => CH2O + M  # Reaction 156
+  type: three-body
+  rate-constant: {A: 2.531e+13, b: 0.2598, Ea: -1.2801e+04}
+  efficiencies: {C2H6: 16.25, H2O: 16.25, CO2: 3.75, CO: 1.875, CH4: 16.25}
+- equation: CH2O + OH => H2O + HCO  # Reaction 157
+  rate-constant: {A: 1.716e+09, b: 1.18, Ea: -447.0}
+- equation: H2O + HCO => CH2O + OH  # Reaction 158
+  rate-constant: {A: 2.089e+07, b: 1.5741, Ea: 2.7959e+04}
+- equation: CH2O + O => HCO + OH  # Reaction 159
+  rate-constant: {A: 1.807e+13, b: 0.0, Ea: 3088.0}
+- equation: HCO + OH => CH2O + O  # Reaction 160
+  rate-constant: {A: 8.374e+09, b: 0.5076, Ea: 1.4209e+04}
+- equation: CH2O + H => H2 + HCO  # Reaction 161
+  rate-constant: {A: 1.26e+08, b: 1.62, Ea: 2170.0}
+- equation: H2 + HCO => CH2O + H  # Reaction 162
+  rate-constant: {A: 9.542e+04, b: 2.1669, Ea: 1.5079e+04}
+- equation: CH2O + O2 => HCO + HO2  # Reaction 163
+  rate-constant: {A: 2.04e+13, b: 0.0, Ea: 3.9e+04}
+- equation: CH2O + CH3 => CH4 + HCO  # Reaction 164
+  rate-constant: {A: 4.09e+12, b: 0.0, Ea: 8843.0}
+- equation: CH4 + HCO => CH2O + CH3  # Reaction 165
+  rate-constant: {A: 2.888e+12, b: 0.1315, Ea: 2.3634e+04}
+- equation: C2H6 + OH => C2H5 + H2O  # Reaction 166
+  rate-constant: {A: 4.1e+06, b: 2.06, Ea: 860.0}
+- equation: C2H5 + H2O => C2H6 + OH  # Reaction 167
+  rate-constant: {A: 1.701e+04, b: 2.4934, Ea: 1.9381e+04}
+- equation: C2H6 + O => C2H5 + OH  # Reaction 168
+  rate-constant: {A: 9.99e+08, b: 1.5, Ea: 5803.0}
+- equation: C2H5 + OH => C2H6 + O  # Reaction 169
+  rate-constant: {A: 1.578e+05, b: 2.0469, Ea: 7039.0}
+- equation: C2H6 + H => C2H5 + H2  # Reaction 170
+  rate-constant: {A: 5.25e+14, b: 0.0, Ea: 1.28e+04}
+- equation: C2H5 + H2 => C2H6 + H  # Reaction 171
+  rate-constant: {A: 1.355e+11, b: 0.5861, Ea: 1.5825e+04}
+- equation: C2H5 + HO2 => C2H6 + O2  # Reaction 172
+  rate-constant: {A: 2.02e+10, b: 0.1923, Ea: -24.0}
+- equation: C2H6 + CH3 => C2H5 + CH4  # Reaction 173
+  rate-constant: {A: 7.536, b: 3.727, Ea: 9883.0}
+- equation: C2H5 + CH4 => C2H6 + CH3  # Reaction 174
+  rate-constant: {A: 1.813, b: 3.8978, Ea: 1.4789e+04}
+- equation: C2H5 + OH => C2H4 + H2O  # Reaction 175
+  rate-constant: {A: 2.409e+13, b: 0.0, Ea: 0.0}
+- equation: C2H5 + OH => CH2O + CH3 + H  # Reaction 176
+  rate-constant: {A: 2.409e+13, b: 0.0, Ea: 0.0}
+- equation: C2H5 + O => CH2O + CH3  # Reaction 177
+  rate-constant: {A: 4.238e+13, b: 0.0, Ea: 0.0}
+- equation: C2H5 + O => C2H4 + OH  # Reaction 178
+  rate-constant: {A: 3.046e+13, b: 0.0, Ea: 0.0}
+- equation: C2H5 + H => C2H4 + H2  # Reaction 179
+  rate-constant: {A: 1.25e+14, b: 0.0, Ea: 8000.0}
+- equation: C2H5 + CH3 => C2H4 + CH4  # Reaction 180
+  rate-constant: {A: 1.144e+12, b: 0.0, Ea: 0.0}
+- equation: 2 C2H5 => C2H4 + C2H6  # Reaction 181
+  rate-constant: {A: 1.4e+12, b: 0.0, Ea: 0.0}
+- equation: C2H4 + M => C2H2 + H2 + M  # Reaction 182
+  type: three-body
+  rate-constant: {A: 3.0e+17, b: 0.0, Ea: 7.9349e+04}
+  efficiencies: {C2H6: 16.25, H2O: 16.25, CO2: 3.75, CO: 1.875, CH4: 16.25}
+- equation: C2H2 + H2 + M => C2H4 + M  # Reaction 183
+  type: three-body
+  rate-constant: {A: 1.605e+14, b: 0.4766, Ea: 3.6344e+04}
+  efficiencies: {C2H6: 16.25, H2O: 16.25, CO2: 3.75, CO: 1.875, CH4: 16.25}
+- equation: C2H4 + M => C2H3 + H + M  # Reaction 184
+  type: three-body
+  rate-constant: {A: 2.97e+17, b: 0.0, Ea: 9.6559e+04}
+  efficiencies: {C2H6: 16.25, H2O: 16.25, CO2: 3.75, CO: 1.875, CH4: 16.25}
+- equation: C2H3 + H + M => C2H4 + M  # Reaction 185
+  type: three-body
+  rate-constant: {A: 4.944e+13, b: 0.4656, Ea: -1.5283e+04}
+  efficiencies: {C2H6: 16.25, H2O: 16.25, CO2: 3.75, CO: 1.875, CH4: 16.25}
+- equation: C2H4 + OH => C2H3 + H2O  # Reaction 186
+  rate-constant: {A: 2.024e+13, b: 0.0, Ea: 5936.0}
+- equation: C2H3 + H2O => C2H4 + OH  # Reaction 187
+  rate-constant: {A: 2.042e+10, b: 0.5999, Ea: 1.3199e+04}
+- equation: C2H4 + O => CH3 + HCO  # Reaction 188
+  rate-constant: {A: 1.2e+08, b: 1.44, Ea: 530.0}
+- equation: C2H4 + O => CH2HCO + H  # Reaction 189
+  rate-constant: {A: 2.0e+08, b: 1.44, Ea: 530.0}
+- equation: C2H4 + H => C2H3 + H2  # Reaction 190
+  rate-constant: {A: 1.0e+14, b: 0.0, Ea: 1.5009e+04}
+- equation: C2H3 + H2 => C2H4 + H  # Reaction 191
+  rate-constant: {A: 6.276e+09, b: 0.7526, Ea: 6775.0}
+- equation: C2H3 + C2H5 => 2 C2H4  # Reaction 192
+  rate-constant: {A: 6.731e+11, b: 0.2241, Ea: -1.0444e+04}
+- equation: C2H4 + CH3 => C2H3 + CH4  # Reaction 193
+  rate-constant: {A: 6.63, b: 3.7, Ea: 9499.0}
+- equation: C2H3 + CH4 => C2H4 + CH3  # Reaction 194
+  rate-constant: {A: 0.388, b: 4.0372, Ea: 3146.0}
+- equation: C2H3 + HO2 => CH3 + CO + OH  # Reaction 195
+  rate-constant: {A: 3.0e+13, b: 0.0, Ea: 0.0}
+- equation: C2H3 + OH => C2H2 + H2O  # Reaction 196
+  rate-constant: {A: 3.0e+13, b: 0.0, Ea: 0.0}
+- equation: C2H2 + H2O => C2H3 + OH  # Reaction 197
+  rate-constant: {A: 1.55e+15, b: -0.1417, Ea: 8.4333e+04}
+- equation: C2H3 + H => C2H2 + H2  # Reaction 198
+  rate-constant: {A: 3.0e+13, b: 0.0, Ea: 0.0}
+- equation: C2H2 + H2 => C2H3 + H  # Reaction 199
+  rate-constant: {A: 9.642e+13, b: 0.0111, Ea: 6.8836e+04}
+- equation: C2H3 + O => CH3 + CO  # Reaction 200
+  rate-constant: {A: 1.5e+13, b: 0.0, Ea: 0.0}
+- equation: C2H3 + O => CH2CO + H  # Reaction 201
+  rate-constant: {A: 1.5e+13, b: 0.0, Ea: 0.0}
+- equation: C2H3 + O2 => C2H2 + HO2  # Reaction 202
+  rate-constant: {A: 1.975e+12, b: 0.0, Ea: 1.0e+04}
+- equation: C2H2 + HO2 => C2H3 + O2  # Reaction 203
+  rate-constant: {A: 4.968e+13, b: -0.3827, Ea: 2.4788e+04}
+- equation: C2H3 + CH => C2H2 + CH2  # Reaction 204
+  rate-constant: {A: 5.0e+13, b: 0.0, Ea: 0.0}
+- equation: C2H3 + CH2 => AC3H4 + H  # Reaction 205
+  rate-constant: {A: 3.0e+13, b: 0.0, Ea: 0.0}
+- equation: AC3H4 + H => C2H3 + CH2  # Reaction 206
+  rate-constant: {A: 9.243e+22, b: -1.8709, Ea: 6.8086e+04}
+- equation: C2H3 + CH3 => C2H2 + CH4  # Reaction 207
+  rate-constant: {A: 3.91e+11, b: 0.0, Ea: 0.0}
+- equation: C2H3 + C2H6 => C2H4 + C2H5  # Reaction 208
+  rate-constant: {A: 1.5e+13, b: 0.0, Ea: 1.0e+04}
+- equation: C2H4 + C2H5 => C2H3 + C2H6  # Reaction 209
+  rate-constant: {A: 6.167e+13, b: -0.1665, Ea: 2.1258e+04}
+- equation: C2H2 + C2H3 => C4H4 + H  # Reaction 210
+  rate-constant: {A: 2.0e+12, b: 0.0, Ea: 5000.0}
+- equation: C4H4 + H => C2H2 + C2H3  # Reaction 211
+  rate-constant: {A: 4.278e+18, b: -1.4408, Ea: 1.0662e+04}
+- equation: C2H3 + HCO => C2H4 + CO  # Reaction 212
+  rate-constant: {A: 9.034e+13, b: 0.0, Ea: 0.0}
+- equation: C2H3 + CH2O => C2H4 + HCO  # Reaction 213
+  rate-constant: {A: 5420.0, b: 2.81, Ea: 5862.0}
+- equation: C2H4 + HCO => C2H3 + CH2O  # Reaction 214
+  rate-constant: {A: 6.54e+04, b: 2.6043, Ea: 2.7005e+04}
+- equation: 2 C2H3 => C4H6  # Reaction 215
+  rate-constant: {A: 5.0e+13, b: 0.0, Ea: 0.0}
+- equation: C4H6 => 2 C2H3  # Reaction 216
+  rate-constant: {A: 3.082e+26, b: -2.6772, Ea: 1.18048e+05}
+- equation: C2H3 + C2H4 => C4H6 + H  # Reaction 217
+  rate-constant: {A: 1.2e+12, b: 0.0, Ea: 4683.0}
+- equation: C4H6 + H => C2H3 + C2H4  # Reaction 218
+  rate-constant: {A: 1.231e+21, b: -2.2116, Ea: 1.0888999999999998e+04}
+- equation: C2H2 + O2 => HCCO + OH  # Reaction 219
+  rate-constant: {A: 2.0e+08, b: 1.5, Ea: 3.01e+04}
+- equation: C2H2 + HO2 => CH2CO + OH  # Reaction 220
+  rate-constant: {A: 6.09e+09, b: 0.0, Ea: 7948.0}
+- equation: C2H2 + OH => C2H + H2O  # Reaction 221
+  rate-constant: {A: 3.4e+07, b: 2.0, Ea: 1.4e+04}
+- equation: C2H + H2O => C2H2 + OH  # Reaction 222
+  rate-constant: {A: 3.477e+04, b: 2.8045, Ea: 751.0}
+- equation: C2H2 + OH => CH3 + CO  # Reaction 223
+  rate-constant: {A: 4.84e-04, b: 4.0, Ea: -2000.0}
+- equation: C2H2 + OH => CH2CO + H  # Reaction 224
+  rate-constant: {A: 2.192e-04, b: 4.5, Ea: -1000.0}
+- equation: CH2CO + H => C2H2 + OH  # Reaction 225
+  rate-constant: {A: 0.8786, b: 3.8283, Ea: 2.355e+04}
+- equation: C2H2 + O => CH2 + CO  # Reaction 226
+  rate-constant: {A: 1.98e+04, b: 2.6, Ea: 656.0}
+- equation: CH2 + CO => C2H2 + O  # Reaction 227
+  rate-constant: {A: 0.01722, b: 4.055, Ea: 4.7111e+04}
+- equation: C2H2 + O => H + HCCO  # Reaction 228
+  rate-constant: {A: 4.62e+04, b: 2.6, Ea: 656.0}
+- equation: H + HCCO => C2H2 + O  # Reaction 229
+  rate-constant: {A: 3.104e+04, b: 2.4713, Ea: 1.9572e+04}
+- equation: C2H2 + CH3 => C2H + CH4  # Reaction 230
+  rate-constant: {A: 1.8e+11, b: 0.0, Ea: 1.729e+04}
+- equation: C2H + CH4 => C2H2 + CH3  # Reaction 231
+  rate-constant: {A: 1.068e+10, b: 0.5419, Ea: -9574.0}
+- equation: C2H + H2 => C2H2 + H  # Reaction 232
+  rate-constant: {A: 1.506e+13, b: 0.0, Ea: 3100.0}
+- equation: C2H2 + H => C2H + H2  # Reaction 233
+  rate-constant: {A: 2.368e+17, b: -0.9572, Ea: 3.1846e+04}
+- equation: C2H + OH => H + HCCO  # Reaction 234
+  rate-constant: {A: 2.0e+13, b: 0.0, Ea: 0.0}
+- equation: C2H + O => CH + CO  # Reaction 235
+  rate-constant: {A: 1.0e+13, b: 0.0, Ea: 0.0}
+- equation: C2H + O2 => CO + HCO  # Reaction 236
+  rate-constant: {A: 2.41e+12, b: 0.0, Ea: 0.0}
+- equation: CH2CO + H => CH2HCO  # Reaction 237
+  rate-constant: {A: 1.0e+14, b: 0.0, Ea: 2500.0}
+- equation: CH2HCO => CH2CO + H  # Reaction 238
+  rate-constant: {A: 2.541e+15, b: -0.4028, Ea: 3.9358e+04}
+- equation: CH2HCO + O2 => CH2CO + HO2  # Reaction 239
+  rate-constant: {A: 1.58e+10, b: 0.0, Ea: 0.0}
+- equation: CH2HCO + O2 => CH2O + CO + OH  # Reaction 240
+  rate-constant: {A: 2.51e+10, b: 0.0, Ea: 0.0}
+- equation: CH2HCO + O => CH2O + HCO  # Reaction 241
+  rate-constant: {A: 3.98e+13, b: 0.0, Ea: 0.0}
+- equation: C2H2OH => CH2CO + H  # Reaction 242
+  rate-constant: {A: 5.0e+15, b: 0.0, Ea: 2.8e+04}
+- equation: CH2CO + H => C2H2OH  # Reaction 243
+  rate-constant: {A: 4.866e+16, b: -0.2663, Ea: 2.1191e+04}
+- equation: C2H2OH + O2 => CO2 + H2 + HCO  # Reaction 244
+  rate-constant: {A: 4.0e+12, b: 0.0, Ea: -250.0}
+- equation: CH2CO + M => CH2 + CO + M  # Reaction 245
+  type: three-body
+  rate-constant: {A: 3.6e+15, b: 0.0, Ea: 5.927e+04}
+  efficiencies: {C2H6: 16.25, H2O: 16.25, CO2: 3.75, CO: 1.875, CH4: 16.25}
+- equation: CH2 + CO + M => CH2CO + M  # Reaction 246
+  type: three-body
+  rate-constant: {A: 3.386e+06, b: 1.8789, Ea: -2.0644e+04}
+  efficiencies: {C2H6: 16.25, H2O: 16.25, CO2: 3.75, CO: 1.875, CH4: 16.25}
+- equation: CH2CO + HO2 => CH2O + CO + OH  # Reaction 247
+  rate-constant: {A: 6.0e+11, b: 0.0, Ea: 1.2738e+04}
+- equation: CH2CO + O => CH2 + CO2  # Reaction 248
+  rate-constant: {A: 1.76e+12, b: 0.0, Ea: 1349.0}
+- equation: CH2CO + O => HCCO + OH  # Reaction 249
+  rate-constant: {A: 1.0e+13, b: 0.0, Ea: 8000.0}
+- equation: HCCO + OH => CH2CO + O  # Reaction 250
+  rate-constant: {A: 1.676e+09, b: 0.543, Ea: 2366.0}
+- equation: CH2CO + OH => CH2OH + CO  # Reaction 251
+  rate-constant: {A: 6.93e+12, b: 0.0, Ea: 0.0}
+- equation: CH2CO + OH => CH2O + HCO  # Reaction 252
+  rate-constant: {A: 2.04e+11, b: 0.0, Ea: 0.0}
+- equation: CH2CO + OH => H2O + HCCO  # Reaction 253
+  rate-constant: {A: 1.02e+11, b: 0.0, Ea: 0.0}
+- equation: H2O + HCCO => CH2CO + OH  # Reaction 254
+  rate-constant: {A: 4.491e+08, b: 0.4296, Ea: 1.1652e+04}
+- equation: CH2CO + OH => CH3 + CO2  # Reaction 255
+  rate-constant: {A: 3.1e+12, b: 0.0, Ea: 0.0}
+- equation: CH3 + CO2 => CH2CO + OH  # Reaction 256
+  rate-constant: {A: 8.753e+12, b: 0.2158, Ea: 5.6347e+04}
+- equation: CH2CO + H => CH3 + CO  # Reaction 257
+  rate-constant: {A: 1.5e+04, b: 2.83, Ea: 673.0}
+- equation: CH3 + CO => CH2CO + H  # Reaction 258
+  rate-constant: {A: 6.897e-03, b: 4.3387, Ea: 3.0901e+04}
+- equation: CH2CO + H => H2 + HCCO  # Reaction 259
+  rate-constant: {A: 1.8e+14, b: 0.0, Ea: 8600.0}
+- equation: H2 + HCCO => CH2CO + H  # Reaction 260
+  rate-constant: {A: 4.929e+10, b: 0.5823, Ea: 4755.0}
+- equation: CH2CO + CH3 => C2H5 + CO  # Reaction 261
+  rate-constant: {A: 6.0e+10, b: 0.0, Ea: 0.0}
+- equation: CH2CO + CH3 => CH4 + HCCO  # Reaction 262
+  rate-constant: {A: 7.5e+12, b: 0.0, Ea: 1.3e+04}
+- equation: CH4 + HCCO => CH2CO + CH3  # Reaction 263
+  rate-constant: {A: 1.915e+12, b: 0.1669, Ea: 1.1036e+04}
+- equation: CH2 + CH2CO => CH3 + HCCO  # Reaction 264
+  rate-constant: {A: 1.0e+12, b: 0.0, Ea: 0.0}
+- equation: CH3 + HCCO => CH2 + CH2CO  # Reaction 265
+  rate-constant: {A: 3.551e+11, b: -0.075, Ea: 2690.0}
+- equation: CH2 + CH2CO => C2H4 + CO  # Reaction 266
+  rate-constant: {A: 3.6e+13, b: 0.0, Ea: 1.1e+04}
+- equation: HCCO + M => CH + CO + M  # Reaction 267
+  type: three-body
+  rate-constant: {A: 6.0e+15, b: 0.0, Ea: 5.8821e+04}
+  efficiencies: {C2H6: 16.25, H2O: 16.25, CO2: 3.75, CO: 1.875, CH4: 16.25}
+- equation: CH + CO + M => HCCO + M  # Reaction 268
+  type: three-body
+  rate-constant: {A: 3.168e+09, b: 1.4773, Ea: -1.4975e+04}
+  efficiencies: {C2H6: 16.25, H2O: 16.25, CO2: 3.75, CO: 1.875, CH4: 16.25}
+- equation: HCCO + OH => CO + H + HCO  # Reaction 269
+  rate-constant: {A: 1.0e+13, b: 0.0, Ea: 0.0}
+- equation: HCCO + O => 2 CO + H  # Reaction 270
+  rate-constant: {A: 1.93e+14, b: 0.0, Ea: 590.0}
+- equation: H + HCCO => CO + SCH2  # Reaction 271
+  rate-constant: {A: 1.5e+14, b: 0.0, Ea: 0.0}
+- equation: CO + SCH2 => H + HCCO  # Reaction 272
+  rate-constant: {A: 5.054e+08, b: 1.5787, Ea: 1.8621e+04}
+- equation: HCCO + O2 => CO + CO2 + H  # Reaction 273
+  rate-constant: {A: 1.4e+09, b: 1.0, Ea: 0.0}
+- equation: CH2 + HCCO => C2H + CH2O  # Reaction 274
+  rate-constant: {A: 1.0e+13, b: 0.0, Ea: 2000.0}
+- equation: CH2 + HCCO => C2H3 + CO  # Reaction 275
+  rate-constant: {A: 3.0e+13, b: 0.0, Ea: 0.0}
+- equation: C2H2 + HCCO => C3H3 + CO  # Reaction 276
+  rate-constant: {A: 1.0e+11, b: 0.0, Ea: 3000.0}
+- equation: CH + HCCO => C2H2 + CO  # Reaction 277
+  rate-constant: {A: 5.0e+13, b: 0.0, Ea: 0.0}
+- equation: 2 HCCO => C2H2 + 2 CO  # Reaction 278
+  rate-constant: {A: 1.0e+13, b: 0.0, Ea: 0.0}
+- equation: CH3OH + OH => CH2OH + H2O  # Reaction 279
+  rate-constant: {A: 4.532e+11, b: 0.33, Ea: 1160.0}
+- equation: CH3OH + OH => CH3O + H2O  # Reaction 280
+  rate-constant: {A: 3.629e+11, b: 0.7, Ea: 5867.999999999999}
+- equation: CH3O + H2O => CH3OH + OH  # Reaction 281
+  rate-constant: {A: 3.778e+11, b: 0.8185, Ea: 2.1048e+04}
+- equation: CH3OH + O => CH2OH + OH  # Reaction 282
+  rate-constant: {A: 1.63e+13, b: 0.0, Ea: 5030.0}
+- equation: CH3OH + H => CH2OH + H2  # Reaction 283
+  rate-constant: {A: 4.0e+13, b: 0.0, Ea: 6100.0}
+- equation: CH2OH + H2 => CH3OH + H  # Reaction 284
+  rate-constant: {A: 3.493e+10, b: 0.3215, Ea: 1.0977e+04}
+- equation: CH3 + CH3OH => CH2OH + CH4  # Reaction 285
+  rate-constant: {A: 3.566e+11, b: 0.0, Ea: 8663.0}
+- equation: CH3 + CH3OH => CH3O + CH4  # Reaction 286
+  rate-constant: {A: 4.677e+05, b: 2.328, Ea: 1.2764e+04}
+- equation: CH3O + CH4 => CH3 + CH3OH  # Reaction 287
+  rate-constant: {A: 2.824e+07, b: 2.1839, Ea: 1.4328e+04}
+- equation: CH2OH + M => CH2O + H + M  # Reaction 288
+  type: three-body
+  rate-constant: {A: 1.0e+14, b: 0.0, Ea: 2.51e+04}
+  efficiencies: {C2H6: 16.25, H2O: 16.25, CO2: 3.75, CO: 1.875, CH4: 16.25}
+- equation: CH2O + H + M => CH2OH + M  # Reaction 289
+  type: three-body
+  rate-constant: {A: 3.352e+13, b: 0.3922, Ea: -1062.0}
+  efficiencies: {C2H6: 16.25, H2O: 16.25, CO2: 3.75, CO: 1.875, CH4: 16.25}
+- equation: CH2OH + H => CH2O + H2  # Reaction 290
+  rate-constant: {A: 3.0e+13, b: 0.0, Ea: 0.0}
+- equation: CH2O + H2 => CH2OH + H  # Reaction 291
+  rate-constant: {A: 3.792e+12, b: 0.6792, Ea: 7.7446e+04}
+- equation: CH2OH + O2 => CH2O + HO2  # Reaction 292
+  rate-constant: {A: 2.168e+14, b: 0.0, Ea: 4690.0}
+- equation: CH2O + HO2 => CH2OH + O2  # Reaction 293
+  rate-constant: {A: 2.145e+14, b: 0.2854, Ea: 2.8088e+04}
+- equation: NC3H7 + O2 => C3H6 + HO2  # Reaction 294
+  rate-constant: {A: 1.0e+12, b: 0.0, Ea: 5020.0}
+- equation: C3H6 => C2H3 + CH3  # Reaction 295
+  rate-constant: {A: 1.1e+21, b: -1.2, Ea: 9.7719e+04}
+- equation: C2H3 + CH3 => C3H6  # Reaction 296
+  rate-constant: {A: 2.703e+11, b: 0.6336, Ea: -5635.0}
+- equation: C3H6 => C2H2 + CH4  # Reaction 297
+  rate-constant: {A: 3.5e+12, b: 0.0, Ea: 6.9999e+04}
+- equation: C2H2 + CH4 => C3H6  # Reaction 298
+  rate-constant: {A: 2.577e+06, b: 1.4293, Ea: 3.7363e+04}
+- equation: C3H6 + O2 => AC3H5 + HO2  # Reaction 299
+  rate-constant: {A: 1.95e+12, b: 0.0, Ea: 3.9e+04}
+- equation: AC3H5 + HO2 => C3H6 + O2  # Reaction 300
+  rate-constant: {A: 5.835e+12, b: -0.7135, Ea: 2900.0}
+- equation: C3H6 + OH => AC3H5 + H2O  # Reaction 301
+  rate-constant: {A: 7.698e+05, b: 2.214, Ea: 622.0}
+- equation: AC3H5 + H2O => C3H6 + OH  # Reaction 302
+  rate-constant: {A: 4.731e+06, b: 1.7416, Ea: 3.4067e+04}
+- equation: C3H6 + O => C2H5 + HCO  # Reaction 303
+  rate-constant: {A: 4.689e+07, b: 1.57, Ea: -628.0}
+- equation: C3H6 + O => CH2HCO + CH3  # Reaction 304
+  rate-constant: {A: 3.9e+07, b: 1.57, Ea: -628.0}
+- equation: C3H6 + O => C2H4 + CH2O  # Reaction 305
+  rate-constant: {A: 7.02e+07, b: 1.57, Ea: -628.0}
+- equation: C3H6 + O => AC3H5 + OH  # Reaction 306
+  rate-constant: {A: 1.75e+11, b: 0.7, Ea: 5884.0}
+- equation: AC3H5 + OH => C3H6 + O  # Reaction 307
+  rate-constant: {A: 4.094e+10, b: 0.3411, Ea: 2.2043e+04}
+- equation: C3H6 + H => AC3H5 + H2  # Reaction 308
+  rate-constant: {A: 1.7e+05, b: 2.5, Ea: 2492.0}
+- equation: AC3H5 + H2 => C3H6 + H  # Reaction 309
+  rate-constant: {A: 6.499e+04, b: 2.1804, Ea: 2.044e+04}
+- equation: C3H6 + CH3 => AC3H5 + CH4  # Reaction 310
+  rate-constant: {A: 1.6e+11, b: 0.0, Ea: 8800.0}
+- equation: AC3H5 + CH4 => C3H6 + CH3  # Reaction 311
+  rate-constant: {A: 5.703e+13, b: -0.735, Ea: 2.8629e+04}
+- equation: C2H5 + C3H6 => AC3H5 + C2H6  # Reaction 312
+  rate-constant: {A: 1.0e+11, b: 0.0, Ea: 9800.0}
+- equation: C2H3 + C3H6 => C4H6 + CH3  # Reaction 313
+  rate-constant: {A: 7.2e+11, b: 0.0, Ea: 5008.0}
+- equation: C4H6 + CH3 => C2H3 + C3H6  # Reaction 314
+  rate-constant: {A: 1.09e+15, b: -0.8436, Ea: 1.9702e+04}
+- equation: AC3H5 + H => AC3H4 + H2  # Reaction 315
+  rate-constant: {A: 6.03e+12, b: 0.0, Ea: 0.0}
+- equation: AC3H4 + H2 => AC3H5 + H  # Reaction 316
+  rate-constant: {A: 3.472e+09, b: 1.2267, Ea: 4.3856e+04}
+- equation: AC3H5 + CH3 => AC3H4 + CH4  # Reaction 317
+  rate-constant: {A: 1.0e+11, b: 0.0, Ea: 0.0}
+- equation: AC3H4 + CH4 => AC3H5 + CH3  # Reaction 318
+  rate-constant: {A: 5.369e+10, b: 0.8113, Ea: 4.5738e+04}
+- equation: AC3H5 + CH2 => C4H6 + H  # Reaction 319
+  rate-constant: {A: 3.0e+13, b: 0.0, Ea: 0.0}
+- equation: C4H6 + H => AC3H5 + CH2  # Reaction 320
+  rate-constant: {A: 1.88e+20, b: -1.125, Ea: 5.3043e+04}
+- equation: AC3H5 + C2H5 => AC3H4 + C2H6  # Reaction 321
+  rate-constant: {A: 4.0e+11, b: 0.0, Ea: 0.0}
+- equation: AC3H4 + C2H6 => AC3H5 + C2H5  # Reaction 322
+  rate-constant: {A: 8.926e+11, b: 0.6406, Ea: 4.0832e+04}
+- equation: AC3H5 + C2H3 => AC3H4 + C2H4  # Reaction 323
+  rate-constant: {A: 1.0e+12, b: 0.0, Ea: 0.0}
+- equation: AC3H4 + C2H4 => AC3H5 + C2H3  # Reaction 324
+  rate-constant: {A: 9.175e+12, b: 0.4741, Ea: 5.209e+04}
+- equation: AC3H4 + M => C3H3 + H + M  # Reaction 325
+  type: three-body
+  rate-constant: {A: 2.0e+18, b: 0.0, Ea: 7.9999e+04}
+  efficiencies: {C2H6: 16.25, H2O: 16.25, CO2: 3.75, CO: 1.875, CH4: 16.25}
+- equation: C3H3 + H + M => AC3H4 + M  # Reaction 326
+  type: three-body
+  rate-constant: {A: 2.527e+15, b: 0.1275, Ea: -1.0262e+04}
+  efficiencies: {C2H6: 16.25, H2O: 16.25, CO2: 3.75, CO: 1.875, CH4: 16.25}
+- equation: AC3H4 => PC3H4  # Reaction 327
+  rate-constant: {A: 1.202e+15, b: 0.0, Ea: 9.2399e+04}
+- equation: PC3H4 => AC3H4  # Reaction 328
+  rate-constant: {A: 2.703e+14, b: 0.1193, Ea: 9.3558e+04}
+- equation: AC3H4 + OH => C3H3 + H2O  # Reaction 329
+  rate-constant: {A: 2.15e+12, b: 0.0, Ea: -200.0}
+- equation: C3H3 + H2O => AC3H4 + OH  # Reaction 330
+  rate-constant: {A: 1.647e+10, b: 0.2618, Ea: 2.8643e+04}
+- equation: AC3H4 + OH => CH2CO + CH3  # Reaction 331
+  rate-constant: {A: 1.0e+12, b: 0.0, Ea: -393.0}
+- equation: AC3H4 + OH => C2H4 + HCO  # Reaction 332
+  rate-constant: {A: 1.25e+11, b: 0.0, Ea: -393.0}
+- equation: AC3H4 + OH => C2H5 + CO  # Reaction 333
+  rate-constant: {A: 1.875e+11, b: 0.0, Ea: -393.0}
+- equation: AC3H4 + O => C2H4 + CO  # Reaction 334
+  rate-constant: {A: 0.01125, b: 4.613, Ea: -4243.0}
+- equation: AC3H4 + O => C2H3 + HCO  # Reaction 335
+  rate-constant: {A: 5.0e-04, b: 4.613, Ea: -4243.0}
+- equation: AC3H4 + O => CH2 + CH2CO  # Reaction 336
+  rate-constant: {A: 1.0e-03, b: 4.613, Ea: -4243.0}
+- equation: AC3H4 + O => C2H2 + CH2O  # Reaction 337
+  rate-constant: {A: 2.5e-03, b: 4.613, Ea: -4243.0}
+- equation: AC3H4 + H => AC3H5  # Reaction 338
+  rate-constant: {A: 1.2e+12, b: 0.0, Ea: 2700.0}
+- equation: AC3H5 => AC3H4 + H  # Reaction 339
+  rate-constant: {A: 7.858e+14, b: -0.9396, Ea: 6.2451e+04}
+- equation: AC3H4 + H => C3H3 + H2  # Reaction 340
+  rate-constant: {A: 1.0e+14, b: 0.0, Ea: 1.5009e+04}
+- equation: C3H3 + H2 => AC3H4 + H  # Reaction 341
+  rate-constant: {A: 4.764e+10, b: 0.4145, Ea: 2.8355e+04}
+- equation: AC3H4 + CH3 => C3H3 + CH4  # Reaction 342
+  rate-constant: {A: 1.333e+12, b: 0.0, Ea: 7700.0}
+- equation: C3H3 + CH4 => AC3H4 + CH3  # Reaction 343
+  rate-constant: {A: 5.921e+11, b: -8.0e-04, Ea: 2.2927e+04}
+- equation: AC3H4 + AC3H5 => C3H3 + C3H6  # Reaction 344
+  rate-constant: {A: 9.0e+11, b: 0.0, Ea: 7700.0}
+- equation: C3H3 + C3H6 => AC3H4 + AC3H5  # Reaction 345
+  rate-constant: {A: 1.121e+09, b: 0.7342, Ea: 3098.0}
+- equation: PC3H4 + M => C3H3 + H + M  # Reaction 346
+  type: three-body
+  rate-constant: {A: 4.7e+18, b: 0.0, Ea: 7.9999e+04}
+  efficiencies: {C2H6: 16.25, H2O: 16.25, CO2: 3.75, CO: 1.875, CH4: 16.25}
+- equation: C3H3 + H + M => PC3H4 + M  # Reaction 347
+  type: three-body
+  rate-constant: {A: 2.64e+16, b: 8.2e-03, Ea: -1.1421e+04}
+  efficiencies: {C2H6: 16.25, H2O: 16.25, CO2: 3.75, CO: 1.875, CH4: 16.25}
+- equation: PC3H4 => C2H + CH3  # Reaction 348
+  rate-constant: {A: 4.2e+16, b: 0.0, Ea: 9.9999e+04}
+- equation: C2H + CH3 => PC3H4  # Reaction 349
+  rate-constant: {A: 4.261e+07, b: 1.7755, Ea: -2.6228e+04}
+- equation: O2 + PC3H4 => CH2 + HCCO + OH  # Reaction 350
+  rate-constant: {A: 1.0e+07, b: 1.5, Ea: 3.01e+04}
+- equation: OH + PC3H4 => C3H3 + H2O  # Reaction 351
+  rate-constant: {A: 650.0, b: 3.0, Ea: 200.0}
+- equation: C3H3 + H2O => OH + PC3H4  # Reaction 352
+  rate-constant: {A: 22.13, b: 3.1425, Ea: 2.7884e+04}
+- equation: OH + PC3H4 => CH2CO + CH3  # Reaction 353
+  rate-constant: {A: 2.0e-04, b: 4.5, Ea: -1000.0}
+- equation: OH + PC3H4 => C2H4 + HCO  # Reaction 354
+  rate-constant: {A: 1.0e-04, b: 4.5, Ea: -1000.0}
+- equation: OH + PC3H4 => C2H3 + CH2O  # Reaction 355
+  rate-constant: {A: 1.0e-04, b: 4.5, Ea: -1000.0}
+- equation: O + PC3H4 => CH2 + CH2CO  # Reaction 356
+  rate-constant: {A: 6.4e+12, b: 0.0, Ea: 2100.0}
+- equation: O + PC3H4 => C2H3 + HCO  # Reaction 357
+  rate-constant: {A: 3.2e+12, b: 0.0, Ea: 2100.0}
+- equation: O + PC3H4 => CH3 + HCCO  # Reaction 358
+  rate-constant: {A: 9.18e+12, b: 0.0, Ea: 2100.0}
+- equation: O + PC3H4 => C2H2 + CH2O  # Reaction 359
+  rate-constant: {A: 3.2e+11, b: 0.0, Ea: 2100.0}
+- equation: O + PC3H4 => CH2 + H + HCCO  # Reaction 360
+  rate-constant: {A: 3.2e+11, b: 0.0, Ea: 2010.0}
+- equation: H + PC3H4 => C3H3 + H2  # Reaction 361
+  rate-constant: {A: 2.0e+14, b: 0.0, Ea: 1.5e+04}
+- equation: C3H3 + H2 => H + PC3H4  # Reaction 362
+  rate-constant: {A: 4.237e+11, b: 0.2952, Ea: 2.7187e+04}
+- equation: CH3 + PC3H4 => C3H3 + CH4  # Reaction 363
+  rate-constant: {A: 4.0e+11, b: 0.0, Ea: 7700.0}
+- equation: C3H3 + CH4 => CH3 + PC3H4  # Reaction 364
+  rate-constant: {A: 7.9e+11, b: -0.1201, Ea: 2.1768e+04}
+- equation: C3H3 + O2 => CH2CO + HCO  # Reaction 365
+  rate-constant: {A: 3.01e+10, b: 0.0, Ea: 2870.0}
+- equation: C3H3 + OH => C3H2 + H2O  # Reaction 366
+  rate-constant: {A: 5.0e+12, b: 0.0, Ea: 0.0}
+- equation: C3H2 + H2O => C3H3 + OH  # Reaction 367
+  rate-constant: {A: 5.492e+12, b: 0.327, Ea: 4.3676e+04}
+- equation: C3H3 + OH => CH3 + HCCO  # Reaction 368
+  rate-constant: {A: 5.0e+12, b: 0.0, Ea: 0.0}
+- equation: CH3 + HCCO => C3H3 + OH  # Reaction 369
+  rate-constant: {A: 1.558e+10, b: 0.7207, Ea: 1.4644e+04}
+- equation: C3H3 + O => C2H2 + HCO  # Reaction 370
+  rate-constant: {A: 1.385e+14, b: 0.0, Ea: 0.0}
+- equation: C3H3 + O => C2H3 + CO  # Reaction 371
+  rate-constant: {A: 4.615e+13, b: 0.0, Ea: 0.0}
+- equation: C3H3 + O => C2H + CH2O  # Reaction 372
+  rate-constant: {A: 4.615e+13, b: 0.0, Ea: 0.0}
+- equation: C3H3 + O => C2H2 + CO + H  # Reaction 373
+  rate-constant: {A: 4.615e+13, b: 0.0, Ea: 0.0}
+- equation: C3H3 + H => C3H2 + H2  # Reaction 374
+  rate-constant: {A: 5.0e+13, b: 0.0, Ea: 3000.0}
+- equation: C3H2 + H2 => C3H3 + H  # Reaction 375
+  rate-constant: {A: 3.416e+12, b: 0.4797, Ea: 3.1179e+04}
+- equation: C3H3 + CH => H + IC4H3  # Reaction 376
+  rate-constant: {A: 7.0e+13, b: 0.0, Ea: 0.0}
+- equation: C3H3 + CH => H + NC4H3  # Reaction 377
+  rate-constant: {A: 7.0e+13, b: 0.0, Ea: 0.0}
+- equation: H + NC4H3 => C3H3 + CH  # Reaction 378
+  rate-constant: {A: 3.475e+19, b: -1.2378, Ea: 4.4119e+04}
+- equation: C3H3 + CH2 => C4H4 + H  # Reaction 379
+  rate-constant: {A: 4.0e+13, b: 0.0, Ea: 0.0}
+- equation: C4H4 + H => C3H3 + CH2  # Reaction 380
+  rate-constant: {A: 3.843e+20, b: -1.2318, Ea: 5.5898e+04}
+- equation: C3H3 + CH3 => C4H6  # Reaction 381
+  rate-constant: {A: 3.33e+12, b: 0.0, Ea: 0.0}
+- equation: C4H6 => C3H3 + CH3  # Reaction 382
+  rate-constant: {A: 2.212e+22, b: -1.8219, Ea: 9.2914e+04}
+- equation: C2H2 + CH => C3H2 + H  # Reaction 383
+  rate-constant: {A: 1.0e+14, b: 0.0, Ea: 0.0}
+- equation: C3H2 + H => C2H2 + CH  # Reaction 384
+  rate-constant: {A: 2.03e+19, b: -1.1683, Ea: 3.8501e+04}
+- equation: C3H2 + O2 => HCCO + HCO  # Reaction 385
+  rate-constant: {A: 3.0e+10, b: 0.0, Ea: 2870.0}
+- equation: C3H2 + OH => C2H2 + HCO  # Reaction 386
+  rate-constant: {A: 5.0e+13, b: 0.0, Ea: 0.0}
+- equation: C3H2 + CH2 => H + IC4H3  # Reaction 387
+  rate-constant: {A: 3.0e+13, b: 0.0, Ea: 0.0}
+- equation: H + IC4H3 => C3H2 + CH2  # Reaction 388
+  rate-constant: {A: 1.167e+19, b: -1.7337, Ea: 3.655e+04}
+- equation: PC4H9 => C2H4 + C2H5  # Reaction 389
+  rate-constant: {A: 2.5e+12, b: 0.0, Ea: 2.85e+04}
+- equation: C2H4 + C2H5 => PC4H9  # Reaction 390
+  rate-constant: {A: 7203.0, b: 2.1092, Ea: 5072.0}
+- equation: C4H6 => C2H2 + C2H4  # Reaction 391
+  rate-constant: {A: 1.0e+14, b: 0.0, Ea: 7.4999e+04}
+- equation: C2H2 + C2H4 => C4H6  # Reaction 392
+  rate-constant: {A: 8.309e+05, b: 1.9357, Ea: 3.4021e+04}
+- equation: C4H6 => H + NC4H5  # Reaction 393
+  rate-constant: {A: 1.58e+16, b: 0.0, Ea: 1.09999e+05}
+- equation: H + NC4H5 => C4H6  # Reaction 394
+  rate-constant: {A: 9.852e+14, b: -0.3953, Ea: -911.0}
+- equation: C4H6 + OH => H2O + NC4H5  # Reaction 395
+  rate-constant: {A: 1.0e+07, b: 2.0, Ea: 7253.0}
+- equation: H2O + NC4H5 => C4H6 + OH  # Reaction 396
+  rate-constant: {A: 3.78e+06, b: 1.739, Ea: 1.5447e+04}
+- equation: C4H6 + O => NC4H5 + OH  # Reaction 397
+  rate-constant: {A: 2.27e+15, b: -0.475, Ea: 7028.0}
+- equation: NC4H5 + OH => C4H6 + O  # Reaction 398
+  rate-constant: {A: 3.266e+13, b: -0.6225, Ea: -2063.0}
+- equation: C4H6 + H => CH3 + PC3H4  # Reaction 399
+  rate-constant: {A: 1300.0, b: 2.5, Ea: 1000.0}
+- equation: CH3 + PC3H4 => C4H6 + H  # Reaction 400
+  rate-constant: {A: 3.483e-05, b: 4.3137, Ea: -493.0}
+- equation: C4H6 + H => AC3H4 + CH3  # Reaction 401
+  rate-constant: {A: 1.0e+13, b: 0.0, Ea: 1.5e+04}
+- equation: AC3H4 + CH3 => C4H6 + H  # Reaction 402
+  rate-constant: {A: 1.191e+06, b: 1.6944, Ea: 1.2348e+04}
+- equation: C4H6 + H => H2 + NC4H5  # Reaction 403
+  rate-constant: {A: 5.0e+15, b: 0.0, Ea: 2.28e+04}
+- equation: H2 + NC4H5 => C4H6 + H  # Reaction 404
+  rate-constant: {A: 1.176e+14, b: -0.1082, Ea: 1.5498e+04}
+- equation: C4H6 + CH3 => CH4 + NC4H5  # Reaction 405
+  rate-constant: {A: 2.0e+14, b: 0.0, Ea: 2.48e+04}
+- equation: CH4 + NC4H5 => C4H6 + CH3  # Reaction 406
+  rate-constant: {A: 4.384e+15, b: -0.5236, Ea: 1.9379e+04}
+- equation: NC4H5 => C2H2 + C2H3  # Reaction 407
+  rate-constant: {A: 5.0e+13, b: 0.0, Ea: 4.4e+04}
+- equation: C2H2 + C2H3 => NC4H5  # Reaction 408
+  rate-constant: {A: 1109.0, b: 2.7965, Ea: 2090.0}
+- equation: NC4H5 + O => AC3H5 + CO  # Reaction 409
+  rate-constant: {A: 1.0e+13, b: 0.0, Ea: 2000.0}
+- equation: NC4H5 + OH => C4H4 + H2O  # Reaction 410
+  rate-constant: {A: 2.0e+07, b: 2.0, Ea: 1000.0}
+- equation: C4H4 + H2O => NC4H5 + OH  # Reaction 411
+  rate-constant: {A: 5751.0, b: 3.49, Ea: 8.3857e+04}
+- equation: HO2 + NC4H5 => AC3H5 + CO + OH  # Reaction 412
+  rate-constant: {A: 1.0e+13, b: 0.0, Ea: 0.0}
+- equation: H + NC4H5 => C4H4 + H2  # Reaction 413
+  rate-constant: {A: 1.0e+14, b: 0.0, Ea: 0.0}
+- equation: C4H4 + H2 => H + NC4H5  # Reaction 414
+  rate-constant: {A: 1.789e+09, b: 1.6427, Ea: 6.736e+04}
+- equation: C4H4 => 2 C2H2  # Reaction 415
+  rate-constant: {A: 3.2e+13, b: 0.0, Ea: 7.7099e+04}
+- equation: 2 C2H2 => C4H4  # Reaction 416
+  rate-constant: {A: 1.275e+08, b: 1.1649, Ea: 3.6666e+04}
+- equation: C4H4 + M => H + NC4H3 + M  # Reaction 417
+  type: three-body
+  rate-constant: {A: 1.0e+20, b: 0.0, Ea: 9.9299e+04}
+- equation: H + NC4H3 + M => C4H4 + M  # Reaction 418
+  type: three-body
+  rate-constant: {A: 2.107e+18, b: -0.1125, Ea: -1.3814e+04}
+- equation: C4H4 => H + IC4H3  # Reaction 419
+  rate-constant: {A: 6.3e+13, b: 0.0, Ea: 8.7099e+04}
+- equation: H + IC4H3 => C4H4  # Reaction 420
+  rate-constant: {A: 4.622e+11, b: -0.3092, Ea: -7678.0}
+- equation: C4H4 => C4H2 + H2  # Reaction 421
+  rate-constant: {A: 1.26e+15, b: 0.0, Ea: 9.4699e+04}
+- equation: C4H2 + H2 => C4H4  # Reaction 422
+  rate-constant: {A: 6.737e+11, b: 0.6901, Ea: 5.0518e+04}
+- equation: C4H4 + HO2 => C3H3 + HCO + OH  # Reaction 423
+  rate-constant: {A: 4.0e+11, b: 0.0, Ea: 8000.0}
+- equation: C4H4 + OH => H2O + IC4H3  # Reaction 424
+  rate-constant: {A: 2.0e+07, b: 2.0, Ea: 2000.0}
+- equation: H2O + IC4H3 => C4H4 + OH  # Reaction 425
+  rate-constant: {A: 8.894e+05, b: 1.8251, Ea: 2.6327e+04}
+- equation: C4H4 + OH => H2O + NC4H3  # Reaction 426
+  rate-constant: {A: 7.5e+06, b: 2.0, Ea: 5000.0}
+- equation: H2O + NC4H3 => C4H4 + OH  # Reaction 427
+  rate-constant: {A: 9.577e+05, b: 2.0218, Ea: 1.0991e+04}
+- equation: C4H4 + O => AC3H4 + CO  # Reaction 428
+  rate-constant: {A: 3.0e+13, b: 0.0, Ea: 1810.0}
+- equation: C4H4 + H => H2 + IC4H3  # Reaction 429
+  rate-constant: {A: 3.33e+05, b: 2.53, Ea: 9240.0}
+- equation: H2 + IC4H3 => C4H4 + H  # Reaction 430
+  rate-constant: {A: 921.1, b: 2.5078, Ea: 1.8071e+04}
+- equation: C4H4 + H => H2 + NC4H3  # Reaction 431
+  rate-constant: {A: 2.0e+07, b: 2.0, Ea: 1.5e+04}
+- equation: H2 + NC4H3 => C4H4 + H  # Reaction 432
+  rate-constant: {A: 1.589e+05, b: 2.1746, Ea: 5495.0}
+- equation: C2H + C4H4 => C2H2 + IC4H3  # Reaction 433
+  rate-constant: {A: 3.98e+13, b: 0.0, Ea: 0.0}
+- equation: C2H2 + IC4H3 => C2H + C4H4  # Reaction 434
+  rate-constant: {A: 1.731e+15, b: -0.9794, Ea: 3.7576e+04}
+- equation: C4H4 + CH3 => CH4 + IC4H3  # Reaction 435
+  rate-constant: {A: 16.6, b: 3.7, Ea: 9499.0}
+- equation: CH4 + IC4H3 => C4H4 + CH3  # Reaction 436
+  rate-constant: {A: 42.81, b: 3.2625, Ea: 2.0211e+04}
+- equation: 2 C2H2 => H + IC4H3  # Reaction 437
+  rate-constant: {A: 6.31e+13, b: 0.0, Ea: 4.16e+04}
+- equation: H + IC4H3 => 2 C2H2  # Reaction 438
+  rate-constant: {A: 1.162e+17, b: -1.4741, Ea: -1.2744e+04}
+- equation: IC4H3 + O2 => CH2CO + HCCO  # Reaction 439
+  rate-constant: {A: 1.0e+12, b: 0.0, Ea: 0.0}
+- equation: IC4H3 + OH => C4H2 + H2O  # Reaction 440
+  rate-constant: {A: 3.0e+13, b: 0.0, Ea: 0.0}
+- equation: C4H2 + H2O => IC4H3 + OH  # Reaction 441
+  rate-constant: {A: 3.515e+13, b: 0.8465, Ea: 6.6093e+04}
+- equation: IC4H3 + O => C2H + CH2CO  # Reaction 442
+  rate-constant: {A: 2.0e+13, b: 0.0, Ea: 0.0}
+- equation: H + IC4H3 => C4H2 + H2  # Reaction 443
+  rate-constant: {A: 5.0e+13, b: 0.0, Ea: 0.0}
+- equation: C4H2 + H2 => H + IC4H3  # Reaction 444
+  rate-constant: {A: 3.644e+12, b: 0.9993, Ea: 5.0596e+04}
+- equation: CH2 + IC4H3 => AC3H4 + C2H  # Reaction 445
+  rate-constant: {A: 2.0e+13, b: 0.0, Ea: 0.0}
+- equation: AC3H4 + C2H => CH2 + IC4H3  # Reaction 446
+  rate-constant: {A: 6.625e+14, b: 0.5494, Ea: 2.4847e+04}
+- equation: NC4H3 + OH => C4H2 + H2O  # Reaction 447
+  rate-constant: {A: 3.0e+13, b: 0.0, Ea: 0.0}
+- equation: C4H2 + H2O => NC4H3 + OH  # Reaction 448
+  rate-constant: {A: 1.224e+13, b: 0.6498, Ea: 8.4429e+04}
+- equation: H + NC4H3 => C4H2 + H2  # Reaction 449
+  rate-constant: {A: 5.0e+13, b: 0.0, Ea: 0.0}
+- equation: C4H2 + H2 => H + NC4H3  # Reaction 450
+  rate-constant: {A: 1.269e+12, b: 0.8025, Ea: 6.8932e+04}
+- equation: H + NC4H3 => H + IC4H3  # Reaction 451
+  rate-constant: {A: 1.0e+14, b: 0.0, Ea: 0.0}
+- equation: H + IC4H3 => H + NC4H3  # Reaction 452
+  rate-constant: {A: 3.482e+13, b: -0.1968, Ea: 1.8336e+04}
+- equation: C2H + C2H2 => C4H2 + H  # Reaction 453
+  rate-constant: {A: 1.82e+14, b: 0.0, Ea: 467.0}
+- equation: C4H2 + H => C2H + C2H2  # Reaction 454
+  rate-constant: {A: 3.839e+20, b: -1.4321, Ea: 2.5465e+04}
+- equation: C4H2 + O => C3H2 + CO  # Reaction 455
+  rate-constant: {A: 1.2e+12, b: 0.0, Ea: 0.0}
+- equation: AC3H4 + C3H3 => C6H6 + H  # Reaction 456
+  rate-constant: {A: 1.4e+12, b: 0.0, Ea: 1.28e+04}
+- equation: C6H6 + H => AC3H4 + C3H3  # Reaction 457
+  rate-constant: {A: 1.017e+23, b: -1.3634, Ea: 7.1909e+04}
+- equation: C3H3 + PC3H4 => C6H6 + H  # Reaction 458
+  rate-constant: {A: 1.4e+12, b: 0.0, Ea: 1.28e+04}
+- equation: C6H6 + H => C3H3 + PC3H4  # Reaction 459
+  rate-constant: {A: 4.52e+23, b: -1.4827, Ea: 7.075e+04}
+- equation: 2 C3H3 => C6H6  # Reaction 460
+  rate-constant: {A: 3.0e+11, b: 0.0, Ea: 0.0}
+- equation: C6H6 => 2 C3H3  # Reaction 461
+  rate-constant: {A: 4.11e+25, b: -1.6021, Ea: 1.49552e+05}
+- equation: C2H3 + C4H4 => C6H6 + H  # Reaction 462
+  rate-constant: {A: 1.9e+12, b: 0.0, Ea: 3510.0}
+- equation: C6H6 + H => C2H3 + C4H4  # Reaction 463
+  rate-constant: {A: 4.424e+25, b: -2.0024, Ea: 7.4806e+04}
+- equation: C2H2 + NC4H5 => C6H6 + H  # Reaction 464
+  rate-constant: {A: 2800.0, b: 2.9, Ea: 1400.0}
+- equation: C6H6 + H => C2H2 + NC4H5  # Reaction 465
+  rate-constant: {A: 3.629e+11, b: 2.5292, Ea: 7.122e+04}
+- equation: C2H3 + NC4H3 => C6H6  # Reaction 466
+  rate-constant: {A: 2.87e+14, b: 0.0, Ea: 817.0}
+- equation: C6H6 => C2H3 + NC4H3  # Reaction 467
+  rate-constant: {A: 3.172e+29, b: -1.89, Ea: 1.85226e+05}
+- equation: C6H6 => C2H2 + C4H4  # Reaction 468
+  rate-constant: {A: 9.0e+15, b: 0.0, Ea: 1.07429e+05}
+- equation: C2H2 + C4H4 => C6H6  # Reaction 469
+  rate-constant: {A: 3295.0, b: 1.7265, Ea: 1361.0}
+- equation: 2 C3H3 => C6H5 + H  # Reaction 470
+  rate-constant: {A: 1.0e+13, b: 0.0, Ea: 0.0}
+- equation: C6H5 + H => 2 C3H3  # Reaction 471
+  rate-constant: {A: 9.209e+22, b: -1.2078, Ea: 3.684e+04}
+- equation: C2H2 + NC4H3 => C6H5  # Reaction 472
+  rate-constant: {A: 2800.0, b: 2.9, Ea: 1400.0}
+- equation: C6H5 => C2H2 + NC4H3  # Reaction 473
+  rate-constant: {A: 5.818e+13, b: 1.5691, Ea: 1.08051e+05}
+- equation: C5H5 + OH => C5H4OH + H  # Reaction 474
+  rate-constant: {A: 3.0e+14, b: 0.0, Ea: 0.0}
+- equation: C5H4OH + H => C5H5 + OH  # Reaction 475
+  rate-constant: {A: 4.104e+19, b: -1.0742, Ea: 9150.0}
+- equation: C5H5 + OH => C4H6 + CO  # Reaction 476
+  rate-constant: {A: 1.5e+14, b: 0.0, Ea: 0.0}
+- equation: C5H4O + H => CO + NC4H5  # Reaction 477
+  rate-constant: {A: 1.71e+13, b: 0.0, Ea: 0.0}
+- equation: C5H5 + O => C5H4O + H  # Reaction 478
+  rate-constant: {A: 5.0e+14, b: 0.0, Ea: 0.0}
+- equation: C5H4O + H => C5H5 + O  # Reaction 479
+  rate-constant: {A: 6.16e+18, b: -0.5513, Ea: 7.2983e+04}
+- equation: C5H5 + O => CO + NC4H5  # Reaction 480
+  rate-constant: {A: 2.0e+14, b: 0.0, Ea: 0.0}
+- equation: C5H4OH => C5H4O + H  # Reaction 481
+  rate-constant: {A: 2.1e+13, b: 0.0, Ea: 4.8e+04}
+- equation: C5H4O + H => C5H4OH  # Reaction 482
+  rate-constant: {A: 8.197e+12, b: 0.2751, Ea: 1.0014e+04}
+- equation: C5H4O => C4H4 + CO  # Reaction 483
+  rate-constant: {A: 1.0e+12, b: 0.0, Ea: 5.3e+04}
+- equation: C6H5 + H => C6H6  # Reaction 484
+  rate-constant: {A: 2.2e+14, b: 0.0, Ea: 0.0}
+- equation: C6H6 => C6H5 + H  # Reaction 485
+  rate-constant: {A: 1.373e+18, b: -0.2831, Ea: 1.12531e+05}
+- equation: C6H5 + HO2 => C6H6 + O2  # Reaction 486
+  rate-constant: {A: 2.979e+10, b: 0.1763, Ea: -2971.0}
+- equation: C6H6 + OH => C6H5 + H2O  # Reaction 487
+  rate-constant: {A: 2.11e+13, b: 0.0, Ea: 4570.0}
+- equation: C6H5 + H2O => C6H6 + OH  # Reaction 488
+  rate-constant: {A: 2.049e+10, b: 0.4174, Ea: 1.1144e+04}
+- equation: C6H6 + H => C6H5 + H2  # Reaction 489
+  rate-constant: {A: 2.5e+14, b: 0.0, Ea: 1.6e+04}
+- equation: C6H5 + H2 => C6H6 + H  # Reaction 490
+  rate-constant: {A: 1.51e+10, b: 0.5701, Ea: 7077.0}
+- equation: C6H6 + O => C6H5O + H  # Reaction 491
+  rate-constant: {A: 35.6, b: 3.8, Ea: 940.0}
+- equation: C6H6 + CH3 => C6H5 + CH4  # Reaction 492
+  rate-constant: {A: 2.0e+12, b: 0.0, Ea: 1.5e+04}
+- equation: C6H5 + CH4 => C6H6 + CH3  # Reaction 493
+  rate-constant: {A: 1.127e+11, b: 0.1548, Ea: 7959.0}
+- equation: C2H6 + C6H5 => C2H5 + C6H6  # Reaction 494
+  rate-constant: {A: 4.683e+11, b: -0.016, Ea: 3053.0}
+- equation: C2H3 + C6H6 => C2H4 + C6H5  # Reaction 495
+  rate-constant: {A: 2.0e+12, b: 0.0, Ea: 1.5e+04}
+- equation: C2H4 + C6H5 => C2H3 + C6H6  # Reaction 496
+  rate-constant: {A: 1.925e+12, b: -0.1825, Ea: 1.4311e+04}
+- equation: AC3H5 + C6H6 => C3H6 + C6H5  # Reaction 497
+  rate-constant: {A: 2.0e+12, b: 0.0, Ea: 1.5e+04}
+- equation: C3H6 + C6H5 => AC3H5 + C6H6  # Reaction 498
+  rate-constant: {A: 3.161e+08, b: 0.8897, Ea: -1.1871e+04}
+- equation: C6H5 + O2 => C6H5O + O  # Reaction 499
+  rate-constant: {A: 2.09e+12, b: 0.0, Ea: 7470.0}
+- equation: C6H5O + O => C6H5 + O2  # Reaction 500
+  rate-constant: {A: 4.143e+16, b: -1.0722, Ea: 1.7576e+04}
+- equation: C6H5 + HO2 => C6H5O + OH  # Reaction 501
+  rate-constant: {A: 5.0e+13, b: 0.0, Ea: 1000.0}
+- equation: C6H5 + OH => C6H5O + H  # Reaction 502
+  rate-constant: {A: 5.0e+13, b: 0.0, Ea: 0.0}
+- equation: C6H5O + H => C6H5 + OH  # Reaction 503
+  rate-constant: {A: 4.997e+20, b: -1.5089, Ea: 2.7388e+04}
+- equation: C2H4 + C6H5 => H + STYREN  # Reaction 504
+  rate-constant: {A: 1.43e+08, b: 1.22, Ea: 3540.0}
+- equation: H + STYREN => C2H4 + C6H5  # Reaction 505
+  rate-constant: {A: 2.843e+14, b: -0.049, Ea: 8684.0}
+- equation: C6H5O => C5H5 + CO  # Reaction 506
+  rate-constant: {A: 5.0e+15, b: 0.0, Ea: 6.3999e+04}
+- equation: C5H5 + CO => C6H5O  # Reaction 507
+  rate-constant: {A: 1.054e+05, b: 2.2534, Ea: 3.5686e+04}
+- equation: TOLUEN => C6H5 + CH3  # Reaction 508
+  rate-constant: {A: 1.4e+16, b: 0.0, Ea: 9.9799e+04}
+- equation: C6H5 + CH3 => TOLUEN  # Reaction 509
+  rate-constant: {A: 4.877e+07, b: 1.3253, Ea: -4178.0}
+- equation: TOLUEN => H + PHCH2  # Reaction 510
+  rate-constant: {A: 3.0e+15, b: 0.0, Ea: 8.8193e+04}
+- equation: H + PHCH2 => TOLUEN  # Reaction 511
+  rate-constant: {A: 4.312e+14, b: -0.3107, Ea: -2545.0}
+- equation: O2 + TOLUEN => HO2 + PHCH2  # Reaction 512
+  rate-constant: {A: 3.0e+14, b: 0.0, Ea: 4.306200000000001e+04}
+- equation: HO2 + PHCH2 => O2 + TOLUEN  # Reaction 513
+  rate-constant: {A: 1.273e+14, b: -0.4175, Ea: 1884.0}
+- equation: OH + TOLUEN => H2O + PHCH2  # Reaction 514
+  rate-constant: {A: 1.0e+13, b: 0.0, Ea: 2180.0}
+- equation: H2O + PHCH2 => OH + TOLUEN  # Reaction 515
+  rate-constant: {A: 8.713e+12, b: -0.1764, Ea: 3.0547e+04}
+- equation: O + TOLUEN => OH + PHCH2  # Reaction 516
+  rate-constant: {A: 6.3e+11, b: 0.0, Ea: 0.0}
+- equation: OH + PHCH2 => O + TOLUEN  # Reaction 517
+  rate-constant: {A: 2.09e+10, b: -0.0629, Ea: 1.1081e+04}
+- equation: H + TOLUEN => H2 + PHCH2  # Reaction 518
+  rate-constant: {A: 1.26e+14, b: 0.0, Ea: 8364.0}
+- equation: H2 + PHCH2 => H + TOLUEN  # Reaction 519
+  rate-constant: {A: 6.829e+12, b: -0.0237, Ea: 2.1234e+04}
+- equation: H + TOLUEN => C6H6 + CH3  # Reaction 520
+  rate-constant: {A: 2.4e+13, b: 0.0, Ea: 5123.0}
+- equation: C6H6 + CH3 => H + TOLUEN  # Reaction 521
+  rate-constant: {A: 5.218e+08, b: 1.0423, Ea: 1.3676e+04}
+- equation: CH3 + TOLUEN => CH4 + PHCH2  # Reaction 522
+  rate-constant: {A: 8.88e+10, b: 0.0, Ea: 8754.0}
+- equation: C6H5 + TOLUEN => C6H6 + PHCH2  # Reaction 523
+  rate-constant: {A: 2.1e+12, b: 0.0, Ea: 4400.0}
+- equation: C6H6 + PHCH2 => C6H5 + TOLUEN  # Reaction 524
+  rate-constant: {A: 1.884e+15, b: -0.5938, Ea: 2.6193e+04}
+- equation: C2H3 + TOLUEN => C2H4 + PHCH2  # Reaction 525
+  rate-constant: {A: 4.0e+12, b: 0.0, Ea: 7500.0}
+- equation: C2H4 + PHCH2 => C2H3 + TOLUEN  # Reaction 526
+  rate-constant: {A: 3.454e+15, b: -0.7763, Ea: 2.8604e+04}
+- equation: H + TOLUEN => AC3H4 + NC4H5  # Reaction 527
+  rate-constant: {A: 1.612e+18, b: -0.1885, Ea: 7.2252e+04}
+- equation: NC4H5 + PC3H4 => H + TOLUEN  # Reaction 528
+  rate-constant: {A: 6.32e+11, b: 0.0, Ea: 3700.0}
+- equation: H + TOLUEN => NC4H5 + PC3H4  # Reaction 529
+  rate-constant: {A: 2.266e+19, b: -0.3078, Ea: 7.1093e+04}
+- equation: PHCH2 => C3H3 + C4H4  # Reaction 530
+  rate-constant: {A: 2.0e+14, b: 0.0, Ea: 8.3599e+04}
+- equation: C3H3 + C4H4 => PHCH2  # Reaction 531
+  rate-constant: {A: 10.34, b: 1.9823, Ea: -2.0724e+04}
+- equation: PHCH2 => C2H2 + C5H5  # Reaction 532
+  rate-constant: {A: 6.03e+13, b: 0.0, Ea: 6.9999e+04}
+- equation: C2H2 + C5H5 => PHCH2  # Reaction 533
+  rate-constant: {A: 1.67e+05, b: 1.5436, Ea: 1056.0}
+- equation: O2 + PHCH2 => OH + PHHCO  # Reaction 534
+  rate-constant: {A: 6.31e+12, b: 0.0, Ea: 4.3e+04}
+- equation: OH + PHCH2 => PHCH2OH  # Reaction 535
+  rate-constant: {A: 2.0e+13, b: 0.0, Ea: 0.0}
+- equation: PHCH2OH => OH + PHCH2  # Reaction 536
+  rate-constant: {A: 1.405e+18, b: -0.6037, Ea: 8.4716e+04}
+- equation: O + PHCH2 => H + PHHCO  # Reaction 537
+  rate-constant: {A: 1.58e+13, b: 0.0, Ea: 0.0}
+- equation: O + PHCH2 => C6H5 + CH2O  # Reaction 538
+  rate-constant: {A: 1.0e+13, b: 0.0, Ea: 0.0}
+- equation: C3H3 + PHCH2 => C3H2 + TOLUEN  # Reaction 539
+  rate-constant: {A: 1.0e+12, b: 0.0, Ea: 0.0}
+- equation: C3H2 + TOLUEN => C3H3 + PHCH2  # Reaction 540
+  rate-constant: {A: 1.261e+12, b: 0.5034, Ea: 1.5309e+04}
+- equation: O2 + PHCH2OH => H + HO2 + PHHCO  # Reaction 541
+  rate-constant: {A: 2.0e+14, b: 0.0, Ea: 4.14e+04}
+- equation: OH + PHCH2OH => H + H2O + PHHCO  # Reaction 542
+  rate-constant: {A: 8.43e+12, b: 0.0, Ea: 2583.0}
+- equation: H + PHCH2OH => C6H6 + CH2OH  # Reaction 543
+  rate-constant: {A: 1.2e+13, b: 0.0, Ea: 5148.0}
+- equation: PHCH2 + PHCH2OH => H + PHHCO + TOLUEN  # Reaction 544
+  rate-constant: {A: 2.11e+11, b: 0.0, Ea: 9500.0}
+- equation: C6H5 + PHCH2OH => C6H6 + H + PHHCO  # Reaction 545
+  rate-constant: {A: 1.4e+12, b: 0.0, Ea: 4400.0}
+- equation: PHHCO => H + PHCO  # Reaction 546
+  rate-constant: {A: 3.98e+15, b: 0.0, Ea: 8.37e+04}
+- equation: H + PHCO => PHHCO  # Reaction 547
+  rate-constant: {A: 6.884e+12, b: 0.2797, Ea: -3725.0}
+- equation: O2 + PHHCO => HO2 + PHCO  # Reaction 548
+  rate-constant: {A: 1.02e+13, b: 0.0, Ea: 3.9e+04}
+- equation: OH + PHHCO => H2O + PHCO  # Reaction 549
+  rate-constant: {A: 1.71e+09, b: 1.18, Ea: -447.0}
+- equation: H2O + PHCO => OH + PHHCO  # Reaction 550
+  rate-constant: {A: 1.793e+07, b: 1.594, Ea: 3.1232e+04}
+- equation: O + PHHCO => OH + PHCO  # Reaction 551
+  rate-constant: {A: 9.04e+12, b: 0.0, Ea: 3080.0}
+- equation: H + PHHCO => H2 + PHCO  # Reaction 552
+  rate-constant: {A: 5.0e+13, b: 0.0, Ea: 4928.0}
+- equation: H2 + PHCO => H + PHHCO  # Reaction 553
+  rate-constant: {A: 3.261e+10, b: 0.5668, Ea: 2.111e+04}
+- equation: H + PHHCO => C6H6 + HCO  # Reaction 554
+  rate-constant: {A: 1.2e+13, b: 0.0, Ea: 5148.0}
+- equation: C6H6 + HCO => H + PHHCO  # Reaction 555
+  rate-constant: {A: 2.927e+08, b: 1.0553, Ea: 1.776e+04}
+- equation: CH3 + PHHCO => CH4 + PHCO  # Reaction 556
+  rate-constant: {A: 2770.0, b: 2.81, Ea: 5773.0}
+- equation: CH4 + PHCO => CH3 + PHHCO  # Reaction 557
+  rate-constant: {A: 1684.0, b: 2.9614, Ea: 2.3836e+04}
+- equation: PHCO => C6H5 + CO  # Reaction 558
+  rate-constant: {A: 3.98e+14, b: 0.0, Ea: 2.9401e+04}
+- equation: C6H5 + CO => PHCO  # Reaction 559
+  rate-constant: {A: 8.824e+07, b: 1.3832, Ea: 1418.0}
+- equation: O2 + PHCO => C6H5O + CO2  # Reaction 560
+  rate-constant: {A: 3.0e+10, b: 0.0, Ea: 2870.0}
+- equation: APHC2H4 => H + STYREN  # Reaction 561
+  rate-constant: {A: 3.16e+13, b: 0.0, Ea: 5.067e+04}
+- equation: H + STYREN => APHC2H4  # Reaction 562
+  rate-constant: {A: 1.109e+12, b: 0.3412, Ea: 1.8261e+04}
+- equation: APHC2H4 => C2H4 + C6H5  # Reaction 563
+  rate-constant: {A: 1.0e+14, b: 0.0, Ea: 3.5e+04}
+- equation: C2H4 + C6H5 => APHC2H4  # Reaction 564
+  rate-constant: {A: 1.765e+06, b: 1.6102, Ea: -2553.0}
+- equation: STYREN => C2H2 + C6H6  # Reaction 565
+  rate-constant: {A: 1.6e+11, b: 0.0, Ea: 5.8438e+04}
+- equation: C2H2 + C6H6 => STYREN  # Reaction 566
+  rate-constant: {A: 7.126e+05, b: 1.1755, Ea: 1.921e+04}
+- equation: H + STYREN => C4H4 + NC4H5  # Reaction 567
+  rate-constant: {A: 3.665e+19, b: -0.3815, Ea: 7.2314e+04}
+- equation: 2 C4H4 => STYREN  # Reaction 568
+  rate-constant: {A: 1.48e+14, b: 0.0, Ea: 3.8003e+04}
+- equation: STYREN => 2 C4H4  # Reaction 569
+  rate-constant: {A: 3.618e+26, b: -1.7371, Ea: 1.42864e+05}
+- equation: PHC3H7 => APHC3H6 + H  # Reaction 570
+  rate-constant: {A: 8.0e+15, b: 0.0, Ea: 1.00209e+05}
+- equation: H + PHC3H7 => APHC3H6 + H2  # Reaction 571
+  rate-constant: {A: 1.33e+06, b: 2.54, Ea: 6756.0}
+- equation: O + PHC3H7 => APHC3H6 + OH  # Reaction 572
+  rate-constant: {A: 1.93e+05, b: 2.68, Ea: 3716.0}
+- equation: OH + PHC3H7 => APHC3H6 + H2O  # Reaction 573
+  rate-constant: {A: 3.16e+07, b: 1.8, Ea: 934.0}
+- equation: CH3 + PHC3H7 => APHC3H6 + CH4  # Reaction 574
+  rate-constant: {A: 5.0e+12, b: 0.0, Ea: 1.171e+04}
+- equation: C2H5 + PHC3H7 => APHC3H6 + C2H6  # Reaction 575
+  rate-constant: {A: 3.16e+11, b: 0.0, Ea: 1.23e+04}
+- equation: PHC3H7 + PHCH2 => APHC3H6 + TOLUEN  # Reaction 576
+  rate-constant: {A: 7.94e+11, b: 0.0, Ea: 2.05e+04}
+- equation: CH3O + PHC3H7 => APHC3H6 + CH3OH  # Reaction 577
+  rate-constant: {A: 3.18e+11, b: 0.0, Ea: 7050.0}
+- equation: APHC3H6 => C2H4 + PHCH2  # Reaction 578
+  rate-constant: {A: 1.0e+14, b: 0.0, Ea: 1.3e+04}
+- equation: C2H4 + PHCH2 => APHC3H6  # Reaction 579
+  rate-constant: {A: 7.58e+07, b: 1.2745, Ea: -125.0}
+- equation: PHC3H7 => CPHC3H6 + H  # Reaction 580
+  rate-constant: {A: 8.0e+15, b: 0.0, Ea: 8.6209e+04}
+- equation: CPHC3H6 + H => PHC3H7  # Reaction 581
+  rate-constant: {A: 4.21e+12, b: 0.533, Ea: 287.0}
+- equation: H + PHC3H7 => CPHC3H6 + H2  # Reaction 582
+  rate-constant: {A: 1.014e+04, b: 2.88, Ea: 1931.0}
+- equation: O + PHC3H7 => CPHC3H6 + OH  # Reaction 583
+  rate-constant: {A: 4.77e+04, b: 2.71, Ea: 1106.0}
+- equation: OH + PHC3H7 => CPHC3H6 + H2O  # Reaction 584
+  rate-constant: {A: 7.08e+06, b: 1.9, Ea: -1159.0}
+- equation: O2 + PHC3H7 => CPHC3H6 + HO2  # Reaction 585
+  rate-constant: {A: 4.0e+13, b: 0.0, Ea: 3.58e+04}
+- equation: CH3 + PHC3H7 => CH4 + CPHC3H6  # Reaction 586
+  rate-constant: {A: 6.0e+11, b: 0.0, Ea: 1.012e+04}
+- equation: C2H3 + PHC3H7 => C2H4 + CPHC3H6  # Reaction 587
+  rate-constant: {A: 1000.0, b: 3.1, Ea: 8829.0}
+- equation: C2H5 + PHC3H7 => C2H6 + CPHC3H6  # Reaction 588
+  rate-constant: {A: 5.01e+10, b: 0.0, Ea: 1.04e+04}
+- equation: AC3H5 + PHC3H7 => C3H6 + CPHC3H6  # Reaction 589
+  rate-constant: {A: 7.94e+11, b: 0.0, Ea: 1.62e+04}
+- equation: PHC3H7 + PHCH2 => CPHC3H6 + TOLUEN  # Reaction 590
+  rate-constant: {A: 7.94e+11, b: 0.0, Ea: 1.62e+04}
+- equation: CH3O + PHC3H7 => CH3OH + CPHC3H6  # Reaction 591
+  rate-constant: {A: 7.2e+10, b: 0.0, Ea: 4470.0}
+- equation: CPHC3H6 => CH3 + STYREN  # Reaction 592
+  rate-constant: {A: 1.0e+14, b: 0.0, Ea: 3.485e+04}
+- equation: CH3 + STYREN => CPHC3H6  # Reaction 593
+  rate-constant: {A: 3.255e+06, b: 1.5118, Ea: -1355.0}
+- equation: CPHC3H6 + O => C2H5 + PHHCO  # Reaction 594
+  rate-constant: {A: 1.6e+13, b: 0.0, Ea: 0.0}
+- equation: CPHC3H6 + OH => C2H6 + PHHCO  # Reaction 595
+  rate-constant: {A: 1.6e+13, b: 0.0, Ea: 0.0}
+- equation: CPHC3H6 + HO2 => C2H5 + OH + PHHCO  # Reaction 596
+  rate-constant: {A: 5.0e+12, b: 0.0, Ea: 0.0}
+- equation: H + PHC3H7 => C6H6 + NC3H7  # Reaction 597
+  rate-constant: {A: 2.4e+13, b: 0.0, Ea: 5123.0}
+- equation: PHC3H7 => C6H5 + NC3H7  # Reaction 598
+  rate-constant: {A: 5.0e+16, b: 0.0, Ea: 8.6499e+04}
+- equation: C6H5 + NC3H7 => PHC3H7  # Reaction 599
+  rate-constant: {A: 5.011e+06, b: 1.5906, Ea: -1.6228e+04}
+- equation: PHC3H7 => C2H5 + PHCH2  # Reaction 600
+  rate-constant: {A: 5.0e+16, b: 0.0, Ea: 7.4499e+04}
+- equation: C2H5 + PHCH2 => PHC3H7  # Reaction 601
+  rate-constant: {A: 1.438e+08, b: 1.4363, Ea: -2834.0}
+- equation: PHC3H7 => APHC2H4 + CH3  # Reaction 602
+  rate-constant: {A: 5.0e+16, b: 0.0, Ea: 7.7499e+04}
+- equation: APHC2H4 + CH3 => PHC3H7  # Reaction 603
+  rate-constant: {A: 2.44e+07, b: 1.7036, Ea: -1.2219e+04}
+- equation: AC5H11 => C2H4 + NC3H7  # Reaction 604
+  rate-constant: {A: 4.5e+13, b: 0.0, Ea: 2.87e+04}
+- equation: C2H4 + NC3H7 => AC5H11  # Reaction 605
+  rate-constant: {A: 9.785e+04, b: 2.034, Ea: 5388.0}
+- equation: AC5H11 + O => CH2O + PC4H9  # Reaction 606
+  rate-constant: {A: 5.0e+14, b: 0.0, Ea: 0.0}
+- equation: AC6H13 => BC6H13  # Reaction 607
+  rate-constant: {A: 2.0e+11, b: 0.0, Ea: 1.11e+04}
+- equation: BC6H13 => AC6H13  # Reaction 608
+  rate-constant: {A: 3.465e+10, b: 0.1111, Ea: 1.218e+04}
+- equation: AC6H13 + O => AC5H11 + CH2O  # Reaction 609
+  rate-constant: {A: 1.61e+13, b: 0.0, Ea: 0.0}
+- equation: BC6H13 => C3H6 + NC3H7  # Reaction 610
+  rate-constant: {A: 5.0e+13, b: 0.0, Ea: 2.87e+04}
+- equation: AC6H13 => C2H4 + PC4H9  # Reaction 611
+  rate-constant: {A: 1.0e+13, b: 0.0, Ea: 2.87e+04}
+- equation: AC7H15 => AC5H11 + C2H4  # Reaction 612
+  rate-constant: {A: 2.0e+13, b: 0.0, Ea: 2.87e+04}
+- equation: AC8H17 => AC6H13 + C2H4  # Reaction 613
+  rate-constant: {A: 2.0e+13, b: 0.0, Ea: 2.87e+04}
+- equation: NC10H22 => AC8H17 + C2H5  # Reaction 614
+  rate-constant: {A: 1.0e+17, b: 0.0, Ea: 7.9899e+04}
+- equation: AC8H17 + C2H5 => NC10H22  # Reaction 615
+  rate-constant: {A: 2.23e+10, b: 1.427, Ea: -4112.0}
+- equation: NC10H22 => AC7H15 + NC3H7  # Reaction 616
+  rate-constant: {A: 1.0e+17, b: 0.0, Ea: 8.4299e+04}
+- equation: NC10H22 => AC6H13 + PC4H9  # Reaction 617
+  rate-constant: {A: 1.0e+17, b: 0.0, Ea: 8.2199e+04}
+- equation: NC10H22 => 2 AC5H11  # Reaction 618
+  rate-constant: {A: 5.0e+16, b: 0.0, Ea: 8.4399e+04}
+- equation: NC10H22 => AC10H21 + H  # Reaction 619
+  rate-constant: {A: 1.0e+15, b: 0.0, Ea: 9.9999e+04}
+- equation: NC10H22 => CC10H21 + H  # Reaction 620
+  rate-constant: {A: 1.0e+15, b: 0.0, Ea: 9.9999e+04}
+- equation: CC10H21 + H => NC10H22  # Reaction 621
+  rate-constant: {A: 1.131e+11, b: 0.5566, Ea: 187.0}
+- equation: NC10H22 => DC10H21 + H  # Reaction 622
+  rate-constant: {A: 1.0e+15, b: 0.0, Ea: 9.9999e+04}
+- equation: NC10H22 => EC10H21 + H  # Reaction 623
+  rate-constant: {A: 1.0e+15, b: 0.0, Ea: 9.9999e+04}
+- equation: NC10H22 + OH => AC10H21 + H2O  # Reaction 624
+  rate-constant: {A: 1.412e+07, b: 1.8, Ea: 974.0}
+- equation: NC10H22 + OH => CC10H21 + H2O  # Reaction 625
+  rate-constant: {A: 2.253e+06, b: 2.0, Ea: -1391.0}
+- equation: NC10H22 + OH => DC10H21 + H2O  # Reaction 626
+  rate-constant: {A: 2.253e+06, b: 2.0, Ea: -1391.0}
+- equation: NC10H22 + OH => EC10H21 + H2O  # Reaction 627
+  rate-constant: {A: 2.253e+06, b: 2.0, Ea: -1391.0}
+- equation: NC10H22 + O => AC10H21 + OH  # Reaction 628
+  rate-constant: {A: 4.36e+06, b: 2.4, Ea: 5500.0}
+- equation: NC10H22 + O => CC10H21 + OH  # Reaction 629
+  rate-constant: {A: 1128.0, b: 3.27, Ea: 1653.0}
+- equation: NC10H22 + O => DC10H21 + OH  # Reaction 630
+  rate-constant: {A: 1128.0, b: 3.27, Ea: 1653.0}
+- equation: NC10H22 + O => EC10H21 + OH  # Reaction 631
+  rate-constant: {A: 1128.0, b: 3.27, Ea: 1653.0}
+- equation: H + NC10H22 => AC10H21 + H2  # Reaction 632
+  rate-constant: {A: 5.63e+07, b: 2.0, Ea: 7700.0}
+- equation: H + NC10H22 => CC10H21 + H2  # Reaction 633
+  rate-constant: {A: 1.8e+07, b: 2.0, Ea: 5000.0}
+- equation: H + NC10H22 => DC10H21 + H2  # Reaction 634
+  rate-constant: {A: 1.8e+07, b: 2.0, Ea: 5000.0}
+- equation: H + NC10H22 => EC10H21 + H2  # Reaction 635
+  rate-constant: {A: 1.8e+07, b: 2.0, Ea: 5000.0}
+- equation: CH3 + NC10H22 => AC10H21 + CH4  # Reaction 636
+  rate-constant: {A: 1.3e+12, b: 0.0, Ea: 1.16e+04}
+- equation: CH3 + NC10H22 => CC10H21 + CH4  # Reaction 637
+  rate-constant: {A: 8.0e+11, b: 0.0, Ea: 9500.0}
+- equation: CH3 + NC10H22 => CH4 + DC10H21  # Reaction 638
+  rate-constant: {A: 8.0e+11, b: 0.0, Ea: 9500.0}
+- equation: CH3 + NC10H22 => CH4 + EC10H21  # Reaction 639
+  rate-constant: {A: 8.0e+11, b: 0.0, Ea: 9500.0}
+- equation: AC10H21 => AC8H17 + C2H4  # Reaction 640
+  rate-constant: {A: 2.0e+13, b: 0.0, Ea: 2.87e+04}
+- equation: AC8H17 + C2H4 => AC10H21  # Reaction 641
+  rate-constant: {A: 3.0e+08, b: 1.4835, Ea: 8494.0}
+- equation: AC10H21 => DC10H21  # Reaction 642
+  rate-constant: {A: 2.0e+11, b: 0.0, Ea: 1.81e+04}
+- equation: DC10H21 => AC10H21  # Reaction 643
+  rate-constant: {A: 2.622e+10, b: 0.275, Ea: 1.8951e+04}
+- equation: AC10H21 => EC10H21  # Reaction 644
+  rate-constant: {A: 2.0e+11, b: 0.0, Ea: 1.11e+04}
+- equation: EC10H21 => AC10H21  # Reaction 645
+  rate-constant: {A: 2.622e+10, b: 0.275, Ea: 1.1951e+04}
+- equation: DC10H21 => CC10H21  # Reaction 646
+  rate-constant: {A: 2.0e+11, b: 0.0, Ea: 1.11e+04}
+- equation: CC10H21 => DC10H21  # Reaction 647
+  rate-constant: {A: 2.0e+11, b: 0.0, Ea: 1.11e+04}
+- equation: EC10H21 => CC10H21  # Reaction 648
+  rate-constant: {A: 2.0e+11, b: 0.0, Ea: 1.81e+04}
+- equation: CC10H21 => EC10H21  # Reaction 649
+  rate-constant: {A: 2.0e+11, b: 0.0, Ea: 1.81e+04}
+- equation: CC9H17C + HO2 => CYC9H18 + O2  # Reaction 650
+  rate-constant: {A: 7.607e+09, b: 0.5654, Ea: -976.0}
+- equation: CYC9H18 + O2 => EC9H17C + HO2  # Reaction 651
+  rate-constant: {A: 8.0e+13, b: 0.0, Ea: 4.991e+04}
+- equation: EC9H17C + HO2 => CYC9H18 + O2  # Reaction 652
+  rate-constant: {A: 2.063e+11, b: 0.1931, Ea: -502.0}
+- equation: CYC9H18 + O2 => FC9H17C + HO2  # Reaction 653
+  rate-constant: {A: 8.0e+13, b: 0.0, Ea: 4.991e+04}
+- equation: FC9H17C + HO2 => CYC9H18 + O2  # Reaction 654
+  rate-constant: {A: 2.063e+11, b: 0.1931, Ea: -502.0}
+- equation: CYC9H18 + OH => CC9H17C + H2O  # Reaction 655
+  rate-constant: {A: 1.5e+09, b: 1.0, Ea: 260.0}
+- equation: CC9H17C + H2O => CYC9H18 + OH  # Reaction 656
+  rate-constant: {A: 5.859e+05, b: 1.8064, Ea: 1.9319e+04}
+- equation: CYC9H18 + OH => EC9H17C + H2O  # Reaction 657
+  rate-constant: {A: 5.5e+12, b: 0.0, Ea: 790.0}
+- equation: CYC9H18 + OH => FC9H17C + H2O  # Reaction 658
+  rate-constant: {A: 5.5e+12, b: 0.0, Ea: 790.0}
+- equation: FC9H17C + H2O => CYC9H18 + OH  # Reaction 659
+  rate-constant: {A: 2.913e+10, b: 0.4341, Ea: 1.9923e+04}
+- equation: CYC9H18 + O => CC9H17C + OH  # Reaction 660
+  rate-constant: {A: 4.77e+04, b: 2.71, Ea: 2106.0}
+- equation: CC9H17C + OH => CYC9H18 + O  # Reaction 661
+  rate-constant: {A: 0.7093, b: 3.6299, Ea: 3880.0}
+- equation: CYC9H18 + O => EC9H17C + OH  # Reaction 662
+  rate-constant: {A: 8.66e+05, b: 2.6, Ea: 2563.0}
+- equation: EC9H17C + OH => CYC9H18 + O  # Reaction 663
+  rate-constant: {A: 174.6, b: 3.1476, Ea: 4410.0}
+- equation: CYC9H18 + O => FC9H17C + OH  # Reaction 664
+  rate-constant: {A: 8.66e+05, b: 2.6, Ea: 2563.0}
+- equation: FC9H17C + OH => CYC9H18 + O  # Reaction 665
+  rate-constant: {A: 174.6, b: 3.1476, Ea: 4410.0}
+- equation: CYC9H18 + H => CC9H17C + H2  # Reaction 666
+  rate-constant: {A: 1.3e+06, b: 2.4, Ea: 4471.0}
+- equation: CC9H17C + H2 => CYC9H18 + H  # Reaction 667
+  rate-constant: {A: 31.59, b: 3.3592, Ea: 8034.0}
+- equation: CYC9H18 + H => EC9H17C + H2  # Reaction 668
+  rate-constant: {A: 2.0e+14, b: 0.0, Ea: 8373.0}
+- equation: EC9H17C + H2 => CYC9H18 + H  # Reaction 669
+  rate-constant: {A: 6.588e+10, b: 0.5869, Ea: 1.2009e+04}
+- equation: CYC9H18 + H => FC9H17C + H2  # Reaction 670
+  rate-constant: {A: 2.0e+14, b: 0.0, Ea: 8373.0}
+- equation: FC9H17C + H2 => CYC9H18 + H  # Reaction 671
+  rate-constant: {A: 6.588e+10, b: 0.5869, Ea: 1.2009e+04}
+- equation: CH3 + CYC9H18 => CC9H17C + CH4  # Reaction 672
+  rate-constant: {A: 1.51, b: 3.46, Ea: 5481.0}
+- equation: CC9H17C + CH4 => CH3 + CYC9H18  # Reaction 673
+  rate-constant: {A: 0.03421, b: 4.0038, Ea: 1.0925e+04}
+- equation: CH3 + CYC9H18 => CH4 + EC9H17C  # Reaction 674
+  rate-constant: {A: 4.5e+11, b: 0.0, Ea: 9540.0}
+- equation: CH3 + CYC9H18 => CH4 + FC9H17C  # Reaction 675
+  rate-constant: {A: 4.5e+11, b: 0.0, Ea: 9540.0}
+- equation: CH4 + FC9H17C => CH3 + CYC9H18  # Reaction 676
+  rate-constant: {A: 1.382e+11, b: 0.1715, Ea: 1.5057e+04}
+- equation: C2H4 + CC9H17C => C2H3 + CYC9H18  # Reaction 677
+  rate-constant: {A: 0.5846, b: 3.6666, Ea: 1.7278e+04}
+- equation: C2H4 + FC9H17C => C2H3 + CYC9H18  # Reaction 678
+  rate-constant: {A: 2.362e+12, b: -0.1657, Ea: 2.141e+04}
+- equation: C2H5 + CYC9H18 => C2H6 + CC9H17C  # Reaction 679
+  rate-constant: {A: 1.51, b: 3.46, Ea: 5481.0}
+- equation: C2H6 + CC9H17C => C2H5 + CYC9H18  # Reaction 680
+  rate-constant: {A: 0.1422, b: 3.8331, Ea: 6019.0}
+- equation: C2H5 + CYC9H18 => C2H6 + EC9H17C  # Reaction 681
+  rate-constant: {A: 4.5e+11, b: 0.0, Ea: 9540.0}
+- equation: C2H5 + CYC9H18 => C2H6 + FC9H17C  # Reaction 682
+  rate-constant: {A: 4.5e+11, b: 0.0, Ea: 9540.0}
+- equation: C2H6 + FC9H17C => C2H5 + CYC9H18  # Reaction 683
+  rate-constant: {A: 5.745e+11, b: 7.0e-04, Ea: 1.0151e+04}
+- equation: AC3H5 + CYC9H18 => C3H6 + CC9H17C  # Reaction 684
+  rate-constant: {A: 1.51, b: 3.46, Ea: 5481.0}
+- equation: C3H6 + CC9H17C => AC3H5 + CYC9H18  # Reaction 685
+  rate-constant: {A: 9.597e-05, b: 4.7388, Ea: -8904.0}
+- equation: AC3H5 + CYC9H18 => C3H6 + EC9H17C  # Reaction 686
+  rate-constant: {A: 4.5e+11, b: 0.0, Ea: 9540.0}
+- equation: C3H6 + EC9H17C => AC3H5 + CYC9H18  # Reaction 687
+  rate-constant: {A: 3.877e+08, b: 0.9065, Ea: -4772.0}
+- equation: AC3H5 + CYC9H18 => C3H6 + FC9H17C  # Reaction 688
+  rate-constant: {A: 4.5e+11, b: 0.0, Ea: 9540.0}
+- equation: C3H6 + FC9H17C => AC3H5 + CYC9H18  # Reaction 689
+  rate-constant: {A: 3.877e+08, b: 0.9065, Ea: -4772.0}
+- equation: CC9H17C + CH2O => CYC9H18 + HCO  # Reaction 690
+  rate-constant: {A: 0.04845, b: 3.8723, Ea: -3866.0}
+- equation: CH2O + FC9H17C => CYC9H18 + HCO  # Reaction 691
+  rate-constant: {A: 1.957e+11, b: 0.04, Ea: 267.0}
+- equation: CH3O + CYC9H18 => CC9H17C + CH3OH  # Reaction 692
+  rate-constant: {A: 4.32e+11, b: 0.0, Ea: 4473.0}
+- equation: CH3O + CYC9H18 => CH3OH + EC9H17C  # Reaction 693
+  rate-constant: {A: 4.32e+11, b: 0.0, Ea: 4473.0}
+- equation: CH3O + CYC9H18 => CH3OH + FC9H17C  # Reaction 694
+  rate-constant: {A: 4.32e+11, b: 0.0, Ea: 4473.0}
+- equation: CYC9H18 => 3 C2H4 + C3H6  # Reaction 695
+  rate-constant: {A: 1.3e+17, b: 0.0, Ea: 8.3999e+04}
+- equation: FC9H17C => CC9H17C  # Reaction 696
+  rate-constant: {A: 4.0e+11, b: 0.0, Ea: 1.81e+04}
+- equation: CC9H17C => FC9H17C  # Reaction 697
+  rate-constant: {A: 2.951e+10, b: 0.3723, Ea: 1.8027e+04}
+- equation: EC9H17C => C2H4 + C4H6 + NC3H7  # Reaction 698
+  rate-constant: {A: 2.0e+13, b: 0.0, Ea: 4.4e+04}
+- equation: H + NO + M => HNO + M  # Reaction 699
+  type: three-body
+  rate-constant: {A: 2.7e+15, b: 0.0, Ea: -600.0}
+  efficiencies: {H2: 2.0, H2O: 10.0, CO2: 3.0, N2: 0.0, O2: 1.5}
+- equation: HNO + M => H + NO + M  # Reaction 700
+  type: three-body
+  rate-constant: {A: 1.049e+17, b: -0.2242, Ea: 4.9397e+04}
+  efficiencies: {H2: 2.0, H2O: 10.0, CO2: 3.0, N2: 0.0, O2: 1.5}
+- equation: H + N2 + NO => HNO + N2  # Reaction 701
+  rate-constant: {A: 7.0e+19, b: -1.5, Ea: 0.0}
+- equation: HNO + N2 => H + N2 + NO  # Reaction 702
+  rate-constant: {A: 2.718e+21, b: -1.7242, Ea: 4.9996e+04}
+- equation: NO + O + M => NO2 + M  # Reaction 703
+  type: three-body
+  rate-constant: {A: 7.5e+19, b: -1.41, Ea: 0.0}
+  efficiencies: {H2O: 10.0, N2: 1.699, O2: 1.5}
+- equation: NO2 + M => NO + O + M  # Reaction 704
+  type: three-body
+  rate-constant: {A: 1.514e+24, b: -2.0762, Ea: 7.3627e+04}
+  efficiencies: {H2O: 10.0, N2: 1.699, O2: 1.5}
+- equation: NO + OH + M => HONO + M  # Reaction 705
+  type: three-body
+  rate-constant: {A: 5.1e+23, b: -2.51, Ea: -68.0}
+  efficiencies: {H2O: 5.0}
+- equation: HONO + M => NO + OH + M  # Reaction 706
+  type: three-body
+  rate-constant: {A: 2.451e+31, b: -4.0457, Ea: 5.0372e+04}
+  efficiencies: {H2O: 5.0}
+- equation: HO2 + NO => NO2 + OH  # Reaction 707
+  rate-constant: {A: 2.1e+12, b: 0.0, Ea: -479.0}
+- equation: NO2 + OH => HO2 + NO  # Reaction 708
+  rate-constant: {A: 2.848e+13, b: -0.1227, Ea: 6306.0}
+- equation: HCO + NO => CO + HNO  # Reaction 709
+  rate-constant: {A: 7.2e+12, b: 0.0, Ea: 0.0}
+- equation: CO + HNO => HCO + NO  # Reaction 710
+  rate-constant: {A: 2.743e+13, b: 0.1004, Ea: 3.4507e+04}
+- equation: C2H3 + NO => C2H2 + HNO  # Reaction 711
+  rate-constant: {A: 1.0e+12, b: 0.0, Ea: 1000.0}
+- equation: C2H2 + HNO => C2H3 + NO  # Reaction 712
+  rate-constant: {A: 3.31e+14, b: -0.5002, Ea: 1.6225e+04}
+- equation: H + NO2 => NO + OH  # Reaction 713
+  rate-constant: {A: 8.4e+13, b: 0.0, Ea: 0.0}
+- equation: NO + OH => H + NO2  # Reaction 714
+  rate-constant: {A: 9.604e+08, b: 0.914, Ea: 2.8193e+04}
+- equation: NO2 + O => NO + O2  # Reaction 715
+  rate-constant: {A: 3.9e+12, b: 0.0, Ea: -238.0}
+- equation: NO + O2 => NO2 + O  # Reaction 716
+  rate-constant: {A: 2.248e+10, b: 0.4773, Ea: 4.5236e+04}
+- equation: HCO + NO2 => CO + HONO  # Reaction 717
+  rate-constant: {A: 1.2e+23, b: -3.29, Ea: 2355.0}
+- equation: HCO + NO2 => CO2 + H + NO  # Reaction 718
+  rate-constant: {A: 8.4e+15, b: -0.75, Ea: 1930.0}
+- equation: CO + NO2 => CO2 + NO  # Reaction 719
+  rate-constant: {A: 9.0e+13, b: 0.0, Ea: 3.377900000000001e+04}
+- equation: CO2 + NO => CO + NO2  # Reaction 720
+  rate-constant: {A: 6.319e+15, b: -0.3789, Ea: 8.809e+04}
+- equation: CH2O + NO2 => HCO + HONO  # Reaction 721
+  rate-constant: {A: 800.0, b: 2.77, Ea: 1.373e+04}
+- equation: CH2 + NO2 => CH2O + NO  # Reaction 722
+  rate-constant: {A: 5.9e+13, b: 0.0, Ea: 0.0}
+- equation: CH + NO2 => HCO + NO  # Reaction 723
+  rate-constant: {A: 1.0e+14, b: 0.0, Ea: 0.0}
+- equation: H + HNO => H2 + NO  # Reaction 724
+  rate-constant: {A: 4.5e+11, b: 0.72, Ea: 655.0}
+- equation: H2 + NO => H + HNO  # Reaction 725
+  rate-constant: {A: 4.369e+09, b: 1.2312, Ea: 5.4266e+04}
+- equation: HNO + O => NO + OH  # Reaction 726
+  rate-constant: {A: 1.0e+13, b: 0.0, Ea: 0.0}
+- equation: NO + OH => HNO + O  # Reaction 727
+  rate-constant: {A: 5.942e+10, b: 0.472, Ea: 5.1823e+04}
+- equation: HNO + OH => H2O + NO  # Reaction 728
+  rate-constant: {A: 3.6e+13, b: 0.0, Ea: 0.0}
+- equation: H2O + NO => HNO + OH  # Reaction 729
+  rate-constant: {A: 5.619e+12, b: 0.3585, Ea: 6.9108e+04}
+- equation: HNO + O2 => HO2 + NO  # Reaction 730
+  rate-constant: {A: 1.0e+13, b: 0.0, Ea: 2.5e+04}
+- equation: HO2 + NO => HNO + O2  # Reaction 731
+  rate-constant: {A: 7.599e+11, b: 0.1174, Ea: 2.4563e+04}
+- equation: H + HONO => H2 + NO2  # Reaction 732
+  rate-constant: {A: 1.2e+13, b: 0.0, Ea: 7352.0}
+- equation: H2 + NO2 => H + HONO  # Reaction 733
+  rate-constant: {A: 8.233e+09, b: 0.9087, Ea: 3.2327e+04}
+- equation: HONO + O => NO2 + OH  # Reaction 734
+  rate-constant: {A: 1.2e+13, b: 0.0, Ea: 5961.0}
+- equation: HONO + OH => H2O + NO2  # Reaction 735
+  rate-constant: {A: 4.0e+12, b: 0.0, Ea: 0.0}
+- equation: H2O + NO2 => HONO + OH  # Reaction 736
+  rate-constant: {A: 4.412e+10, b: 0.756, Ea: 4.0471e+04}
+- equation: NH3 + M => H + NH2 + M  # Reaction 737
+  type: three-body
+  rate-constant: {A: 2.2e+16, b: 0.0, Ea: 9.3469e+04}
+  efficiencies: {N2: 1.0}
+- equation: H + NH2 + M => NH3 + M  # Reaction 738
+  type: three-body
+  rate-constant: {A: 7.835e+13, b: 0.2655, Ea: -1.5486e+04}
+  efficiencies: {N2: 1.0}
+- equation: H + NH3 => H2 + NH2  # Reaction 739
+  rate-constant: {A: 6.4e+05, b: 2.39, Ea: 1.0171e+04}
+- equation: H2 + NH2 => H + NH3  # Reaction 740
+  rate-constant: {A: 859.5, b: 2.9426, Ea: 4824.0}
+- equation: NH3 + O => NH2 + OH  # Reaction 741
+  rate-constant: {A: 9.4e+06, b: 1.94, Ea: 6460.0}
+- equation: NH2 + OH => NH3 + O  # Reaction 742
+  rate-constant: {A: 7725.0, b: 2.4533, Ea: -676.0}
+- equation: NH3 + OH => H2O + NH2  # Reaction 743
+  rate-constant: {A: 2.0e+06, b: 2.04, Ea: 566.0}
+- equation: H2O + NH2 => NH3 + OH  # Reaction 744
+  rate-constant: {A: 4.318e+04, b: 2.4398, Ea: 1.0715e+04}
+- equation: H + NH2 => H2 + NH  # Reaction 745
+  rate-constant: {A: 4.0e+13, b: 0.0, Ea: 3650.0}
+- equation: H2 + NH => H + NH2  # Reaction 746
+  rate-constant: {A: 4.139e+12, b: 0.2269, Ea: 1.5529e+04}
+- equation: NH2 + O => H + HNO  # Reaction 747
+  rate-constant: {A: 6.6e+14, b: -0.5, Ea: 0.0}
+- equation: H + HNO => NH2 + O  # Reaction 748
+  rate-constant: {A: 3.68e+17, b: -1.0494, Ea: 2.9637e+04}
+- equation: NH2 + O => NH + OH  # Reaction 749
+  rate-constant: {A: 6.8e+12, b: 0.0, Ea: 0.0}
+- equation: NH + OH => NH2 + O  # Reaction 750
+  rate-constant: {A: 4.306e+11, b: 0.1876, Ea: 1.009e+04}
+- equation: NH2 + OH => H2O + NH  # Reaction 751
+  rate-constant: {A: 4.0e+06, b: 2.0, Ea: 1000.0}
+- equation: H2O + NH => NH2 + OH  # Reaction 752
+  rate-constant: {A: 6.653e+06, b: 2.0742, Ea: 2.8375e+04}
+- equation: HO2 + NH2 => NH3 + O2  # Reaction 753
+  rate-constant: {A: 1.0e+13, b: 0.0, Ea: 0.0}
+- equation: NH3 + O2 => HO2 + NH2  # Reaction 754
+  rate-constant: {A: 9.514e+14, b: -0.1587, Ea: 5.9395e+04}
+- equation: NH2 + NO => NNH + OH  # Reaction 755
+  rate-constant: {A: 8.9e+12, b: -0.35, Ea: 0.0}
+- equation: NNH + OH => NH2 + NO  # Reaction 756
+  rate-constant: {A: 2.703e+13, b: -0.5739, Ea: -739.0}
+- equation: NH2 + NO => H2O + N2  # Reaction 757
+  rate-constant: {A: 2.9e+15, b: -0.988, Ea: 0.0}
+- equation: H2O + N2 => NH2 + NO  # Reaction 758
+  rate-constant: {A: 8.082e+15, b: -0.7087, Ea: 1.24628e+05}
+- equation: NH2 + NO2 => H2O + N2O  # Reaction 759
+  rate-constant: {A: 3.2e+18, b: -2.2, Ea: 0.0}
+- equation: N + NH2 => 2 H + N2  # Reaction 760
+  rate-constant: {A: 7.2e+13, b: 0.0, Ea: 0.0}
+- equation: 2 H + N2 => N + NH2  # Reaction 761
+  rate-constant: {A: 1.675e+15, b: -0.2034, Ea: 5.4497e+04}
+- equation: H + NH => H2 + N  # Reaction 762
+  rate-constant: {A: 3.0e+13, b: 0.0, Ea: 0.0}
+- equation: H2 + N => H + NH  # Reaction 763
+  rate-constant: {A: 5.068e+13, b: 0.1226, Ea: 2.4185e+04}
+- equation: NH + O => H + NO  # Reaction 764
+  rate-constant: {A: 9.2e+13, b: 0.0, Ea: 0.0}
+- equation: H + NO => NH + O  # Reaction 765
+  rate-constant: {A: 4.813e+15, b: -0.265, Ea: 7.137000000000001e+04}
+- equation: NH + OH => H + HNO  # Reaction 766
+  rate-constant: {A: 2.0e+13, b: 0.0, Ea: 0.0}
+- equation: H + HNO => NH + OH  # Reaction 767
+  rate-constant: {A: 1.761e+17, b: -0.737, Ea: 1.9547e+04}
+- equation: NH + OH => H2O + N  # Reaction 768
+  rate-constant: {A: 5.0e+11, b: 0.5, Ea: 2000.0}
+- equation: H2O + N => NH + OH  # Reaction 769
+  rate-constant: {A: 1.358e+13, b: 0.4698, Ea: 4.1682e+04}
+- equation: NH + O2 => HNO + O  # Reaction 770
+  rate-constant: {A: 4.6e+05, b: 2.0, Ea: 6500.0}
+- equation: HNO + O => NH + O2  # Reaction 771
+  rate-constant: {A: 8.033e+06, b: 1.6997, Ea: 8766.0}
+- equation: NH + O2 => NO + OH  # Reaction 772
+  rate-constant: {A: 1.3e+06, b: 1.5, Ea: 100.0}
+- equation: NO + OH => NH + O2  # Reaction 773
+  rate-constant: {A: 1.349e+05, b: 1.6717, Ea: 5.4188e+04}
+- equation: NH + NO => H + N2O  # Reaction 774
+  rate-constant: {A: 2.85e+14, b: -0.3657, Ea: 0.0}
+- equation: H + N2O => NH + NO  # Reaction 775
+  rate-constant: {A: 1.266e+21, b: -1.5565, Ea: 3.6123e+04}
+- equation: NH + NO => N2 + OH  # Reaction 776
+  rate-constant: {A: 2.2e+13, b: -0.23, Ea: 0.0}
+- equation: N2 + OH => NH + NO  # Reaction 777
+  rate-constant: {A: 3.686e+13, b: -0.0249, Ea: 9.7253e+04}
+- equation: NH + NO2 => N2O + OH  # Reaction 778
+  rate-constant: {A: 1.0e+13, b: 0.0, Ea: 0.0}
+- equation: N2O + OH => NH + NO2  # Reaction 779
+  rate-constant: {A: 5.079e+14, b: -0.2768, Ea: 6.4316e+04}
+- equation: 2 NH => 2 H + N2  # Reaction 780
+  rate-constant: {A: 2.5e+13, b: 0.0, Ea: 0.0}
+- equation: 2 H + N2 => 2 NH  # Reaction 781
+  rate-constant: {A: 9.498e+15, b: -0.3077, Ea: 6.6804e+04}
+- equation: N + NH => H + N2  # Reaction 782
+  rate-constant: {A: 3.0e+13, b: 0.0, Ea: 0.0}
+- equation: H + N2 => N + NH  # Reaction 783
+  rate-constant: {A: 2.544e+15, b: -0.1432, Ea: 1.46226e+05}
+- equation: N + OH => H + NO  # Reaction 784
+  rate-constant: {A: 3.8e+13, b: 0.0, Ea: 0.0}
+- equation: H + NO => N + OH  # Reaction 785
+  rate-constant: {A: 1.923e+15, b: -0.3483, Ea: 4.8974e+04}
+- equation: N + O2 => NO + O  # Reaction 786
+  rate-constant: {A: 6.4e+09, b: 1.0, Ea: 6280.0}
+- equation: NO + O => N + O2  # Reaction 787
+  rate-constant: {A: 6.424e+08, b: 1.0884, Ea: 3.7972e+04}
+- equation: N + NO => N2 + O  # Reaction 788
+  rate-constant: {A: 3.3e+12, b: 0.3, Ea: 0.0}
+- equation: N2 + O => N + NO  # Reaction 789
+  rate-constant: {A: 5.349e+12, b: 0.4218, Ea: 7.4856e+04}
+- equation: CO2 + N => CO + NO  # Reaction 790
+  rate-constant: {A: 1.9e+11, b: 0.0, Ea: 3400.0}
+- equation: CO + NO => CO2 + N  # Reaction 791
+  rate-constant: {A: 1.566e+06, b: 0.9446, Ea: 2.6254e+04}
+- equation: HCCO + N => CO + HCN  # Reaction 792
+  rate-constant: {A: 5.0e+13, b: 0.0, Ea: 0.0}
+- equation: CH3 + N => H + H2CN  # Reaction 793
+  rate-constant: {A: 7.1e+13, b: 0.0, Ea: 0.0}
+- equation: CH2 + N => H + HCN  # Reaction 794
+  rate-constant: {A: 5.0e+13, b: 0.0, Ea: 0.0}
+- equation: CH2 + N2 => H2CN + N  # Reaction 795
+  rate-constant: {A: 5.17e+09, b: 0.9517, Ea: 7.8416e+04}
+- equation: CH + N => CN + H  # Reaction 796
+  rate-constant: {A: 1.3e+13, b: 0.0, Ea: 0.0}
+- equation: C2H3 + N => CH2 + HCN  # Reaction 797
+  rate-constant: {A: 2.0e+13, b: 0.0, Ea: 0.0}
+- equation: NNH => H + N2  # Reaction 798
+  rate-constant: {A: 1.0e+07, b: 0.0, Ea: 0.0}
+- equation: H + N2 => NNH  # Reaction 799
+  rate-constant: {A: 1.514e+06, b: 0.3689, Ea: 6262.0}
+- equation: H + NNH => H2 + N2  # Reaction 800
+  rate-constant: {A: 1.0e+14, b: 0.0, Ea: 0.0}
+- equation: H2 + N2 => H + NNH  # Reaction 801
+  rate-constant: {A: 5.709e+12, b: 0.6559, Ea: 1.0987e+05}
+- equation: NNH + O => N2 + OH  # Reaction 802
+  rate-constant: {A: 8.0e+13, b: 0.0, Ea: 0.0}
+- equation: N2 + OH => NNH + O  # Reaction 803
+  rate-constant: {A: 2.795e+12, b: 0.6166, Ea: 1.08081e+05}
+- equation: NNH + O => H + N2O  # Reaction 804
+  rate-constant: {A: 1.0e+14, b: 0.0, Ea: 0.0}
+- equation: H + N2O => NNH + O  # Reaction 805
+  rate-constant: {A: 9.263e+18, b: -0.7792, Ea: 4.6952e+04}
+- equation: NNH + O => NH + NO  # Reaction 806
+  rate-constant: {A: 5.0e+13, b: 0.0, Ea: 0.0}
+- equation: NH + NO => NNH + O  # Reaction 807
+  rate-constant: {A: 1.043e+12, b: 0.4116, Ea: 1.0829e+04}
+- equation: NNH + OH => H2O + N2  # Reaction 808
+  rate-constant: {A: 5.0e+13, b: 0.0, Ea: 0.0}
+- equation: H2O + N2 => NNH + OH  # Reaction 809
+  rate-constant: {A: 4.589e+13, b: 0.5032, Ea: 1.25367e+05}
+- equation: NNH + O2 => HO2 + N2  # Reaction 810
+  rate-constant: {A: 2.0e+14, b: 0.0, Ea: 0.0}
+- equation: HO2 + N2 => NNH + O2  # Reaction 811
+  rate-constant: {A: 8.937e+13, b: 0.2621, Ea: 5.5822e+04}
+- equation: NNH + O2 => H + N2 + O2  # Reaction 812
+  rate-constant: {A: 5.0e+13, b: 0.0, Ea: 0.0}
+- equation: H + N2 + O2 => NNH + O2  # Reaction 813
+  rate-constant: {A: 7.571e+12, b: 0.3689, Ea: 6262.0}
+- equation: NNH + NO => HNO + N2  # Reaction 814
+  rate-constant: {A: 5.0e+13, b: 0.0, Ea: 0.0}
+- equation: HNO + N2 => NNH + NO  # Reaction 815
+  rate-constant: {A: 2.94e+14, b: 0.1447, Ea: 5.6259e+04}
+- equation: N2O + M => N2 + O + M  # Reaction 816
+  type: three-body
+  rate-constant: {A: 4.0e+14, b: 0.0, Ea: 5.61e+04}
+  efficiencies: {H2O: 12.0, CO2: 3.0, CO: 1.5, N2: 1.699, O2: 1.399}
+- equation: N2 + O + M => N2O + M  # Reaction 817
+  type: three-body
+  rate-constant: {A: 6.538e+08, b: 1.1481, Ea: 1.541e+04}
+  efficiencies: {H2O: 12.0, CO2: 3.0, CO: 1.5, N2: 1.699, O2: 1.399}
+- equation: H + N2O => N2 + OH  # Reaction 818
+  rate-constant: {A: 2.36e-11, b: 7.0, Ea: -441.0}
+- equation: N2 + OH => H + N2O  # Reaction 819
+  rate-constant: {A: 8.901e-18, b: 8.3959, Ea: 6.0689e+04}
+- equation: N2O + O => 2 NO  # Reaction 820
+  rate-constant: {A: 6.6e+13, b: 0.0, Ea: 2.663e+04}
+- equation: 2 NO => N2O + O  # Reaction 821
+  rate-constant: {A: 7.772e+08, b: 0.9257, Ea: 6.1877e+04}
+- equation: N2O + O => N2 + O2  # Reaction 822
+  rate-constant: {A: 1.0e+14, b: 0.0, Ea: 2.8e+04}
+- equation: N2 + O2 => N2O + O  # Reaction 823
+  rate-constant: {A: 1.902e+10, b: 0.9591, Ea: 1.06411e+05}
+- equation: N2O + OH => HO2 + N2  # Reaction 824
+  rate-constant: {A: 0.013, b: 4.72, Ea: 3.6561e+04}
+- equation: HO2 + N2 => N2O + OH  # Reaction 825
+  rate-constant: {A: 3.162e-05, b: 5.3246, Ea: 6.2713e+04}
+- equation: N2O + OH => HNO + NO  # Reaction 826
+  rate-constant: {A: 1.2e-04, b: 4.33, Ea: 2.5081e+04}
+- equation: N2O + NO => N2 + NO2  # Reaction 827
+  rate-constant: {A: 5.3e+05, b: 2.23, Ea: 4.6281e+04}
+- equation: N2 + NO2 => N2O + NO  # Reaction 828
+  rate-constant: {A: 1.748e+04, b: 2.7118, Ea: 7.9218e+04}
+- equation: CO + N2O => CO2 + N2  # Reaction 829
+  rate-constant: {A: 3.2e+11, b: 0.0, Ea: 2.0237e+04}
+- equation: CO2 + N2 => CO + N2O  # Reaction 830
+  rate-constant: {A: 7.411e+11, b: 0.1029, Ea: 1.07486e+05}
+- equation: CH + N2O => HCN + NO  # Reaction 831
+  rate-constant: {A: 1.9e+13, b: 0.0, Ea: -511.0}
+- equation: HCN + O => H + NCO  # Reaction 832
+  rate-constant: {A: 1.4e+04, b: 2.64, Ea: 4980.0}
+- equation: H + NCO => HCN + O  # Reaction 833
+  rate-constant: {A: 1.408e+07, b: 2.0016, Ea: 1.3218e+04}
+- equation: HCN + O => CO + NH  # Reaction 834
+  rate-constant: {A: 3500.0, b: 2.64, Ea: 4980.0}
+- equation: CO + NH => HCN + O  # Reaction 835
+  rate-constant: {A: 1.595, b: 3.4444, Ea: 3.6861e+04}
+- equation: HCN + O => CN + OH  # Reaction 836
+  rate-constant: {A: 2.7e+09, b: 1.58, Ea: 2.92e+04}
+- equation: CN + OH => HCN + O  # Reaction 837
+  rate-constant: {A: 3.968e+05, b: 2.4093, Ea: 6466.0}
+- equation: HCN + OH => CN + H2O  # Reaction 838
+  rate-constant: {A: 3.9e+06, b: 1.83, Ea: 1.03e+04}
+- equation: CN + H2O => HCN + OH  # Reaction 839
+  rate-constant: {A: 1.506e+04, b: 2.5458, Ea: 4852.0}
+- equation: HCN + OH => H + HOCN  # Reaction 840
+  rate-constant: {A: 5.9e+04, b: 2.4, Ea: 1.25e+04}
+- equation: H + HOCN => HCN + OH  # Reaction 841
+  rate-constant: {A: 9.21e+06, b: 2.0839, Ea: 5474.0}
+- equation: HCN + OH => H + HNCO  # Reaction 842
+  rate-constant: {A: 2.0e-03, b: 4.0, Ea: 1000.0}
+- equation: H + HNCO => HCN + OH  # Reaction 843
+  rate-constant: {A: 42.73, b: 3.1291, Ea: 1.9072e+04}
+- equation: HCN + OH => CO + NH2  # Reaction 844
+  rate-constant: {A: 7.8e-04, b: 4.0, Ea: 4000.0}
+- equation: CO + NH2 => HCN + OH  # Reaction 845
+  rate-constant: {A: 5.614e-06, b: 4.6167, Ea: 2.5791e+04}
+- equation: HCN + SCH2 => CH3 + CN  # Reaction 846
+  rate-constant: {A: 5.0e+13, b: 0.0, Ea: 0.0}
+- equation: CH3 + CN => HCN + SCH2  # Reaction 847
+  rate-constant: {A: 5.983e+12, b: 0.2163, Ea: -5493.0}
+- equation: CN + O => CO + N  # Reaction 848
+  rate-constant: {A: 7.7e+13, b: 0.0, Ea: 0.0}
+- equation: CO + N => CN + O  # Reaction 849
+  rate-constant: {A: 2.468e+14, b: 0.0584, Ea: 7.7011e+04}
+- equation: CN + OH => H + NCO  # Reaction 850
+  rate-constant: {A: 4.0e+13, b: 0.0, Ea: 0.0}
+- equation: H + NCO => CN + OH  # Reaction 851
+  rate-constant: {A: 2.738e+20, b: -1.4677, Ea: 3.0972e+04}
+- equation: CN + O2 => NCO + O  # Reaction 852
+  rate-constant: {A: 7.5e+12, b: 0.0, Ea: -389.0}
+- equation: NCO + O => CN + O2  # Reaction 853
+  rate-constant: {A: 1.018e+17, b: -1.0309, Ea: 1.3301e+04}
+- equation: CN + CO2 => CO + NCO  # Reaction 854
+  rate-constant: {A: 3.7e+06, b: 2.16, Ea: 2.6884e+04}
+- equation: CO + NCO => CN + CO2  # Reaction 855
+  rate-constant: {A: 4.124e+06, b: 1.9852, Ea: 3.1736e+04}
+- equation: CN + H2 => H + HCN  # Reaction 856
+  rate-constant: {A: 3.0e+05, b: 2.45, Ea: 2237.0}
+- equation: H + HCN => CN + H2  # Reaction 857
+  rate-constant: {A: 1.249e+09, b: 1.5814, Ea: 2.3182e+04}
+- equation: CH4 + CN => CH3 + HCN  # Reaction 858
+  rate-constant: {A: 6.2e+04, b: 2.64, Ea: -437.0}
+- equation: CH3 + HCN => CH4 + CN  # Reaction 859
+  rate-constant: {A: 2.769e+05, b: 2.1868, Ea: 1.8626e+04}
+- equation: CH2CO + CN => HCCO + HCN  # Reaction 860
+  rate-constant: {A: 2.0e+13, b: 0.0, Ea: 0.0}
+- equation: HCCO + HCN => CH2CO + CN  # Reaction 861
+  rate-constant: {A: 2.281e+13, b: -0.2863, Ea: 1.71e+04}
+- equation: C2H6 + CN => C2H5 + HCN  # Reaction 862
+  rate-constant: {A: 1.2e+05, b: 2.77, Ea: -1788.0}
+- equation: C2H5 + HCN => C2H6 + CN  # Reaction 863
+  rate-constant: {A: 1.289e+05, b: 2.4876, Ea: 2.2181e+04}
+- equation: C2H4 + CN => C2H3 + HCN  # Reaction 864
+  rate-constant: {A: 5.9e+14, b: -0.24, Ea: 0.0}
+- equation: C2H3 + HCN => C2H4 + CN  # Reaction 865
+  rate-constant: {A: 1.542e+14, b: -0.356, Ea: 1.2711e+04}
+- equation: HNCO + M => CO + NH + M  # Reaction 866
+  type: three-body
+  rate-constant: {A: 1.1e+16, b: 0.0, Ea: 8.5999e+04}
+  efficiencies: {N2: 1.0}
+- equation: CO + NH + M => HNCO + M  # Reaction 867
+  type: three-body
+  rate-constant: {A: 1.017e+09, b: 1.4275, Ea: -2011.0}
+  efficiencies: {N2: 1.0}
+- equation: H + HNCO => CO + NH2  # Reaction 868
+  rate-constant: {A: 2.2e+07, b: 1.7, Ea: 3800.0}
+- equation: CO + NH2 => H + HNCO  # Reaction 869
+  rate-constant: {A: 7.412, b: 3.1876, Ea: 7519.0}
+- equation: HNCO + O => CO + HNO  # Reaction 870
+  rate-constant: {A: 1.5e+08, b: 1.57, Ea: 4.4012e+04}
+- equation: CO + HNO => HNCO + O  # Reaction 871
+  rate-constant: {A: 2.817e+04, b: 2.5083, Ea: 7.7368e+04}
+- equation: HNCO + O => CO2 + NH  # Reaction 872
+  rate-constant: {A: 9.8e+07, b: 1.41, Ea: 8523.999999999998}
+- equation: CO2 + NH => HNCO + O  # Reaction 873
+  rate-constant: {A: 1.284e+07, b: 1.7924, Ea: 4.8452e+04}
+- equation: HNCO + O => NCO + OH  # Reaction 874
+  rate-constant: {A: 2.2e+06, b: 2.11, Ea: 1.1425e+04}
+- equation: NCO + OH => HNCO + O  # Reaction 875
+  rate-constant: {A: 1.036e+05, b: 2.3425, Ea: 1591.0}
+- equation: HNCO + OH => H2O + NCO  # Reaction 876
+  rate-constant: {A: 6.4e+05, b: 2.0, Ea: 2563.0}
+- equation: H2O + NCO => HNCO + OH  # Reaction 877
+  rate-constant: {A: 7.915e+05, b: 2.1191, Ea: 1.0014e+04}
+- equation: HNCO + O2 => CO2 + HNO  # Reaction 878
+  rate-constant: {A: 1.0e+12, b: 0.0, Ea: 3.5e+04}
+- equation: CO2 + HNO => HNCO + O2  # Reaction 879
+  rate-constant: {A: 2.288e+12, b: 0.0821, Ea: 7.7193e+04}
+- equation: HNCO + NH2 => NCO + NH3  # Reaction 880
+  rate-constant: {A: 5.0e+12, b: 0.0, Ea: 6200.0}
+- equation: NCO + NH3 => HNCO + NH2  # Reaction 881
+  rate-constant: {A: 2.864e+14, b: -0.2808, Ea: 3502.0}
+- equation: H + HOCN => H + HNCO  # Reaction 882
+  rate-constant: {A: 2.0e+07, b: 2.0, Ea: 2000.0}
+- equation: H + HNCO => H + HOCN  # Reaction 883
+  rate-constant: {A: 2.737e+09, b: 1.4452, Ea: 2.7098e+04}
+- equation: HOCN + O => NCO + OH  # Reaction 884
+  rate-constant: {A: 1.5e+04, b: 2.64, Ea: 4000.0}
+- equation: NCO + OH => HOCN + O  # Reaction 885
+  rate-constant: {A: 9.665e+04, b: 2.3178, Ea: 1.9264e+04}
+- equation: HOCN + OH => H2O + NCO  # Reaction 886
+  rate-constant: {A: 6.4e+05, b: 2.0, Ea: 2563.0}
+- equation: H2O + NCO => HOCN + OH  # Reaction 887
+  rate-constant: {A: 1.083e+08, b: 1.5643, Ea: 3.5112e+04}
+- equation: NCO + NO => CO + N2O  # Reaction 888
+  rate-constant: {A: 8.4e+17, b: -1.73, Ea: 763.0}
+- equation: CO + N2O => NCO + NO  # Reaction 889
+  rate-constant: {A: 1.691e+18, b: -1.478, Ea: 6.0529e+04}
+- equation: NCO + NO => CO2 + N2  # Reaction 890
+  rate-constant: {A: 5.6e+17, b: -1.73, Ea: 763.0}
+- equation: CO2 + N2 => NCO + NO  # Reaction 891
+  rate-constant: {A: 2.611e+18, b: -1.3751, Ea: 1.47777e+05}
+- equation: HO2 + NCO => HNCO + O2  # Reaction 892
+  rate-constant: {A: 2.0e+13, b: 0.0, Ea: 0.0}
+- equation: HNCO + O2 => HO2 + NCO  # Reaction 893
+  rate-constant: {A: 3.321e+13, b: 0.122, Ea: 6.2094e+04}
+- equation: NCO + M => CO + N + M  # Reaction 894
+  type: three-body
+  rate-constant: {A: 3.1e+16, b: -0.5, Ea: 4.8e+04}
+  efficiencies: {N2: 1.0}
+- equation: CO + N + M => NCO + M  # Reaction 895
+  type: three-body
+  rate-constant: {A: 6.293e+10, b: 0.7783, Ea: -7780.0}
+  efficiencies: {N2: 1.0}
+- equation: H + NCO => CO + NH  # Reaction 896
+  rate-constant: {A: 5.0e+13, b: 0.0, Ea: 0.0}
+- equation: CO + NH => H + NCO  # Reaction 897
+  rate-constant: {A: 2.265e+07, b: 1.4428, Ea: 2.3643e+04}
+- equation: NCO + O => CO + NO  # Reaction 898
+  rate-constant: {A: 4.7e+13, b: 0.0, Ea: 0.0}
+- equation: CO + NO => NCO + O  # Reaction 899
+  rate-constant: {A: 1.114e+09, b: 1.1777, Ea: 9.5013e+04}
+- equation: NCO + OH => HCO + NO  # Reaction 900
+  rate-constant: {A: 5.0e+12, b: 0.0, Ea: 1.5e+04}
+- equation: HCO + NO => NCO + OH  # Reaction 901
+  rate-constant: {A: 5.235e+09, b: 0.6054, Ea: 2.3683e+04}
+- equation: NCO + O2 => CO2 + NO  # Reaction 902
+  rate-constant: {A: 2.0e+12, b: 0.0, Ea: 2.0e+04}
+- equation: CO2 + NO => NCO + O2  # Reaction 903
+  rate-constant: {A: 5.774e+11, b: 0.3215, Ea: 1.2385e+05}
+- equation: H2 + NCO => H + HNCO  # Reaction 904
+  rate-constant: {A: 760.0, b: 3.0, Ea: 4000.0}
+- equation: H + HNCO => H2 + NCO  # Reaction 905
+  rate-constant: {A: 9879.0, b: 2.7282, Ea: 1.2045e+04}
+- equation: HCO + NCO => CO + HNCO  # Reaction 906
+  rate-constant: {A: 3.6e+13, b: 0.0, Ea: 0.0}
+- equation: NCO + NO2 => CO + 2 NO  # Reaction 907
+  rate-constant: {A: 2.5e+11, b: 0.0, Ea: -707.0}
+- equation: NCO + NO2 => CO2 + N2O  # Reaction 908
+  rate-constant: {A: 3.0e+12, b: 0.0, Ea: -707.0}
+- equation: N + NCO => CO + N2  # Reaction 909
+  rate-constant: {A: 2.0e+13, b: 0.0, Ea: 0.0}
+- equation: 2 NCO => 2 CO + N2  # Reaction 910
+  rate-constant: {A: 1.8e+13, b: 0.0, Ea: 0.0}
+- equation: CH4 + NCO => CH3 + HNCO  # Reaction 911
+  rate-constant: {A: 9.8e+12, b: 0.0, Ea: 8120.0}
+- equation: CH3 + HNCO => CH4 + NCO  # Reaction 912
+  rate-constant: {A: 1.366e+11, b: 0.1436, Ea: 1.4284e+04}
+- equation: CH2O + NCO => HCO + HNCO  # Reaction 913
+  rate-constant: {A: 6.0e+12, b: 0.0, Ea: 0.0}
+- equation: C2H6 + NCO => C2H5 + HNCO  # Reaction 914
+  rate-constant: {A: 1.5e-09, b: 6.89, Ea: -2910.0}
+- equation: C2H5 + HNCO => C2H6 + NCO  # Reaction 915
+  rate-constant: {A: 5.031e-12, b: 7.2043, Ea: 8160.0}
+- equation: C2H2 + NCO => HCCO + HCN  # Reaction 916
+  rate-constant: {A: 1.4e+12, b: 0.0, Ea: 1815.0}
+- equation: HCCO + HCN => C2H2 + NCO  # Reaction 917
+  rate-constant: {A: 9.35e+08, b: 0.5097, Ea: 1.2493e+04}
+- equation: CH3CN + H => CH3 + HCN  # Reaction 918
+  rate-constant: {A: 4.0e+07, b: 2.0, Ea: 2000.0}
+- equation: CH3 + HCN => CH3CN + H  # Reaction 919
+  rate-constant: {A: 78.33, b: 3.1605, Ea: 5719.0}
+- equation: CH3CN + O => CH3 + NCO  # Reaction 920
+  rate-constant: {A: 1.5e+04, b: 2.64, Ea: 4980.0}
+- equation: CH3 + HOCN => CH3CN + OH  # Reaction 921
+  rate-constant: {A: 5.0e+12, b: 0.0, Ea: 2000.0}
+- equation: CH3CN + OH => CH3 + HOCN  # Reaction 922
+  rate-constant: {A: 1.636e+16, b: -0.8443, Ea: 5307.0}
+- equation: H2CN + M => H + HCN + M  # Reaction 923
+  type: three-body
+  rate-constant: {A: 3.0e+14, b: 0.0, Ea: 2.2e+04}
+  efficiencies: {N2: 1.0}
+- equation: H + HCN + M => H2CN + M  # Reaction 924
+  type: three-body
+  rate-constant: {A: 3.053e+13, b: 0.2113, Ea: -3176.0}
+  efficiencies: {N2: 1.0}
+- equation: CH2 + N2 => HCN + NH  # Reaction 925
+  rate-constant: {A: 1.0e+13, b: 0.0, Ea: 7.3999e+04}
+- equation: CH + N2 => HCN + N  # Reaction 926
+  rate-constant: {A: 3.7e+07, b: 1.42, Ea: 2.0723e+04}
+- equation: HCN + N => CH + N2  # Reaction 927
+  rate-constant: {A: 3.572e+10, b: 0.786, Ea: 1.8465e+04}
+- equation: HCCO + NO => CO2 + HCN  # Reaction 928
+  rate-constant: {A: 1.6e+13, b: 0.0, Ea: 0.0}
+- equation: C2H + NO => CN + HCO  # Reaction 929
+  rate-constant: {A: 2.1e+13, b: 0.0, Ea: 0.0}
+- equation: CH3 + NO => H2O + HCN  # Reaction 930
+  rate-constant: {A: 0.15, b: 3.523, Ea: 3950.0}
+- equation: H2O + HCN => CH3 + NO  # Reaction 931
+  rate-constant: {A: 0.2738, b: 3.6567, Ea: 8.5996e+04}
+- equation: CH3 + NO => H2CN + OH  # Reaction 932
+  rate-constant: {A: 0.15, b: 3.523, Ea: 3950.0}
+- equation: H2CN + OH => CH3 + NO  # Reaction 933
+  rate-constant: {A: 0.4439, b: 3.3111, Ea: -7933.000000000001}
+- equation: NO + SCH2 => HCN + OH  # Reaction 934
+  rate-constant: {A: 2.0e+13, b: 0.0, Ea: 0.0}
+- equation: NO + SCH2 => CH2 + NO  # Reaction 935
+  rate-constant: {A: 1.0e+14, b: 0.0, Ea: 0.0}
+- equation: CH2 + NO => NO + SCH2  # Reaction 936
+  rate-constant: {A: 3.843e+13, b: 5.0e-03, Ea: 8917.0}
+- equation: CH2 + NO => HCN + OH  # Reaction 937
+  rate-constant: {A: 2.2e+12, b: 0.0, Ea: -378.0}
+- equation: CH + NO => HCN + O  # Reaction 938
+  rate-constant: {A: 4.8e+13, b: 0.0, Ea: 0.0}
+- equation: HCN + O => CH + NO  # Reaction 939
+  rate-constant: {A: 7.511e+16, b: -0.5122, Ea: 7.2598e+04}
+- equation: CH + NO => HCO + N  # Reaction 940
+  rate-constant: {A: 3.4e+13, b: 0.0, Ea: 0.0}
+- equation: CH + NO => H + NCO  # Reaction 941
+  rate-constant: {A: 1.9e+13, b: 0.0, Ea: 0.0}
+- equation: C2H2 + NO => HCN + HCO  # Reaction 942
+  rate-constant: {A: 6.0e+07, b: 0.0, Ea: 0.0}
+- equation: 2 CH3 (+M) => C2H6 (+M)  # Reaction 943
+  type: falloff
+  low-P-rate-constant: {A: 3.489e+42, b: -7.2135, Ea: 1.1166e+04}
+  high-P-rate-constant: {A: 1.477e+20, b: -2.138, Ea: 2301.0}
+- equation: C2H6 (+M) => 2 CH3 (+M)  # Reaction 944
+  type: falloff
+  low-P-rate-constant: {A: 2.126e+54, b: -8.7374, Ea: 1.02837e+05}
+  high-P-rate-constant: {A: 9.001e+31, b: -3.6619, Ea: 9.3972e+04}
+- equation: CH4 (+M) => CH3 + H (+M)  # Reaction 945
+  type: falloff
+  low-P-rate-constant: {A: 1.992e+27, b: -2.678, Ea: 9.9516e+04}
+  high-P-rate-constant: {A: 1.261e+24, b: -2.606, Ea: 1.05622e+05}
+- equation: CH3 + H (+M) => CH4 (+M)  # Reaction 946
+  type: falloff
+  low-P-rate-constant: {A: 5.666e+24, b: -2.5497, Ea: -5973.0}
+  high-P-rate-constant: {A: 3.587e+21, b: -2.4777, Ea: 133.0}
+- equation: CH3 + OH (+M) => CH2OH + H (+M)  # Reaction 947
+  type: falloff
+  low-P-rate-constant: {A: 1.0e+19, b: 0.0, Ea: 5700.0}
+  high-P-rate-constant: {A: 1.517e+10, b: 0.0, Ea: 5477.0}
+- equation: CH2OH + H (+M) => CH3 + OH (+M)  # Reaction 948
+  type: falloff
+  low-P-rate-constant: {A: 2.041e+22, b: -0.9334, Ea: 604.0}
+  high-P-rate-constant: {A: 3.096e+13, b: -0.9334, Ea: 381.0}
+- equation: CH3 + OH (+M) => CH3O + H (+M)  # Reaction 949
+  type: falloff
+  low-P-rate-constant: {A: 1.0e+17, b: 0.0, Ea: 1.2e+04}
+  high-P-rate-constant: {A: 1.141e+11, b: 0.0, Ea: 1.4469e+04}
+- equation: CH3O + H (+M) => CH3 + OH (+M)  # Reaction 950
+  type: falloff
+  low-P-rate-constant: {A: 1.514e+22, b: -0.9836, Ea: 1710.0}
+  high-P-rate-constant: {A: 1.727e+16, b: -0.9836, Ea: 4179.0}
+- equation: CH3 + OH (+M) => H2O + SCH2 (+M)  # Reaction 951
+  type: falloff
+  low-P-rate-constant: {A: 2.463e+27, b: 0.0, Ea: 91.0}
+  high-P-rate-constant: {A: 8.286e+09, b: 0.0, Ea: 6149.0}
+- equation: H2O + SCH2 (+M) => CH3 + OH (+M)  # Reaction 952
+  type: falloff
+  low-P-rate-constant: {A: 7.947e+25, b: 0.4995, Ea: 136.0}
+  high-P-rate-constant: {A: 2.674e+08, b: 0.4995, Ea: 6194.0}
+- equation: CH3 + OH (+M) => CH2O + H2 (+M)  # Reaction 953
+  type: falloff
+  low-P-rate-constant: {A: 2.0e+15, b: 0.0, Ea: 1.1e+04}
+  high-P-rate-constant: {A: 6.301e+07, b: 0.0, Ea: 1.1069e+04}
+- equation: CH2O + H2 (+M) => CH3 + OH (+M)  # Reaction 954
+  type: falloff
+  low-P-rate-constant: {A: 5.16e+17, b: -0.2541, Ea: 8.335e+04}
+  high-P-rate-constant: {A: 1.626e+10, b: -0.2541, Ea: 8.3419e+04}
+- equation: C2H6 (+M) => C2H5 + H (+M)  # Reaction 955
+  type: falloff
+  low-P-rate-constant: {A: 3.453e+19, b: 0.0, Ea: 8.7959e+04}
+  high-P-rate-constant: {A: 6.789e+16, b: 0.0, Ea: 1.00461e+05}
+- equation: C2H5 + H (+M) => C2H6 (+M)  # Reaction 956
+  type: falloff
+  low-P-rate-constant: {A: 2.363e+16, b: 0.2991, Ea: -1.2624e+04}
+  high-P-rate-constant: {A: 4.646e+13, b: 0.2991, Ea: -122.0}
+- equation: C2H5 (+M) => C2H4 + H (+M)  # Reaction 957
+  type: falloff
+  low-P-rate-constant: {A: 5.311e+28, b: -3.647, Ea: 3.8653e+04}
+  high-P-rate-constant: {A: 4.882e+28, b: -4.689, Ea: 4.4423e+04}
+- equation: C2H4 + H (+M) => C2H5 (+M)  # Reaction 958
+  type: falloff
+  low-P-rate-constant: {A: 6.567e+27, b: -3.4056, Ea: 1954.0}
+  high-P-rate-constant: {A: 6.036e+27, b: -4.4476, Ea: 7724.0}
+- equation: C2H5 + O2 (+M) => C2H4 + HO2 (+M)  # Reaction 959
+  type: falloff
+  low-P-rate-constant: {A: 1.0e+27, b: 1.485, Ea: 1.4e+04}
+  high-P-rate-constant: {A: 2.552e+27, b: -5.704, Ea: 1.3757e+04}
+- equation: C2H4 + HO2 (+M) => C2H5 + O2 (+M)  # Reaction 960
+  type: falloff
+  low-P-rate-constant: {A: 3.649e+26, b: 1.6197, Ea: 2.6861e+04}
+  high-P-rate-constant: {A: 9.312e+26, b: -5.5693, Ea: 2.6618e+04}
+- equation: C2H2 + H (+M) => C2H3 (+M)  # Reaction 961
+  type: falloff
+  low-P-rate-constant: {A: 2.517e+16, b: 0.341, Ea: 1416.0}
+  high-P-rate-constant: {A: 2.667e+13, b: -0.197, Ea: 2721.0}
+- equation: C2H3 (+M) => C2H2 + H (+M)  # Reaction 962
+  type: falloff
+  low-P-rate-constant: {A: 2.953e+15, b: 0.617, Ea: 3.6188e+04}
+  high-P-rate-constant: {A: 3.129e+12, b: 0.079, Ea: 3.7493e+04}
+- equation: C2H2 (+M) => C2H + H (+M)  # Reaction 963
+  type: falloff
+  low-P-rate-constant: {A: 2.236e+30, b: -3.261, Ea: 1.25868e+05}
+  high-P-rate-constant: {A: 1.649e+25, b: -2.964, Ea: 1.28451e+05}
+- equation: C2H + H (+M) => C2H2 (+M)  # Reaction 964
+  type: falloff
+  low-P-rate-constant: {A: 3.772e+26, b: -2.5908, Ea: -6486.0}
+  high-P-rate-constant: {A: 2.782e+21, b: -2.2938, Ea: -3903.0}
+- equation: C2H3 + O2 (+M) => CH2HCO + O (+M)  # Reaction 965
+  type: falloff
+  low-P-rate-constant: {A: 2.002e+23, b: 1.116, Ea: 2212.0}
+  high-P-rate-constant: {A: 1.277e+13, b: -1.065, Ea: 4329.0}
+- equation: CH2HCO + O (+M) => C2H3 + O2 (+M)  # Reaction 966
+  type: falloff
+  low-P-rate-constant: {A: 3.447e+26, b: 0.2023, Ea: 1.1566e+04}
+  high-P-rate-constant: {A: 2.199e+16, b: -1.9787, Ea: 1.3683e+04}
+- equation: C2H3 + O2 (+M) => CH2O + HCO (+M)  # Reaction 967
+  type: falloff
+  low-P-rate-constant: {A: 9.089e+47, b: -1.563, Ea: 4819.0}
+  high-P-rate-constant: {A: 1.062e+21, b: -3.537, Ea: 5030.0}
+- equation: CH2O + HCO (+M) => C2H3 + O2 (+M)  # Reaction 968
+  type: falloff
+  low-P-rate-constant: {A: 4.557e+46, b: -1.1832, Ea: 9.3594e+04}
+  high-P-rate-constant: {A: 5.324e+19, b: -3.1572, Ea: 9.3805e+04}
+- equation: C2H2 + OH (+M) => C2H2OH (+M)  # Reaction 969
+  type: falloff
+  low-P-rate-constant: {A: 1.147e+24, b: -2.295, Ea: 6370.0}
+  high-P-rate-constant: {A: 1.678e+07, b: 1.48, Ea: -2713.0}
+- equation: C2H2OH (+M) => C2H2 + OH (+M)  # Reaction 970
+  type: falloff
+  low-P-rate-constant: {A: 4.724e+26, b: -2.7004, Ea: 3.7729e+04}
+  high-P-rate-constant: {A: 6.911e+09, b: 1.0746, Ea: 2.8646e+04}
+- equation: C2H2 + CH3 (+M) => H + PC3H4 (+M)  # Reaction 971
+  type: falloff
+  low-P-rate-constant: {A: 0.3357, b: 4.233, Ea: 1.1293e+04}
+  high-P-rate-constant: {A: 5.757e+14, b: -1.388, Ea: 2.055e+04}
+- equation: H + PC3H4 (+M) => C2H2 + CH3 (+M)  # Reaction 972
+  type: falloff
+  low-P-rate-constant: {A: 5.582e+04, b: 3.1277, Ea: 5167.0}
+  high-P-rate-constant: {A: 9.573e+19, b: -2.4933, Ea: 1.4424e+04}
+- equation: C2H2 + CH3 (+M) => AC3H5 (+M)  # Reaction 973
+  type: falloff
+  low-P-rate-constant: {A: 0.02928, b: 5.741, Ea: 1.3823e+04}
+  high-P-rate-constant: {A: 1.979e+05, b: 1.872, Ea: 1.6456e+04}
+- equation: AC3H5 (+M) => C2H2 + CH3 (+M)  # Reaction 974
+  type: falloff
+  low-P-rate-constant: {A: 1.418e+07, b: 3.5767, Ea: 6.6289e+04}
+  high-P-rate-constant: {A: 9.581e+13, b: -0.2923, Ea: 6.8922e+04}
+- equation: CH3 + OH (+M) => CH3OH (+M)  # Reaction 975
+  type: falloff
+  low-P-rate-constant: {A: 1.572e+31, b: -4.26, Ea: 502.0}
+  high-P-rate-constant: {A: 3.879e+25, b: -3.589, Ea: 6347.0}
+- equation: CH3OH (+M) => CH3 + OH (+M)  # Reaction 976
+  type: falloff
+  low-P-rate-constant: {A: 1.385e+37, b: -5.2278, Ea: 9.4137e+04}
+  high-P-rate-constant: {A: 3.419e+31, b: -4.5568, Ea: 9.9982e+04}
+- equation: NC3H7 (+M) => C3H6 + H (+M)  # Reaction 977
+  type: falloff
+  low-P-rate-constant: {A: 2.383e+15, b: -0.081, Ea: 2.2861e+04}
+  high-P-rate-constant: {A: 7.473e+15, b: -1.124, Ea: 3.4913e+04}
+- equation: C3H6 + H (+M) => NC3H7 (+M)  # Reaction 978
+  type: falloff
+  low-P-rate-constant: {A: 1.388e+14, b: 0.2742, Ea: -1.017e+04}
+  high-P-rate-constant: {A: 4.352e+14, b: -0.7688, Ea: 1881.0}
+- equation: NC3H7 (+M) => C2H4 + CH3 (+M)  # Reaction 979
+  type: falloff
+  low-P-rate-constant: {A: 8.834e+17, b: -0.591, Ea: 2.2448e+04}
+  high-P-rate-constant: {A: 2.101e+14, b: -0.497, Ea: 2.9732e+04}
+- equation: C2H4 + CH3 (+M) => NC3H7 (+M)  # Reaction 980
+  type: falloff
+  low-P-rate-constant: {A: 7.594e+10, b: 1.1322, Ea: -2096.0}
+  high-P-rate-constant: {A: 1.806e+07, b: 1.2262, Ea: 5188.0}
+- equation: C3H6 (+M) => AC3H5 + H (+M)  # Reaction 981
+  type: falloff
+  low-P-rate-constant: {A: 1.891e+45, b: -7.203, Ea: 1.03054e+05}
+  high-P-rate-constant: {A: 9.644e+05, b: 2.778, Ea: 8.1757e+04}
+- equation: AC3H5 + H (+M) => C3H6 (+M)  # Reaction 982
+  type: falloff
+  low-P-rate-constant: {A: 1.917e+45, b: -7.8097, Ea: 1.7395e+04}
+  high-P-rate-constant: {A: 9.779e+05, b: 2.1713, Ea: -3902.0}
+- equation: AC3H4 (+M) => PC3H4 (+M)  # Reaction 983
+  type: falloff
+  low-P-rate-constant: {A: 6.932e+73, b: -15.363, Ea: 9.3665e+04}
+  high-P-rate-constant: {A: 9.163e+66, b: -14.612, Ea: 9.3371e+04}
+- equation: PC3H4 (+M) => AC3H4 (+M)  # Reaction 984
+  type: falloff
+  low-P-rate-constant: {A: 1.559e+73, b: -15.2437, Ea: 9.4824e+04}
+  high-P-rate-constant: {A: 2.061e+66, b: -14.4927, Ea: 9.453e+04}
+- equation: NC4H5 (+M) => C4H4 + H (+M)  # Reaction 985
+  type: falloff
+  low-P-rate-constant: {A: 4.332e+12, b: 0.0, Ea: 8776.0}
+  high-P-rate-constant: {A: 4.231e+08, b: 0.0, Ea: 2.8099e+04}
+- equation: C4H4 + H (+M) => NC4H5 (+M)  # Reaction 986
+  type: falloff
+  low-P-rate-constant: {A: 2.055e+08, b: 1.3557, Ea: -2.7472e+04}
+  high-P-rate-constant: {A: 2.007e+04, b: 1.3557, Ea: -8149.0}
+- equation: IC4H3 (+M) => C4H2 + H (+M)  # Reaction 987
+  type: falloff
+  low-P-rate-constant: {A: 2.0e+15, b: 0.0, Ea: 4.8e+04}
+  high-P-rate-constant: {A: 1.0e+14, b: 0.0, Ea: 5.5e+04}
+- equation: C4H2 + H (+M) => IC4H3 (+M)  # Reaction 988
+  type: falloff
+  low-P-rate-constant: {A: 3.866e+14, b: 0.7122, Ea: -5012.0}
+  high-P-rate-constant: {A: 1.933e+13, b: 0.7122, Ea: 1988.0}
+- equation: NC4H3 (+M) => C4H2 + H (+M)  # Reaction 989
+  type: falloff
+  low-P-rate-constant: {A: 1.0e+14, b: 0.0, Ea: 3.0e+04}
+  high-P-rate-constant: {A: 1.0e+14, b: 0.0, Ea: 3.6e+04}
+- equation: C4H2 + H (+M) => NC4H3 (+M)  # Reaction 990
+  type: falloff
+  low-P-rate-constant: {A: 6.732e+12, b: 0.5155, Ea: -4676.0}
+  high-P-rate-constant: {A: 6.732e+12, b: 0.5155, Ea: 1324.0}
+- equation: HCN + HCO => C2H2 + NO  # Reaction 991
+  rate-constant: {A: 3.393e+05, b: 0.5118, Ea: 3.3209e+04}
