@@ -114,6 +114,7 @@ nav:
       - Hydrogen (Fuel Cell & Tank): user-guide/hydrogen.md
       - Aerodynamics Module: user-guide/aerodynamics.md
       - Structures Module: user-guide/structures.md
+      - Surrogate Models: user-guide/surrogate-models.md
       - Well-To-Wake Analysis: user-guide/well-to-wake.md
       - Emissions & Climate Impact: user-guide/emissions.md
   - Developer Guide:

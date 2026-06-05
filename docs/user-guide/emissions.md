@@ -17,10 +17,14 @@ It is enabled by supplying a `ClimateImpactInput` (typed: `ClimateImpactConfig`)
 
 CO₂, H₂O, SO₄ and soot scale with the **fuel burned** through fixed emission indices; CO₂ also
 picks up the **electricity** contribution via the grid intensity (so a hybrid's battery energy
-is not free). NOₓ is estimated with one of two models, selected by `EINOx_model`:
+is not free). The combustion pollutants NOₓ (and, with the surrogate, CO and UHC) are estimated
+with one of two models, selected by `EINOx_model`:
 
 - **`'Filippone'`** — a semi-empirical \(EI_{NO_x}\) correlation (default, no extra files);
-- **`'GasTurb'`** — a regression surrogate loaded from `EINOx_gasturb.joblib`.
+- **`'Surrogate'`** — the packaged **PW127 gas‑turbine emission‑index response surface**, which
+  integrates operating‑point‑dependent \(EI_{NO_x}\), \(EI_{CO}\) and \(EI_{UHC}\) over the mission.
+  See [Surrogate Models](surrogate-models.md#4-gas-turbine-emissions-surrogate) for how it is built
+  (pyCycle deck → Cantera CRN → certification‑anchored EI map).
 
 ```python
 aircraft.configure(hybrid_config())            # carries a ClimateImpactInput
@@ -82,7 +86,7 @@ atr = aircraft.climateimpact.ATR()             # [K]
 - `"H"` — time horizon for ATR [years]
 - `"N"` — number of flights per year
 - `"Y"` — number of operating years
-- `"EINOx_model"` — `'Filippone'` or `'GasTurb'`
+- `"EINOx_model"` — `'Filippone'` or `'Surrogate'` (see [Surrogate Models](surrogate-models.md))
 - `"WTW_CO2"` — well-to-wake CO₂ intensity of the fuel [kg CO₂ / MJ]
 - `"Grid_CO2"` — CO₂ intensity of the electricity [kg CO₂ / MJ]
 
