@@ -1,0 +1,4 @@
+# Extra dependencies for the Virtual Aircraft Design Lab (the Streamlit GUI).
+# The PhlyGreen package itself (and CoolProp) is installed via `pip install -e ./trunk`.
+streamlit>=1.30
+matplotlib

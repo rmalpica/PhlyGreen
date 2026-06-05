@@ -12,7 +12,7 @@ setup(
     packages=find_packages(),            
     include_package_data=True,
     python_requires=">=3",
-    install_requires=["numpy", "matplotlib", "scipy"],
+    install_requires=["numpy", "matplotlib", "scipy", "CoolProp"],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
