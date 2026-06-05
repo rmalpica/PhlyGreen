@@ -122,7 +122,6 @@ nav:
       - Flowcharts: developer-guide/flowcharts.md
       - Module Reference: developer-guide/module-reference.md
       - Extending the Model: developer-guide/extending-the-model.md
-      - Battery Merge Assessment: developer-guide/battery-merge-assessment.md
       - Troubleshooting: developer-guide/troubleshooting.md
   - API Reference:
       - Outer Loop & Results: api/outer-loop.md

@@ -91,7 +91,7 @@ All of these (plus the electric motor) can be plotted as efficiency maps in exam
 
 ## Power Ratios
 
-The main objective of the powertrain module is to compute the fuel/battery power required to deliver a certain propulsive power. At any instant in time, the required **propulsive power** is computed by the Mission module (see [Mission](mission.md/#4-mission-power-calculation)):
+The main objective of the powertrain module is to compute the fuel/battery power required to deliver a certain propulsive power. At any instant in time, the required **propulsive power** is computed by the Mission module (see [Mission](mission.md#mission-power-calculation)):
 
 \[
 P_{prop}(t)= W_{TO}

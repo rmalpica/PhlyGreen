@@ -136,7 +136,7 @@ of magnitude across the power range.
    combustor inlet state — temperature \(T_3\), pressure \(P_3\), fuel‑air ratio FAR, air mass flow — over
    a flight‑envelope grid (Mach ≥ 0.1; the Mach = 0 static point is a deck convergence artifact and is
    dropped).
-2. **Chemical Reactor Network (`crn/`, A. Pietrosanto's thesis).** A Cantera CRN — a 9‑PSR primary zone
+2. **Chemical Reactor Network (`crn/`).** A Cantera CRN — a 9‑PSR primary zone
    plus secondary and dilution zones, with a Luche kerosene surrogate mechanism and an evaporation model —
    is run at each combustor state to produce \(EI_{NO_x},\ EI_{CO},\ EI_{UHC}\). It is calibrated to the
    PW127 with a richer primary‑zone air fraction `ARPZ = 0.24` (vs the CFM56 baseline 0.31), found by
@@ -207,11 +207,4 @@ python validation_plots.py       # -> validation_vs_icao.png + ei_vs_combustor_s
 See `emissions_pipeline/README.md` for the full provenance and `EMISSIONS_MODEL_NOTES.md` for the
 design history and the soot groundwork.
 
----
 
-## References
-
-- A. Pietrosanto, *Chemical‑reactor‑network modelling of gas‑turbine pollutant emissions* (M.Sc.
-  thesis, Sapienza) — the CRN, Luche kerosene mechanism and evaporation model.
-- F. Bassis, *Gas‑turbine soot emissions* (M.Sc. thesis, Sapienza) — soot groundwork (future phase).
-- ICAO Aircraft Engine Emissions Databank / FOCA‑EASA PW127 certification data — the NOₓ/CO anchors.

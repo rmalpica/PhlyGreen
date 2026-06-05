@@ -23,7 +23,7 @@ with one of two models, selected by `EINOx_model`:
 - **`'Filippone'`** — a semi-empirical \(EI_{NO_x}\) correlation (default, no extra files);
 - **`'Surrogate'`** — the packaged **PW127 gas‑turbine emission‑index response surface**, which
   integrates operating‑point‑dependent \(EI_{NO_x}\), \(EI_{CO}\) and \(EI_{UHC}\) over the mission.
-  See [Surrogate Models](surrogate-models.md#4-gas-turbine-emissions-surrogate) for how it is built
+  See [Surrogate Models](surrogate-models.md#4-gasturbine-emissions-surrogate) for how it is built
   (pyCycle deck → Cantera CRN → certification‑anchored EI map).
 
 ```python
