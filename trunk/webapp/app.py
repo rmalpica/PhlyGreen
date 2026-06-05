@@ -128,19 +128,39 @@ def compare_tab(overrides):
     if not st.button("Run comparison", type="primary"):
         return
 
-    with st.spinner("Sizing designs…"):
+    with st.spinner("Sizing & comparing designs…"):
         configs = [(lab, controls.apply_overrides(templates.make_config(lab), overrides))
                    for lab in picks]
-        rows = runner.compare(configs)
+        rows = runner.compare_detailed(configs)
 
-    _show_figure(render.comparison_figure(rows))
-    st.dataframe({
-        "architecture": [r["label"] for r in rows],
-        "WTO [kg]": [round(r["results"]["WTO"], 1) if r["ok"] else None for r in rows],
-        "block fuel/H2 [kg]": [round(r["results"].get("block_fuel") or 0, 1) if r["ok"] else None for r in rows],
-        "empty [kg]": [round(r["results"]["empty_weight"], 1) if r["ok"] else None for r in rows],
-        "status": ["ok" if r["ok"] else r["error"] for r in rows],
-    })
+    st.markdown("#### Summary")
+    st.dataframe(render.comparison_table(rows))
+
+    if not any(r["ok"] for r in rows):
+        st.warning("No design closed — relax the shared inputs (range, payload, battery shares).")
+        return
+
+    st.markdown("#### Take-off mass breakdown")
+    _show_figure(render.mass_breakdown_figure(rows))
+
+    st.markdown("#### Energy and CO₂")
+    st.caption("Well-to-wake uses **illustrative** lifecycle intensity factors (in `sustainability.py`), "
+               "not a physics model — Jet-A vs SAF vs green-H₂ vs grid electricity. Change them and the "
+               "ranking changes; that is the lesson.")
+    _show_figure(render.energy_co2_figure(rows))
+
+    st.markdown("#### CO₂ vs CO₂-equivalent")
+    st.caption("Adds the gas-turbine **non-CO₂** effect (NOx-ozone, contrails) from the PW127 emission "
+               "surrogate + the ATR climate model. Fuel-cell architectures have no combustion non-CO₂.")
+    fig, notes = render.co2e_figure(rows)
+    _show_figure(fig)
+    for line in notes:
+        st.caption(line)
+
+    st.markdown("#### Mission profile")
+    st.caption("All architectures fly the same prescribed mission, so the profile is shared.")
+    ok_rows = [r for r in rows if r["ok"]]
+    _show_figure(render.mission_profile_figure(ok_rows[0]))
 
 
 # --- Sweep tab ----------------------------------------------------------------------------------

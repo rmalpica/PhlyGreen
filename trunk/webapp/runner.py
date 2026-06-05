@@ -13,7 +13,9 @@ import json
 import warnings
 
 import PhlyGreen as pg
+from PhlyGreen import postprocess as pp
 
+import sustainability
 from templates import config_to_dict, clone
 from controls import apply_overrides
 
@@ -104,6 +106,33 @@ def compare(labels_and_configs):
         res, err = safe_results_dict(cfg)
         out.append({"label": label, "ok": err is None, "results": res, "error": err})
     return out
+
+
+def compare_detailed(labels_and_configs):
+    """Size several designs and collect everything the rich Compare tab needs.
+
+    Each row carries the scalar results, the take-off mass breakdown, the altitude/velocity
+    profile, the (illustrative) onboard / well-to-wake energy and CO₂, and the gas-turbine
+    non-CO₂ CO₂-equivalent. A design that does not close becomes a row with ``ok=False``.
+    """
+    rows = []
+    for label, cfg in labels_and_configs:
+        aircraft, err = safe_design(cfg)
+        if err:
+            rows.append({"label": label, "ok": False, "error": err})
+            continue
+        results = aircraft.results().to_dict()
+        breakdown = pp.mass_breakdown(aircraft)
+        ts = pp.mission_timeseries(aircraft)
+        onboard, wtw, co2 = sustainability.wtw_metrics(label, aircraft, cfg)
+        nonco2 = sustainability.gt_nonco2_co2e(cfg)
+        rows.append({
+            "label": label, "ok": True, "error": None, "results": results,
+            "breakdown": breakdown,
+            "timeseries": {k: ts[k] for k in ("time", "altitude", "velocity") if k in ts},
+            "onboard_MJ": onboard, "wtw_MJ": wtw, "co2_kg": co2, "nonco2_kg": nonco2,
+        })
+    return rows
 
 
 # convenience: apply the Design-tab knob values, then size, in one call

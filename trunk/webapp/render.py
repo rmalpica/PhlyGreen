@@ -118,23 +118,112 @@ METRIC_OPTIONS = {
 }
 
 
-def comparison_figure(rows, metric_keys=("WTO", "block_fuel", "empty_weight")):
-    """Grouped bar chart comparing several designs on a few headline masses.
+def comparison_table(rows):
+    """A wide summary table (one row per architecture) as a dict-of-columns for ``st.dataframe``."""
+    out = {k: [] for k in ("architecture", "WTO [kg]", "OEW [kg]", "fuel/H₂ [kg]", "battery [kg]",
+                           "H₂ tank [kg]", "wing [m²]", "engine [kW]", "onboard [MJ]", "WtW [MJ]",
+                           "WtW CO₂ [kg]", "CO₂e [kg]", "status")}
+    for r in rows:
+        out["architecture"].append(r["label"])
+        if not r["ok"]:
+            for k in list(out)[1:-1]:
+                out[k].append(None)
+            out["status"].append((r["error"] or "did not close")[:40])
+            continue
+        res = r["results"]
+        out["WTO [kg]"].append(round(res["WTO"]))
+        out["OEW [kg]"].append(round(res.get("empty_weight") or 0))
+        out["fuel/H₂ [kg]"].append(round(res.get("block_fuel") or res.get("Wf") or 0))
+        out["battery [kg]"].append(round(res.get("WBat") or 0))
+        out["H₂ tank [kg]"].append(round(r["breakdown"].get("H2 tank", 0.0)))
+        out["wing [m²]"].append(round(res.get("WingSurface") or 0, 1))
+        out["engine [kW]"].append(round((res.get("engineRating") or 0) / 1000))
+        out["onboard [MJ]"].append(round(r["onboard_MJ"]))
+        out["WtW [MJ]"].append(round(r["wtw_MJ"]))
+        out["WtW CO₂ [kg]"].append(round(r["co2_kg"]))
+        out["CO₂e [kg]"].append(round(r["co2_kg"] + r["nonco2_kg"]))
+        out["status"].append("ok")
+    return out
 
-    ``rows`` is the output of ``runner.compare`` (each row has 'label', 'ok', 'results').
-    """
+
+def mass_breakdown_figure(rows):
+    """Stacked take-off mass breakdown per architecture; black ticks mark WTO (the bars sum to it)."""
+    import matplotlib.cm as cm
+    ok = [r for r in rows if r["ok"]]
+    names = [r["label"] for r in ok]
+    comps = []
+    for r in ok:
+        for k in r["breakdown"]:
+            if k not in comps:
+                comps.append(k)
+    colors = cm.tab20(np.linspace(0, 1, max(len(comps), 1)))
+    fig, ax = plt.subplots(figsize=(10, 5.5))
+    bottoms = np.zeros(len(names))
+    for i, c in enumerate(comps):
+        vals = np.array([r["breakdown"].get(c, 0.0) for r in ok])
+        ax.bar(names, vals, bottom=bottoms, label=c, color=colors[i])
+        bottoms += vals
+    ax.scatter(range(len(names)), [r["results"]["WTO"] for r in ok], marker="_", s=900,
+               color="black", linewidth=2, zorder=5, label="WTO")
+    ax.set_ylabel("mass [kg]"); ax.set_title("Take-off mass breakdown (sums to WTO)")
+    ax.tick_params(axis="x", rotation=15)
+    ax.legend(ncol=4, fontsize=8); ax.grid(axis="y", alpha=0.3)
+    fig.tight_layout()
+    return fig
+
+
+def energy_co2_figure(rows):
+    """Two panels: onboard vs well-to-wake energy, and well-to-wake CO₂ (illustrative factors)."""
     ok = [r for r in rows if r["ok"]]
     labels = [r["label"] for r in ok]
-    pretty = {"WTO": "Take-off", "block_fuel": "Block fuel/H2", "empty_weight": "Empty"}
-    fig, ax = plt.subplots(figsize=(9, 5))
-    x = np.arange(len(labels))
-    w = 0.8 / max(len(metric_keys), 1)
-    for i, key in enumerate(metric_keys):
-        vals = [(r["results"].get(key) or 0.0) for r in ok]
-        ax.bar(x + i * w - 0.4 + w / 2, vals, w, label=pretty.get(key, key))
-    ax.set_xticks(x); ax.set_xticklabels(labels, rotation=15, ha="right")
-    ax.set_ylabel("mass [kg]"); ax.grid(axis="y", alpha=0.3); ax.legend()
-    ax.set_title("Architecture comparison")
+    x = np.arange(len(labels)); w = 0.38
+    fig, (a1, a2) = plt.subplots(1, 2, figsize=(13, 4.8))
+    a1.bar(x - w / 2, [r["onboard_MJ"] for r in ok], w, label="onboard (tank-to-wake)", color="tab:cyan")
+    a1.bar(x + w / 2, [r["wtw_MJ"] for r in ok], w, label="well-to-wake (incl. production)", color="tab:blue")
+    a1.set_xticks(x); a1.set_xticklabels(labels, rotation=20, ha="right")
+    a1.set_ylabel("energy [MJ]"); a1.set_title("Energy: onboard vs well-to-wake")
+    a1.grid(axis="y", alpha=0.3); a1.legend(fontsize=8)
+    a2.bar(labels, [r["co2_kg"] for r in ok], color="tab:olive")
+    a2.set_ylabel("well-to-wake CO₂ [kg]"); a2.set_title("Well-to-wake CO₂")
+    a2.tick_params(axis="x", rotation=20); a2.grid(axis="y", alpha=0.3)
+    fig.tight_layout()
+    return fig
+
+
+def co2e_figure(rows):
+    """CO₂ vs CO₂-equivalent (+ gas-turbine non-CO₂). Returns ``(fig, notes)``."""
+    ok = [r for r in rows if r["ok"]]
+    labels = [r["label"] for r in ok]
+    co2 = np.array([r["co2_kg"] for r in ok])
+    co2e = co2 + np.array([r["nonco2_kg"] for r in ok])
+    x = np.arange(len(labels)); w = 0.38
+    fig, ax = plt.subplots(figsize=(9, 4.6))
+    ax.bar(x - w / 2, co2, w, label="well-to-wake CO₂", color="tab:olive")
+    ax.bar(x + w / 2, co2e, w, label="CO₂-equivalent (+ GT non-CO₂)", color="tab:red")
+    ax.set_xticks(x); ax.set_xticklabels(labels, rotation=20, ha="right")
+    ax.set_ylabel("mission [kg]")
+    ax.set_title("CO₂ vs CO₂-equivalent (non-CO₂ from the PW127 emission surrogate)")
+    ax.grid(axis="y", alpha=0.3); ax.legend()
+    notes = [f"{n}: CO₂ {c:,.0f} → CO₂e {ce:,.0f} kg ({100 * (ce / c - 1):+.1f}% from GT non-CO₂)"
+             for n, c, ce in zip(labels, co2, co2e) if c > 0]
+    fig.tight_layout()
+    return fig, notes
+
+
+def mission_profile_figure(row):
+    """THE mission profile (altitude + TAS vs time) — the same prescribed mission all designs fly."""
+    ts = row["timeseries"]
+    t = np.asarray(ts["time"]) / 60.0
+    fig, ax = plt.subplots(figsize=(9, 4.6))
+    ax.plot(t, np.asarray(ts["altitude"]), color="tab:blue")
+    ax.set_xlabel("time [min]"); ax.set_ylabel("altitude [m]", color="tab:blue")
+    ax.tick_params(axis="y", labelcolor="tab:blue")
+    axv = ax.twinx()
+    axv.plot(t, np.asarray(ts["velocity"]), color="tab:orange")
+    axv.set_ylabel("TAS [m/s]", color="tab:orange")
+    axv.tick_params(axis="y", labelcolor="tab:orange")
+    ax.set_title("Mission profile (shared by all architectures)")
+    ax.grid(alpha=0.3)
     fig.tight_layout()
     return fig
 

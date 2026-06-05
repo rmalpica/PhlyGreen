@@ -29,17 +29,19 @@ TEMPLATES = {
         "factory": lambda: common.traditional_config(),
         "blurb": "Conventional fuel-only ATR-like turboprop. The baseline reference design.",
     },
-    "Parallel hybrid (battery)": {
+    "Hybrid GT + battery": {
         "factory": lambda: common.hybrid_config(battery_class="II"),
-        "blurb": "Gas turbine + battery in parallel; the battery supplies part of cruise power (phi).",
+        "blurb": "Gas turbine + battery hybrid (parallel by default — switch to serial under Advanced). "
+                 "The battery supplies a share (phi) of the propulsive power.",
     },
     "Hydrogen fuel cell": {
         "factory": lambda: common.hydrogen_config(tank=True),
         "blurb": "Fuel-cell electric on liquid hydrogen with a physics-sized cryogenic LH2 tank.",
     },
-    "Fuel cell + battery": {
+    "Hybrid fuel cell + battery": {
         "factory": lambda: common.fuelcell_battery_config(cruise_phi=0.15),
-        "blurb": "Hydrogen fuel cell hybridised with a battery that supplies a share (phi) of cruise power.",
+        "blurb": "Hydrogen fuel cell hybridised with a battery that supplies a share (phi) of the "
+                 "propulsive power.",
     },
 }
 

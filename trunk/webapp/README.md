@@ -43,8 +43,12 @@ design automatically.
   diagram and the take-off mass breakdown. Download the config, the results (JSON) and the mission
   time series (CSV).
 - **Compare** — size several architectures on the *same* mission, **using the inputs set in the
-  sidebar**, and compare their masses side by side. Use this tab's **Run comparison** button (the
-  Design tab's Run button sizes only the single current design).
+  sidebar**, and get a tutorial-style trade study: a wide summary table (masses, energy, CO₂), a
+  stacked take-off mass breakdown (summing to WTO), onboard-vs-well-to-wake energy and CO₂ (with
+  illustrative lifecycle factors in `sustainability.py`), a **CO₂ vs CO₂-equivalent** chart that
+  adds the gas-turbine non-CO₂ from the PW127 emission surrogate, and overlaid mission profiles.
+  Use this tab's **Run comparison** button (the Design tab's Run button sizes only the single
+  current design).
 - **Sweep** — vary one input over a range and plot how an output responds.
 
 Each design solves the take-off-weight convergence loop (~1 s). Inputs that push a design too hard
@@ -60,6 +64,7 @@ simply report *"did not close"* — relax the range, payload, or battery/fuel-ce
 | `advanced.py` | The **advanced** forms (every parameter + model choice) and the editable constraint diagram. |
 | `runner.py` | Crash-safe, memoized wrappers around `pg.run_design` / `pg.evaluate`. |
 | `render.py` | Dashboard figures, headline metrics, comparison/sweep charts, CSV export. |
+| `sustainability.py` | Illustrative well-to-wake CO₂/energy factors + the gas-turbine CO₂-equivalent (emission surrogate + ATR). |
 
 `runner.py`, `render.py`, `controls.py` and `templates.py` have no Streamlit dependency, so they
 can be imported and tested without launching the app.
