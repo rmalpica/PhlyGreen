@@ -41,6 +41,7 @@ needs pandas — each degrades gracefully if the dependency is missing.
 | `21_hydrogen_design_voltage_sweep.py` | Sweep the fuel-cell design voltage; find the take-off-weight optimum | sweep panels |
 | `22_hydrogen_tank.py` | Size the cryogenic LH2 tank and track its pressure/mass/venting/heat over the mission (needs CoolProp) | tank state + dashboard |
 | `23_fuelcell_battery_hybrid.py` | Hybridize a fuel cell with a battery; sweep the battery power share | sweep panels |
+| `24_gt_emissions_surrogate.py` | State-dependent GT pollutant emissions (NOx/CO/UHC) from the PW127 EI response surface; `einox_model='Surrogate'` vs Filippone | EI vs power & altitude |
 
 ## Outer-loop applications
 

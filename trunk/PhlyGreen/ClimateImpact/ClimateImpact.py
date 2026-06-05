@@ -76,18 +76,31 @@ class ClimateImpact:
             'soot': None,
             'nox': None
         }
+
+        # Optional state-dependent emission-index surrogate (see
+        # Systems.Powertrain.emissions_surrogate.EmissionSurrogate). When attached, the opt-in
+        # method mission_emissions_from_surrogate() integrates EI(alt, Mach, power) x fuel-flow
+        # over the mission for NOx/CO/UHC, as an alternative to the Filippone NOx correlation.
+        # Default None -> existing behaviour is unchanged.
+        self.emission_surrogate = None
     
 
     """ Properties """
 
     @property
     def EINOx_model(self):
-        """Selected NOx model: {'unset', 'Filippone'}"""
+        """Selected emissions model: {'unset', 'Filippone', 'Surrogate'}.
+
+        ``'Filippone'`` — semi-empirical gas-turbine NOx correlation (default). ``'Surrogate'`` —
+        the packaged gas-turbine emission-index response surface (PW127), which provides NOx, CO
+        and UHC as a function of altitude/Mach/power along the mission (see
+        :class:`PhlyGreen.Systems.Powertrain.emissions_surrogate.EmissionSurrogate`).
+        """
         return self._EINOx_model
 
     @EINOx_model.setter
     def EINOx_model(self,value):
-        if value == 'Filippone' or value == 'unset':
+        if value in ('Filippone', 'unset', 'Surrogate'):
             self._EINOx_model = value
         else:
             raise ValueError("Error: %s EINOx model not implemented. Exiting" %value)
@@ -426,7 +439,100 @@ class ClimateImpact:
 
         self.mission_emissions['nox'] = nox
 
+        # With the gas-turbine emission-index surrogate selected, override NOx and add CO/UHC from
+        # the response surface (CO2/H2O/SO4/soot keep their fixed-EI values computed above).
+        if self.EINOx_model == 'Surrogate':
+            self._integrate_surrogate_emissions()
+
         self.mission_emissions_calculated = True
+
+
+    def _ensure_emission_surrogate(self):
+        """Attach the packaged EmissionSurrogate (PW127) if none was set."""
+        if self.emission_surrogate is None:
+            from PhlyGreen.Systems.Powertrain.emissions_surrogate import EmissionSurrogate
+            self.emission_surrogate = EmissionSurrogate()   # packaged default artifact
+        return self.emission_surrogate
+
+    def _integrate_surrogate_emissions(self, power_fraction_basis='engineRating'):
+        """Set ``mission_emissions['nox'|'co'|'uhc']`` from the EI surrogate; return them.
+
+        Walks the (continuous) mission exactly as the Filippone path does — recovering, at each
+        solver point, the altitude, true airspeed and required shaft power, hence the fuel mass
+        flow ``portata = power * PRatio[0] / ef`` — then queries the surrogate for
+        ``EI(alt_ft, Mach, power_fraction)`` and integrates ``EI * portata`` over time. Does not
+        touch CO2 (the caller handles it). ``power_fraction`` is ``power / engineRating`` clipped
+        to the surrogate's training domain. Thermal-engine configs (Traditional / Hybrid) only.
+        """
+        if self.aircraft.Configuration not in ('Traditional', 'Hybrid'):
+            raise ValueError("The EI surrogate path applies to thermal-engine configurations "
+                             "(Traditional / Hybrid) only.")
+        if getattr(self.aircraft, 'MissionType', 'Continue') != 'Continue':
+            raise ValueError("The EI surrogate path requires MissionType == 'Continue'.")
+        self._ensure_emission_surrogate()
+
+        # --- 1. walk the mission (same recovery as the Filippone path) ---
+        times = np.array([])
+        beta = np.array([])
+        for arr in self.aircraft.mission.integral_solution:
+            times = np.concatenate([times, arr.t])
+            beta = np.concatenate([beta, arr.y[1] if self.aircraft.Configuration == 'Traditional'
+                                   else arr.y[2]])
+        v0 = self.aircraft.mission.profile.Velocity(times)   # [m/s] TAS
+        alt = self.aircraft.mission.profile.Altitude(times)  # [m]
+        spr = ([self.aircraft.mission.profile.SuppliedPowerRatio(t) for t in times]
+               if self.aircraft.Configuration == 'Hybrid' else None)
+
+        DISA = self.aircraft.mission.DISA
+        power = np.zeros(len(times))
+        portata = np.zeros(len(times))   # [kg fuel / s]
+        for t in range(len(times)):
+            p = self.aircraft.weight.WTO * self.aircraft.performance.PoWTO(
+                self.aircraft.DesignWTOoS, beta[t],
+                self.aircraft.mission.profile.PowerExcess(times[t]), 1, alt[t], DISA, v0[t], 'TAS')
+            if self.aircraft.Configuration == 'Traditional':
+                PRatio = self.aircraft.powertrain.Traditional(alt[t], v0[t], p)
+            else:
+                PRatio = self.aircraft.powertrain.Hybrid(spr[t], alt[t], v0[t], p)
+            power[t] = p
+            portata[t] = p * PRatio[0] / self.aircraft.weight.ef
+
+        # --- 2. operating-point coordinates for the surrogate ---
+        T = np.array([ISA.atmosphere.Tstd(float(a)) for a in alt]) + DISA   # static temp [K]
+        mach = v0 / (20.0468 * np.sqrt(T))           # a = sqrt(gamma R T), gamma R ~ 401.9
+        alt_ft = alt / 0.3048
+        rating = getattr(self.aircraft.powertrain, 'engineRating', None) \
+            if power_fraction_basis == 'engineRating' else None
+        if not rating or rating <= 0:
+            rating = float(np.max(power)) or 1.0     # fallback: peak required power
+        power_fraction = power / rating
+
+        # --- 3. EI(alt, Mach, power) along the mission, then integrate EI * fuel-flow ---
+        X = np.column_stack([alt_ft, mach, power_fraction])
+        ei = self.emission_surrogate.predict(X)      # {'EINOX','EICO','EIUHC'} in g/kg fuel
+        species = {'nox': 'EINOX', 'co': 'EICO', 'uhc': 'EIUHC'}
+        out = {}
+        for key, col in species.items():
+            if col in ei:
+                grams = integrate.cumulative_trapezoid(np.asarray(ei[col]) * portata, times,
+                                                       initial=0.0)[-1]
+                self.mission_emissions[key] = float(grams) * 1e-3   # g -> kg
+                out[key] = self.mission_emissions[key]
+        return out
+
+    def mission_emissions_from_surrogate(self, power_fraction_basis='engineRating'):
+        """Single-mission NOx/CO/UHC (+ CO2) mass [kg] from the EI surrogate (standalone helper).
+
+        Convenience that runs :meth:`_integrate_surrogate_emissions` and also fills CO2. For the
+        integrated accounting, set ``ClimateImpactInput['EINOx_model'] = 'Surrogate'`` and call
+        :meth:`calculate_mission_emissions` (which keeps CO2/H2O/SO4/soot consistent). Attaches the
+        packaged PW127 surrogate automatically if ``self.emission_surrogate`` is unset.
+        """
+        self._integrate_surrogate_emissions(power_fraction_basis)
+        self.mission_emissions['co2'] = 3.16 * self.aircraft.weight.Wf + \
+            self.WTW_CO2 * 43.5 * self.aircraft.weight.Wf
+        self.mission_emissions_calculated = True
+        return self.mission_emissions
 
 
     # ----------------------------------------------------------------------
