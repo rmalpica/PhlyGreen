@@ -1212,7 +1212,9 @@ powertrain.aircraft = myaircraft
 <span class=normal>127</span>
 <span class=normal>128</span>
 <span class=normal>129</span>
-<span class=normal>130</span></pre></div></td><td class=code><div><pre><span></span><code><span class=nd>@classmethod</span>
+<span class=normal>130</span>
+<span class=normal>131</span>
+<span class=normal>132</span></pre></div></td><td class=code><div><pre><span></span><code><span class=nd>@classmethod</span>
 <span class=k>def</span><span class=w> </span><span class=nf>from_aircraft</span><span class=p>(</span><span class=bp>cls</span><span class=p>,</span> <span class=n>aircraft</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;Build :class:`AircraftResults` from a designed :class:`Aircraft`.</span>
 
@@ -1252,14 +1254,16 @@ powertrain.aircraft = myaircraft
         <span class=n>r</span><span class=o>.</span><span class=n>SourceEnergy</span> <span class=o>=</span> <span class=n>_get</span><span class=p>(</span><span class=n>aircraft</span><span class=o>.</span><span class=n>welltowake</span><span class=p>,</span> <span class=s1>&#39;SourceEnergy&#39;</span><span class=p>)</span>
         <span class=n>r</span><span class=o>.</span><span class=n>Psi</span> <span class=o>=</span> <span class=n>_get</span><span class=p>(</span><span class=n>aircraft</span><span class=o>.</span><span class=n>welltowake</span><span class=p>,</span> <span class=s1>&#39;Psi&#39;</span><span class=p>)</span>
 
-    <span class=c1># Detailed (Class II) battery pack specs only exist for the Hybrid configuration.</span>
-    <span class=k>if</span> <span class=n>r</span><span class=o>.</span><span class=n>configuration</span> <span class=o>==</span> <span class=s1>&#39;Hybrid&#39;</span><span class=p>:</span>
-        <span class=n>b</span> <span class=o>=</span> <span class=n>aircraft</span><span class=o>.</span><span class=n>battery</span>
-        <span class=n>r</span><span class=o>.</span><span class=n>battery_class</span> <span class=o>=</span> <span class=nb>getattr</span><span class=p>(</span><span class=n>b</span><span class=p>,</span> <span class=s1>&#39;BatteryClass&#39;</span><span class=p>,</span> <span class=kc>None</span><span class=p>)</span>
-        <span class=n>r</span><span class=o>.</span><span class=n>pack_energy</span> <span class=o>=</span> <span class=n>_get</span><span class=p>(</span><span class=n>b</span><span class=p>,</span> <span class=s1>&#39;pack_energy&#39;</span><span class=p>)</span>
-        <span class=n>r</span><span class=o>.</span><span class=n>pack_power_max</span> <span class=o>=</span> <span class=n>_get</span><span class=p>(</span><span class=n>b</span><span class=p>,</span> <span class=s1>&#39;pack_power_max&#39;</span><span class=p>)</span>
-        <span class=n>r</span><span class=o>.</span><span class=n>S_number</span> <span class=o>=</span> <span class=n>_get</span><span class=p>(</span><span class=n>b</span><span class=p>,</span> <span class=s1>&#39;S_number&#39;</span><span class=p>)</span>
-        <span class=n>r</span><span class=o>.</span><span class=n>P_number</span> <span class=o>=</span> <span class=n>_get</span><span class=p>(</span><span class=n>b</span><span class=p>,</span> <span class=s1>&#39;P_number&#39;</span><span class=p>)</span>
+    <span class=c1># Battery pack specs: the configuration (S/P cells), energy and power exist for the</span>
+    <span class=c1># Class-II battery, used by the Hybrid and the fuel-cell + battery architectures.</span>
+    <span class=k>if</span> <span class=n>r</span><span class=o>.</span><span class=n>configuration</span> <span class=ow>in</span> <span class=p>(</span><span class=s1>&#39;Hybrid&#39;</span><span class=p>,</span> <span class=s1>&#39;FuelCellBattery&#39;</span><span class=p>):</span>
+        <span class=n>b</span> <span class=o>=</span> <span class=nb>getattr</span><span class=p>(</span><span class=n>aircraft</span><span class=p>,</span> <span class=s1>&#39;battery&#39;</span><span class=p>,</span> <span class=kc>None</span><span class=p>)</span>
+        <span class=k>if</span> <span class=n>b</span> <span class=ow>is</span> <span class=ow>not</span> <span class=kc>None</span><span class=p>:</span>
+            <span class=n>r</span><span class=o>.</span><span class=n>battery_class</span> <span class=o>=</span> <span class=nb>getattr</span><span class=p>(</span><span class=n>b</span><span class=p>,</span> <span class=s1>&#39;BatteryClass&#39;</span><span class=p>,</span> <span class=kc>None</span><span class=p>)</span>
+            <span class=n>r</span><span class=o>.</span><span class=n>pack_energy</span> <span class=o>=</span> <span class=n>_get</span><span class=p>(</span><span class=n>b</span><span class=p>,</span> <span class=s1>&#39;pack_energy&#39;</span><span class=p>)</span>
+            <span class=n>r</span><span class=o>.</span><span class=n>pack_power_max</span> <span class=o>=</span> <span class=n>_get</span><span class=p>(</span><span class=n>b</span><span class=p>,</span> <span class=s1>&#39;pack_power_max&#39;</span><span class=p>)</span>
+            <span class=n>r</span><span class=o>.</span><span class=n>S_number</span> <span class=o>=</span> <span class=n>_get</span><span class=p>(</span><span class=n>b</span><span class=p>,</span> <span class=s1>&#39;S_number&#39;</span><span class=p>)</span>
+            <span class=n>r</span><span class=o>.</span><span class=n>P_number</span> <span class=o>=</span> <span class=n>_get</span><span class=p>(</span><span class=n>b</span><span class=p>,</span> <span class=s1>&#39;P_number&#39;</span><span class=p>)</span>
 
     <span class=c1># Opt-in battery thermal-management / degradation results, if the post-design</span>
     <span class=c1># analysis (battery.thermal_degradation_analysis) was run before results().</span>
@@ -1273,16 +1277,16 @@ powertrain.aircraft = myaircraft
     <span class=n>r</span><span class=o>.</span><span class=n>_aircraft</span> <span class=o>=</span> <span class=n>aircraft</span>
     <span class=k>return</span> <span class=n>r</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.results.AircraftResults.input_summary class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">input_summary</span> <a href=#PhlyGreen.results.AircraftResults.input_summary class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>input_summary</span><span class=p>()</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Return a human-readable summary of <em>all</em> inputs that produced this design.</p> <p>Includes the configuration flags (Configuration / HybridType / AircraftType / weight &amp; battery class) and every legacy input block that was set on the aircraft (mission, aerodynamics, constraints, energy, cell, well-to-tank, climate, propeller, FLOPS, tank) plus the mission / diversion / loiter flight segments. Use it to keep track of exactly what was solved; pair it with :meth:<code>to_dict</code> for the outputs.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/results.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>136</span>
-<span class=normal>137</span>
-<span class=normal>138</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Return a human-readable summary of <em>all</em> inputs that produced this design.</p> <p>Includes the configuration flags (Configuration / HybridType / AircraftType / weight &amp; battery class) and every legacy input block that was set on the aircraft (mission, aerodynamics, constraints, energy, cell, well-to-tank, climate, propeller, FLOPS, tank) plus the mission / diversion / loiter flight segments. Use it to keep track of exactly what was solved; pair it with :meth:<code>to_dict</code> for the outputs.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/results.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>138</span>
 <span class=normal>139</span>
 <span class=normal>140</span>
 <span class=normal>141</span>
 <span class=normal>142</span>
 <span class=normal>143</span>
 <span class=normal>144</span>
-<span class=normal>145</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>input_summary</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
+<span class=normal>145</span>
+<span class=normal>146</span>
+<span class=normal>147</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>input_summary</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;Return a human-readable summary of *all* inputs that produced this design.</span>
 
 <span class=sd>    Includes the configuration flags (Configuration / HybridType / AircraftType /</span>
@@ -1293,21 +1297,19 @@ powertrain.aircraft = myaircraft
 <span class=sd>    &quot;&quot;&quot;</span>
     <span class=k>return</span> <span class=n>_format_inputs</span><span class=p>(</span><span class=bp>self</span><span class=o>.</span><span class=n>inputs</span><span class=p>)</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.results.AircraftResults.print_input_summary class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">print_input_summary</span> <a href=#PhlyGreen.results.AircraftResults.print_input_summary class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>print_input_summary</span><span class=p>()</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Print :meth:<code>input_summary</code> to stdout.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/results.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>147</span>
-<span class=normal>148</span>
-<span class=normal>149</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>print_input_summary</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Print :meth:<code>input_summary</code> to stdout.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/results.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>149</span>
+<span class=normal>150</span>
+<span class=normal>151</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>print_input_summary</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;Print :meth:`input_summary` to stdout.&quot;&quot;&quot;</span>
     <span class=nb>print</span><span class=p>(</span><span class=bp>self</span><span class=o>.</span><span class=n>input_summary</span><span class=p>())</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.results.AircraftResults.to_dict class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">to_dict</span> <a href=#PhlyGreen.results.AircraftResults.to_dict class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>to_dict</span><span class=p>()</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Return a plain dict of all fields (suitable for JSON serialization).</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/results.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>132</span>
-<span class=normal>133</span>
-<span class=normal>134</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>to_dict</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Return a plain dict of all fields (suitable for JSON serialization).</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/results.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>134</span>
+<span class=normal>135</span>
+<span class=normal>136</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>to_dict</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;Return a plain dict of all fields (suitable for JSON serialization).&quot;&quot;&quot;</span>
     <span class=k>return</span> <span class=n>asdict</span><span class=p>(</span><span class=bp>self</span><span class=p>)</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.results.AircraftResults.write_timeseries class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">write_timeseries</span> <a href=#PhlyGreen.results.AircraftResults.write_timeseries class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>write_timeseries</span><span class=p>(</span><span class=n>path</span><span class=p>,</span> <span class=n>include_components</span><span class=o>=</span><span class=s1>&#39;auto&#39;</span><span class=p>)</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Dump every time-evolving mission variable to a CSV file (debug helper).</p> <p>Writes one row per solver time point with the raw ODE states, the derived mission quantities (altitude, velocity, SOC, phi, …), the power flow (propulsive / gas-turbine / electric-motor power) and the Class-II component quantities. <code>include_components</code> defaults to <code>"auto"</code> — only components that actually used a Class-II model in this design are added (a constant-efficiency design loads no surrogates); pass <code>True</code> to force all or <code>False</code> to omit. Requires the results to have been built via :meth:<code>from_aircraft</code> / :meth:<code>Aircraft.results</code>. Returns the path.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/results.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>151</span>
-<span class=normal>152</span>
-<span class=normal>153</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Dump every time-evolving mission variable to a CSV file (debug helper).</p> <p>Writes one row per solver time point with the raw ODE states, the derived mission quantities (altitude, velocity, SOC, phi, …), the power flow (propulsive / gas-turbine / electric-motor power) and the Class-II component quantities. <code>include_components</code> defaults to <code>"auto"</code> — only components that actually used a Class-II model in this design are added (a constant-efficiency design loads no surrogates); pass <code>True</code> to force all or <code>False</code> to omit. Requires the results to have been built via :meth:<code>from_aircraft</code> / :meth:<code>Aircraft.results</code>. Returns the path.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/results.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>153</span>
 <span class=normal>154</span>
 <span class=normal>155</span>
 <span class=normal>156</span>
@@ -1321,7 +1323,9 @@ powertrain.aircraft = myaircraft
 <span class=normal>164</span>
 <span class=normal>165</span>
 <span class=normal>166</span>
-<span class=normal>167</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>write_timeseries</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>path</span><span class=p>,</span> <span class=n>include_components</span><span class=o>=</span><span class=s2>&quot;auto&quot;</span><span class=p>):</span>
+<span class=normal>167</span>
+<span class=normal>168</span>
+<span class=normal>169</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>write_timeseries</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>path</span><span class=p>,</span> <span class=n>include_components</span><span class=o>=</span><span class=s2>&quot;auto&quot;</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;Dump every time-evolving mission variable to a CSV file (debug helper).</span>
 
 <span class=sd>    Writes one row per solver time point with the raw ODE states, the derived mission</span>

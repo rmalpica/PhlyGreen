@@ -211,13 +211,25 @@
 <span class=normal>426</span>
 <span class=normal>427</span>
 <span class=normal>428</span>
-<span class=normal>429</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>ComputePRatio</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>alt</span><span class=p>,</span> <span class=n>vel</span><span class=p>,</span> <span class=n>P_req_net</span><span class=p>):</span>
+<span class=normal>429</span>
+<span class=normal>430</span>
+<span class=normal>431</span>
+<span class=normal>432</span>
+<span class=normal>433</span>
+<span class=normal>434</span>
+<span class=normal>435</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>ComputePRatio</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>alt</span><span class=p>,</span> <span class=n>vel</span><span class=p>,</span> <span class=n>P_req_net</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;Computes operational state given altitude, velocity and required net power.&quot;&quot;&quot;</span>
     <span class=k>if</span> <span class=ow>not</span> <span class=bp>self</span><span class=o>.</span><span class=n>Sizing_Done</span><span class=p>:</span> <span class=bp>self</span><span class=o>.</span><span class=n>ComputeAndStoreWeights</span><span class=p>(</span><span class=mf>1000.0</span><span class=p>)</span>
 
     <span class=n>P_amb</span><span class=p>,</span> <span class=n>T_amb</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>_get_env</span><span class=p>(</span><span class=n>alt</span><span class=p>)</span>
 
-    <span class=n>eta_mech</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>EtaGB</span> <span class=o>*</span> <span class=bp>self</span><span class=o>.</span><span class=n>EtaEM</span> <span class=o>*</span> <span class=bp>self</span><span class=o>.</span><span class=n>EtaPM</span>
+    <span class=c1># Electric-motor efficiency: the constant Eta Electric Motor, or — when the Class-II</span>
+    <span class=c1># (&#39;Smart&#39;) d-q motor model is selected — its operating-point efficiency.</span>
+    <span class=k>if</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>EnergyInput</span><span class=o>.</span><span class=n>get</span><span class=p>(</span><span class=s1>&#39;Eta Electric Motor Model&#39;</span><span class=p>)</span> <span class=o>==</span> <span class=s1>&#39;Smart&#39;</span><span class=p>:</span>
+        <span class=n>eta_em</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>powertrain</span><span class=o>.</span><span class=n>eta</span><span class=p>(</span><span class=s1>&#39;electric_motor&#39;</span><span class=p>,</span> <span class=n>alt</span><span class=p>,</span> <span class=n>vel</span><span class=p>,</span> <span class=n>P_req_net</span><span class=p>)</span>
+    <span class=k>else</span><span class=p>:</span>
+        <span class=n>eta_em</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>EtaEM</span>
+    <span class=n>eta_mech</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>EtaGB</span> <span class=o>*</span> <span class=n>eta_em</span> <span class=o>*</span> <span class=bp>self</span><span class=o>.</span><span class=n>EtaPM</span>
     <span class=k>if</span> <span class=nb>hasattr</span><span class=p>(</span><span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>powertrain</span><span class=p>,</span> <span class=s1>&#39;Propeller&#39;</span><span class=p>):</span>
         <span class=n>eta_prop</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>powertrain</span><span class=o>.</span><span class=n>Propeller</span><span class=o>.</span><span class=n>ComputePropEfficiency</span><span class=p>(</span><span class=n>alt</span><span class=p>,</span> <span class=n>vel</span><span class=p>,</span> <span class=n>P_req_net</span><span class=p>)</span>
         <span class=n>eta_mech</span> <span class=o>*=</span> <span class=n>eta_prop</span>
@@ -573,13 +585,7 @@
     <span class=n>sizing_mass</span> <span class=o>=</span> <span class=mf>25000.0</span> <span class=k>if</span> <span class=n>WTO</span> <span class=o>&lt;</span> <span class=mf>10000.0</span> <span class=k>else</span> <span class=n>WTO</span>
     <span class=k>return</span> <span class=bp>self</span><span class=o>.</span><span class=n>_size_stack</span><span class=p>(</span><span class=n>pw</span> <span class=o>*</span> <span class=n>sizing_mass</span><span class=p>)</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.Systems.FuelCell.FuelCell.FuelCell.report_sizing class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">report_sizing</span> <a href=#PhlyGreen.Systems.FuelCell.FuelCell.FuelCell.report_sizing class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>report_sizing</span><span class=p>(</span><span class=n>raise_on_undersize</span><span class=o>=</span><span class=kc>False</span><span class=p>)</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Check that the sized fuel cell can deliver the power the mission demands.</p> <p>Mirrors :meth:<code>Powertrain.report_class_ii_sizing</code> for the fuel cell. Run <em>after</em> the weight-sizing loop has flown the mission: :meth:<code>ComputePRatio</code> records, at every operating point, the ratio of required to <em>available</em> net power (the available power falls with altitude as the air-system draws more), so a stack whose sea-level rating looks sufficient can still be <strong>power-limited at altitude</strong>. Without this check that shortfall is hidden — <code>ComputePRatio</code> silently substitutes an analytical fallback.</p> <p>Returns a <code>dict</code> with the rated power, the worst-case load ratio and its altitude, whether the stack is <code>power_limited</code> and the <code>min_rating</code> needed to avoid it, and warns (or, with <code>raise_on_undersize=True</code>, raises) when the cell is undersized.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Systems/FuelCell/FuelCell.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>431</span>
-<span class=normal>432</span>
-<span class=normal>433</span>
-<span class=normal>434</span>
-<span class=normal>435</span>
-<span class=normal>436</span>
-<span class=normal>437</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Check that the sized fuel cell can deliver the power the mission demands.</p> <p>Mirrors :meth:<code>Powertrain.report_class_ii_sizing</code> for the fuel cell. Run <em>after</em> the weight-sizing loop has flown the mission: :meth:<code>ComputePRatio</code> records, at every operating point, the ratio of required to <em>available</em> net power (the available power falls with altitude as the air-system draws more), so a stack whose sea-level rating looks sufficient can still be <strong>power-limited at altitude</strong>. Without this check that shortfall is hidden — <code>ComputePRatio</code> silently substitutes an analytical fallback.</p> <p>Returns a <code>dict</code> with the rated power, the worst-case load ratio and its altitude, whether the stack is <code>power_limited</code> and the <code>min_rating</code> needed to avoid it, and warns (or, with <code>raise_on_undersize=True</code>, raises) when the cell is undersized.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Systems/FuelCell/FuelCell.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>437</span>
 <span class=normal>438</span>
 <span class=normal>439</span>
 <span class=normal>440</span>
@@ -620,7 +626,13 @@
 <span class=normal>475</span>
 <span class=normal>476</span>
 <span class=normal>477</span>
-<span class=normal>478</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>report_sizing</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>raise_on_undersize</span><span class=o>=</span><span class=kc>False</span><span class=p>):</span>
+<span class=normal>478</span>
+<span class=normal>479</span>
+<span class=normal>480</span>
+<span class=normal>481</span>
+<span class=normal>482</span>
+<span class=normal>483</span>
+<span class=normal>484</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>report_sizing</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>raise_on_undersize</span><span class=o>=</span><span class=kc>False</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;Check that the sized fuel cell can deliver the power the mission demands.</span>
 
 <span class=sd>    Mirrors :meth:`Powertrain.report_class_ii_sizing` for the fuel cell. Run *after* the</span>
