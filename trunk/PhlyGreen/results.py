@@ -108,14 +108,16 @@ class AircraftResults:
             r.SourceEnergy = _get(aircraft.welltowake, 'SourceEnergy')
             r.Psi = _get(aircraft.welltowake, 'Psi')
 
-        # Detailed (Class II) battery pack specs only exist for the Hybrid configuration.
-        if r.configuration == 'Hybrid':
-            b = aircraft.battery
-            r.battery_class = getattr(b, 'BatteryClass', None)
-            r.pack_energy = _get(b, 'pack_energy')
-            r.pack_power_max = _get(b, 'pack_power_max')
-            r.S_number = _get(b, 'S_number')
-            r.P_number = _get(b, 'P_number')
+        # Battery pack specs: the configuration (S/P cells), energy and power exist for the
+        # Class-II battery, used by the Hybrid and the fuel-cell + battery architectures.
+        if r.configuration in ('Hybrid', 'FuelCellBattery'):
+            b = getattr(aircraft, 'battery', None)
+            if b is not None:
+                r.battery_class = getattr(b, 'BatteryClass', None)
+                r.pack_energy = _get(b, 'pack_energy')
+                r.pack_power_max = _get(b, 'pack_power_max')
+                r.S_number = _get(b, 'S_number')
+                r.P_number = _get(b, 'P_number')
 
         # Opt-in battery thermal-management / degradation results, if the post-design
         # analysis (battery.thermal_degradation_analysis) was run before results().

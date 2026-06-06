@@ -182,6 +182,8 @@ class Mission:
             return self.HydrogenConfiguration(WTO)
 
         elif self.aircraft.Configuration == 'FuelCellBattery':
+            if getattr(self.aircraft.battery, 'BatteryClass', None) == 'II':
+                return self.FuelCellBatteryConfigurationClassII(WTO)
             return self.FuelCellBatteryConfiguration(WTO)
 
         else:
@@ -305,7 +307,15 @@ class Mission:
         """
         self.WTO = WTO
         fc = self.aircraft.fuelcell
-        eta_elec = fc.EtaEM * fc.EtaPM * fc.EtaGB   # battery electrical -> shaft
+
+        # Battery electrical -> shaft efficiency. Constant by default; when the Class-II
+        # ('Smart') d-q motor model is selected, the electric-motor term varies with the
+        # operating point.
+        em_smart = self.aircraft.EnergyInput.get('Eta Electric Motor Model') == 'Smart'
+
+        def eta_elec_at(alt, vel, P):
+            em = self.aircraft.powertrain.eta('electric_motor', alt, vel, P) if em_smart else fc.EtaEM
+            return em * fc.EtaPM * fc.EtaGB
 
         def PowerPropulsive(Beta, t):
             PPoWTO = self.aircraft.performance.PoWTO(
@@ -375,7 +385,9 @@ class Mission:
                               PowerPropulsive(b, t) for t, b in zip(arr.t, arr.y[1])])
             p_fc = np.array([PowerPropulsive(b, t) for t, b in zip(arr.t, arr.y[1])]) - p_bat
             if len(arr.t) > 1:
-                E_bat += float(np.trapezoid(p_bat / eta_elec, arr.t))
+                eta_arr = np.array([eta_elec_at(self.profile.Altitude(t), self.profile.Velocity(t), pb)
+                                    for t, pb in zip(arr.t, p_bat)])
+                E_bat += float(np.trapezoid(p_bat / eta_arr, arr.t))
             pp_bat_peak = max(pp_bat_peak, float(p_bat.max()) if len(p_bat) else 0.0)
             pp_fc_peak = max(pp_fc_peak, float(p_fc.max()) if len(p_fc) else 0.0)
         self.EBat = E_bat
@@ -383,6 +395,216 @@ class Mission:
         self.Max_PEng_alt = 0.0
         self.Max_PBat = max(pp_bat_peak, self.TO_PBat)
         return self.Ef[-1], self.EBat
+
+
+    def FuelCellBatteryConfigurationClassII(self, WTO):
+        """Fuel-cell + battery mission with a **Class-II** (cell-level electro-thermal) battery.
+
+        Same propulsive split as :meth:`FuelCellBatteryConfiguration` — the battery covers
+        ``phi`` of the propulsive power and the fuel cell the remaining ``1 - phi`` — but the
+        battery is the physics cell model: the mission integrates the pack state (charge and
+        temperature) and the pack is **P-number sized** so the SOC / voltage / current limits
+        hold over the real mission current profile, exactly as :meth:`HybridConfigurationClassII`
+        does for the gas-turbine hybrid. Five ODE states are carried:
+        ``[E_h2, E_bat, Beta, it (As), T (K)]``. Returns ``(hydrogen chemical energy, battery
+        energy)`` and leaves ``aircraft.battery.pack_weight`` and ``Max_Bat_Thermal_Pwr`` for the
+        weight loop.
+        """
+        self.WTO = WTO
+        fc = self.aircraft.fuelcell
+
+        # Battery electrical -> shaft efficiency. Constant by default; the electric-motor term
+        # becomes operating-point dependent when the Class-II ('Smart') d-q model is selected.
+        em_smart = self.aircraft.EnergyInput.get('Eta Electric Motor Model') == 'Smart'
+
+        def eta_elec_at(alt, vel, P):
+            em = self.aircraft.powertrain.eta('electric_motor', alt, vel, P) if em_smart else fc.EtaEM
+            return em * fc.EtaPM * fc.EtaGB
+
+        def PowerPropulsive(Beta, t):
+            return WTO * self.aircraft.performance.PoWTO(
+                self.aircraft.DesignWTOoS, Beta, self.profile.PowerExcess(t), 1,
+                self.profile.Altitude(t), self.DISA, self.profile.Velocity(t), 'TAS')
+
+        def model(t, y):
+            # states: y = [E_h2, E_bat, Beta, it (As), T (K)]
+            Beta = y[2]
+            PP = self.check_PP(PowerPropulsive(Beta, t))
+            phi = float(self.profile.SuppliedPowerRatio(t))     # battery fraction of PP
+            alt, vel = self.profile.Altitude(t), self.profile.Velocity(t)
+
+            # fuel-cell (hydrogen) branch — the fuel cell supplies (1 - phi) of the power
+            P_fc = (1.0 - phi) * PP
+            dEh2 = P_fc * fc.ComputePRatio(alt, vel, P_fc)[0] if P_fc > 0 else 0.0
+            q = fc.Q_thermal
+            if q > self.Max_FC_Thermal_Pwr:
+                self.Max_FC_Thermal_Pwr = q
+                self.Max_FC_Thermal_Pwr_alt = alt
+            dbetadt = - dEh2 / (self.ef * self.WTO)             # only hydrogen burn changes mass
+
+            # battery branch — Class-II cell model. The pack must deliver phi*PP of shaft power,
+            # i.e. phi*PP/eta_elec of electrical power at its terminals.
+            PElectric = (phi * PP) / eta_elec_at(alt, vel, phi * PP)
+            b = self.aircraft.battery
+            b.T = y[4]
+            b.phi = phi
+            b.it = y[3] / 3600                                 # spent charge -> SOC (validated)
+            b.i = b.Power_2_current(PElectric)                 # current (validated)
+            dEdt_bat = b.i * b.Vout                             # Vout generated + validated
+
+            Mach = Speed.TAS2Mach(vel, alt, DISA=self.DISA)
+            Tamb = ISA.atmosphere.T0std(alt, Mach)
+            rho = ISA.atmosphere.RHO0std(alt, Mach, self.DISA)
+            dTdt, _ = b.heatLoss(Tamb, rho)
+            if phi > 0.:                                        # bang-bang thermostat at the ceiling
+                dTdt = max(dTdt, 0.) if y[4] < 273.15 + self.T_battery_limit else 0.
+            else:
+                dTdt = min(dTdt, 0.)
+            return [dEh2, dEdt_bat, dbetadt, b.i, dTdt]
+
+        # Worst-case off-mission propulsive power (take-off field length / OEI climb) and its
+        # battery / fuel-cell shares, at the constraint conditions.
+        P_TO = WTO * self.aircraft.performance.TakeOff(
+            self.aircraft.DesignWTOoS, self.aircraft.constraint.TakeOffConstraints['Beta'],
+            self.aircraft.constraint.TakeOffConstraints['Altitude'],
+            self.aircraft.constraint.TakeOffConstraints['kTO'],
+            self.aircraft.constraint.TakeOffConstraints['sTO'], self.aircraft.constraint.DISA,
+            self.aircraft.constraint.TakeOffConstraints['Speed'],
+            self.aircraft.constraint.TakeOffConstraints['Speed Type'])
+        P_OEI = WTO * self.aircraft.performance.OEIClimb(
+            self.aircraft.DesignWTOoS, self.aircraft.constraint.OEIClimbConstraints['Beta'],
+            self.aircraft.constraint.OEIClimbConstraints['Speed'] * self.aircraft.constraint.OEIClimbConstraints['Climb Gradient'],
+            1., self.aircraft.constraint.OEIClimbConstraints['Altitude'], self.aircraft.constraint.DISA,
+            self.aircraft.constraint.OEIClimbConstraints['Speed'],
+            self.aircraft.constraint.OEIClimbConstraints['Speed Type'])
+        P_total_TO = max(P_TO, P_OEI)
+        phi_TO = float(self.profile.SPW[0][0]) if self.profile.SPW is not None else 0.0
+        self.TO_PP = (1.0 - phi_TO) * P_total_TO            # fuel-cell propulsive share at TO/OEI
+        self.TO_PBat = phi_TO * P_total_TO                 # battery propulsive share at TO/OEI
+
+        def evaluate_mission_given_P(P_number):
+            """Fly the whole mission for a given parallel-cell count; (feasible, error_code)."""
+            self.P_n_arr.append(P_number)
+            if P_number == 0:
+                return False, None
+            self.aircraft.battery.Configure(P_number)
+            # Take-off battery feasibility (independent of the integration).
+            try:
+                self.aircraft.battery.T = self.startT + 273.15
+                self.aircraft.battery.it = 0
+                _to_alt = self.aircraft.constraint.TakeOffConstraints['Altitude']
+                _to_spd = self.aircraft.constraint.TakeOffConstraints['Speed']
+                self.aircraft.battery.i = self.aircraft.battery.Power_2_current(
+                    self.TO_PBat / eta_elec_at(_to_alt, _to_spd, self.TO_PBat))
+                self.aircraft.battery.Vout
+            except BatteryError as err:
+                if not self.size_battery_pack:
+                    print(err)
+                return False, err.code
+
+            np.seterr(over="raise")
+            times = np.append(self.profile.Breaks, self.profile.MissionTime2)
+            self.integral_solution = []
+            self.Max_FC_Thermal_Pwr = -1.0
+            y0 = [0, 0, self.beta0, 0, self.startT + 273.15]
+            for i in range(len(times) - 1):
+                try:
+                    sol = integrate.solve_ivp(model, [times[i], times[i + 1]], y0,
+                                              method="BDF", rtol=1e-6)
+                    self.integral_solution.append(sol)
+                except BatteryError as err:
+                    if not self.size_battery_pack:
+                        print(err)
+                    return False, err.code
+                self.Ef = sol.y[0]
+                self.EBat = sol.y[1]
+                self.Beta = sol.y[2]
+                y0 = [sol.y[0][-1], sol.y[1][-1], sol.y[2][-1], sol.y[3][-1], sol.y[4][-1]]
+            return True, None
+
+        def find_P_nr(n_guess, wto_ratio):
+            """Minimal feasible parallel-cell count via doubling/halving brackets + bisection."""
+            if wto_ratio is not None:
+                n_max = math.ceil(n_guess * wto_ratio)
+                n_min = n_max - 1
+            else:
+                n_max = n_guess
+                n_min = math.floor(n_max / 2)
+            nmax_is_bounded = False
+            while evaluate_mission_given_P(n_min)[0]:
+                n_max = n_min
+                n_min = math.floor(n_min / 2)
+                nmax_is_bounded = True
+            if not nmax_is_bounded:
+                while not evaluate_mission_given_P(n_max)[0]:
+                    n_min = n_max
+                    n_max = n_max * 2
+            n = math.ceil((n_max + n_min) / 2)
+            optimal = False
+            while not optimal:
+                valid = evaluate_mission_given_P(n)[0]
+                if valid and (n - n_min) == 1:
+                    optimal = True
+                elif valid:
+                    n_max = n
+                    n = math.floor((n_max + n_min) / 2)
+                else:
+                    n_min = n
+                    n = math.ceil((n_max + n_min) / 2)
+            return n
+
+        if self.size_battery_pack:
+            ratio = None if self.last_weight is None else self.WTO / self.last_weight
+            P_n_guess = 128 if self.optimal_n is None else self.optimal_n
+            self.optimal_n = find_P_nr(P_n_guess, ratio)
+            self.last_weight = self.WTO
+            self.Past_P_n.append(self.P_n_arr)
+            self.P_n_arr = []
+        else:
+            success, code = evaluate_mission_given_P(self.aircraft.battery.P_number)
+            if not success:
+                return 0, code
+
+        # Peak fuel-cell / battery propulsive power and the battery TMS heat over the sized mission.
+        times, beta, it_arr, T_arr = [], [], [], []
+        for arr in self.integral_solution:
+            times = np.concatenate([times, arr.t])
+            beta = np.concatenate([beta, arr.y[2]])
+            it_arr = np.concatenate([it_arr, arr.y[3]])
+            T_arr = np.concatenate([T_arr, arr.y[4]])
+        self.MissionTimes = times
+        PP = np.array([WTO * self.aircraft.performance.PoWTO(
+            self.aircraft.DesignWTOoS, beta[i], self.profile.PowerExcess(times[i]), 1,
+            self.profile.Altitude(times[i]), self.DISA, self.profile.Velocity(times[i]), 'TAS')
+            for i in range(len(times))])
+        phis = np.array([float(self.profile.SuppliedPowerRatio(times[i])) for i in range(len(times))])
+        p_fc, p_bat = (1.0 - phis) * PP, phis * PP
+        self.Max_PEng = float(np.max(p_fc)) if len(p_fc) else 0.0
+        self.Max_PEng_alt = self.profile.Altitude(times[int(np.argmax(p_fc))]) if len(p_fc) else 0.0
+        self.Max_PBat = max(float(np.max(p_bat)) if len(p_bat) else 0.0, self.TO_PBat)
+
+        ceiling = 273.15 + self.T_battery_limit
+        b = self.aircraft.battery
+        q_pack_peak = 0.0
+        for i in range(len(times)):
+            if T_arr[i] < ceiling - 0.5:                   # cooling acts only at the ceiling
+                continue
+            try:
+                b.T = T_arr[i]
+                b.it = it_arr[i] / 3600
+                alt = self.profile.Altitude(times[i])
+                vel = self.profile.Velocity(times[i])
+                b.i = b.Power_2_current(p_bat[i] / eta_elec_at(alt, vel, p_bat[i]))
+                Mach = Speed.TAS2Mach(vel, alt, DISA=self.DISA)
+                Tamb = ISA.atmosphere.T0std(alt, Mach)
+                rho = ISA.atmosphere.RHO0std(alt, Mach, self.DISA)
+                _, q_cell = b.heatLoss(Tamb, rho)
+                q_pack_peak = max(q_pack_peak, q_cell * b.cells_total)
+            except Exception:
+                continue
+        self.Max_Bat_Thermal_Pwr = q_pack_peak
+
+        return self.Ef[-1], self.EBat[-1]
 
 
     def TraditionalConfiguration(self,WTO):

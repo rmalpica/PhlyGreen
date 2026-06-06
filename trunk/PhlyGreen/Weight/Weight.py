@@ -357,10 +357,15 @@ class Weight:
             self.WH2_Fuel = (E_h2_chem / self.ef) * 1.05
             self.Wf = self.WH2_Fuel
 
-            # Battery mass: max of energy- and power-limited sizing (Class I).
-            WBat_energy = (E_bat / 3600.0) / (spec_energy_Wh * usable_soc)
-            WBat_power = self.aircraft.mission.Max_PBat / spec_power
-            self.WBat = max(WBat_energy, WBat_power)
+            # Battery mass. Class II: the P-number-sized physics pack (mass from the cell model,
+            # set during the mission). Class I (default): max of energy- and power-limited sizing
+            # from the EnergyInput specific energy/power.
+            if self.aircraft.battery.BatteryClass == 'II':
+                self.WBat = self.aircraft.battery.pack_weight
+            else:
+                WBat_energy = (E_bat / 3600.0) / (spec_energy_Wh * usable_soc)
+                WBat_power = self.aircraft.mission.Max_PBat / spec_power
+                self.WBat = max(WBat_energy, WBat_power)
 
             # Hydrogen tank (empty) mass.
             if self.WH2_Fuel <= 0:
@@ -376,6 +381,12 @@ class Weight:
             Q_max = self.aircraft.mission.Max_FC_Thermal_Pwr
             hex_sp_h2 = self.aircraft.EnergyInput.get('HEX Specific Power H2', 5000.0)
             self.WHeat_Exchanger = Q_max / hex_sp_h2 if Q_max > 0 else 0.0
+            # Class-II battery: add its thermal-management (cooling) mass from the peak in-flight
+            # pack waste heat (rejected to ambient — lower specific power than the cryo-H2 HEX).
+            if self.aircraft.battery.BatteryClass == 'II':
+                Q_bat = self.aircraft.mission.Max_Bat_Thermal_Pwr
+                hex_sp_bat = self.aircraft.EnergyInput.get('HEX Specific Power Battery', 1500.0)
+                self.WHeat_Exchanger += Q_bat / hex_sp_bat if (Q_bat and Q_bat > 0) else 0.0
 
             # Structure.
             if self.Class == 'I':

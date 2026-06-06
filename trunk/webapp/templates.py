@@ -53,6 +53,21 @@ def make_config(label):
     return TEMPLATES[label]["factory"]()
 
 
+def fcb_class_ii_cell():
+    """A Class-II (cell-level electro-thermal) battery for the fuel-cell + battery design.
+
+    Attaching this to a ``FuelCellBattery`` config switches the battery from the simple Class-I
+    specific-energy/power model to the physics cell model (P-number sizing + thermal cooling).
+    """
+    from PhlyGreen.config import CellConfig
+    return CellConfig(cell_class="II", model="Finger-Cell-Thermal", specific_power=8000,
+                      specific_energy=250, minimum_soc=0.2, pack_voltage=800,
+                      initial_temperature=25, max_operative_temperature=50)
+
+
+FCB_LABEL = "Hybrid fuel cell + battery"
+
+
 def template_blurb(label):
     return TEMPLATES[label]["blurb"]
 

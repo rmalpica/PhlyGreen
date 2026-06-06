@@ -52,6 +52,16 @@ def build_inputs():
     base = templates.make_config(arch)
     prefix = arch                              # namespace widget keys per architecture
 
+    # Fuel-cell + battery: let the user pick the battery model (Class I energy/power, or the
+    # Class-II cell-level electro-thermal model with P-number sizing).
+    if arch == templates.FCB_LABEL:
+        bm = st.sidebar.selectbox(
+            "Battery model", ["Class I (specific energy/power)", "Class II (cell thermal)"],
+            key=f"{prefix}.fcb_battmodel",
+            help="Class II sizes a physics cell pack (P-number + thermal cooling); slower to run.")
+        if bm.startswith("Class II"):
+            base.cell = templates.fcb_class_ii_cell()
+
     # 1. curated "main" inputs
     st.sidebar.markdown("### Main inputs")
     overrides = {}

@@ -24,6 +24,7 @@ class Battery:
     def __init__(self, aircraft):
         self.aircraft = aircraft
 
+        self.BatteryClass = None     # set by SetInput when a CellInput is supplied
         self.pack_Vmax = 800
         self._SOC_min = None
         self._it = 0         # integral of current [Ah], used to compute SOC

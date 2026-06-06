@@ -37,6 +37,11 @@ def headline_metrics(results):
     ]
     if results.get("WBat"):
         metrics.append(("Battery [kg]", _fmt(results.get("WBat"))))
+    # Class-II battery: show the cell pack configuration and its specific energy explicitly.
+    if results.get("S_number") and results.get("P_number"):
+        metrics.append(("Battery cells", f"S{results['S_number']:.0f}/P{results['P_number']:.0f}"))
+        if results.get("pack_energy") and results.get("WBat"):
+            metrics.append(("Cell [Wh/kg]", _fmt(results["pack_energy"] / results["WBat"])))
     if results.get("SourceEnergy"):
         metrics.append(("Source energy [MJ]", _fmt(results.get("SourceEnergy"), scale=1e-6)))
     return metrics

@@ -42,6 +42,7 @@ needs pandas — each degrades gracefully if the dependency is missing.
 | `22_hydrogen_tank.py` | Size the cryogenic LH2 tank and track its pressure/mass/venting/heat over the mission (needs CoolProp) | tank state + dashboard |
 | `23_fuelcell_battery_hybrid.py` | Hybridize a fuel cell with a battery; sweep the battery power share | sweep panels |
 | `24_gt_emissions_surrogate.py` | State-dependent GT pollutant emissions (NOx/CO/UHC) from the PW127 EI response surface; `einox_model='Surrogate'` vs Filippone | EI vs power & altitude |
+| `25_fuelcell_battery_class_ii_models.py` | Fuel-cell + battery sized with the Class-II battery (P-number + thermal), the d-q ("Smart") electric motor and the Hamilton propeller; plots SOC/temperature, power split and component efficiencies (compute-heavy) | profile, power split, SOC/T, efficiencies |
 
 ## Outer-loop applications
 

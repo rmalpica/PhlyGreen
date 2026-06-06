@@ -67,7 +67,7 @@ def _mission_stages():
         Segment('Climb1', 'ConstantRateClimb', {'CB': 0.16, 'Speed': 77,  'StartAltitude': 100,  'EndAltitude': 1500}, phi_start=0, phi_end=0),
         Segment('Climb2', 'ConstantRateClimb', {'CB': 0.08, 'Speed': 120, 'StartAltitude': 1500, 'EndAltitude': 4500}, phi_start=0, phi_end=0),
         Segment('Climb3', 'ConstantRateClimb', {'CB': 0.07, 'Speed': 125, 'StartAltitude': 4500, 'EndAltitude': 8000}, phi_start=0, phi_end=0),
-        Segment('Cruise', 'ConstantMachCruise', {'Mach': 0.4, 'Altitude': 8000}, phi_start=0, phi_end=0.5),
+        Segment('Cruise', 'ConstantMachCruise', {'Mach': 0.4, 'Altitude': 8000}, phi_start=0, phi_end=0.15),
         Segment('Descent1', 'ConstantRateDescent', {'CB': -0.04, 'Speed': 90, 'StartAltitude': 8000, 'EndAltitude': 200}, phi_start=0, phi_end=0),
     ])
 
@@ -183,12 +183,12 @@ def hybrid_config(battery_class='II'):
     simple specific-energy/specific-power model.
     """
     if battery_class == 'I':
-        cell = CellConfig(cell_class='I', specific_energy=1500, specific_power=8000,
+        cell = CellConfig(cell_class='I', specific_energy=250, specific_power=8000,
                           minimum_soc=0.2)
     else:
         cell = CellConfig(
             cell_class='II', model='Finger-Cell-Thermal',
-            specific_power=8000, specific_energy=1500, minimum_soc=0.2,
+            specific_power=8000, specific_energy=250, minimum_soc=0.2,
             pack_voltage=800, initial_temperature=25, max_operative_temperature=50,
         )
     well_to_tank = WellToTankConfig(
@@ -295,8 +295,10 @@ def print_results(aircraft, title="Design results"):
         print(f"  Engine rating     : {r.engineRating/1000:10.1f} kW (total, all engines"
               + (f"; {r.engineRating/1000/n_eng:.1f} kW/engine for {int(n_eng)})" if n_eng and n_eng > 1 else ")"))
     if r.pack_energy is not None:
-        print(f"  Battery pack      : {r.pack_energy/3.6e6:.1f} kWh, "
-              f"{r.pack_power_max/1000:.1f} kW (S{r.S_number:.0f}/P{r.P_number:.0f})")
+        # pack_energy is in Wh (cell nominal voltage x capacity); WBat in kg.
+        print(f"  Battery pack      : {r.pack_energy/1000:.1f} kWh, {r.pack_power_max/1000:.1f} kW")
+        print(f"  Battery config    : S{r.S_number:.0f} / P{r.P_number:.0f} cells, "
+              f"{r.pack_energy/r.WBat:.0f} Wh/kg (cell-level specific energy)")
     if r.SourceEnergy is not None:
         print(f"  Well-to-wake      : {r.SourceEnergy/1e6:.1f} MJ source energy, Psi {r.Psi:.4f}")
     print("  --- take-off mass breakdown ---")

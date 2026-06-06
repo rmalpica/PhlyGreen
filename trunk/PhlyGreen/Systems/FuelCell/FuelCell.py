@@ -342,7 +342,13 @@ class FuelCell:
 
         P_amb, T_amb = self._get_env(alt)
         
-        eta_mech = self.EtaGB * self.EtaEM * self.EtaPM
+        # Electric-motor efficiency: the constant Eta Electric Motor, or — when the Class-II
+        # ('Smart') d-q motor model is selected — its operating-point efficiency.
+        if self.aircraft.EnergyInput.get('Eta Electric Motor Model') == 'Smart':
+            eta_em = self.aircraft.powertrain.eta('electric_motor', alt, vel, P_req_net)
+        else:
+            eta_em = self.EtaEM
+        eta_mech = self.EtaGB * eta_em * self.EtaPM
         if hasattr(self.aircraft.powertrain, 'Propeller'):
             eta_prop = self.aircraft.powertrain.Propeller.ComputePropEfficiency(alt, vel, P_req_net)
             eta_mech *= eta_prop

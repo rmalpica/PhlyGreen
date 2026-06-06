@@ -25,7 +25,9 @@ The sidebar has three layers:
 
 - **Main inputs** — the handful of parameters you tune most (range, payload, cruise Mach/altitude,
   Cd0, aspect ratio, efficiencies, and — for the battery architectures — the **take-off, climb and
-  cruise battery shares φ** separately, plus battery specific energy / fuel-cell voltage).
+  cruise battery shares φ** separately, plus battery specific energy / fuel-cell voltage). For the
+  fuel-cell + battery design a **Battery model** selector chooses Class I (specific energy/power) or
+  Class II (the cell-level electro-thermal model with P-number sizing + thermal cooling; slower).
 - **⚙️ Advanced inputs** — *every* parameter and **model choice**: the gas-turbine / propeller /
   electric-motor efficiency models, the NOₓ model, the battery class, the weight model (Class I/II),
   the aircraft type, optional fixed wing loading, and all the per-section scalars.
