@@ -77,7 +77,7 @@ def test_more_hybridization_grows_the_battery():
 def _fcb_config_class_ii(cruise_phi=0.1):
     cfg = _fcb_config(cruise_phi)
     cfg.cell = CellConfig(cell_class='II', model='Finger-Cell-Thermal',
-                          specific_power=8000, specific_energy=250, minimum_soc=0.2,
+                          specific_power=8000, specific_energy=1500, minimum_soc=0.2,
                           pack_voltage=800, initial_temperature=25, max_operative_temperature=50)
     return cfg
 

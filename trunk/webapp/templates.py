@@ -21,6 +21,20 @@ if _EXAMPLES not in sys.path:
 import common  # noqa: E402  (examples/common.py)
 
 
+def _power_hybridization(cfg, phi=0.2):
+    """Apply the tutorial-03 *power* hybridization to a battery config: the battery covers ``phi``
+    of the take-off and climb power and nothing in cruise (the primary source is sized for cruise).
+    """
+    for s in cfg.mission_stages.segments:
+        if s.name == "Takeoff":
+            s.phi, s.phi_start, s.phi_end = phi, None, None
+        elif s.segment_type == "ConstantRateClimb":
+            s.phi, s.phi_start, s.phi_end = None, phi, phi
+        elif s.segment_type == "ConstantMachCruise":
+            s.phi, s.phi_start, s.phi_end = None, 0.0, 0.0
+    return cfg
+
+
 # --- the labelled registry of starting designs ------------------------------------------------
 # Each factory returns a fully-validated PhlyGreen.config.AircraftConfig. The hydrogen template
 # uses the physics LH2 tank (CoolProp is a required dependency).
@@ -30,18 +44,20 @@ TEMPLATES = {
         "blurb": "Conventional fuel-only ATR-like turboprop. The baseline reference design.",
     },
     "Hybrid GT + battery": {
-        "factory": lambda: common.hybrid_config(battery_class="II"),
-        "blurb": "Gas turbine + battery hybrid (parallel by default — switch to serial under Advanced). "
-                 "The battery supplies a share (phi) of the propulsive power.",
+        "factory": lambda: _power_hybridization(common.hybrid_config(battery_class="II")),
+        "blurb": "Gas turbine + battery hybrid (parallel by default — switch to serial under "
+                 "Advanced). Power hybridization: the battery covers part of the take-off/climb "
+                 "peak so the gas turbine is sized for cruise.",
     },
     "Hydrogen fuel cell": {
         "factory": lambda: common.hydrogen_config(tank=True),
         "blurb": "Fuel-cell electric on liquid hydrogen with a physics-sized cryogenic LH2 tank.",
     },
     "Hybrid fuel cell + battery": {
-        "factory": lambda: common.fuelcell_battery_config(cruise_phi=0.15),
-        "blurb": "Hydrogen fuel cell hybridised with a battery that supplies a share (phi) of the "
-                 "propulsive power.",
+        "factory": lambda: _power_hybridization(common.fuelcell_battery_config(cruise_phi=0.0, tank=True)),
+        "blurb": "Hydrogen fuel cell hybridised with a battery. Power hybridization: the battery "
+                 "covers part of the take-off/climb peak so the fuel cell is sized for cruise. "
+                 "Physics-sized cryogenic LH2 tank.",
     },
 }
 
@@ -61,7 +77,7 @@ def fcb_class_ii_cell():
     """
     from PhlyGreen.config import CellConfig
     return CellConfig(cell_class="II", model="Finger-Cell-Thermal", specific_power=8000,
-                      specific_energy=250, minimum_soc=0.2, pack_voltage=800,
+                      specific_energy=1500, minimum_soc=0.2, pack_voltage=800,
                       initial_temperature=25, max_operative_temperature=50)
 
 

@@ -39,11 +39,16 @@ design automatically.
 
 ## What's in it
 
-- **Design** — choose one of four architectures (conventional turboprop, parallel hybrid,
-  hydrogen fuel cell, fuel cell + battery), tune the inputs, press **▶ Run design**, and read off
-  the sized aircraft: take-off weight, fuel/hydrogen, masses, the flight profile, the constraint
-  diagram and the take-off mass breakdown. Download the config, the results (JSON) and the mission
-  time series (CSV).
+- **Design** — choose one of four architectures (conventional turboprop, hybrid GT + battery,
+  hydrogen fuel cell, hybrid fuel cell + battery), tune the inputs, press **▶ Run design**, and
+  read off the sized aircraft: take-off weight, fuel/hydrogen, masses, the flight profile, the
+  constraint diagram and the take-off mass breakdown. The hydrogen architectures also size a
+  physics LH2 tank and show its **thermodynamic evolution** (pressure, stored H2, vent flow,
+  heater). An opt-in **well-to-wake emissions** panel reports WTW energy, CO₂ and CO₂-equivalent,
+  split into well-to-tank (upstream) and tank-to-wake (onboard), with **editable lifecycle factors**
+  (well-to-tank energy efficiency and CO₂ intensities per carrier) that update the result live. Download the config, the results
+  (JSON) and the mission time series (CSV). The battery architectures default to the *power
+  hybridization* of tutorial 03 (battery on take-off/climb, primary source sized for cruise).
 - **Compare** — size several architectures on the *same* mission, **using the inputs set in the
   sidebar**, and get a tutorial-style trade study: a wide summary table (masses, energy, CO₂), a
   stacked take-off mass breakdown (summing to WTO), onboard-vs-well-to-wake energy and CO₂ (with

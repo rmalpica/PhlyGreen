@@ -99,6 +99,22 @@ def mass_breakdown(aircraft):
     return pp.mass_breakdown(aircraft)
 
 
+def has_physics_tank(aircraft):
+    """True if the design carries a physics LH2 tank whose state can be tracked."""
+    tank = getattr(aircraft, "tank", None)
+    return tank is not None and hasattr(tank, "time_step")
+
+
+def tank_figure(aircraft):
+    """LH2 tank thermodynamic evolution (pressure, stored mass, vent flow) over the mission."""
+    pp.compute_tank_history(aircraft)
+    axes = pp.plot_tank_state(aircraft)
+    fig = axes[0].figure
+    axes[0].set_title("LH2 tank state over the mission")
+    fig.tight_layout()
+    return fig
+
+
 def timeseries_csv(aircraft):
     """Return the mission time-series as an in-memory CSV string (for a download button)."""
     import csv
@@ -121,6 +137,38 @@ METRIC_OPTIONS = {
     "Engine rating [kW]": ("engineRating", 1e-3),
     "Battery mass [kg]": ("WBat", 1.0),
 }
+
+
+def wtw_table(b):
+    """Well-to-wake breakdown as a WTT / TTW / total table (dict-of-columns for ``st.dataframe``)."""
+    rnd = lambda x: round(x)
+    return {
+        "stage": ["Well-to-tank (upstream)", "Tank-to-wake (onboard)", "Well-to-wake (total)"],
+        "energy [MJ]": [rnd(b["wtt_MJ"]), rnd(b["ttw_MJ"]), rnd(b["wtw_MJ"])],
+        "CO₂ [kg]": [rnd(b["wtt_co2"]), rnd(b["ttw_co2"]), rnd(b["wtw_co2"])],
+        "CO₂e [kg]": [rnd(b["wtt_co2e"]), rnd(b["ttw_co2e"]), rnd(b["wtw_co2e"])],
+    }
+
+
+def wtw_figure(b):
+    """Well-to-wake energy and CO₂/CO₂e, stacked into well-to-tank and tank-to-wake parts."""
+    fig, (a1, a2) = plt.subplots(1, 2, figsize=(11, 4.4))
+    a1.bar(["energy"], [b["ttw_MJ"]], color="tab:cyan", label="tank-to-wake (used)")
+    a1.bar(["energy"], [b["wtt_MJ"]], bottom=[b["ttw_MJ"]], color="tab:blue", label="well-to-tank (production)")
+    a1.set_ylabel("energy [MJ]"); a1.set_title("Well-to-wake energy")
+    a1.legend(fontsize=8); a1.grid(axis="y", alpha=0.3)
+
+    x = ["CO₂", "CO₂e"]
+    comb = [b["ttw_co2"], b["ttw_co2"]]                     # tank-to-wake combustion CO₂
+    wtt = [b["wtt_co2"], b["wtt_co2"]]                      # well-to-tank upstream CO₂
+    nonco2 = [0.0, b["nonco2"]]                             # GT non-CO₂ (CO₂e only)
+    a2.bar(x, comb, color="tab:olive", label="TTW combustion CO₂")
+    a2.bar(x, wtt, bottom=comb, color="tab:gray", label="WTT upstream CO₂")
+    a2.bar(x, nonco2, bottom=[comb[i] + wtt[i] for i in range(2)], color="tab:red", label="GT non-CO₂")
+    a2.set_ylabel("mass [kg]"); a2.set_title("Well-to-wake CO₂ / CO₂-equivalent")
+    a2.legend(fontsize=8); a2.grid(axis="y", alpha=0.3)
+    fig.tight_layout()
+    return fig
 
 
 def comparison_table(rows):

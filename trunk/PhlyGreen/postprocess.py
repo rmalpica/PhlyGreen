@@ -48,8 +48,10 @@ def mission_timeseries(aircraft):
     if config in ("Hybrid", "FuelCellBattery"):
         out["phi"] = np.array([float(profile.SuppliedPowerRatio(t)) for t in time])
 
-    # Battery energy time-series exists as an ODE state only for the Hybrid configuration.
-    if config == "Hybrid":
+    # Battery energy / SOC / temperature time-series exist as ODE states for the Hybrid and the
+    # Class-II fuel-cell+battery configurations (the battery energy is the 2nd state). The Class-I
+    # fuel-cell+battery integrates no battery state ([E_h2, Beta]), so it has none.
+    if config in ("Hybrid", "FuelCellBattery") and sols[0].y.shape[0] >= 3:
         nstates = sols[0].y.shape[0]
         out["battery_energy"] = np.concatenate([s.y[1] for s in sols])
         b = aircraft.battery
@@ -108,7 +110,20 @@ def power_timeseries(aircraft):
         gt_power = np.full_like(PP, np.nan)
         em_power = np.full_like(PP, np.nan)
 
-    return {"time": t, "propulsive_power": PP, "gt_power": gt_power, "em_power": em_power}
+    result = {"time": t, "propulsive_power": PP, "gt_power": gt_power, "em_power": em_power}
+
+    # Fuel-cell / battery / tank outputs for the hydrogen architectures: the battery supplies a
+    # share ``phi`` of the propulsive power and the fuel cell the rest; the tank empties as the
+    # cumulative hydrogen chemical energy is drawn.
+    if config in ("Hydrogen", "FuelCellBattery"):
+        result["fc_power"] = (1.0 - phi) * PP        # fuel-cell propulsive share [W]
+        result["battery_power"] = phi * PP           # battery propulsive share [W]
+        ef = getattr(aircraft.mission, "ef", None)   # H2 lower heating value [J/kg]
+        WH2 = getattr(aircraft.weight, "WH2_Fuel", None)
+        if ef and WH2:
+            result["h2_remaining"] = np.clip(WH2 - ts["fuel_energy"] / ef, 0.0, None)  # [kg]
+
+    return result
 
 
 def class_ii_components(aircraft):
@@ -361,12 +376,36 @@ def write_timeseries(aircraft, path, include_components="auto"):
 
 
 def plot_power_timeseries(aircraft, ax=None):
-    """Plot propulsive, gas-turbine and electric-motor power vs time (totals, kW)."""
+    """Plot the mission power flow vs time (totals, kW).
+
+    Thermal architectures (Traditional / Hybrid) show propulsive, gas-turbine and electric-motor
+    power; the hydrogen architectures (Hydrogen / FuelCellBattery) show propulsive, fuel-cell and
+    battery power, with the hydrogen remaining in the tank on a second axis.
+    """
     import matplotlib.pyplot as plt
     ps = power_timeseries(aircraft)
     t = ps["time"] / 60.0
     if ax is None:
         _, ax = plt.subplots(figsize=(8, 4.5))
+    config = getattr(aircraft, "Configuration", None)
+
+    if config in ("Hydrogen", "FuelCellBattery"):
+        ax.plot(t, ps["propulsive_power"] / 1e3, color="tab:green", label="propulsive")
+        ax.plot(t, ps["fc_power"] / 1e3, color="tab:red", label="fuel cell")
+        if np.any(np.nan_to_num(ps.get("battery_power")) != 0):
+            ax.plot(t, ps["battery_power"] / 1e3, color="tab:blue", label="battery")
+        ax.set_xlabel("time [min]"); ax.set_ylabel("power [kW] (total)"); ax.grid(alpha=0.3)
+        if "h2_remaining" in ps:
+            ax2 = ax.twinx()
+            ax2.plot(t, ps["h2_remaining"], color="tab:purple", ls="--", label="H2 in tank")
+            ax2.set_ylabel("H2 in tank [kg]")
+            h1, l1 = ax.get_legend_handles_labels()
+            h2, l2 = ax2.get_legend_handles_labels()
+            ax.legend(h1 + h2, l1 + l2, fontsize=8)
+        else:
+            ax.legend()
+        return ax
+
     ax.plot(t, ps["propulsive_power"] / 1e3, color="tab:green", label="propulsive")
     ax.plot(t, ps["gt_power"] / 1e3, color="tab:red", label="gas turbine")
     if np.any(np.nan_to_num(ps["em_power"]) != 0):
@@ -518,11 +557,45 @@ def plot_mass_breakdown(aircraft, ax=None):
     return ax
 
 
-def plot_tank_state(aircraft, axes=None):
-    """Plot LH2 tank pressure, stored mass and vent flow vs time.
+def compute_tank_history(aircraft):
+    """Advance the LH2 tank thermodynamic state along the converged mission, filling
+    ``aircraft.tank.history``.
 
-    Requires the tank thermodynamics to have been tracked, i.e. set
-    ``aircraft.mission.track_tank = True`` and re-run ``EvaluateMission`` first.
+    Works for any hydrogen architecture (``Hydrogen`` and ``FuelCellBattery``): it walks the
+    flown mission solution and drives the tank with the hydrogen mass flow recovered from the
+    cumulative hydrogen chemical energy (ODE state ``y[0]``). Unlike setting
+    ``mission.track_tank`` and re-flying, this is a cheap post-processing pass and needs no
+    re-integration. Requires a physics LH2 tank (a ``TankConfig`` + CoolProp) and a flown mission.
+    """
+    tank = getattr(aircraft, "tank", None)
+    m = getattr(aircraft, "mission", None)
+    if tank is None or not hasattr(tank, "time_step"):
+        raise ValueError("No physics LH2 tank — attach a TankConfig (needs CoolProp).")
+    if m is None or not getattr(m, "integral_solution", None):
+        raise ValueError("No mission solution — design the aircraft first.")
+    tank.m_curr = tank.capacity_single        # start full
+    tank.P_curr = tank.P_min
+    tank.history = {'t': [], 'P': [], 'm_tot': [], 'Vent': [], 'Q_in': [],
+                    'Alt': [], 'Q_heater': [], 'm_vent_cum': [], 'Consumption': []}
+    tank.cum_vented_mass = 0.0
+    for arr in m.integral_solution:
+        for k in range(1, len(arr.t)):
+            dt = arr.t[k] - arr.t[k - 1]
+            dE = max(float(arr.y[0][k] - arr.y[0][k - 1]), 0.0)   # hydrogen chemical energy used
+            m_dot = (dE / m.ef) / dt if dt > 0 else 0.0
+            t_mid = 0.5 * (arr.t[k] + arr.t[k - 1])
+            tank.time_step(dt, m_dot, float(m.profile.Altitude(t_mid)))
+    return tank.history
+
+
+def plot_tank_state(aircraft, axes=None):
+    """Plot LH2 tank pressure, stored mass, vent flow and heater power vs time.
+
+    The vent flow and heater power are the two active thermal-management actions: the tank vents
+    hydrogen when it reaches the maximum pressure, and the heater adds power when it falls to the
+    minimum pressure. Requires the tank thermodynamics to have been tracked: either set
+    ``aircraft.mission.track_tank = True`` and re-run ``EvaluateMission``, or call
+    :func:`compute_tank_history` (which works for the fuel-cell + battery configuration too).
     """
     import matplotlib.pyplot as plt
     tank = getattr(aircraft, "tank", None)
@@ -531,10 +604,13 @@ def plot_tank_state(aircraft, axes=None):
     h = tank.history
     t_min = np.array(h["t"]) / 60.0
     if axes is None:
-        _, axes = plt.subplots(3, 1, sharex=True, figsize=(8, 8))
+        _, axes = plt.subplots(4, 1, sharex=True, figsize=(8, 10))
     axes[0].plot(t_min, h["P"], color="tab:blue"); axes[0].set_ylabel("pressure [bar]")
     axes[1].plot(t_min, h["m_tot"], color="tab:green"); axes[1].set_ylabel("stored H2 [kg]")
     axes[2].plot(t_min, h["Vent"], color="tab:red"); axes[2].set_ylabel("vent flow [kg/s]")
+    if len(axes) > 3:
+        axes[3].plot(t_min, np.array(h["Q_heater"]) / 1e3, color="tab:orange")
+        axes[3].set_ylabel("heater power [kW]")
     axes[-1].set_xlabel("time [min]")
     for ax in axes:
         ax.grid(alpha=0.3)

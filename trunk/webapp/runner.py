@@ -49,10 +49,13 @@ def safe_design(config):
 
 def _friendly_error(exc):
     msg = str(exc)
-    if "did not converge" in msg or "did not close" in msg:
-        return ("The design did not close (the take-off weight loop diverged). Try a shorter "
-                "range, a lighter payload, a higher battery specific energy, or — for hydrogen — "
-                "a higher stack power density / lower design voltage.")
+    # "f(a) and f(b) must have different signs" is the take-off-weight Brent solver failing to
+    # bracket a root — i.e. the design did not close (typically a snowballing battery).
+    if ("did not converge" in msg or "did not close" in msg or "different signs" in msg):
+        return ("The design did not close (the take-off-weight loop could not converge — usually a "
+                "snowballing battery). Try a smaller battery share φ, a higher battery specific "
+                "energy, a shorter range / lighter payload, or — for hydrogen — a higher stack "
+                "power density / lower design voltage.")
     return f"{type(exc).__name__}: {msg}"
 
 

@@ -26,6 +26,7 @@ import controls
 import advanced
 import runner
 import render
+import sustainability
 
 
 st.set_page_config(page_title="Virtual Aircraft Design Lab", layout="wide")
@@ -34,6 +35,47 @@ st.set_page_config(page_title="Virtual Aircraft Design Lab", layout="wide")
 def _show_figure(fig):
     st.pyplot(fig)
     plt.close(fig)
+
+
+def _gt_emissions_cached(run, einox_model):
+    """Cached gas-turbine mission emissions (NOx/CO/UHC + non-CO₂) for the current design and EINOx
+    model. It re-sizes the design (slow), so it is computed once per (design, model)."""
+    cache = st.session_state.setdefault("gt_em", {})
+    key = (run["key"], einox_model)
+    if key not in cache:
+        with st.spinner("Computing gas-turbine emissions…"):
+            cache[key] = sustainability.gt_emissions(run["cfg"], einox_model)
+    return cache[key]
+
+
+_CARRIER_NAMES = {"jetA": "Jet-A", "saf": "SAF", "h2_green": "green H₂", "grid": "grid electricity"}
+
+
+def _wtw_factor_inputs(arch, has_battery):
+    """Editable **well-to-tank** factors (upstream production) for the carriers this design uses.
+    The tank-to-wake (combustion) CO₂ is *not* here — it is fixed physics (fuel burn × CO₂ index).
+    Returns the ``(wtw_co2, ttw_co2, wtt_energy)`` override dicts for ``wtw_breakdown``.
+    """
+    carrier = sustainability.CARRIER.get(arch, "jetA")
+    carriers = [carrier] + (["grid"] if has_battery and carrier != "grid" else [])
+    wtw_co2 = dict(sustainability.WTW_CO2)
+    ttw_co2 = dict(sustainability.TTW_CO2)          # combustion CO₂ — physics, kept fixed
+    wtt_energy = dict(sustainability.WTT_ENERGY)
+    with st.expander("Well-to-tank factors (upstream production) — edit to explore"):
+        for c in carriers:
+            st.markdown(f"**{_CARRIER_NAMES.get(c, c)}**")
+            col = st.columns(2)
+            eff = col[0].number_input(
+                "WtT energy efficiency [-]", 0.05, 1.0,
+                value=round(1.0 / sustainability.WTT_ENERGY[c], 3), step=0.01, key=f"wtte_{c}",
+                help="Delivered energy / primary energy consumed upstream (production + delivery).")
+            wtt_energy[c] = 1.0 / max(eff, 1e-6)
+            upstream = col[1].number_input(
+                "WtT (upstream) CO₂ [gCO₂/MJ]", 0.0, 400.0,
+                value=float(sustainability.WTW_CO2[c] - sustainability.TTW_CO2[c]), step=1.0,
+                key=f"wttco2_{c}")
+            wtw_co2[c] = upstream + sustainability.TTW_CO2[c]   # upstream (editable) + combustion (fixed)
+    return wtw_co2, ttw_co2, wtt_energy
 
 
 # --- sidebar: architecture, Run button, all inputs ---------------------------------------------
@@ -100,11 +142,65 @@ def design_tab(arch, cfg):
         return
 
     aircraft, results, cfg = run["aircraft"], run["results"], run["cfg"]
-    cols = st.columns(len(render.headline_metrics(results)))
-    for col, (name, val) in zip(cols, render.headline_metrics(results)):
-        col.metric(name, val)
+    # Metrics in rows of at most 4 so the (fixed-size) metric font stays readable / unclipped
+    # even in a narrow window.
+    metrics = render.headline_metrics(results)
+    per_row = 4
+    for i in range(0, len(metrics), per_row):
+        cols = st.columns(per_row)
+        for col, (name, val) in zip(cols, metrics[i:i + per_row]):
+            col.metric(name, val)
 
     _show_figure(render.dashboard_figure(aircraft, title=run["arch"]))
+
+    # LH2 tank thermodynamic evolution (hydrogen architectures with a physics tank).
+    if render.has_physics_tank(aircraft):
+        st.markdown("#### LH2 tank evolution")
+        st.caption("Pressure, stored hydrogen and vent flow over the mission (self-pressurisation, "
+                   "venting at P_max, heater at P_min).")
+        try:
+            _show_figure(render.tank_figure(aircraft))
+        except Exception as exc:
+            st.caption(f"(tank state unavailable: {type(exc).__name__})")
+
+    # Opt-in well-to-wake emissions panel (computing the gas-turbine non-CO₂ re-sizes the design,
+    # so it is gated behind the checkbox and cached per design).
+    st.markdown("#### Well-to-wake emissions")
+    st.caption("Illustrative lifecycle factors (`sustainability.py`) — Jet-A / green-H₂ / grid "
+               "electricity — split into **well-to-tank** (upstream production) and **tank-to-wake** "
+               "(onboard use). CO₂e adds the gas-turbine non-CO₂ effect from the emission surrogate.")
+    if st.checkbox("Compute well-to-wake emissions", key="wtw_on"):
+        is_gt = results.get("configuration") in ("Traditional", "Hybrid")
+        # When the gas turbine runs, choose the NOx (and CO/UHC) emission model and show the
+        # combustion pollutants. Fuel-cell architectures have no combustion emissions.
+        gt = {"nox": None, "co": None, "uhc": None, "nonco2": 0.0}
+        if is_gt:
+            einox = st.selectbox(
+                "EINOx (gas-turbine emission) model", sustainability.EINOX_MODELS, key="einox_model",
+                help="Surrogate: the PW127 emission-index response surface (NOx, CO, UHC). "
+                     "Filippone: a NOx-only correlation.")
+            gt = _gt_emissions_cached(run, einox)
+
+        has_batt = (results.get("WBat") or 0) > 0
+        wtw_co2, ttw_co2, wtt_energy = _wtw_factor_inputs(run["arch"], has_batt)
+        wb = sustainability.wtw_breakdown(run["arch"], aircraft, cfg, wtw_co2=wtw_co2,
+                                          ttw_co2=ttw_co2, wtt_energy=wtt_energy, nonco2=gt["nonco2"])
+
+        if is_gt:
+            st.markdown("##### Gas-turbine mission emissions (combustion, tank-to-wake)")
+            e = st.columns(4)
+            e[0].metric("CO₂ [kg]", f"{wb['ttw_co2']:,.0f}")
+            e[1].metric("NOx [kg]", f"{gt['nox']:,.1f}" if gt["nox"] is not None else "—")
+            e[2].metric("CO [kg]", f"{gt['co']:,.1f}" if gt["co"] is not None else "—")
+            e[3].metric("UHC [kg]", f"{gt['uhc']:,.2f}" if gt["uhc"] is not None else "—")
+
+        st.markdown("##### Well-to-wake totals")
+        c1, c2, c3 = st.columns(3)
+        c1.metric("WTW energy [MJ]", f"{wb['wtw_MJ']:,.0f}")
+        c2.metric("WTW CO₂ [kg]", f"{wb['wtw_co2']:,.0f}")
+        c3.metric("WTW CO₂e [kg]", f"{wb['wtw_co2e']:,.0f}")
+        st.dataframe(render.wtw_table(wb))
+        _show_figure(render.wtw_figure(wb))
 
     with st.expander("Mission power & mass detail"):
         _show_figure(render.power_figure(aircraft, title="Mission power"))

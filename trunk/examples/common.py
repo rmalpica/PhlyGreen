@@ -67,7 +67,7 @@ def _mission_stages():
         Segment('Climb1', 'ConstantRateClimb', {'CB': 0.16, 'Speed': 77,  'StartAltitude': 100,  'EndAltitude': 1500}, phi_start=0, phi_end=0),
         Segment('Climb2', 'ConstantRateClimb', {'CB': 0.08, 'Speed': 120, 'StartAltitude': 1500, 'EndAltitude': 4500}, phi_start=0, phi_end=0),
         Segment('Climb3', 'ConstantRateClimb', {'CB': 0.07, 'Speed': 125, 'StartAltitude': 4500, 'EndAltitude': 8000}, phi_start=0, phi_end=0),
-        Segment('Cruise', 'ConstantMachCruise', {'Mach': 0.4, 'Altitude': 8000}, phi_start=0, phi_end=0.15),
+        Segment('Cruise', 'ConstantMachCruise', {'Mach': 0.4, 'Altitude': 8000}, phi_start=0, phi_end=0.5),
         Segment('Descent1', 'ConstantRateDescent', {'CB': -0.04, 'Speed': 90, 'StartAltitude': 8000, 'EndAltitude': 200}, phi_start=0, phi_end=0),
     ])
 
@@ -157,22 +157,26 @@ def _mission_stages_with_cruise_phi(cruise_phi):
     return stages
 
 
-def fuelcell_battery_config(cruise_phi=0.15):
+def fuelcell_battery_config(cruise_phi=0.15, tank=False):
     """A fuel-cell + battery hybrid: the battery supplies ``cruise_phi`` of cruise power.
 
     Demonstrates hybridizing a hydrogen fuel cell with a battery. ``phi`` is the fraction of
-    propulsive power taken from the battery (the fuel cell supplies the rest).
+    propulsive power taken from the battery (the fuel cell supplies the rest). With ``tank=True``
+    a cryogenic LH2 tank (TankConfig) is attached, so the hydrogen storage is sized with the
+    physics tank model and its thermodynamic state can be tracked (requires CoolProp).
     """
     energy = _energy_hydrogen()
     energy.battery_specific_energy = 250.0   # Wh/kg
     energy.battery_specific_power = 1500.0    # W/kg
     energy.battery_usable_soc = 0.8
+    tank_cfg = TankConfig(max_diameter=2.4, number_of_tanks=1, tank_model='Svensson_Default',
+                          fuselage_diameter=2.8) if tank else None
     return AircraftConfig(
         configuration='FuelCellBattery', aircraft_type='ATR', weight_class='I',
         aerodynamics=_aerodynamics(), constraints=_constraints(),
         mission=_mission(), energy=energy,
         mission_stages=_mission_stages_with_cruise_phi(cruise_phi),
-        diversion_stages=_diversion_stages(),
+        diversion_stages=_diversion_stages(), tank=tank_cfg,
     )
 
 
@@ -183,12 +187,12 @@ def hybrid_config(battery_class='II'):
     simple specific-energy/specific-power model.
     """
     if battery_class == 'I':
-        cell = CellConfig(cell_class='I', specific_energy=250, specific_power=8000,
+        cell = CellConfig(cell_class='I', specific_energy=1500, specific_power=8000,
                           minimum_soc=0.2)
     else:
         cell = CellConfig(
             cell_class='II', model='Finger-Cell-Thermal',
-            specific_power=8000, specific_energy=250, minimum_soc=0.2,
+            specific_power=8000, specific_energy=1500, minimum_soc=0.2,
             pack_voltage=800, initial_temperature=25, max_operative_temperature=50,
         )
     well_to_tank = WellToTankConfig(

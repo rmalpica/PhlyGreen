@@ -186,7 +186,9 @@ KNOBS = [
          0.0, 0.6, 0.05, applies=_has_battery,
          help="Fraction of cruise propulsive power from the battery."),
     Knob("batt_e", "Battery specific energy [Wh/kg]", _get_batt_specific_energy,
-         _set_batt_specific_energy, 600, 2000, 50, applies=_has_battery),
+         _set_batt_specific_energy, 150, 2000, 50, applies=_has_battery,
+         help="Cell-level specific energy. ~250 is current tech; the example hybrids use a high "
+              "illustrative value. Lower values make battery designs much heavier."),
     # hydrogen / fuel-cell only
     Knob("v_cell", "Fuel-cell design voltage [V]", lambda c: c.energy.v_cell_design,
          lambda c, v: setattr(c.energy, "v_cell_design", float(v)),
