@@ -152,6 +152,27 @@ class Weight:
                  return "Try a different configuration..."
 
 
+    def _structural_weight(self, WTO):
+        """Airframe structural mass [kg] for the current weight class.
+
+        Class I: the regression empty-weight model selected by ``AircraftType``. Class II:
+        the sum of the FLOPS component masses (computed in imperial units, converted to kg).
+        Identical for every configuration, so the four weight loops share this one method.
+        """
+        if self.Class == 'I':
+            return self.aircraft.structures.StructuralWeight(WTO)
+        # Class II: FLOPS component masses (lb) at this gross weight -> kg.
+        self.aircraft.FLOPSInput['GROSS_WEIGHT'] = WTO  # UNITS KG
+        self.AircraftComponents.SetInput()
+        self.AircraftComponents.CalculateComponentMasses()
+        c = self.AircraftComponents
+        return Units.lbTokg(
+            c.Wing.wingmass + c.Fuselage.fuselagemass + c.Tail.HTailmass
+            + c.Tail.VTailmass + c.LandingGear.Landing_gearmass + c.Nacelle.nacellemass
+            + c.Paint.paintmass + c.SystemEquipment.system_equipment_mass
+            + c.Propeller.propellermass)
+
+
     def Traditional(self):
         """
         Solve the weight equation for a traditional (non-hybrid) 
@@ -185,26 +206,14 @@ class Weight:
                  - Final reserve rule
                 """
             
-                self.Wf = self.aircraft.mission.EvaluateMission(WTO)/self.ef
+                E_fuel = self.aircraft.mission.EvaluateMission(WTO)
+                self.Wf = E_fuel/self.ef
+                # Energies used over the mission [J] = [fuel, battery]; consumed by the
+                # well-to-wake accounting (no battery in a traditional aircraft).
+                self.TotalEnergies = [E_fuel, 0.0]
                 self.WPT = self.aircraft.powertrain.WeightPowertrain(WTO)
 
-                if self.Class == 'I':
-
-                    self.WStructure = self.aircraft.structures.StructuralWeight(WTO) 
-
-                elif self.Class == 'II':
-
-                    self.aircraft.FLOPSInput['GROSS_WEIGHT'] = WTO # UNITS KG 
-
-                    self.AircraftComponents.SetInput()
-
-                    self.AircraftComponents.CalculateComponentMasses()
-
-                    self.WStructure =  Units.lbTokg(self.AircraftComponents.Wing.wingmass + self.AircraftComponents.Fuselage.fuselagemass
-                                                    + self.AircraftComponents.Tail.HTailmass + self.AircraftComponents.Tail.VTailmass 
-                                                    + self.AircraftComponents.LandingGear.Landing_gearmass + self.AircraftComponents.Nacelle.nacellemass
-                                                    + self.AircraftComponents.Paint.paintmass + self.AircraftComponents.SystemEquipment.system_equipment_mass
-                                                    + self.AircraftComponents.Propeller.propellermass) 
+                self.WStructure = self._structural_weight(WTO)
 
 
                 self.final_reserve = self._contingency if self._contingency else 0.05 * self.Wf
@@ -261,6 +270,9 @@ class Weight:
 
             self.WH2_Fuel = (E_h2_chem / self.ef) * 1.05
             self.Wf = self.WH2_Fuel
+            # Energies used over the mission [J] = [hydrogen, battery]; consumed by the
+            # well-to-wake accounting (no battery in a pure fuel-cell aircraft).
+            self.TotalEnergies = [E_h2_chem, 0.0]
 
             # 3. Hydrogen tank (empty) mass.
             if self.WH2_Fuel <= 0:
@@ -279,18 +291,7 @@ class Weight:
             self.WHeat_Exchanger = Q_max / hex_sp_h2 if Q_max > 0 else 0.0
 
             # 5. Structure.
-            if self.Class == 'I':
-                self.WStructure = self.aircraft.structures.StructuralWeight(WTO)
-            elif self.Class == 'II':
-                self.aircraft.FLOPSInput['GROSS_WEIGHT'] = WTO
-                self.AircraftComponents.SetInput()
-                self.AircraftComponents.CalculateComponentMasses()
-                c = self.AircraftComponents
-                self.WStructure = Units.lbTokg(
-                    c.Wing.wingmass + c.Fuselage.fuselagemass + c.Tail.HTailmass
-                    + c.Tail.VTailmass + c.LandingGear.Landing_gearmass + c.Nacelle.nacellemass
-                    + c.Paint.paintmass + c.SystemEquipment.system_equipment_mass
-                    + c.Propeller.propellermass)
+            self.WStructure = self._structural_weight(WTO)
 
             # 6. Reserve (fixed input mass, else 5% of the usable H2) and sum.
             self.final_reserve = self._contingency if self._contingency else 0.05 * self.Wf
@@ -356,6 +357,9 @@ class Weight:
 
             self.WH2_Fuel = (E_h2_chem / self.ef) * 1.05
             self.Wf = self.WH2_Fuel
+            # Energies used over the mission [J] = [hydrogen, battery]; consumed by the
+            # well-to-wake accounting.
+            self.TotalEnergies = [E_h2_chem, E_bat]
 
             # Battery mass. Class II: the P-number-sized physics pack (mass from the cell model,
             # set during the mission). Class I (default): max of energy- and power-limited sizing
@@ -389,18 +393,7 @@ class Weight:
                 self.WHeat_Exchanger += Q_bat / hex_sp_bat if (Q_bat and Q_bat > 0) else 0.0
 
             # Structure.
-            if self.Class == 'I':
-                self.WStructure = self.aircraft.structures.StructuralWeight(WTO)
-            elif self.Class == 'II':
-                self.aircraft.FLOPSInput['GROSS_WEIGHT'] = WTO
-                self.AircraftComponents.SetInput()
-                self.AircraftComponents.CalculateComponentMasses()
-                c = self.AircraftComponents
-                self.WStructure = Units.lbTokg(
-                    c.Wing.wingmass + c.Fuselage.fuselagemass + c.Tail.HTailmass
-                    + c.Tail.VTailmass + c.LandingGear.Landing_gearmass + c.Nacelle.nacellemass
-                    + c.Paint.paintmass + c.SystemEquipment.system_equipment_mass
-                    + c.Propeller.propellermass)
+            self.WStructure = self._structural_weight(WTO)
 
             self.final_reserve = self._contingency if self._contingency else 0.05 * self.Wf
 
@@ -460,24 +453,7 @@ class Weight:
 
                 self.WPT = self.aircraft.powertrain.WeightPowertrain(WTO)
 
-                if self.Class == 'I':
-
-                    self.WStructure = self.aircraft.structures.StructuralWeight(WTO)
-                    # print('Structural weight: ', self.WStructure) 
-
-                elif self.Class == 'II':
-
-                    self.aircraft.FLOPSInput['GROSS_WEIGHT'] = WTO # UNITS KG 
-
-                    self.AircraftComponents.SetInput()
-
-                    self.AircraftComponents.CalculateComponentMasses()
-
-                    self.WStructure =  Units.lbTokg(self.AircraftComponents.Wing.wingmass + self.AircraftComponents.Fuselage.fuselagemass
-                                                    + self.AircraftComponents.Tail.HTailmass + self.AircraftComponents.Tail.VTailmass 
-                                                    + self.AircraftComponents.LandingGear.Landing_gearmass + self.AircraftComponents.Nacelle.nacellemass
-                                                    + self.AircraftComponents.Paint.paintmass + self.AircraftComponents.SystemEquipment.system_equipment_mass
-                                                    + self.AircraftComponents.Propeller.propellermass) 
+                self.WStructure = self._structural_weight(WTO)
 
                 # Battery thermal-management (cooling) mass from the peak *in-flight* battery
                 # waste heat (Class-II battery only; the Class-I battery has no thermal model).

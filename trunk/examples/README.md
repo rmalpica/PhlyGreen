@@ -29,6 +29,7 @@ needs pandas — each degrades gracefully if the dependency is missing.
 |--------|---------------|---------|
 | `01_design_traditional.py` | Build → configure → size a fuel-only aircraft; full results + input snapshot + CSV dump | dashboard, power time-series |
 | `02_hybrid_with_battery.py` | A parallel hybrid-electric design with a battery pack (energy + SOC) | dashboard, power time-series |
+| `02b_serial_hybrid.py` | Serial vs parallel hybrid topology: the serial chain's generator+motor double conversion costs fuel and battery mass | dashboard |
 | `03_typed_config_and_results.py` | Typed config, validation, config↔dict, results as a dict | mass groups |
 | `04_flight_profile_and_custom_segment.py` | Query altitude/speed/phi(t); register a new segment type | profile timeline |
 | `05_powertrain_graph_and_efficiency_models.py` | Power-balance graph; operating-point efficiencies; GT/EM/propeller performance maps | component maps |
@@ -37,6 +38,7 @@ needs pandas — each degrades gracefully if the dependency is missing.
 | `15_class_i_vs_class_ii.py` | Class-I vs Class-II structures (FLOPS) and battery models | comparison bars |
 | `16_class_ii_propulsion_sizing.py` | Size the Class-II gas turbine / electric motor with over/under-size check; throttle vs time | component time-series |
 | `17_battery_thermal_and_degradation.py` | Class-II battery: in-flight temperature history, ground fast-charge cooling load (TMS) and cycle-life vs charge C-rate | temperature vs time + sweep panels |
+| `18_serial_range_extender_gt.py` | Serial range-extender (constant-power turbine + recharging battery buffer) vs parallel turboprop, with the Class-II operating-point-dependent gas turbine; honest take: the serial turbine runs a bit more efficiently but conversion+mass penalties make it burn more fuel at efficient cruise | GT part-load map, serial power split |
 | `20_hydrogen_fuel_cell.py` | Size a hydrogen fuel-cell aircraft and fly the full mission | polarization + dashboard |
 | `21_hydrogen_design_voltage_sweep.py` | Sweep the fuel-cell design voltage; find the take-off-weight optimum | sweep panels |
 | `22_hydrogen_tank.py` | Size the cryogenic LH2 tank and track its pressure/mass/venting/heat over the mission (needs CoolProp) | tank state + dashboard |

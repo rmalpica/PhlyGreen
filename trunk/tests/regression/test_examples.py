@@ -15,12 +15,14 @@ TRUNK = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__
 
 FAST_EXAMPLES = [
     "01_design_traditional.py",
+    "02b_serial_hybrid.py",
     "03_typed_config_and_results.py",
     "04_flight_profile_and_custom_segment.py",
     "05_powertrain_graph_and_efficiency_models.py",
     "06_utilities_atmosphere_and_speeds.py",
     "14_welltowake_and_climate.py",
     "15_class_i_vs_class_ii.py",
+    "18_serial_range_extender_gt.py",
     "20_hydrogen_fuel_cell.py",
 ]
 

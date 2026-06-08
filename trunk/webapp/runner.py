@@ -120,6 +120,9 @@ def compare_detailed(labels_and_configs):
     """
     rows = []
     for label, cfg in labels_and_configs:
+        # Attach climate up front so the single sizing run yields a climate-ready aircraft; the
+        # gas-turbine non-CO₂ term is then read off that mission solution (no second sizing).
+        cfg = sustainability.attach_climate(clone(cfg))
         aircraft, err = safe_design(cfg)
         if err:
             rows.append({"label": label, "ok": False, "error": err})
@@ -128,7 +131,7 @@ def compare_detailed(labels_and_configs):
         breakdown = pp.mass_breakdown(aircraft)
         ts = pp.mission_timeseries(aircraft)
         onboard, wtw, co2 = sustainability.wtw_metrics(label, aircraft, cfg)
-        nonco2 = sustainability.gt_nonco2_co2e(cfg)
+        nonco2 = sustainability.gt_nonco2_co2e(cfg, aircraft=aircraft)
         rows.append({
             "label": label, "ok": True, "error": None, "results": results,
             "breakdown": breakdown,

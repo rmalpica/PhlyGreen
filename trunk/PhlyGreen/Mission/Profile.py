@@ -16,9 +16,10 @@ segment computes its own geometry; this class only:
    :meth:`SuppliedPowerRatio`.
 
 This replaces the legacy ``getattr`` dispatch, manual counters, and offset-indexed
-altitude closures of :mod:`PhlyGreen.Mission.Profile_legacy`, while producing identical
-numerical results (verified in tests/regression/test_profile_equivalence.py). New segment
-types can be added purely by registering them — no change to this file.
+altitude closures of the original monolithic profile (kept only as a numerical baseline at
+``tests/_reference/Profile_legacy.py``), while producing identical numerical results
+(verified in tests/regression/test_profile_equivalence.py). New segment types can be added
+purely by registering them — no change to this file.
 """
 
 import numbers

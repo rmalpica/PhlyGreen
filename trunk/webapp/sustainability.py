@@ -109,13 +109,27 @@ def wtw_metrics(label, aircraft, cfg):
 EINOX_MODELS = ("Surrogate", "Filippone")    # NOx (and, for Surrogate, CO/UHC) emission models
 
 
-def _attach_climate(cfg, einox_model="Surrogate"):
+def attach_climate(cfg, einox_model="Surrogate"):
+    """Ensure ``cfg`` carries a climate-impact + well-to-tank section so that *designing* it
+    yields a climate-ready aircraft (emissions computable without a second sizing pass).
+
+    Preserves whatever the template already set; only (re)sets the EINOx model. Mutates and
+    returns ``cfg``.
+    """
     from PhlyGreen.config import ClimateImpactConfig, WellToTankConfig
-    cfg.climate_impact = ClimateImpactConfig(H=100, N=1.6e7, Y=30, einox_model=einox_model,
-                                             wtw_co2=8.30e-3, grid_co2=9.36e-2)
-    cfg.well_to_tank = WellToTankConfig(eta_charge=0.95, eta_grid=1., eta_extraction=1.,
-                                        eta_production=1., eta_transportation=0.25)
+    if cfg.climate_impact is None:
+        cfg.climate_impact = ClimateImpactConfig(H=100, N=1.6e7, Y=30, einox_model=einox_model,
+                                                 wtw_co2=8.30e-3, grid_co2=9.36e-2)
+    else:
+        cfg.climate_impact.einox_model = einox_model
+    if cfg.well_to_tank is None:
+        cfg.well_to_tank = WellToTankConfig(eta_charge=0.95, eta_grid=1., eta_extraction=1.,
+                                            eta_production=1., eta_transportation=0.25)
     return cfg
+
+
+# Backwards-compatible private alias (older callers).
+_attach_climate = attach_climate
 
 
 def _climate_atr(aircraft, co2_only=False):
@@ -133,24 +147,29 @@ def _climate_atr(aircraft, co2_only=False):
         ci.rf = original_rf
 
 
-def gt_emissions(cfg, einox_model="Surrogate"):
+def gt_emissions(cfg, einox_model="Surrogate", aircraft=None):
     """Mission gas-turbine emissions for a gas-turbine design (``Traditional`` / ``Hybrid``).
 
-    Sizes a climate-attached copy of the design with the chosen NOx (and, for the ``Surrogate``
-    model, CO/UHC) emission model and returns the mission masses ``nox`` / ``co`` / ``uhc`` [kg]
-    (``None`` when the model does not provide them) plus the non-CO₂ CO₂-equivalent ``nonco2`` [kg]
-    (NOx-ozone + contrails, from ``co2 · (ATR_full/ATR_CO2only − 1)``). Returns zero/None entries
-    for non-gas-turbine architectures or on any failure (so callers never crash).
+    Returns the mission masses ``nox`` / ``co`` / ``uhc`` [kg] (``None`` when the model does not
+    provide them) plus the non-CO₂ CO₂-equivalent ``nonco2`` [kg] (NOx-ozone + contrails, from
+    ``co2 · (ATR_full/ATR_CO2only − 1)``). Returns zero/None entries for non-gas-turbine
+    architectures or on any failure (so callers never crash).
+
+    If ``aircraft`` is given it must be an **already-sized, climate-attached** design (built from a
+    config passed through :func:`attach_climate`): the emissions are read off that existing mission
+    solution — no second take-off-weight sizing. If ``aircraft`` is ``None`` a climate-attached copy
+    of ``cfg`` is sized here (the slow path, kept for standalone callers).
     """
     blank = {"nox": None, "co": None, "uhc": None, "nonco2": 0.0}
     if cfg.configuration not in _GT_CONFIGS:
         return blank
     try:
-        c = _attach_climate(copy.deepcopy(cfg), einox_model)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            aircraft = pg.build_aircraft()
-            aircraft.configure(c)
+            if aircraft is None:
+                c = attach_climate(copy.deepcopy(cfg), einox_model)
+                aircraft = pg.build_aircraft()
+                aircraft.configure(c)
             ci = aircraft.climateimpact
             aircraft.MissionType = "Continue"
             ci.calculate_mission_emissions()
@@ -180,6 +199,10 @@ def _scalar(v):
             return None
 
 
-def gt_nonco2_co2e(cfg, einox_model="Surrogate"):
-    """Absolute non-CO₂ CO₂-equivalent [kg] of a gas-turbine design (0 for fuel-cell architectures)."""
-    return gt_emissions(cfg, einox_model)["nonco2"]
+def gt_nonco2_co2e(cfg, einox_model="Surrogate", aircraft=None):
+    """Absolute non-CO₂ CO₂-equivalent [kg] of a gas-turbine design (0 for fuel-cell architectures).
+
+    Pass an already-sized, climate-attached ``aircraft`` to reuse its mission solution instead of
+    sizing a fresh design (see :func:`gt_emissions`).
+    """
+    return gt_emissions(cfg, einox_model, aircraft=aircraft)["nonco2"]

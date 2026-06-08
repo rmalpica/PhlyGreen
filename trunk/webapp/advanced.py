@@ -30,6 +30,8 @@ _EXCLUDE = {
     "energy": {"eta_propulsive", "eta_gas_turbine", "v_cell_design",
                "stack_power_density", "battery_specific_energy"},
     "cell": {"specific_energy"},
+    # The EINOx (gas-turbine emission) model is chosen in the dedicated Emissions sidebar panel.
+    "climate_impact": {"einox_model"},
 }
 
 # Order + labels of the sections shown in the advanced panel.

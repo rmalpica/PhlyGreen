@@ -244,7 +244,10 @@ class Aircraft:
         self.weight.WeightEstimation()
         self.WingSurface = self.weight.WTO / self.DesignWTOoS * 9.81
         
-        if (self.Configuration == 'Hybrid' and WellToTankInput is not None):
+        # Well-to-wake (upstream) energy accounting, available for every configuration:
+        # weight.TotalEnergies = [fuel/H2 energy, battery energy] is now populated by all
+        # weight loops, and EvaluateSource treats an absent pathway as lossless.
+        if WellToTankInput is not None:
             self.welltowake.EvaluateSource()
 
         # If Class-II GT/EM models were used, check the fixed nominal power was adequate.

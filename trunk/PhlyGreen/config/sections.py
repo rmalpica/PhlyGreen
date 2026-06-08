@@ -101,6 +101,12 @@ class EnergyConfig(DictConfig):
     em_design_power: Optional[float] = None           # nominal electric-motor power [W]
     em_design_voltage: Optional[float] = None         # [V]
     em_design_rpm: Optional[float] = None             # [rpm]
+    # --- serial "range-extender" strategy (Hybrid + HybridType 'Serial') ---
+    # When set, the serial gas turbine runs at this constant shaft power for the whole mission
+    # (only the altitude/velocity lapse affects its efficiency); the battery absorbs the surplus
+    # (recharging) when propulsive demand is lower and covers the deficit when it is higher.
+    gt_rated_power: Optional[float] = None            # constant serial GT shaft power [W]
+    battery_charge_efficiency: Optional[float] = None  # in-flight recharge efficiency [-] (default 1.0)
 
     _KEY_MAP = {
         "Ef": "Ef",
@@ -132,6 +138,8 @@ class EnergyConfig(DictConfig):
         "em_design_power": "EM Design Power",
         "em_design_voltage": "EM Design Voltage",
         "em_design_rpm": "EM Design RPM",
+        "gt_rated_power": "GT Rated Power",
+        "battery_charge_efficiency": "Battery Charge Efficiency",
     }
 
     def __post_init__(self):

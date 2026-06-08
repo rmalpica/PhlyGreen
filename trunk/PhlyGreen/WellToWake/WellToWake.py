@@ -42,16 +42,24 @@ class WellToWake:
 
             - Source → Grid → Charger → Battery
             - Source → Extraction → Production → Transport → Fuel Tank
-        """
-        
-        # Electricity pathway
-        self.EtaCH = self.aircraft.WellToTankInput['Eta Charge']            # Charger eff.
-        self.EtaGR = self.aircraft.WellToTankInput['Eta Grid']              # Grid generation & distribution eff.
 
-        # Fuel pathway
-        self.EtaEX = self.aircraft.WellToTankInput['Eta Extraction']        # Resource extraction eff.
-        self.EtaPR = self.aircraft.WellToTankInput['Eta Production']        # Fuel production / refining eff.
-        self.EtaTR = self.aircraft.WellToTankInput['Eta Transportation']    # Distribution/logistics eff.
+        Any efficiency not supplied defaults to 1.0 (a lossless pathway). This lets the
+        well-to-wake accounting run for *any* configuration with only the relevant keys:
+        a fuel-only aircraft (Traditional / Hydrogen) need not supply the electricity
+        keys, and a battery-only study need not supply the fuel keys. The "fuel" pathway
+        applies to whatever the primary chemical fuel is — jet fuel for Traditional/Hybrid,
+        hydrogen for Hydrogen/FuelCellBattery — so set its efficiencies accordingly.
+        """
+        wtt = self.aircraft.WellToTankInput
+
+        # Electricity pathway (battery configs)
+        self.EtaCH = wtt.get('Eta Charge', 1.0)            # Charger eff.
+        self.EtaGR = wtt.get('Eta Grid', 1.0)              # Grid generation & distribution eff.
+
+        # Fuel pathway (chemical fuel: jet fuel or hydrogen)
+        self.EtaEX = wtt.get('Eta Extraction', 1.0)        # Resource extraction eff.
+        self.EtaPR = wtt.get('Eta Production', 1.0)        # Fuel production / refining eff.
+        self.EtaTR = wtt.get('Eta Transportation', 1.0)    # Distribution/logistics eff.
     
         # Aggregate efficiencies
         self.EtaSourceToBattery = self.EtaCH * self.EtaGR

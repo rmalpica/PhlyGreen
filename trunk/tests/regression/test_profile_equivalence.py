@@ -11,7 +11,7 @@ import pytest
 import PhlyGreen as pg
 import _sample_configs as sc
 from PhlyGreen.Mission.Profile import Profile
-from PhlyGreen.Mission.Profile_legacy import Profile as LegacyProfile
+from _reference.Profile_legacy import Profile as LegacyProfile
 
 
 def _prepare_aircraft(config_fn):

@@ -37,45 +37,62 @@ def _show_figure(fig):
     plt.close(fig)
 
 
-def _gt_emissions_cached(run, einox_model):
-    """Cached gas-turbine mission emissions (NOx/CO/UHC + non-CO₂) for the current design and EINOx
-    model. It re-sizes the design (slow), so it is computed once per (design, model)."""
-    cache = st.session_state.setdefault("gt_em", {})
-    key = (run["key"], einox_model)
-    if key not in cache:
-        with st.spinner("Computing gas-turbine emissions…"):
-            cache[key] = sustainability.gt_emissions(run["cfg"], einox_model)
-    return cache[key]
-
-
 _CARRIER_NAMES = {"jetA": "Jet-A", "saf": "SAF", "h2_green": "green H₂", "grid": "grid electricity"}
 
 
-def _wtw_factor_inputs(arch, has_battery):
-    """Editable **well-to-tank** factors (upstream production) for the carriers this design uses.
-    The tank-to-wake (combustion) CO₂ is *not* here — it is fixed physics (fuel burn × CO₂ index).
-    Returns the ``(wtw_co2, ttw_co2, wtt_energy)`` override dicts for ``wtw_breakdown``.
+def _wtw_factor_inputs(container, arch, has_battery):
+    """Editable **well-to-tank** factors (upstream production) for the carriers this design uses,
+    rendered into ``container`` (the sidebar). The tank-to-wake (combustion) CO₂ is *not* here — it
+    is fixed physics (fuel burn × CO₂ index). Returns ``(wtw_co2, ttw_co2, wtt_energy)`` overrides.
     """
     carrier = sustainability.CARRIER.get(arch, "jetA")
     carriers = [carrier] + (["grid"] if has_battery and carrier != "grid" else [])
     wtw_co2 = dict(sustainability.WTW_CO2)
     ttw_co2 = dict(sustainability.TTW_CO2)          # combustion CO₂ — physics, kept fixed
     wtt_energy = dict(sustainability.WTT_ENERGY)
-    with st.expander("Well-to-tank factors (upstream production) — edit to explore"):
-        for c in carriers:
-            st.markdown(f"**{_CARRIER_NAMES.get(c, c)}**")
-            col = st.columns(2)
-            eff = col[0].number_input(
-                "WtT energy efficiency [-]", 0.05, 1.0,
-                value=round(1.0 / sustainability.WTT_ENERGY[c], 3), step=0.01, key=f"wtte_{c}",
-                help="Delivered energy / primary energy consumed upstream (production + delivery).")
-            wtt_energy[c] = 1.0 / max(eff, 1e-6)
-            upstream = col[1].number_input(
-                "WtT (upstream) CO₂ [gCO₂/MJ]", 0.0, 400.0,
-                value=float(sustainability.WTW_CO2[c] - sustainability.TTW_CO2[c]), step=1.0,
-                key=f"wttco2_{c}")
-            wtw_co2[c] = upstream + sustainability.TTW_CO2[c]   # upstream (editable) + combustion (fixed)
+    exp = container.expander("Well-to-tank factors (upstream production) — edit to explore")
+    for c in carriers:
+        exp.markdown(f"**{_CARRIER_NAMES.get(c, c)}**")
+        eff = exp.number_input(
+            "WtT energy efficiency [-]", 0.05, 1.0,
+            value=round(1.0 / sustainability.WTT_ENERGY[c], 3), step=0.01, key=f"wtte_{c}",
+            help="Delivered energy / primary energy consumed upstream (production + delivery).")
+        wtt_energy[c] = 1.0 / max(eff, 1e-6)
+        upstream = exp.number_input(
+            "WtT (upstream) CO₂ [gCO₂/MJ]", 0.0, 400.0,
+            value=float(sustainability.WTW_CO2[c] - sustainability.TTW_CO2[c]), step=1.0,
+            key=f"wttco2_{c}")
+        wtw_co2[c] = upstream + sustainability.TTW_CO2[c]   # upstream (editable) + combustion (fixed)
     return wtw_co2, ttw_co2, wtt_energy
+
+
+def emissions_panel(container, arch, cfg):
+    """Sidebar emissions controls. When enabled, attaches the climate model to ``cfg`` (in place) so
+    the **design run itself** produces a climate-ready aircraft and the emissions come from that same
+    sizing pass — no separate re-size. Returns the emissions settings used by the Design tab.
+    """
+    container.markdown("### Emissions / well-to-wake")
+    on = container.checkbox(
+        "Compute well-to-wake emissions", key="wtw_on",
+        help="Attaches the climate model so the design is sized *with* emissions in one pass. "
+             "Leave off for a faster design with no emissions output.")
+    settings = {"on": on, "einox": "Surrogate", "wtw_co2": None, "ttw_co2": None, "wtt_energy": None}
+    if not on:
+        return settings
+
+    is_gt = cfg.configuration in ("Traditional", "Hybrid")
+    if is_gt:
+        settings["einox"] = container.selectbox(
+            "EINOx (gas-turbine emission) model", sustainability.EINOX_MODELS, key="einox_model",
+            help="Surrogate: the PW127 emission-index response surface (NOx, CO, UHC). "
+                 "Filippone: a NOx-only correlation.")
+    has_batt = cfg.configuration in ("Hybrid", "FuelCellBattery")
+    settings["wtw_co2"], settings["ttw_co2"], settings["wtt_energy"] = \
+        _wtw_factor_inputs(container, arch, has_batt)
+
+    # Attach climate to the config so designing it computes emissions directly.
+    sustainability.attach_climate(cfg, settings["einox"])
+    return settings
 
 
 # --- sidebar: architecture, Run button, all inputs ---------------------------------------------
@@ -117,18 +134,29 @@ def build_inputs():
     advanced.render_advanced(st.sidebar, cfg, prefix)
     advanced.render_constraints(st.sidebar, cfg.constraints, prefix)
 
-    return arch, cfg, overrides
+    # 3. emissions / well-to-wake — a sidebar input so the design is sized *with* (or without)
+    # emissions directly; this mutates cfg (attaches the climate model) when enabled.
+    emissions = emissions_panel(st.sidebar, arch, cfg)
+
+    return arch, cfg, overrides, emissions
 
 
 # --- Design tab (owns the Run-design button; sizes only on click) -------------------------------
-def design_tab(arch, cfg):
+def design_tab(arch, cfg, emissions):
     current_key = runner.config_key(cfg)
     if st.button("▶ Run design", type="primary"):
         with st.spinner("Sizing the aircraft…"):
             aircraft, error = runner.safe_design(cfg)
+        # Emissions are computed as part of the run (from the same sized aircraft) when enabled in
+        # the sidebar — so the design is sized *with* emissions in one pass, not as a later re-size.
+        gt = None
+        if emissions["on"] and aircraft is not None and cfg.configuration in ("Traditional", "Hybrid"):
+            with st.spinner("Computing gas-turbine emissions…"):
+                gt = sustainability.gt_emissions(cfg, emissions["einox"], aircraft=aircraft)
         st.session_state["last_run"] = {
             "arch": arch, "key": current_key, "aircraft": aircraft, "error": error,
             "results": aircraft.results().to_dict() if aircraft is not None else None, "cfg": cfg,
+            "gt": gt,
         }
 
     run = st.session_state.get("last_run")
@@ -163,28 +191,21 @@ def design_tab(arch, cfg):
         except Exception as exc:
             st.caption(f"(tank state unavailable: {type(exc).__name__})")
 
-    # Opt-in well-to-wake emissions panel (computing the gas-turbine non-CO₂ re-sizes the design,
-    # so it is gated behind the checkbox and cached per design).
-    st.markdown("#### Well-to-wake emissions")
-    st.caption("Illustrative lifecycle factors (`sustainability.py`) — Jet-A / green-H₂ / grid "
-               "electricity — split into **well-to-tank** (upstream production) and **tank-to-wake** "
-               "(onboard use). CO₂e adds the gas-turbine non-CO₂ effect from the emission surrogate.")
-    if st.checkbox("Compute well-to-wake emissions", key="wtw_on"):
+    # Well-to-wake emissions — switched on (and configured) in the sidebar, so the design was sized
+    # with the climate model attached and these come from that same run (no re-size here).
+    if emissions["on"]:
+        st.markdown("#### Well-to-wake emissions")
+        st.caption("Illustrative lifecycle factors (`sustainability.py`) — Jet-A / green-H₂ / grid "
+                   "electricity — split into **well-to-tank** (upstream production) and "
+                   "**tank-to-wake** (onboard use). CO₂e adds the gas-turbine non-CO₂ effect from "
+                   "the emission surrogate.")
         is_gt = results.get("configuration") in ("Traditional", "Hybrid")
-        # When the gas turbine runs, choose the NOx (and CO/UHC) emission model and show the
-        # combustion pollutants. Fuel-cell architectures have no combustion emissions.
-        gt = {"nox": None, "co": None, "uhc": None, "nonco2": 0.0}
-        if is_gt:
-            einox = st.selectbox(
-                "EINOx (gas-turbine emission) model", sustainability.EINOX_MODELS, key="einox_model",
-                help="Surrogate: the PW127 emission-index response surface (NOx, CO, UHC). "
-                     "Filippone: a NOx-only correlation.")
-            gt = _gt_emissions_cached(run, einox)
-
-        has_batt = (results.get("WBat") or 0) > 0
-        wtw_co2, ttw_co2, wtt_energy = _wtw_factor_inputs(run["arch"], has_batt)
-        wb = sustainability.wtw_breakdown(run["arch"], aircraft, cfg, wtw_co2=wtw_co2,
-                                          ttw_co2=ttw_co2, wtt_energy=wtt_energy, nonco2=gt["nonco2"])
+        # The gas turbine's combustion pollutants were computed during the run (from the sized
+        # aircraft's mission solution); fuel-cell architectures have no combustion emissions.
+        gt = run.get("gt") or {"nox": None, "co": None, "uhc": None, "nonco2": 0.0}
+        wb = sustainability.wtw_breakdown(
+            run["arch"], aircraft, cfg, wtw_co2=emissions["wtw_co2"], ttw_co2=emissions["ttw_co2"],
+            wtt_energy=emissions["wtt_energy"], nonco2=gt["nonco2"])
 
         if is_gt:
             st.markdown("##### Gas-turbine mission emissions (combustion, tank-to-wake)")
@@ -308,7 +329,10 @@ def about_tab():
 
         - **Main inputs** (sidebar) — the handful of parameters you tune most.
         - **⚙️ Advanced inputs** — *every* parameter and **model choice** (gas-turbine / propeller /
-          motor efficiency models, NOₓ model, battery & weight class, aircraft type, …).
+          motor efficiency models, battery & weight class, aircraft type, …).
+        - **Emissions / well-to-wake** (sidebar) — switch it on to size the design *with* emissions in
+          one pass (pick the NOₓ model and edit the well-to-tank lifecycle factors); leave it off for
+          a faster design with no emissions output.
         - **📐 Constraint analysis** — the editable sizing requirements; change a point and re-run to
           watch the design point move on the constraint diagram.
 
@@ -323,12 +347,12 @@ def about_tab():
 
 
 def main():
-    arch, cfg, overrides = build_inputs()
+    arch, cfg, overrides, emissions = build_inputs()
     st.title("Virtual Aircraft Design Lab")
     tab_design, tab_compare, tab_sweep, tab_about = st.tabs(
         ["Design", "Compare", "Sweep", "About"])
     with tab_design:
-        design_tab(arch, cfg)
+        design_tab(arch, cfg, emissions)
     with tab_compare:
         compare_tab(overrides)
     with tab_sweep:

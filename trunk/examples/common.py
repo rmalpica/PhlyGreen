@@ -180,11 +180,20 @@ def fuelcell_battery_config(cruise_phi=0.15, tank=False):
     )
 
 
-def hybrid_config(battery_class='II'):
-    """A parallel hybrid-electric ATR-like aircraft with a battery pack.
+def hybrid_config(battery_class='II', hybrid_type='Parallel'):
+    """A hybrid-electric ATR-like aircraft with a battery pack.
 
     ``battery_class='II'`` uses the detailed cell-level thermal model; ``'I'`` uses the
     simple specific-energy/specific-power model.
+
+    ``hybrid_type`` selects the powertrain topology:
+
+    - ``'Parallel'`` (default): the gas turbine and the electric motor both drive the
+      propeller; ``eta_electric_motor`` is the motor efficiency.
+    - ``'Serial'``: the gas turbine drives a generator that feeds the electric bus, and an
+      electric motor drives the propeller; all shaft power flows through the electric chain.
+      The two conversions use ``eta_electric_motor_1`` (generator) and
+      ``eta_electric_motor_2`` (motor), already set in ``_energy()``.
     """
     if battery_class == 'I':
         cell = CellConfig(cell_class='I', specific_energy=1500, specific_power=8000,
@@ -200,7 +209,7 @@ def hybrid_config(battery_class='II'):
     climate = ClimateImpactConfig(H=100, N=1.6e7, Y=30, einox_model='Filippone',
                                   wtw_co2=8.30e-3, grid_co2=9.36e-2)
     return AircraftConfig(
-        configuration='Hybrid', hybrid_type='Parallel', aircraft_type='ATR', weight_class='I',
+        configuration='Hybrid', hybrid_type=hybrid_type, aircraft_type='ATR', weight_class='I',
         aerodynamics=_aerodynamics(), constraints=_constraints(),
         mission=_mission(), energy=_energy(),
         mission_stages=_mission_stages(), diversion_stages=_diversion_stages(),

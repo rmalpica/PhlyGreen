@@ -173,6 +173,12 @@ class Mission:
             return self.TraditionalConfiguration(WTO)
             
         elif self.aircraft.Configuration == 'Hybrid':
+            # Serial "range-extender" strategy: a constant-power gas turbine with the battery
+            # buffering surplus/deficit (so it recharges in flight). Triggered by a 'GT Rated
+            # Power' input on a Serial hybrid; otherwise the standard phi-split path runs.
+            if (self.aircraft.HybridType == 'Serial'
+                    and self.aircraft.EnergyInput.get('GT Rated Power')):
+                return self.SerialRangeExtenderConfiguration(WTO)
             if self.aircraft.battery.BatteryClass == 'II':
                 return self.HybridConfigurationClassII(WTO)
             elif self.aircraft.battery.BatteryClass == 'I':
@@ -188,9 +194,36 @@ class Mission:
 
         else:
             raise Exception("Unknown aircraft configuration: %s" %self.aircraft.Configuration)
-        
-  
-  
+
+
+    # --- shared off-mission power requirements ------------------------------------------
+    # The take-off field-length and one-engine-inoperative climb conditions are not flown by
+    # the mission profile, but every powertrain must still be able to supply their power.
+    # Each configuration method computes the same worst case and then splits it between its
+    # energy sources, so the computation lives here once (identical for all configurations).
+
+    def _takeoff_power(self, WTO):
+        """Propulsive power required by the take-off field-length constraint [W]."""
+        c = self.aircraft.constraint
+        to = c.TakeOffConstraints
+        return WTO * self.aircraft.performance.TakeOff(
+            self.aircraft.DesignWTOoS, to['Beta'], to['Altitude'], to['kTO'],
+            to['sTO'], c.DISA, to['Speed'], to['Speed Type'])
+
+    def _oei_climb_power(self, WTO):
+        """Propulsive power required by the one-engine-inoperative climb constraint [W]."""
+        c = self.aircraft.constraint
+        oei = c.OEIClimbConstraints
+        return WTO * self.aircraft.performance.OEIClimb(
+            self.aircraft.DesignWTOoS, oei['Beta'],
+            oei['Speed'] * oei['Climb Gradient'], 1., oei['Altitude'],
+            c.DISA, oei['Speed'], oei['Speed Type'])
+
+    def _worst_case_propulsive_power(self, WTO):
+        """Worst-case off-mission propulsive power = max(take-off, OEI climb) [W]."""
+        return max(self._takeoff_power(WTO), self._oei_climb_power(WTO))
+
+
     def HydrogenConfiguration(self, WTO):
         """Evaluate the full mission for a hydrogen fuel-cell (electric) propulsion system.
 
@@ -229,20 +262,7 @@ class Mission:
         # length and the one-engine-inoperative climb, evaluated at the *constraint* conditions
         # (these scenarios are not flown by the mission profile, but the fuel cell must supply
         # their power). Taken as the worst case.
-        P_TO = WTO * self.aircraft.performance.TakeOff(
-            self.aircraft.DesignWTOoS, self.aircraft.constraint.TakeOffConstraints['Beta'],
-            self.aircraft.constraint.TakeOffConstraints['Altitude'],
-            self.aircraft.constraint.TakeOffConstraints['kTO'],
-            self.aircraft.constraint.TakeOffConstraints['sTO'], self.aircraft.constraint.DISA,
-            self.aircraft.constraint.TakeOffConstraints['Speed'],
-            self.aircraft.constraint.TakeOffConstraints['Speed Type'])
-        P_OEI = WTO * self.aircraft.performance.OEIClimb(
-            self.aircraft.DesignWTOoS, self.aircraft.constraint.OEIClimbConstraints['Beta'],
-            self.aircraft.constraint.OEIClimbConstraints['Speed'] * self.aircraft.constraint.OEIClimbConstraints['Climb Gradient'],
-            1., self.aircraft.constraint.OEIClimbConstraints['Altitude'],
-            self.aircraft.constraint.DISA, self.aircraft.constraint.OEIClimbConstraints['Speed'],
-            self.aircraft.constraint.OEIClimbConstraints['Speed Type'])
-        self.TO_PP = max(P_TO, P_OEI)
+        self.TO_PP = self._worst_case_propulsive_power(WTO)
         PRatio_TO = self.aircraft.fuelcell.ComputePRatio(
             self.aircraft.constraint.TakeOffConstraints['Altitude'],
             self.aircraft.constraint.TakeOffConstraints['Speed'], self.TO_PP)
@@ -346,20 +366,7 @@ class Mission:
 
         # Worst-case off-mission propulsive power (take-off field length / OEI climb) at the
         # constraint conditions, split between the fuel cell and the battery by the take-off phi.
-        P_TO = WTO * self.aircraft.performance.TakeOff(
-            self.aircraft.DesignWTOoS, self.aircraft.constraint.TakeOffConstraints['Beta'],
-            self.aircraft.constraint.TakeOffConstraints['Altitude'],
-            self.aircraft.constraint.TakeOffConstraints['kTO'],
-            self.aircraft.constraint.TakeOffConstraints['sTO'], self.aircraft.constraint.DISA,
-            self.aircraft.constraint.TakeOffConstraints['Speed'],
-            self.aircraft.constraint.TakeOffConstraints['Speed Type'])
-        P_OEI = WTO * self.aircraft.performance.OEIClimb(
-            self.aircraft.DesignWTOoS, self.aircraft.constraint.OEIClimbConstraints['Beta'],
-            self.aircraft.constraint.OEIClimbConstraints['Speed'] * self.aircraft.constraint.OEIClimbConstraints['Climb Gradient'],
-            1., self.aircraft.constraint.OEIClimbConstraints['Altitude'],
-            self.aircraft.constraint.DISA, self.aircraft.constraint.OEIClimbConstraints['Speed'],
-            self.aircraft.constraint.OEIClimbConstraints['Speed Type'])
-        P_total_TO = max(P_TO, P_OEI)
+        P_total_TO = self._worst_case_propulsive_power(WTO)
         phi_TO = float(self.profile.SPW[0][0]) if self.profile.SPW is not None else 0.0
         self.TO_PP = (1.0 - phi_TO) * P_total_TO    # fuel-cell propulsive share at take-off/OEI
         self.TO_PBat = phi_TO * P_total_TO          # battery propulsive share at take-off/OEI
@@ -464,20 +471,7 @@ class Mission:
 
         # Worst-case off-mission propulsive power (take-off field length / OEI climb) and its
         # battery / fuel-cell shares, at the constraint conditions.
-        P_TO = WTO * self.aircraft.performance.TakeOff(
-            self.aircraft.DesignWTOoS, self.aircraft.constraint.TakeOffConstraints['Beta'],
-            self.aircraft.constraint.TakeOffConstraints['Altitude'],
-            self.aircraft.constraint.TakeOffConstraints['kTO'],
-            self.aircraft.constraint.TakeOffConstraints['sTO'], self.aircraft.constraint.DISA,
-            self.aircraft.constraint.TakeOffConstraints['Speed'],
-            self.aircraft.constraint.TakeOffConstraints['Speed Type'])
-        P_OEI = WTO * self.aircraft.performance.OEIClimb(
-            self.aircraft.DesignWTOoS, self.aircraft.constraint.OEIClimbConstraints['Beta'],
-            self.aircraft.constraint.OEIClimbConstraints['Speed'] * self.aircraft.constraint.OEIClimbConstraints['Climb Gradient'],
-            1., self.aircraft.constraint.OEIClimbConstraints['Altitude'], self.aircraft.constraint.DISA,
-            self.aircraft.constraint.OEIClimbConstraints['Speed'],
-            self.aircraft.constraint.OEIClimbConstraints['Speed Type'])
-        P_total_TO = max(P_TO, P_OEI)
+        P_total_TO = self._worst_case_propulsive_power(WTO)
         phi_TO = float(self.profile.SPW[0][0]) if self.profile.SPW is not None else 0.0
         self.TO_PP = (1.0 - phi_TO) * P_total_TO            # fuel-cell propulsive share at TO/OEI
         self.TO_PBat = phi_TO * P_total_TO                 # battery propulsive share at TO/OEI
@@ -669,29 +663,8 @@ class Mission:
 
             return [dEdt,dbetadt]
 
-        # Takeoff condition
-        Ppropulsive = self.WTO * self.aircraft.performance.TakeOff(
-            self.aircraft.DesignWTOoS,
-            self.aircraft.constraint.TakeOffConstraints['Beta'], 
-            self.aircraft.constraint.TakeOffConstraints['Altitude'], 
-            self.aircraft.constraint.TakeOffConstraints['kTO'], 
-            self.aircraft.constraint.TakeOffConstraints['sTO'], 
-            self.aircraft.constraint.DISA, 
-            self.aircraft.constraint.TakeOffConstraints['Speed'], 
-            self.aircraft.constraint.TakeOffConstraints['Speed Type'])
-
-        # Takeoff One Engine Inop condition 
-        PpropulsiveOEI = self.WTO * self.aircraft.performance.OEIClimb(
-            self.aircraft.DesignWTOoS, 
-            self.aircraft.constraint.OEIClimbConstraints['Beta'], 
-            self.aircraft.constraint.OEIClimbConstraints['Speed'] * self.aircraft.constraint.OEIClimbConstraints['Climb Gradient'], 
-            1., 
-            self.aircraft.constraint.OEIClimbConstraints['Altitude'], 
-            self.aircraft.constraint.DISA, 
-            self.aircraft.constraint.OEIClimbConstraints['Speed'], 
-            self.aircraft.constraint.OEIClimbConstraints['Speed Type'])
-        
-        Ppropulsive = max(Ppropulsive,PpropulsiveOEI) #consider worst case
+        # Takeoff / OEI-climb worst case (see _worst_case_propulsive_power)
+        Ppropulsive = self._worst_case_propulsive_power(self.WTO)
 
         PRatio = self.aircraft.powertrain.Traditional(
             self.aircraft.constraint.TakeOffConstraints['Altitude'],
@@ -824,29 +797,8 @@ class Mission:
                 dbetadt = - dEFdt/(self.ef*self.WTO)  
                 return [dEFdt,dEBatdt,dbetadt]
 
-            # Takeoff condition
-            Ppropulsive = self.WTO * self.aircraft.performance.TakeOff(
-                self.aircraft.DesignWTOoS,
-                self.aircraft.constraint.TakeOffConstraints['Beta'], 
-                self.aircraft.constraint.TakeOffConstraints['Altitude'], 
-                self.aircraft.constraint.TakeOffConstraints['kTO'], 
-                self.aircraft.constraint.TakeOffConstraints['sTO'], 
-                self.aircraft.constraint.DISA, 
-                self.aircraft.constraint.TakeOffConstraints['Speed'], 
-                self.aircraft.constraint.TakeOffConstraints['Speed Type'])
-            
-            # Takeoff One Engine Inop condition 
-            PpropulsiveOEI = self.WTO * self.aircraft.performance.OEIClimb(
-                self.aircraft.DesignWTOoS, 
-                self.aircraft.constraint.OEIClimbConstraints['Beta'], 
-                self.aircraft.constraint.OEIClimbConstraints['Speed'] * self.aircraft.constraint.OEIClimbConstraints['Climb Gradient'], 
-                1., 
-                self.aircraft.constraint.OEIClimbConstraints['Altitude'], 
-                self.aircraft.constraint.DISA, 
-                self.aircraft.constraint.OEIClimbConstraints['Speed'], 
-                self.aircraft.constraint.OEIClimbConstraints['Speed Type'])
-            
-            Ppropulsive = max(Ppropulsive,PpropulsiveOEI) #consider worst case
+            # Takeoff / OEI-climb worst case (see _worst_case_propulsive_power)
+            Ppropulsive = self._worst_case_propulsive_power(self.WTO)
 
             PRatio = self.aircraft.powertrain.Hybrid(self.aircraft.mission.profile.SPW[0][0],self.aircraft.constraint.TakeOffConstraints['Altitude'],self.aircraft.constraint.TakeOffConstraints['Speed'],Ppropulsive)
             self.TO_PBat = Ppropulsive * PRatio[5]
@@ -900,9 +852,117 @@ class Mission:
             self.Max_PBat = np.max(np.multiply(PP,PRatio[:,5]))
 
             return self.Ef[-1], self.EBat[-1]
-        
 
-    
+
+    def SerialRangeExtenderConfiguration(self, WTO):
+        """Serial hybrid flown as a **range extender**: the gas turbine runs at a constant shaft
+        power (``'GT Rated Power'``) for the whole mission while the battery buffers the mismatch
+        with the propulsive demand — discharging when demand exceeds the turbine output and
+        **recharging** (from the turbine surplus) when it is lower.
+
+        Because the turbine is decoupled from the propeller it stays at its rated load, so its
+        Class-II efficiency is read at that (near-design) shaft power and only the altitude/velocity
+        lapse moves it — the part-load penalty a propeller-coupled (parallel) turbine pays at low
+        demand is avoided. The battery is sized for the *swing* of its state of charge (the buffer
+        capacity) rather than a one-way discharge.
+
+        State vector ``y = [E_fuel_chem, E_batt_removed, Beta]`` (battery energy removed is signed:
+        positive when discharging, negative when the surplus recharges it). Returns
+        ``(fuel chemical energy [J], battery buffer capacity [J])``.
+        """
+        self.WTO = WTO
+        pt = self.aircraft.powertrain
+        import PhlyGreen.Utilities.Units as Units
+        from PhlyGreen.Systems.Powertrain.gas_turbine_surrogate import _isa_pressure_ratio
+        P_gt_rated = float(self.aircraft.EnergyInput['GT Rated Power'])   # sea-level rated shaft power [W]
+        # The turbine is sized (for its efficiency map) by 'GT Design Power'; default it to the
+        # rated power so the range-extender turbine runs at ~full load (its sweet spot).
+        gt_design = self.aircraft.EnergyInput.get('GT Design Power') or P_gt_rated
+        eta_charge = self.aircraft.EnergyInput.get('Battery Charge Efficiency', 1.0) or 1.0
+
+        def gt_shaft_power(alt):
+            """Turbine shaft power at full throttle: the rated power lapsed for altitude (ISA),
+            i.e. only the altitude lapse reduces it (the turbine is otherwise always at full power)."""
+            available = gt_design * _isa_pressure_ratio(Units.mToft(alt))
+            return min(P_gt_rated, available)
+
+        def PowerPropulsive(Beta, t):
+            return WTO * self.aircraft.performance.PoWTO(
+                self.aircraft.DesignWTOoS, Beta, self.profile.PowerExcess(t), 1,
+                self.profile.Altitude(t), self.DISA, self.profile.Velocity(t), 'TAS')
+
+        def flows(t, Beta):
+            """Fuel chemical power and battery terminal power at one instant.
+
+            Forward serial chain (turbine -> generator -> bus + battery -> motor -> gearbox ->
+            propeller); the battery makes up the difference between the bus demand and the
+            generator output. ``Pbat > 0`` discharging, ``Pbat < 0`` recharging.
+            """
+            alt, vel = self.profile.Altitude(t), self.profile.Velocity(t)
+            P_prop = PowerPropulsive(Beta, t)
+            self.check_PP(P_prop)
+            P_gt = gt_shaft_power(alt)                                 # full throttle, lapsed
+            eta_pp = pt.eta('propeller', alt, vel, P_prop)
+            eta_gb = pt.eta('gearbox', alt, vel, P_prop)
+            eta_pm = pt.eta('pmad', alt, vel, P_prop)
+            eta_gt = pt.eta('gas_turbine', alt, vel, P_gt)            # at the delivered shaft load
+            Pe1 = P_prop / (eta_pp * eta_gb * pt.EtaEM2)              # electrical bus -> motor
+            Ps1 = P_gt * pt.EtaEM1                                     # generator electrical output
+            Pbat = Pe1 / eta_pm - Ps1                                 # battery into the bus combiner
+            Pf = P_gt / eta_gt                                        # fuel chemical power
+            return Pf, Pbat
+
+        def model(t, y):
+            Pf, Pbat = flows(t, y[2])
+            dErem = Pbat if Pbat > 0 else Pbat * eta_charge          # recharge pays a charge loss
+            return [Pf, dErem, -Pf / (self.ef * self.WTO)]
+
+        # Off-mission worst case (take-off / OEI): turbine still at rated, battery covers the rest.
+        P_total_TO = self._worst_case_propulsive_power(WTO)
+        to = self.aircraft.constraint.TakeOffConstraints
+        alt_TO, vel_TO = to['Altitude'], to['Speed']
+        eta_pp = pt.eta('propeller', alt_TO, vel_TO, P_total_TO)
+        eta_gb = pt.eta('gearbox', alt_TO, vel_TO, P_total_TO)
+        eta_pm = pt.eta('pmad', alt_TO, vel_TO, P_total_TO)
+        P_gt_TO = gt_shaft_power(alt_TO)
+        Pbat_TO = (P_total_TO / (eta_pp * eta_gb * pt.EtaEM2)) / eta_pm - P_gt_TO * pt.EtaEM1
+        self.TO_PP = P_gt_TO
+        self.TO_PBat = max(Pbat_TO, 0.0)
+
+        # Integrate sequentially over the profile breakpoints.
+        y0 = [0.0, 0.0, self.beta0]
+        self.integral_solution = []
+        times = np.append(self.profile.Breaks, self.profile.MissionTime2)
+        self.Ef_mission = None
+        for i in range(len(times) - 1):
+            sol = integrate.solve_ivp(model, [times[i], times[i + 1]], y0,
+                                      method='BDF', rtol=1e-5, dense_output=True)
+            self.integral_solution.append(sol)
+            y0 = [sol.y[0][-1], sol.y[1][-1], sol.y[2][-1]]
+            if times[i + 1] == self.profile.BreaksDescent:
+                self.Ef_mission = sol.y[0][-1]
+
+        self.Ef = sol.y[0]
+        self.Beta = sol.y[2]
+        if self.Ef_mission is None:
+            self.Ef_mission = self.Ef[-1]
+        self.Ef_diversion = self.Ef[-1] - self.Ef_mission
+
+        # Battery state-of-charge swing (the buffer capacity it must hold) and peak powers.
+        t_all = np.concatenate([a.t for a in self.integral_solution])
+        erem_all = np.concatenate([a.y[1] for a in self.integral_solution])
+        beta_all = np.concatenate([a.y[2] for a in self.integral_solution])
+        self.MissionTimes = t_all
+        self.EBat = erem_all                                          # signed cumulative (for plots)
+        swing = float(erem_all.max() - erem_all.min())               # usable buffer energy [J]
+        pbat_all = np.array([flows(t_all[k], beta_all[k])[1] for k in range(len(t_all))])
+        self.Max_PBat = max(float(pbat_all.max()) if len(pbat_all) else 0.0, self.TO_PBat)
+        self.Max_PEng = P_gt_rated                                    # turbine sized for its rated power
+        self.Max_PEng_alt = 0.0
+        return self.Ef[-1], swing
+
+
+
     def HybridConfigurationClassII(self,WTO):
         """
         Evaluate the mission for a Hybrid-Electric aircraft using a Class II battery model.
@@ -1046,29 +1106,9 @@ class Mission:
             self.aircraft.battery.Configure(P_number)
 
             # Takeoff condition, calculated before anything else as
-            # it does not depend on the battery size, just the aircraft
-            # calculates the total propulsive power required for takeoff
-            Ppropulsive_TO = self.WTO * self.aircraft.performance.TakeOff(
-                self.aircraft.DesignWTOoS,
-                self.aircraft.constraint.TakeOffConstraints["Beta"],
-                self.aircraft.constraint.TakeOffConstraints["Altitude"],
-                self.aircraft.constraint.TakeOffConstraints["kTO"],
-                self.aircraft.constraint.TakeOffConstraints["sTO"],
-                self.aircraft.constraint.DISA,
-                self.aircraft.constraint.TakeOffConstraints["Speed"],
-                self.aircraft.constraint.TakeOffConstraints["Speed Type"],
-            )
-
-            PpropulsiveOEI = self.WTO * self.aircraft.performance.OEIClimb(
-                self.aircraft.DesignWTOoS, 
-                self.aircraft.constraint.OEIClimbConstraints['Beta'], 
-                self.aircraft.constraint.OEIClimbConstraints['Speed'] * self.aircraft.constraint.OEIClimbConstraints['Climb Gradient'], 
-                1., 
-                self.aircraft.constraint.OEIClimbConstraints['Altitude'], 
-                self.aircraft.constraint.DISA, self.aircraft.constraint.OEIClimbConstraints['Speed'], 
-                self.aircraft.constraint.OEIClimbConstraints['Speed Type'])
-            
-            Ppropulsive_TO = max(Ppropulsive_TO,PpropulsiveOEI) 
+            # it does not depend on the battery size, just the aircraft.
+            # Takeoff / OEI-climb worst case (see _worst_case_propulsive_power)
+            Ppropulsive_TO = self._worst_case_propulsive_power(self.WTO)
 
 
             # hybrid power ratio for takeoff

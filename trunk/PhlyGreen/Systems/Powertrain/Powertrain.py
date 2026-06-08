@@ -27,16 +27,8 @@ class Powertrain:
         self.EtaPPmodelType = 'constant'
         self.EtaGT = None
         self.EtaGB = None 
-        self.EtaPP = None 
-        #well-to-wake efficiencies
-        self.EtaCH = None 
-        self.EtaGR = None 
-        self.EtaEX = None 
-        self.EtaPR = None 
-        self.EtaTR = None 
-        self.EtaSourceToBattery = None 
-        self.EtaSourceToFuel = None 
-        #electric powerplant efficiencies 
+        self.EtaPP = None
+        #electric powerplant efficiencies
         self.EtaPM = None
         self.EtaEM = None
         self.EtaEM1 = None
@@ -344,20 +336,8 @@ class Powertrain:
 
         self.EtaGB = self.aircraft.EnergyInput['Eta Gearbox']
         self.SPowerPT = self.aircraft.EnergyInput['Specific Power Powertrain']
-                
-        if self.aircraft.WellToTankInput is not None:
-            
-            self.EtaCH = self.aircraft.WellToTankInput['Eta Charge']
-            self.EtaGR = self.aircraft.WellToTankInput['Eta Grid']
-            self.EtaEX = self.aircraft.WellToTankInput['Eta Extraction']
-            self.EtaPR = self.aircraft.WellToTankInput['Eta Production']
-            self.EtaTR = self.aircraft.WellToTankInput['Eta Transportation']
-            
-            self.EtaSourceToBattery = self.EtaCH * self.EtaGR
-            self.EtaSourceToFuel = self.EtaEX * self.EtaPR * self.EtaTR
 
 
-        
         # Optional fuel-cell system efficiency (used by PowerRatioFuelCellBattery).
         if 'Eta Fuel Cell' in self.aircraft.EnergyInput:
             self.EtaFC = self.aircraft.EnergyInput['Eta Fuel Cell']
