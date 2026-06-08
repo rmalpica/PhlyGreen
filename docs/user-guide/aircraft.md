@@ -42,7 +42,9 @@ major code paths:
 
 - `Configuration` — `'Traditional'` (thermal only), `'Hybrid'` (thermal + battery),
   `'Hydrogen'` (fuel-cell electric), or `'FuelCellBattery'` (fuel cell + battery).
-- `HybridType` — `'Parallel'` or `'Serial'` (Hybrid only).
+- `HybridType` — `'Parallel'` or `'Serial'` (Hybrid only). A `'Serial'` hybrid given an
+  `EnergyConfig.gt_rated_power` is flown as a **range extender** (constant-power turbine +
+  recharging battery buffer); see [Powertrain](powertrain.md) and [Mission](mission.md).
 - `weight.Class` — `'I'` (regression Structures model) or `'II'` (FLOPS component masses).
 - `AircraftType` — selects the **Class-I** structural correlation: `'ATR'`, `'DO228'`, `'Jet'`
   or `'TwinTP'` (generic twin turboprop). Ignored when `weight.Class == 'II'` (FLOPS). See

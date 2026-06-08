@@ -30,8 +30,9 @@ class ConstantRateClimbToMachSegment(FlightSegment):
                              duration=dt, distance=v * dt, category=self.category)
 ```
 
-Use it by setting `'type': 'ConstantRateClimbToMach'` on a stage. `Profile_legacy.py` is **not** an
-extension point — it's frozen as the numerical reference for the equivalence tests.
+Use it by setting `'type': 'ConstantRateClimbToMach'` on a stage. The legacy monolithic profile
+is **not** an extension point — it is frozen as the numerical reference for the equivalence tests
+and now lives outside the package at `tests/_reference/Profile_legacy.py`.
 
 ---
 

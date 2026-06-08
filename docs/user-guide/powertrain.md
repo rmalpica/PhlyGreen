@@ -267,6 +267,19 @@ primitives rather than hand-coded; every \(\eta\) above is obtained from
 `Powertrain.eta(component, alt, vel, pwr)`, so it may be a constant (Class-I) or an
 operating-point-dependent Class-II model.
 
+#### Serial range-extender operating mode
+
+The power balance above splits the *propulsive demand* between the turbine and the battery by
+the profile's \(\phi\) (the battery never recharges in flight). A serial layout can also be
+flown as a **range extender**: set `gt_rated_power` on a `Serial` hybrid and the gas turbine
+runs at that constant shaft power for the whole mission (lapsed for altitude, full throttle),
+while the battery **buffers** the mismatch — recharging from the turbine surplus when propulsive
+demand is low (cruise/descent) and discharging when it is high (climb). This is the
+`Mission.SerialRangeExtenderConfiguration` path (selected automatically when `gt_rated_power` is
+present); the turbine efficiency is read at its actual (≈rated) shaft load, and the battery is
+sized for the *swing* of its state of charge rather than a one-way discharge. See example
+`18_serial_range_extender_gt.py`.
+
 ---
 
 ### 3. Parallel Hybrid 

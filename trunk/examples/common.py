@@ -61,20 +61,34 @@ def _mission():
 # airspeed; cruise specifies a Mach and altitude and automatically fills the remaining
 # range. 'phi' (or phi_start/phi_end) is the hybrid supplied-power ratio — ignored for a
 # Traditional aircraft, used for a Hybrid one.
+# The climb is split into five short segments whose climb gradient (CB) *decreases* with
+# altitude. This approximates a **constant-throttle climb**: a turbine's available power lapses
+# with altitude, so a single fixed-rate climb would run the engine from light part-load near the
+# ground up to a power-limited 100% near cruise (see the throttle plot in example 16). Tapering
+# the climb rate keeps the gas-turbine throttle roughly constant (~0.65-0.87 on the Class-II GT,
+# never power-limited). The rates run ~2400 ft/min near the ground down to ~600 ft/min approaching
+# cruise; the *initial* rate matches a normal climb, so the peak power (and the sizing of
+# power-limited fuel cells / batteries) is unchanged.
 def _mission_stages():
     return StagesConfig(segments=[
         Segment('Takeoff', phi=0.0),
-        Segment('Climb1', 'ConstantRateClimb', {'CB': 0.16, 'Speed': 77,  'StartAltitude': 100,  'EndAltitude': 1500}, phi_start=0, phi_end=0),
-        Segment('Climb2', 'ConstantRateClimb', {'CB': 0.08, 'Speed': 120, 'StartAltitude': 1500, 'EndAltitude': 4500}, phi_start=0, phi_end=0),
-        Segment('Climb3', 'ConstantRateClimb', {'CB': 0.07, 'Speed': 125, 'StartAltitude': 4500, 'EndAltitude': 8000}, phi_start=0, phi_end=0),
+        Segment('Climb1', 'ConstantRateClimb', {'CB': 0.152, 'Speed': 80,  'StartAltitude': 100,  'EndAltitude': 1200}, phi_start=0, phi_end=0),
+        Segment('Climb2', 'ConstantRateClimb', {'CB': 0.097, 'Speed': 100, 'StartAltitude': 1200, 'EndAltitude': 2600}, phi_start=0, phi_end=0),
+        Segment('Climb3', 'ConstantRateClimb', {'CB': 0.062, 'Speed': 115, 'StartAltitude': 2600, 'EndAltitude': 4200}, phi_start=0, phi_end=0),
+        Segment('Climb4', 'ConstantRateClimb', {'CB': 0.039, 'Speed': 125, 'StartAltitude': 4200, 'EndAltitude': 6000}, phi_start=0, phi_end=0),
+        Segment('Climb5', 'ConstantRateClimb', {'CB': 0.024, 'Speed': 130, 'StartAltitude': 6000, 'EndAltitude': 8000}, phi_start=0, phi_end=0),
         Segment('Cruise', 'ConstantMachCruise', {'Mach': 0.4, 'Altitude': 8000}, phi_start=0, phi_end=0.5),
         Segment('Descent1', 'ConstantRateDescent', {'CB': -0.04, 'Speed': 90, 'StartAltitude': 8000, 'EndAltitude': 200}, phi_start=0, phi_end=0),
     ])
 
 
 def _diversion_stages():
+    # Same constant-throttle idea for the diversion climb (200 -> 3100 m): the climb gradient
+    # tapers with altitude so the turbine throttle stays roughly constant instead of ramping up.
     return StagesConfig(segments=[
-        Segment('Climb1', 'ConstantRateClimb', {'CB': 0.08, 'Speed': 110, 'StartAltitude': 200, 'EndAltitude': 3100}, phi_start=0, phi_end=0),
+        Segment('Climb1', 'ConstantRateClimb', {'CB': 0.152, 'Speed': 80,  'StartAltitude': 200,  'EndAltitude': 1200}, phi_start=0, phi_end=0),
+        Segment('Climb2', 'ConstantRateClimb', {'CB': 0.097, 'Speed': 100, 'StartAltitude': 1200, 'EndAltitude': 2600}, phi_start=0, phi_end=0),
+        Segment('Climb3', 'ConstantRateClimb', {'CB': 0.062, 'Speed': 115, 'StartAltitude': 2600, 'EndAltitude': 3100}, phi_start=0, phi_end=0),
         Segment('Cruise', 'ConstantMachCruise', {'Mach': 0.35, 'Altitude': 3100}, phi_start=0, phi_end=0),
         Segment('Descent1', 'ConstantRateDescent', {'CB': -0.04, 'Speed': 90, 'StartAltitude': 3100, 'EndAltitude': 200}, phi_start=0, phi_end=0),
     ])

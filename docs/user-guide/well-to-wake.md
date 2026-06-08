@@ -6,7 +6,11 @@ mission, and how much of it comes from electricity versus fuel. It runs at the e
 sizing loop, after the mission energies are known.
 
 It is enabled by supplying a `WellToTankInput` (typed: `WellToTankConfig`); without it the WTW
-quantities are simply not computed.
+quantities are simply not computed. It runs for **every** configuration — `Traditional`,
+`Hybrid`, `Hydrogen` and `FuelCellBattery` — with the "fuel" pathway representing whichever
+chemical fuel the design burns (jet fuel for the thermal configs, hydrogen for the fuel-cell
+ones). Each weight loop populates `aircraft.weight.TotalEnergies = [fuel/H₂ energy, battery
+energy]`, so a fuel-only aircraft simply reports a zero battery (electricity) pathway.
 
 ---
 
@@ -64,6 +68,11 @@ Both are surfaced on `AircraftResults` (`SourceEnergy`, `Psi`).
 
 A low `Eta Transportation` (or `Eta Grid`) is how you penalize, e.g., a poorly-sourced fuel or
 a carbon-heavy grid in the *energy* accounting.
+
+Any efficiency you leave out defaults to **1.0** (a lossless pathway). A fuel-only design
+(`Traditional` / `Hydrogen`) therefore needs only the fuel keys, and a battery study needs only
+the electricity keys — the unused pathway carries no energy anyway. For a hydrogen aircraft, set
+the *fuel* efficiencies to represent the H₂ production/liquefaction/delivery chain.
 
 ---
 

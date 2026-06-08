@@ -66,6 +66,15 @@ It supports the following segments:
 
 Each segment **appends time‑resolved states** to the global mission arrays.
 
+!!! tip "Constant-throttle climb"
+    A single fixed-rate climb runs the engine from light part-load near the ground to a
+    power-limited 100 % near cruise, because the available power lapses with altitude. The
+    example profiles in `common.py` therefore split the climb into several short
+    `ConstantRateClimb` segments whose climb gradient **decreases** with altitude (rates of
+    ~2400 ft/min near the ground tapering to ~600 ft/min approaching cruise). This keeps the
+    gas-turbine throttle roughly constant over the climb instead of ramping to its limit. The
+    diversion climb uses the same tapering.
+
 
 ---
 
@@ -94,7 +103,10 @@ The Mission module then calls the **Powertrain** module to split this power into
 - fuel power  
 - battery power  
 
-depending on the configured architecture (tradition, serial hybrid, parallel hybrid).
+depending on the configured architecture (traditional, parallel hybrid, serial hybrid,
+hydrogen fuel cell, or fuel-cell + battery). A serial hybrid given a `gt_rated_power` is flown
+as a **range extender** (constant-power turbine + recharging battery buffer) via
+`SerialRangeExtenderConfiguration`.
 
 ---
 

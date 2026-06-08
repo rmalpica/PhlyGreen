@@ -21,6 +21,17 @@ if _EXAMPLES not in sys.path:
 import common  # noqa: E402  (examples/common.py)
 
 
+def _serial_range_extender():
+    """A serial hybrid flown as a range extender: the gas turbine runs at a constant shaft power
+    (``GT Rated Power``) and the battery buffers the mismatch with propulsive demand, recharging
+    from the surplus. The rated power is chosen ~charge-sustaining for the baseline ATR mission."""
+    cfg = common.hybrid_config(battery_class="I", hybrid_type="Serial")
+    cfg.energy.gt_rated_power = 3.0e6           # constant turbine shaft power [W]
+    cfg.energy.gt_design_power = 3.0e6          # turbine sized for that rated power
+    cfg.energy.battery_charge_efficiency = 0.96
+    return cfg
+
+
 def _power_hybridization(cfg, phi=0.2):
     """Apply the tutorial-03 *power* hybridization to a battery config: the battery covers ``phi``
     of the take-off and climb power and nothing in cruise (the primary source is sized for cruise).
@@ -48,6 +59,13 @@ TEMPLATES = {
         "blurb": "Gas turbine + battery hybrid (parallel by default — switch to serial under "
                  "Advanced). Power hybridization: the battery covers part of the take-off/climb "
                  "peak so the gas turbine is sized for cruise.",
+    },
+    "Serial hybrid (range extender)": {
+        "factory": _serial_range_extender,
+        "blurb": "Serial hybrid flown as a range extender: the gas turbine runs at a constant "
+                 "power ('GT Rated Power', editable under Advanced) and the battery buffers the "
+                 "difference — recharging from the turbine surplus in cruise, discharging on the "
+                 "climb. The cruise battery-share φ is ignored in this mode.",
     },
     "Hydrogen fuel cell": {
         "factory": lambda: common.hydrogen_config(tank=True),

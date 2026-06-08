@@ -59,8 +59,9 @@ estimate is an iterative **WTO convergence loop** solved with Brent's method
 `Mission/Profile.py` builds the altitude/velocity/vertical-rate/φ(t) timeline from a
 sequence of **segments**. Segment types live in a registry in `Mission/segments.py`; add a
 new flight-segment kind by subclassing `FlightSegment` and decorating it with
-`@register_segment("Name")` — nothing else changes. (`Profile_legacy.py` is retained only
-as the numerical reference for the equivalence tests.)
+`@register_segment("Name")` — nothing else changes. (The legacy monolithic profile is retained
+only as the numerical reference for the equivalence tests, at
+`tests/_reference/Profile_legacy.py`, outside the shipped package.)
 
 ## Powertrain: component graph + efficiency models
 

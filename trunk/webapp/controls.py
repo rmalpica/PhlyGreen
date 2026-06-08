@@ -53,13 +53,26 @@ def _get_cruise_alt(cfg):
 
 
 def _set_cruise_alt(cfg, v):
-    """Move cruise altitude and keep the profile monotonic (end of last climb / top of descent)."""
+    """Move the cruise altitude and keep the profile monotonic.
+
+    The climb is several ``ConstantRateClimb`` segments stacked from the ground to cruise. To
+    retarget the cruise altitude for *any* number of segments, linearly rescale every climb
+    segment's start/end from the template's climb span ``[ground, top]`` to ``[ground, v]`` — so
+    the breakpoints stay in proportion and the climb remains monotonic. The cruise altitude and
+    the top of the descent are set to ``v`` as well.
+    """
     v = float(v)
+    climbs = [s for s in cfg.mission_stages.segments if s.segment_type == "ConstantRateClimb"]
+    if climbs:
+        lo = min(s.inputs["StartAltitude"] for s in climbs)     # ground
+        hi = max(s.inputs["EndAltitude"] for s in climbs)       # current top of climb
+        span = (hi - lo) or 1.0
+        for s in climbs:
+            s.inputs["StartAltitude"] = lo + (s.inputs["StartAltitude"] - lo) / span * (v - lo)
+            s.inputs["EndAltitude"] = lo + (s.inputs["EndAltitude"] - lo) / span * (v - lo)
     for seg in cfg.mission_stages.segments:
         if seg.segment_type == "ConstantMachCruise":
             seg.inputs["Altitude"] = v
-        elif seg.name == "Climb3":
-            seg.inputs["EndAltitude"] = v
         elif seg.segment_type == "ConstantRateDescent":
             seg.inputs["StartAltitude"] = v
 
