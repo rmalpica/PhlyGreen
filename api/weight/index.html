@@ -12,8 +12,7 @@
 </code></pre></div></td></tr></table></div> </details> <div class="doc doc-children"> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.Weight.Weight.Weight.FuelCellBattery class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">FuelCellBattery</span> <a href=#PhlyGreen.Weight.Weight.Weight.FuelCellBattery class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>FuelCellBattery</span><span class=p>()</span>
 </code></pre></div> <div class="doc doc-contents "> <p>Solve the take-off-weight equation for a fuel-cell + battery hybrid aircraft.</p> <pre><code>f(WTO) = W_structure + W_fuelcell + W_battery + W_H2 + W_tank + W_HX
          + W_payload + W_crew + W_reserve - WTO
-</code></pre> <p>The fuel cell is sized by <code>FuelCell.ComputeAndStoreWeights</code>; the mission returns the hydrogen and battery energies. The battery is sized (Class I) by the larger of its energy and power requirements, using specific energy/power from EnergyInput.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Weight/Weight.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>312</span>
-<span class=normal>313</span>
+</code></pre> <p>The fuel cell is sized by <code>FuelCell.ComputeAndStoreWeights</code>; the mission returns the hydrogen and battery energies. The battery is sized (Class I) by the larger of its energy and power requirements, using specific energy/power from EnergyInput.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Weight/Weight.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>313</span>
 <span class=normal>314</span>
 <span class=normal>315</span>
 <span class=normal>316</span>
@@ -111,14 +110,7 @@
 <span class=normal>408</span>
 <span class=normal>409</span>
 <span class=normal>410</span>
-<span class=normal>411</span>
-<span class=normal>412</span>
-<span class=normal>413</span>
-<span class=normal>414</span>
-<span class=normal>415</span>
-<span class=normal>416</span>
-<span class=normal>417</span>
-<span class=normal>418</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>FuelCellBattery</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
+<span class=normal>411</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>FuelCellBattery</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;Solve the take-off-weight equation for a fuel-cell + battery hybrid aircraft.</span>
 
 <span class=sd>        f(WTO) = W_structure + W_fuelcell + W_battery + W_H2 + W_tank + W_HX</span>
@@ -165,6 +157,9 @@
 
         <span class=bp>self</span><span class=o>.</span><span class=n>WH2_Fuel</span> <span class=o>=</span> <span class=p>(</span><span class=n>E_h2_chem</span> <span class=o>/</span> <span class=bp>self</span><span class=o>.</span><span class=n>ef</span><span class=p>)</span> <span class=o>*</span> <span class=mf>1.05</span>
         <span class=bp>self</span><span class=o>.</span><span class=n>Wf</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>WH2_Fuel</span>
+        <span class=c1># Energies used over the mission [J] = [hydrogen, battery]; consumed by the</span>
+        <span class=c1># well-to-wake accounting.</span>
+        <span class=bp>self</span><span class=o>.</span><span class=n>TotalEnergies</span> <span class=o>=</span> <span class=p>[</span><span class=n>E_h2_chem</span><span class=p>,</span> <span class=n>E_bat</span><span class=p>]</span>
 
         <span class=c1># Battery mass. Class II: the P-number-sized physics pack (mass from the cell model,</span>
         <span class=c1># set during the mission). Class I (default): max of energy- and power-limited sizing</span>
@@ -198,18 +193,7 @@
             <span class=bp>self</span><span class=o>.</span><span class=n>WHeat_Exchanger</span> <span class=o>+=</span> <span class=n>Q_bat</span> <span class=o>/</span> <span class=n>hex_sp_bat</span> <span class=k>if</span> <span class=p>(</span><span class=n>Q_bat</span> <span class=ow>and</span> <span class=n>Q_bat</span> <span class=o>&gt;</span> <span class=mi>0</span><span class=p>)</span> <span class=k>else</span> <span class=mf>0.0</span>
 
         <span class=c1># Structure.</span>
-        <span class=k>if</span> <span class=bp>self</span><span class=o>.</span><span class=n>Class</span> <span class=o>==</span> <span class=s1>&#39;I&#39;</span><span class=p>:</span>
-            <span class=bp>self</span><span class=o>.</span><span class=n>WStructure</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>structures</span><span class=o>.</span><span class=n>StructuralWeight</span><span class=p>(</span><span class=n>WTO</span><span class=p>)</span>
-        <span class=k>elif</span> <span class=bp>self</span><span class=o>.</span><span class=n>Class</span> <span class=o>==</span> <span class=s1>&#39;II&#39;</span><span class=p>:</span>
-            <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>FLOPSInput</span><span class=p>[</span><span class=s1>&#39;GROSS_WEIGHT&#39;</span><span class=p>]</span> <span class=o>=</span> <span class=n>WTO</span>
-            <span class=bp>self</span><span class=o>.</span><span class=n>AircraftComponents</span><span class=o>.</span><span class=n>SetInput</span><span class=p>()</span>
-            <span class=bp>self</span><span class=o>.</span><span class=n>AircraftComponents</span><span class=o>.</span><span class=n>CalculateComponentMasses</span><span class=p>()</span>
-            <span class=n>c</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>AircraftComponents</span>
-            <span class=bp>self</span><span class=o>.</span><span class=n>WStructure</span> <span class=o>=</span> <span class=n>Units</span><span class=o>.</span><span class=n>lbTokg</span><span class=p>(</span>
-                <span class=n>c</span><span class=o>.</span><span class=n>Wing</span><span class=o>.</span><span class=n>wingmass</span> <span class=o>+</span> <span class=n>c</span><span class=o>.</span><span class=n>Fuselage</span><span class=o>.</span><span class=n>fuselagemass</span> <span class=o>+</span> <span class=n>c</span><span class=o>.</span><span class=n>Tail</span><span class=o>.</span><span class=n>HTailmass</span>
-                <span class=o>+</span> <span class=n>c</span><span class=o>.</span><span class=n>Tail</span><span class=o>.</span><span class=n>VTailmass</span> <span class=o>+</span> <span class=n>c</span><span class=o>.</span><span class=n>LandingGear</span><span class=o>.</span><span class=n>Landing_gearmass</span> <span class=o>+</span> <span class=n>c</span><span class=o>.</span><span class=n>Nacelle</span><span class=o>.</span><span class=n>nacellemass</span>
-                <span class=o>+</span> <span class=n>c</span><span class=o>.</span><span class=n>Paint</span><span class=o>.</span><span class=n>paintmass</span> <span class=o>+</span> <span class=n>c</span><span class=o>.</span><span class=n>SystemEquipment</span><span class=o>.</span><span class=n>system_equipment_mass</span>
-                <span class=o>+</span> <span class=n>c</span><span class=o>.</span><span class=n>Propeller</span><span class=o>.</span><span class=n>propellermass</span><span class=p>)</span>
+        <span class=bp>self</span><span class=o>.</span><span class=n>WStructure</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>_structural_weight</span><span class=p>(</span><span class=n>WTO</span><span class=p>)</span>
 
         <span class=bp>self</span><span class=o>.</span><span class=n>final_reserve</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>_contingency</span> <span class=k>if</span> <span class=bp>self</span><span class=o>.</span><span class=n>_contingency</span> <span class=k>else</span> <span class=mf>0.05</span> <span class=o>*</span> <span class=bp>self</span><span class=o>.</span><span class=n>Wf</span>
 
@@ -226,7 +210,14 @@
             <span class=s2>&quot;shorter mission).&quot;</span><span class=p>)</span>
     <span class=k>return</span> <span class=bp>self</span><span class=o>.</span><span class=n>WTO</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.Weight.Weight.Weight.Hybrid class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">Hybrid</span> <a href=#PhlyGreen.Weight.Weight.Weight.Hybrid class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>Hybrid</span><span class=p>()</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Solve the weight equation for a hybrid-electric aircraft.</p> <p>Same logic as Traditional(), but includes battery sizing.</p> <p>Battery mass is computed differently depending on battery class:</p> <ul> <li>Class I : analytical battery mass formula</li> <li>Class II : battery pack weight determined by P-number sizing loop inside the mission model</li> </ul> <h5 id=PhlyGreen.Weight.Weight.Weight.Hybrid--returns>Returns<a class=headerlink href=#PhlyGreen.Weight.Weight.Weight.Hybrid--returns title="Permanent link">&para;</a></h5> <p>float Converged take-off weight WTO</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Weight/Weight.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>421</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Solve the weight equation for a hybrid-electric aircraft.</p> <p>Same logic as Traditional(), but includes battery sizing.</p> <p>Battery mass is computed differently depending on battery class:</p> <ul> <li>Class I : analytical battery mass formula</li> <li>Class II : battery pack weight determined by P-number sizing loop inside the mission model</li> </ul> <h5 id=PhlyGreen.Weight.Weight.Weight.Hybrid--returns>Returns<a class=headerlink href=#PhlyGreen.Weight.Weight.Weight.Hybrid--returns title="Permanent link">&para;</a></h5> <p>float Converged take-off weight WTO</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Weight/Weight.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>414</span>
+<span class=normal>415</span>
+<span class=normal>416</span>
+<span class=normal>417</span>
+<span class=normal>418</span>
+<span class=normal>419</span>
+<span class=normal>420</span>
+<span class=normal>421</span>
 <span class=normal>422</span>
 <span class=normal>423</span>
 <span class=normal>424</span>
@@ -277,31 +268,7 @@
 <span class=normal>469</span>
 <span class=normal>470</span>
 <span class=normal>471</span>
-<span class=normal>472</span>
-<span class=normal>473</span>
-<span class=normal>474</span>
-<span class=normal>475</span>
-<span class=normal>476</span>
-<span class=normal>477</span>
-<span class=normal>478</span>
-<span class=normal>479</span>
-<span class=normal>480</span>
-<span class=normal>481</span>
-<span class=normal>482</span>
-<span class=normal>483</span>
-<span class=normal>484</span>
-<span class=normal>485</span>
-<span class=normal>486</span>
-<span class=normal>487</span>
-<span class=normal>488</span>
-<span class=normal>489</span>
-<span class=normal>490</span>
-<span class=normal>491</span>
-<span class=normal>492</span>
-<span class=normal>493</span>
-<span class=normal>494</span>
-<span class=normal>495</span>
-<span class=normal>496</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>Hybrid</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
+<span class=normal>472</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>Hybrid</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;</span>
 <span class=sd>    Solve the weight equation for a hybrid-electric aircraft.</span>
 
@@ -343,24 +310,7 @@
 
             <span class=bp>self</span><span class=o>.</span><span class=n>WPT</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>powertrain</span><span class=o>.</span><span class=n>WeightPowertrain</span><span class=p>(</span><span class=n>WTO</span><span class=p>)</span>
 
-            <span class=k>if</span> <span class=bp>self</span><span class=o>.</span><span class=n>Class</span> <span class=o>==</span> <span class=s1>&#39;I&#39;</span><span class=p>:</span>
-
-                <span class=bp>self</span><span class=o>.</span><span class=n>WStructure</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>structures</span><span class=o>.</span><span class=n>StructuralWeight</span><span class=p>(</span><span class=n>WTO</span><span class=p>)</span>
-                <span class=c1># print(&#39;Structural weight: &#39;, self.WStructure) </span>
-
-            <span class=k>elif</span> <span class=bp>self</span><span class=o>.</span><span class=n>Class</span> <span class=o>==</span> <span class=s1>&#39;II&#39;</span><span class=p>:</span>
-
-                <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>FLOPSInput</span><span class=p>[</span><span class=s1>&#39;GROSS_WEIGHT&#39;</span><span class=p>]</span> <span class=o>=</span> <span class=n>WTO</span> <span class=c1># UNITS KG </span>
-
-                <span class=bp>self</span><span class=o>.</span><span class=n>AircraftComponents</span><span class=o>.</span><span class=n>SetInput</span><span class=p>()</span>
-
-                <span class=bp>self</span><span class=o>.</span><span class=n>AircraftComponents</span><span class=o>.</span><span class=n>CalculateComponentMasses</span><span class=p>()</span>
-
-                <span class=bp>self</span><span class=o>.</span><span class=n>WStructure</span> <span class=o>=</span>  <span class=n>Units</span><span class=o>.</span><span class=n>lbTokg</span><span class=p>(</span><span class=bp>self</span><span class=o>.</span><span class=n>AircraftComponents</span><span class=o>.</span><span class=n>Wing</span><span class=o>.</span><span class=n>wingmass</span> <span class=o>+</span> <span class=bp>self</span><span class=o>.</span><span class=n>AircraftComponents</span><span class=o>.</span><span class=n>Fuselage</span><span class=o>.</span><span class=n>fuselagemass</span>
-                                                <span class=o>+</span> <span class=bp>self</span><span class=o>.</span><span class=n>AircraftComponents</span><span class=o>.</span><span class=n>Tail</span><span class=o>.</span><span class=n>HTailmass</span> <span class=o>+</span> <span class=bp>self</span><span class=o>.</span><span class=n>AircraftComponents</span><span class=o>.</span><span class=n>Tail</span><span class=o>.</span><span class=n>VTailmass</span> 
-                                                <span class=o>+</span> <span class=bp>self</span><span class=o>.</span><span class=n>AircraftComponents</span><span class=o>.</span><span class=n>LandingGear</span><span class=o>.</span><span class=n>Landing_gearmass</span> <span class=o>+</span> <span class=bp>self</span><span class=o>.</span><span class=n>AircraftComponents</span><span class=o>.</span><span class=n>Nacelle</span><span class=o>.</span><span class=n>nacellemass</span>
-                                                <span class=o>+</span> <span class=bp>self</span><span class=o>.</span><span class=n>AircraftComponents</span><span class=o>.</span><span class=n>Paint</span><span class=o>.</span><span class=n>paintmass</span> <span class=o>+</span> <span class=bp>self</span><span class=o>.</span><span class=n>AircraftComponents</span><span class=o>.</span><span class=n>SystemEquipment</span><span class=o>.</span><span class=n>system_equipment_mass</span>
-                                                <span class=o>+</span> <span class=bp>self</span><span class=o>.</span><span class=n>AircraftComponents</span><span class=o>.</span><span class=n>Propeller</span><span class=o>.</span><span class=n>propellermass</span><span class=p>)</span> 
+            <span class=bp>self</span><span class=o>.</span><span class=n>WStructure</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>_structural_weight</span><span class=p>(</span><span class=n>WTO</span><span class=p>)</span>
 
             <span class=c1># Battery thermal-management (cooling) mass from the peak *in-flight* battery</span>
             <span class=c1># waste heat (Class-II battery only; the Class-I battery has no thermal model).</span>
@@ -380,16 +330,7 @@
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.Weight.Weight.Weight.Hydrogen class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">Hydrogen</span> <a href=#PhlyGreen.Weight.Weight.Weight.Hydrogen class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>Hydrogen</span><span class=p>()</span>
 </code></pre></div> <div class="doc doc-contents "> <p>Solve the take-off-weight equation for a hydrogen fuel-cell aircraft.</p> <pre><code>f(WTO) = W_structure + W_fuelcell + W_H2 + W_tank + W_HX
          + W_payload + W_crew + W_reserve - WTO
-</code></pre> <p>The fuel-cell system mass is sized by <code>FuelCell.ComputeAndStoreWeights</code> (which also sets <code>aircraft.weight.WPT</code>); the mission returns the hydrogen chemical energy, converted to usable H2 mass via the hydrogen LHV (<code>self.ef</code>) with a 5% installation/feed margin. Hydrogen storage mass uses the cryogenic <code>LH2_Tank</code> if available, otherwise a simple gravimetric-index model so the design always closes.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Weight/Weight.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>217</span>
-<span class=normal>218</span>
-<span class=normal>219</span>
-<span class=normal>220</span>
-<span class=normal>221</span>
-<span class=normal>222</span>
-<span class=normal>223</span>
-<span class=normal>224</span>
-<span class=normal>225</span>
-<span class=normal>226</span>
+</code></pre> <p>The fuel-cell system mass is sized by <code>FuelCell.ComputeAndStoreWeights</code> (which also sets <code>aircraft.weight.WPT</code>); the mission returns the hydrogen chemical energy, converted to usable H2 mass via the hydrogen LHV (<code>self.ef</code>) with a 5% installation/feed margin. Hydrogen storage mass uses the cryogenic <code>LH2_Tank</code> if available, otherwise a simple gravimetric-index model so the design always closes.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Weight/Weight.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>226</span>
 <span class=normal>227</span>
 <span class=normal>228</span>
 <span class=normal>229</span>
@@ -472,7 +413,8 @@
 <span class=normal>306</span>
 <span class=normal>307</span>
 <span class=normal>308</span>
-<span class=normal>309</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>Hydrogen</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
+<span class=normal>309</span>
+<span class=normal>310</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>Hydrogen</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;Solve the take-off-weight equation for a hydrogen fuel-cell aircraft.</span>
 
 <span class=sd>        f(WTO) = W_structure + W_fuelcell + W_H2 + W_tank + W_HX</span>
@@ -519,6 +461,9 @@
 
         <span class=bp>self</span><span class=o>.</span><span class=n>WH2_Fuel</span> <span class=o>=</span> <span class=p>(</span><span class=n>E_h2_chem</span> <span class=o>/</span> <span class=bp>self</span><span class=o>.</span><span class=n>ef</span><span class=p>)</span> <span class=o>*</span> <span class=mf>1.05</span>
         <span class=bp>self</span><span class=o>.</span><span class=n>Wf</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>WH2_Fuel</span>
+        <span class=c1># Energies used over the mission [J] = [hydrogen, battery]; consumed by the</span>
+        <span class=c1># well-to-wake accounting (no battery in a pure fuel-cell aircraft).</span>
+        <span class=bp>self</span><span class=o>.</span><span class=n>TotalEnergies</span> <span class=o>=</span> <span class=p>[</span><span class=n>E_h2_chem</span><span class=p>,</span> <span class=mf>0.0</span><span class=p>]</span>
 
         <span class=c1># 3. Hydrogen tank (empty) mass.</span>
         <span class=k>if</span> <span class=bp>self</span><span class=o>.</span><span class=n>WH2_Fuel</span> <span class=o>&lt;=</span> <span class=mi>0</span><span class=p>:</span>
@@ -537,18 +482,7 @@
         <span class=bp>self</span><span class=o>.</span><span class=n>WHeat_Exchanger</span> <span class=o>=</span> <span class=n>Q_max</span> <span class=o>/</span> <span class=n>hex_sp_h2</span> <span class=k>if</span> <span class=n>Q_max</span> <span class=o>&gt;</span> <span class=mi>0</span> <span class=k>else</span> <span class=mf>0.0</span>
 
         <span class=c1># 5. Structure.</span>
-        <span class=k>if</span> <span class=bp>self</span><span class=o>.</span><span class=n>Class</span> <span class=o>==</span> <span class=s1>&#39;I&#39;</span><span class=p>:</span>
-            <span class=bp>self</span><span class=o>.</span><span class=n>WStructure</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>structures</span><span class=o>.</span><span class=n>StructuralWeight</span><span class=p>(</span><span class=n>WTO</span><span class=p>)</span>
-        <span class=k>elif</span> <span class=bp>self</span><span class=o>.</span><span class=n>Class</span> <span class=o>==</span> <span class=s1>&#39;II&#39;</span><span class=p>:</span>
-            <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>FLOPSInput</span><span class=p>[</span><span class=s1>&#39;GROSS_WEIGHT&#39;</span><span class=p>]</span> <span class=o>=</span> <span class=n>WTO</span>
-            <span class=bp>self</span><span class=o>.</span><span class=n>AircraftComponents</span><span class=o>.</span><span class=n>SetInput</span><span class=p>()</span>
-            <span class=bp>self</span><span class=o>.</span><span class=n>AircraftComponents</span><span class=o>.</span><span class=n>CalculateComponentMasses</span><span class=p>()</span>
-            <span class=n>c</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>AircraftComponents</span>
-            <span class=bp>self</span><span class=o>.</span><span class=n>WStructure</span> <span class=o>=</span> <span class=n>Units</span><span class=o>.</span><span class=n>lbTokg</span><span class=p>(</span>
-                <span class=n>c</span><span class=o>.</span><span class=n>Wing</span><span class=o>.</span><span class=n>wingmass</span> <span class=o>+</span> <span class=n>c</span><span class=o>.</span><span class=n>Fuselage</span><span class=o>.</span><span class=n>fuselagemass</span> <span class=o>+</span> <span class=n>c</span><span class=o>.</span><span class=n>Tail</span><span class=o>.</span><span class=n>HTailmass</span>
-                <span class=o>+</span> <span class=n>c</span><span class=o>.</span><span class=n>Tail</span><span class=o>.</span><span class=n>VTailmass</span> <span class=o>+</span> <span class=n>c</span><span class=o>.</span><span class=n>LandingGear</span><span class=o>.</span><span class=n>Landing_gearmass</span> <span class=o>+</span> <span class=n>c</span><span class=o>.</span><span class=n>Nacelle</span><span class=o>.</span><span class=n>nacellemass</span>
-                <span class=o>+</span> <span class=n>c</span><span class=o>.</span><span class=n>Paint</span><span class=o>.</span><span class=n>paintmass</span> <span class=o>+</span> <span class=n>c</span><span class=o>.</span><span class=n>SystemEquipment</span><span class=o>.</span><span class=n>system_equipment_mass</span>
-                <span class=o>+</span> <span class=n>c</span><span class=o>.</span><span class=n>Propeller</span><span class=o>.</span><span class=n>propellermass</span><span class=p>)</span>
+        <span class=bp>self</span><span class=o>.</span><span class=n>WStructure</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>_structural_weight</span><span class=p>(</span><span class=n>WTO</span><span class=p>)</span>
 
         <span class=c1># 6. Reserve (fixed input mass, else 5% of the usable H2) and sum.</span>
         <span class=bp>self</span><span class=o>.</span><span class=n>final_reserve</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>_contingency</span> <span class=k>if</span> <span class=bp>self</span><span class=o>.</span><span class=n>_contingency</span> <span class=k>else</span> <span class=mf>0.05</span> <span class=o>*</span> <span class=bp>self</span><span class=o>.</span><span class=n>Wf</span>
@@ -620,28 +554,7 @@
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.Weight.Weight.Weight.Traditional class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">Traditional</span> <a href=#PhlyGreen.Weight.Weight.Weight.Traditional class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>Traditional</span><span class=p>()</span>
 </code></pre></div> <div class="doc doc-contents "> <p>Solve the weight equation for a traditional (non-hybrid) propulsion system.</p> <p>The objective function is:</p> <pre><code>f(WTO) = W_fuel + W_final_reserve + W_powertrain + W_structure
          + W_payload + W_crew - WTO
-</code></pre> <p>The root of f(WTO) is the correct takeoff weight.</p> <h5 id=PhlyGreen.Weight.Weight.Weight.Traditional--returns>Returns<a class=headerlink href=#PhlyGreen.Weight.Weight.Weight.Traditional--returns title="Permanent link">&para;</a></h5> <p>float Converged take-off weight WTO.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Weight/Weight.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>155</span>
-<span class=normal>156</span>
-<span class=normal>157</span>
-<span class=normal>158</span>
-<span class=normal>159</span>
-<span class=normal>160</span>
-<span class=normal>161</span>
-<span class=normal>162</span>
-<span class=normal>163</span>
-<span class=normal>164</span>
-<span class=normal>165</span>
-<span class=normal>166</span>
-<span class=normal>167</span>
-<span class=normal>168</span>
-<span class=normal>169</span>
-<span class=normal>170</span>
-<span class=normal>171</span>
-<span class=normal>172</span>
-<span class=normal>173</span>
-<span class=normal>174</span>
-<span class=normal>175</span>
-<span class=normal>176</span>
+</code></pre> <p>The root of f(WTO) is the correct takeoff weight.</p> <h5 id=PhlyGreen.Weight.Weight.Weight.Traditional--returns>Returns<a class=headerlink href=#PhlyGreen.Weight.Weight.Weight.Traditional--returns title="Permanent link">&para;</a></h5> <p>float Converged take-off weight WTO.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Weight/Weight.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>176</span>
 <span class=normal>177</span>
 <span class=normal>178</span>
 <span class=normal>179</span>
@@ -679,7 +592,16 @@
 <span class=normal>211</span>
 <span class=normal>212</span>
 <span class=normal>213</span>
-<span class=normal>214</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>Traditional</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
+<span class=normal>214</span>
+<span class=normal>215</span>
+<span class=normal>216</span>
+<span class=normal>217</span>
+<span class=normal>218</span>
+<span class=normal>219</span>
+<span class=normal>220</span>
+<span class=normal>221</span>
+<span class=normal>222</span>
+<span class=normal>223</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>Traditional</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;</span>
 <span class=sd>    Solve the weight equation for a traditional (non-hybrid) </span>
 <span class=sd>    propulsion system.</span>
@@ -712,26 +634,14 @@
 <span class=sd>             - Final reserve rule</span>
 <span class=sd>            &quot;&quot;&quot;</span>
 
-            <span class=bp>self</span><span class=o>.</span><span class=n>Wf</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>mission</span><span class=o>.</span><span class=n>EvaluateMission</span><span class=p>(</span><span class=n>WTO</span><span class=p>)</span><span class=o>/</span><span class=bp>self</span><span class=o>.</span><span class=n>ef</span>
+            <span class=n>E_fuel</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>mission</span><span class=o>.</span><span class=n>EvaluateMission</span><span class=p>(</span><span class=n>WTO</span><span class=p>)</span>
+            <span class=bp>self</span><span class=o>.</span><span class=n>Wf</span> <span class=o>=</span> <span class=n>E_fuel</span><span class=o>/</span><span class=bp>self</span><span class=o>.</span><span class=n>ef</span>
+            <span class=c1># Energies used over the mission [J] = [fuel, battery]; consumed by the</span>
+            <span class=c1># well-to-wake accounting (no battery in a traditional aircraft).</span>
+            <span class=bp>self</span><span class=o>.</span><span class=n>TotalEnergies</span> <span class=o>=</span> <span class=p>[</span><span class=n>E_fuel</span><span class=p>,</span> <span class=mf>0.0</span><span class=p>]</span>
             <span class=bp>self</span><span class=o>.</span><span class=n>WPT</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>powertrain</span><span class=o>.</span><span class=n>WeightPowertrain</span><span class=p>(</span><span class=n>WTO</span><span class=p>)</span>
 
-            <span class=k>if</span> <span class=bp>self</span><span class=o>.</span><span class=n>Class</span> <span class=o>==</span> <span class=s1>&#39;I&#39;</span><span class=p>:</span>
-
-                <span class=bp>self</span><span class=o>.</span><span class=n>WStructure</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>structures</span><span class=o>.</span><span class=n>StructuralWeight</span><span class=p>(</span><span class=n>WTO</span><span class=p>)</span> 
-
-            <span class=k>elif</span> <span class=bp>self</span><span class=o>.</span><span class=n>Class</span> <span class=o>==</span> <span class=s1>&#39;II&#39;</span><span class=p>:</span>
-
-                <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>FLOPSInput</span><span class=p>[</span><span class=s1>&#39;GROSS_WEIGHT&#39;</span><span class=p>]</span> <span class=o>=</span> <span class=n>WTO</span> <span class=c1># UNITS KG </span>
-
-                <span class=bp>self</span><span class=o>.</span><span class=n>AircraftComponents</span><span class=o>.</span><span class=n>SetInput</span><span class=p>()</span>
-
-                <span class=bp>self</span><span class=o>.</span><span class=n>AircraftComponents</span><span class=o>.</span><span class=n>CalculateComponentMasses</span><span class=p>()</span>
-
-                <span class=bp>self</span><span class=o>.</span><span class=n>WStructure</span> <span class=o>=</span>  <span class=n>Units</span><span class=o>.</span><span class=n>lbTokg</span><span class=p>(</span><span class=bp>self</span><span class=o>.</span><span class=n>AircraftComponents</span><span class=o>.</span><span class=n>Wing</span><span class=o>.</span><span class=n>wingmass</span> <span class=o>+</span> <span class=bp>self</span><span class=o>.</span><span class=n>AircraftComponents</span><span class=o>.</span><span class=n>Fuselage</span><span class=o>.</span><span class=n>fuselagemass</span>
-                                                <span class=o>+</span> <span class=bp>self</span><span class=o>.</span><span class=n>AircraftComponents</span><span class=o>.</span><span class=n>Tail</span><span class=o>.</span><span class=n>HTailmass</span> <span class=o>+</span> <span class=bp>self</span><span class=o>.</span><span class=n>AircraftComponents</span><span class=o>.</span><span class=n>Tail</span><span class=o>.</span><span class=n>VTailmass</span> 
-                                                <span class=o>+</span> <span class=bp>self</span><span class=o>.</span><span class=n>AircraftComponents</span><span class=o>.</span><span class=n>LandingGear</span><span class=o>.</span><span class=n>Landing_gearmass</span> <span class=o>+</span> <span class=bp>self</span><span class=o>.</span><span class=n>AircraftComponents</span><span class=o>.</span><span class=n>Nacelle</span><span class=o>.</span><span class=n>nacellemass</span>
-                                                <span class=o>+</span> <span class=bp>self</span><span class=o>.</span><span class=n>AircraftComponents</span><span class=o>.</span><span class=n>Paint</span><span class=o>.</span><span class=n>paintmass</span> <span class=o>+</span> <span class=bp>self</span><span class=o>.</span><span class=n>AircraftComponents</span><span class=o>.</span><span class=n>SystemEquipment</span><span class=o>.</span><span class=n>system_equipment_mass</span>
-                                                <span class=o>+</span> <span class=bp>self</span><span class=o>.</span><span class=n>AircraftComponents</span><span class=o>.</span><span class=n>Propeller</span><span class=o>.</span><span class=n>propellermass</span><span class=p>)</span> 
+            <span class=bp>self</span><span class=o>.</span><span class=n>WStructure</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>_structural_weight</span><span class=p>(</span><span class=n>WTO</span><span class=p>)</span>
 
 
             <span class=bp>self</span><span class=o>.</span><span class=n>final_reserve</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>_contingency</span> <span class=k>if</span> <span class=bp>self</span><span class=o>.</span><span class=n>_contingency</span> <span class=k>else</span> <span class=mf>0.05</span> <span class=o>*</span> <span class=bp>self</span><span class=o>.</span><span class=n>Wf</span>

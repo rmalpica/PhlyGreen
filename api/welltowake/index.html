@@ -7,15 +7,7 @@
 <span class=normal>35</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=fm>__init__</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>aircraft</span><span class=p>):</span>
     <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span> <span class=o>=</span> <span class=n>aircraft</span>
 </code></pre></div></td></tr></table></div> </details> <div class="doc doc-children"> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.WellToWake.WellToWake.WellToWake.EvaluateSource class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">EvaluateSource</span> <a href=#PhlyGreen.WellToWake.WellToWake.WellToWake.EvaluateSource class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>EvaluateSource</span><span class=p>()</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Computes the primary energy demand (well-to-wake) required to supply the mission's fuel and battery energy.</p> <h5 id=PhlyGreen.WellToWake.WellToWake.WellToWake.EvaluateSource--requires>Requires:<a class=headerlink href=#PhlyGreen.WellToWake.WellToWake.WellToWake.EvaluateSource--requires title="Permanent link">&para;</a></h5> <p>aircraft.weight.TotalEnergies = [E_fuel, E_battery]</p> <h5 id=PhlyGreen.WellToWake.WellToWake.WellToWake.EvaluateSource--outputs>Outputs:<a class=headerlink href=#PhlyGreen.WellToWake.WellToWake.WellToWake.EvaluateSource--outputs title="Permanent link">&para;</a></h5> <p>SourceFuel : upstream energy needed to produce delivered fuel SourceBattery : upstream energy needed to deliver electrical energy Psi : fraction of energy from electricity (0-1) SourceEnergy : total well-to-wake energy demand</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/WellToWake/WellToWake.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>61</span>
-<span class=normal>62</span>
-<span class=normal>63</span>
-<span class=normal>64</span>
-<span class=normal>65</span>
-<span class=normal>66</span>
-<span class=normal>67</span>
-<span class=normal>68</span>
-<span class=normal>69</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Computes the primary energy demand (well-to-wake) required to supply the mission's fuel and battery energy.</p> <h5 id=PhlyGreen.WellToWake.WellToWake.WellToWake.EvaluateSource--requires>Requires:<a class=headerlink href=#PhlyGreen.WellToWake.WellToWake.WellToWake.EvaluateSource--requires title="Permanent link">&para;</a></h5> <p>aircraft.weight.TotalEnergies = [E_fuel, E_battery]</p> <h5 id=PhlyGreen.WellToWake.WellToWake.WellToWake.EvaluateSource--outputs>Outputs:<a class=headerlink href=#PhlyGreen.WellToWake.WellToWake.WellToWake.EvaluateSource--outputs title="Permanent link">&para;</a></h5> <p>SourceFuel : upstream energy needed to produce delivered fuel SourceBattery : upstream energy needed to deliver electrical energy Psi : fraction of energy from electricity (0-1) SourceEnergy : total well-to-wake energy demand</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/WellToWake/WellToWake.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>69</span>
 <span class=normal>70</span>
 <span class=normal>71</span>
 <span class=normal>72</span>
@@ -28,7 +20,15 @@
 <span class=normal>79</span>
 <span class=normal>80</span>
 <span class=normal>81</span>
-<span class=normal>82</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>EvaluateSource</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
+<span class=normal>82</span>
+<span class=normal>83</span>
+<span class=normal>84</span>
+<span class=normal>85</span>
+<span class=normal>86</span>
+<span class=normal>87</span>
+<span class=normal>88</span>
+<span class=normal>89</span>
+<span class=normal>90</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>EvaluateSource</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;</span>
 <span class=sd>    Computes the primary energy demand (well-to-wake) required to</span>
 <span class=sd>    supply the mission&#39;s fuel and battery energy.</span>
@@ -53,7 +53,7 @@
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.WellToWake.WellToWake.WellToWake.SetInput class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">SetInput</span> <a href=#PhlyGreen.WellToWake.WellToWake.WellToWake.SetInput class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>SetInput</span><span class=p>()</span>
 </code></pre></div> <div class="doc doc-contents "> <p>Loads well-to-tank efficiencies from aircraft input and computes combined upstream efficiencies for the two relevant pathways:</p> <pre><code>- Source → Grid → Charger → Battery
 - Source → Extraction → Production → Transport → Fuel Tank
-</code></pre> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/WellToWake/WellToWake.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>38</span>
+</code></pre> <p>Any efficiency not supplied defaults to 1.0 (a lossless pathway). This lets the well-to-wake accounting run for <em>any</em> configuration with only the relevant keys: a fuel-only aircraft (Traditional / Hydrogen) need not supply the electricity keys, and a battery-only study need not supply the fuel keys. The "fuel" pathway applies to whatever the primary chemical fuel is — jet fuel for Traditional/Hybrid, hydrogen for Hydrogen/FuelCellBattery — so set its efficiencies accordingly.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/WellToWake/WellToWake.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>38</span>
 <span class=normal>39</span>
 <span class=normal>40</span>
 <span class=normal>41</span>
@@ -73,23 +73,39 @@
 <span class=normal>55</span>
 <span class=normal>56</span>
 <span class=normal>57</span>
-<span class=normal>58</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>SetInput</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
+<span class=normal>58</span>
+<span class=normal>59</span>
+<span class=normal>60</span>
+<span class=normal>61</span>
+<span class=normal>62</span>
+<span class=normal>63</span>
+<span class=normal>64</span>
+<span class=normal>65</span>
+<span class=normal>66</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>SetInput</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;</span>
 <span class=sd>    Loads well-to-tank efficiencies from aircraft input and computes</span>
 <span class=sd>    combined upstream efficiencies for the two relevant pathways:</span>
 
 <span class=sd>        - Source → Grid → Charger → Battery</span>
 <span class=sd>        - Source → Extraction → Production → Transport → Fuel Tank</span>
+
+<span class=sd>    Any efficiency not supplied defaults to 1.0 (a lossless pathway). This lets the</span>
+<span class=sd>    well-to-wake accounting run for *any* configuration with only the relevant keys:</span>
+<span class=sd>    a fuel-only aircraft (Traditional / Hydrogen) need not supply the electricity</span>
+<span class=sd>    keys, and a battery-only study need not supply the fuel keys. The &quot;fuel&quot; pathway</span>
+<span class=sd>    applies to whatever the primary chemical fuel is — jet fuel for Traditional/Hybrid,</span>
+<span class=sd>    hydrogen for Hydrogen/FuelCellBattery — so set its efficiencies accordingly.</span>
 <span class=sd>    &quot;&quot;&quot;</span>
+    <span class=n>wtt</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>WellToTankInput</span>
 
-    <span class=c1># Electricity pathway</span>
-    <span class=bp>self</span><span class=o>.</span><span class=n>EtaCH</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>WellToTankInput</span><span class=p>[</span><span class=s1>&#39;Eta Charge&#39;</span><span class=p>]</span>            <span class=c1># Charger eff.</span>
-    <span class=bp>self</span><span class=o>.</span><span class=n>EtaGR</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>WellToTankInput</span><span class=p>[</span><span class=s1>&#39;Eta Grid&#39;</span><span class=p>]</span>              <span class=c1># Grid generation &amp; distribution eff.</span>
+    <span class=c1># Electricity pathway (battery configs)</span>
+    <span class=bp>self</span><span class=o>.</span><span class=n>EtaCH</span> <span class=o>=</span> <span class=n>wtt</span><span class=o>.</span><span class=n>get</span><span class=p>(</span><span class=s1>&#39;Eta Charge&#39;</span><span class=p>,</span> <span class=mf>1.0</span><span class=p>)</span>            <span class=c1># Charger eff.</span>
+    <span class=bp>self</span><span class=o>.</span><span class=n>EtaGR</span> <span class=o>=</span> <span class=n>wtt</span><span class=o>.</span><span class=n>get</span><span class=p>(</span><span class=s1>&#39;Eta Grid&#39;</span><span class=p>,</span> <span class=mf>1.0</span><span class=p>)</span>              <span class=c1># Grid generation &amp; distribution eff.</span>
 
-    <span class=c1># Fuel pathway</span>
-    <span class=bp>self</span><span class=o>.</span><span class=n>EtaEX</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>WellToTankInput</span><span class=p>[</span><span class=s1>&#39;Eta Extraction&#39;</span><span class=p>]</span>        <span class=c1># Resource extraction eff.</span>
-    <span class=bp>self</span><span class=o>.</span><span class=n>EtaPR</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>WellToTankInput</span><span class=p>[</span><span class=s1>&#39;Eta Production&#39;</span><span class=p>]</span>        <span class=c1># Fuel production / refining eff.</span>
-    <span class=bp>self</span><span class=o>.</span><span class=n>EtaTR</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>WellToTankInput</span><span class=p>[</span><span class=s1>&#39;Eta Transportation&#39;</span><span class=p>]</span>    <span class=c1># Distribution/logistics eff.</span>
+    <span class=c1># Fuel pathway (chemical fuel: jet fuel or hydrogen)</span>
+    <span class=bp>self</span><span class=o>.</span><span class=n>EtaEX</span> <span class=o>=</span> <span class=n>wtt</span><span class=o>.</span><span class=n>get</span><span class=p>(</span><span class=s1>&#39;Eta Extraction&#39;</span><span class=p>,</span> <span class=mf>1.0</span><span class=p>)</span>        <span class=c1># Resource extraction eff.</span>
+    <span class=bp>self</span><span class=o>.</span><span class=n>EtaPR</span> <span class=o>=</span> <span class=n>wtt</span><span class=o>.</span><span class=n>get</span><span class=p>(</span><span class=s1>&#39;Eta Production&#39;</span><span class=p>,</span> <span class=mf>1.0</span><span class=p>)</span>        <span class=c1># Fuel production / refining eff.</span>
+    <span class=bp>self</span><span class=o>.</span><span class=n>EtaTR</span> <span class=o>=</span> <span class=n>wtt</span><span class=o>.</span><span class=n>get</span><span class=p>(</span><span class=s1>&#39;Eta Transportation&#39;</span><span class=p>,</span> <span class=mf>1.0</span><span class=p>)</span>    <span class=c1># Distribution/logistics eff.</span>
 
     <span class=c1># Aggregate efficiencies</span>
     <span class=bp>self</span><span class=o>.</span><span class=n>EtaSourceToBattery</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>EtaCH</span> <span class=o>*</span> <span class=bp>self</span><span class=o>.</span><span class=n>EtaGR</span>
