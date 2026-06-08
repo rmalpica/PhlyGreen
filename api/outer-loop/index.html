@@ -1,4 +1,4 @@
-<!doctype html><html lang=en class=no-js> <head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><meta name=description content="User & Developer Manual for the PhlyGreen Aircraft Design Toolkit"><meta name=author content="Riccardo Malpica Galassi"><link href=https://rmalpica.github.io/PhlyGreen/api/outer-loop/ rel=canonical><link href=../../developer-guide/troubleshooting/ rel=prev><link href=../config/ rel=next><link rel=icon href=../../assets/images/favicon.png><meta name=generator content="mkdocs-1.6.1, mkdocs-material-9.7.6"><title>Outer Loop & Results - PhlyGreen Documentation</title><link rel=stylesheet href=../../assets/stylesheets/main.484c7ddc.min.css><link rel=stylesheet href=../../assets/stylesheets/palette.ab4e12ef.min.css><link rel=preconnect href=https://fonts.gstatic.com crossorigin><link rel=stylesheet href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CFira+Code:400,400i,700,700i&display=fallback"><style>:root{--md-text-font:"Inter";--md-code-font:"Fira Code"}</style><link rel=stylesheet href=../../assets/_mkdocstrings.css><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css><link rel=stylesheet href=../../css/custom.css><link rel=stylesheet href=../../css/extra.css><script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script></head> <body dir=ltr data-md-color-scheme=default data-md-color-primary=teal data-md-color-accent=cyan> <input class=md-toggle data-md-toggle=drawer type=checkbox id=__drawer autocomplete=off> <input class=md-toggle data-md-toggle=search type=checkbox id=__search autocomplete=off> <label class=md-overlay for=__drawer></label> <div data-md-component=skip> <a href=#outer-loop-results-api class=md-skip> Skip to content </a> </div> <div data-md-component=announce> </div> <header class="md-header md-header--shadow" data-md-component=header> <nav class="md-header__inner md-grid" aria-label=Header> <a href=../.. title="PhlyGreen Documentation" class="md-header__button md-logo" aria-label="PhlyGreen Documentation" data-md-component=logo> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg> </a> <label class="md-header__button md-icon" for=__drawer> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg> </label> <div class=md-header__title data-md-component=header-title> <div class=md-header__ellipsis> <div class=md-header__topic> <span class=md-ellipsis> PhlyGreen Documentation </span> </div> <div class=md-header__topic data-md-component=header-topic> <span class=md-ellipsis> Outer Loop & Results </span> </div> </div> </div> <form class=md-header__option data-md-component=palette> <input class=md-option data-md-color-media data-md-color-scheme=default data-md-color-primary=teal data-md-color-accent=cyan aria-hidden=true type=radio name=__palette id=__palette_0> <input class=md-option data-md-color-media data-md-color-scheme=slate data-md-color-primary=teal data-md-color-accent=cyan aria-label="Switch to light mode" type=radio name=__palette id=__palette_1> <label class="md-header__button md-icon" title="Switch to light mode" for=__palette_0 hidden> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg> </label> </form> <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script> <label class="md-header__button md-icon" for=__search> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg> </label> <div class=md-search data-md-component=search role=dialog> <label class=md-search__overlay for=__search></label> <div class=md-search__inner role=search> <form class=md-search__form name=search> <input type=text class=md-search__input name=query aria-label=Search placeholder=Search autocapitalize=off autocorrect=off autocomplete=off spellcheck=false data-md-component=search-query required> <label class="md-search__icon md-icon" for=__search> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg> </label> <nav class=md-search__options aria-label=Search> <button type=reset class="md-search__icon md-icon" title=Clear aria-label=Clear tabindex=-1> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg> </button> </nav> </form> <div class=md-search__output> <div class=md-search__scrollwrap tabindex=0 data-md-scrollfix> <div class=md-search-result data-md-component=search-result> <div class=md-search-result__meta> Initializing search </div> <ol class=md-search-result__list role=presentation></ol> </div> </div> </div> </div> </div> <div class=md-header__source> <a href=https://github.com/rmalpica/PhlyGreen title="Go to repository" class=md-source data-md-component=source> <div class="md-source__icon md-icon"> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 512 512"><!-- Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg> </div> <div class=md-source__repository> GitHub </div> </a> </div> </nav> </header> <div class=md-container data-md-component=container> <main class=md-main data-md-component=main> <div class="md-main__inner md-grid"> <div class="md-sidebar md-sidebar--primary" data-md-component=sidebar data-md-type=navigation> <div class=md-sidebar__scrollwrap> <div class=md-sidebar__inner> <nav class="md-nav md-nav--primary md-nav--integrated" aria-label=Navigation data-md-level=0> <label class=md-nav__title for=__drawer> <a href=../.. title="PhlyGreen Documentation" class="md-nav__button md-logo" aria-label="PhlyGreen Documentation" data-md-component=logo> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg> </a> PhlyGreen Documentation </label> <div class=md-nav__source> <a href=https://github.com/rmalpica/PhlyGreen title="Go to repository" class=md-source data-md-component=source> <div class="md-source__icon md-icon"> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 512 512"><!-- Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg> </div> <div class=md-source__repository> GitHub </div> </a> </div> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../.. class=md-nav__link> <span class=md-ellipsis> Home </span> </a> </li> <li class="md-nav__item md-nav__item--section md-nav__item--nested"> <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type=checkbox id=__nav_2> <label class=md-nav__link for=__nav_2 id=__nav_2_label tabindex> <span class=md-ellipsis> Getting Started </span> <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav data-md-level=1 aria-labelledby=__nav_2_label aria-expanded=false> <label class=md-nav__title for=__nav_2> <span class="md-nav__icon md-icon"></span> Getting Started </label> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../../getting-started/installation/ class=md-nav__link> <span class=md-ellipsis> Installation </span> </a> </li> <li class=md-nav__item> <a href=../../getting-started/theory/ class=md-nav__link> <span class=md-ellipsis> Theoretical Reference </span> </a> </li> <li class=md-nav__item> <a href=../../getting-started/logic/ class=md-nav__link> <span class=md-ellipsis> Program Logic </span> </a> </li> <li class=md-nav__item> <a href=../../getting-started/running-your-first-mission/ class=md-nav__link> <span class=md-ellipsis> Running your first mission </span> </a> </li> </ul> </nav> </li> <li class="md-nav__item md-nav__item--section md-nav__item--nested"> <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type=checkbox id=__nav_3> <label class=md-nav__link for=__nav_3 id=__nav_3_label tabindex> <span class=md-ellipsis> User Guide </span> <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav data-md-level=1 aria-labelledby=__nav_3_label aria-expanded=false> <label class=md-nav__title for=__nav_3> <span class="md-nav__icon md-icon"></span> User Guide </label> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../../user-guide/configuration/ class=md-nav__link> <span class=md-ellipsis> Configuration & Workflow </span> </a> </li> <li class=md-nav__item> <a href=../../user-guide/aircraft/ class=md-nav__link> <span class=md-ellipsis> Aircraft Module </span> </a> </li> <li class=md-nav__item> <a href=../../user-guide/constraints/ class=md-nav__link> <span class=md-ellipsis> Constraints Analysis </span> </a> </li> <li class=md-nav__item> <a href=../../user-guide/mission/ class=md-nav__link> <span class=md-ellipsis> Mission Module </span> </a> </li> <li class=md-nav__item> <a href=../../user-guide/weight/ class=md-nav__link> <span class=md-ellipsis> Weight Estimation </span> </a> </li> <li class=md-nav__item> <a href=../../user-guide/performance/ class=md-nav__link> <span class=md-ellipsis> Performance Module </span> </a> </li> <li class=md-nav__item> <a href=../../user-guide/powertrain/ class=md-nav__link> <span class=md-ellipsis> Powertrain Module </span> </a> </li> <li class=md-nav__item> <a href=../../user-guide/battery/ class=md-nav__link> <span class=md-ellipsis> Battery Module </span> </a> </li> <li class=md-nav__item> <a href=../../user-guide/hydrogen/ class=md-nav__link> <span class=md-ellipsis> Hydrogen (Fuel Cell & Tank) </span> </a> </li> <li class=md-nav__item> <a href=../../user-guide/aerodynamics/ class=md-nav__link> <span class=md-ellipsis> Aerodynamics Module </span> </a> </li> <li class=md-nav__item> <a href=../../user-guide/structures/ class=md-nav__link> <span class=md-ellipsis> Structures Module </span> </a> </li> <li class=md-nav__item> <a href=../../user-guide/surrogate-models/ class=md-nav__link> <span class=md-ellipsis> Surrogate Models </span> </a> </li> <li class=md-nav__item> <a href=../../user-guide/well-to-wake/ class=md-nav__link> <span class=md-ellipsis> Well-To-Wake Analysis </span> </a> </li> <li class=md-nav__item> <a href=../../user-guide/emissions/ class=md-nav__link> <span class=md-ellipsis> Emissions & Climate Impact </span> </a> </li> </ul> </nav> </li> <li class="md-nav__item md-nav__item--section md-nav__item--nested"> <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type=checkbox id=__nav_4> <label class=md-nav__link for=__nav_4 id=__nav_4_label tabindex> <span class=md-ellipsis> Developer Guide </span> <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav data-md-level=1 aria-labelledby=__nav_4_label aria-expanded=false> <label class=md-nav__title for=__nav_4> <span class="md-nav__icon md-icon"></span> Developer Guide </label> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../../developer-guide/architecture-overview/ class=md-nav__link> <span class=md-ellipsis> Architecture Overview </span> </a> </li> <li class=md-nav__item> <a href=../../developer-guide/flowcharts/ class=md-nav__link> <span class=md-ellipsis> Flowcharts </span> </a> </li> <li class=md-nav__item> <a href=../../developer-guide/module-reference/ class=md-nav__link> <span class=md-ellipsis> Module Reference </span> </a> </li> <li class=md-nav__item> <a href=../../developer-guide/extending-the-model/ class=md-nav__link> <span class=md-ellipsis> Extending the Model </span> </a> </li> <li class=md-nav__item> <a href=../../developer-guide/troubleshooting/ class=md-nav__link> <span class=md-ellipsis> Troubleshooting </span> </a> </li> </ul> </nav> </li> <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested"> <input class="md-nav__toggle md-toggle " type=checkbox id=__nav_5 checked> <label class=md-nav__link for=__nav_5 id=__nav_5_label tabindex> <span class=md-ellipsis> API Reference </span> <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav data-md-level=1 aria-labelledby=__nav_5_label aria-expanded=true> <label class=md-nav__title for=__nav_5> <span class="md-nav__icon md-icon"></span> API Reference </label> <ul class=md-nav__list data-md-scrollfix> <li class="md-nav__item md-nav__item--active"> <input class="md-nav__toggle md-toggle" type=checkbox id=__toc> <label class="md-nav__link md-nav__link--active" for=__toc> <span class=md-ellipsis> Outer Loop & Results </span> <span class="md-nav__icon md-icon"></span> </label> <a href=./ class="md-nav__link md-nav__link--active"> <span class=md-ellipsis> Outer Loop & Results </span> </a> <nav class="md-nav md-nav--secondary" aria-label="Table of contents"> <label class=md-nav__title for=__toc> <span class="md-nav__icon md-icon"></span> Table of contents </label> <ul class=md-nav__list data-md-component=toc data-md-scrollfix> <li class=md-nav__item> <a href=#design-api class=md-nav__link> <span class=md-ellipsis> Design API </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.api class=md-nav__link> <span class=md-ellipsis> api </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.api.evaluate class=md-nav__link> <span class=md-ellipsis> evaluate </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.api.run_design class=md-nav__link> <span class=md-ellipsis> run_design </span> </a> </li> <li class=md-nav__item> <a href=#aircraft-factory class=md-nav__link> <span class=md-ellipsis> Aircraft factory </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.factory class=md-nav__link> <span class=md-ellipsis> factory </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.factory.build_aircraft class=md-nav__link> <span class=md-ellipsis> build_aircraft </span> </a> </li> <li class=md-nav__item> <a href=#structured-results class=md-nav__link> <span class=md-ellipsis> Structured results </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.results class=md-nav__link> <span class=md-ellipsis> results </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.results.AircraftResults class=md-nav__link> <span class=md-ellipsis> AircraftResults </span> </a> <nav class=md-nav aria-label=AircraftResults> <ul class=md-nav__list> <li class=md-nav__item> <a href=#PhlyGreen.results.AircraftResults.from_aircraft class=md-nav__link> <span class=md-ellipsis> from_aircraft </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.results.AircraftResults.input_summary class=md-nav__link> <span class=md-ellipsis> input_summary </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.results.AircraftResults.print_input_summary class=md-nav__link> <span class=md-ellipsis> print_input_summary </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.results.AircraftResults.to_dict class=md-nav__link> <span class=md-ellipsis> to_dict </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.results.AircraftResults.write_timeseries class=md-nav__link> <span class=md-ellipsis> write_timeseries </span> </a> </li> </ul> </nav> </li> <li class=md-nav__item> <a href=#post-processing-time-series class=md-nav__link> <span class=md-ellipsis> Post-processing &amp; time series </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.postprocess class=md-nav__link> <span class=md-ellipsis> postprocess </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.postprocess.class_ii_components class=md-nav__link> <span class=md-ellipsis> class_ii_components </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.postprocess.component_timeseries class=md-nav__link> <span class=md-ellipsis> component_timeseries </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.postprocess.mass_breakdown class=md-nav__link> <span class=md-ellipsis> mass_breakdown </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.postprocess.mission_timeseries class=md-nav__link> <span class=md-ellipsis> mission_timeseries </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.postprocess.plot_component_timeseries class=md-nav__link> <span class=md-ellipsis> plot_component_timeseries </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.postprocess.plot_constraint_diagram class=md-nav__link> <span class=md-ellipsis> plot_constraint_diagram </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.postprocess.plot_energy_timeseries class=md-nav__link> <span class=md-ellipsis> plot_energy_timeseries </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.postprocess.plot_mass_breakdown class=md-nav__link> <span class=md-ellipsis> plot_mass_breakdown </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.postprocess.plot_mission_profile class=md-nav__link> <span class=md-ellipsis> plot_mission_profile </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.postprocess.plot_power_timeseries class=md-nav__link> <span class=md-ellipsis> plot_power_timeseries </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.postprocess.plot_tank_state class=md-nav__link> <span class=md-ellipsis> plot_tank_state </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.postprocess.power_timeseries class=md-nav__link> <span class=md-ellipsis> power_timeseries </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.postprocess.timeseries_table class=md-nav__link> <span class=md-ellipsis> timeseries_table </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.postprocess.write_timeseries class=md-nav__link> <span class=md-ellipsis> write_timeseries </span> </a> </li> </ul> </nav> </li> <li class=md-nav__item> <a href=../config/ class=md-nav__link> <span class=md-ellipsis> Configuration </span> </a> </li> <li class=md-nav__item> <a href=../mission/ class=md-nav__link> <span class=md-ellipsis> Mission </span> </a> </li> <li class=md-nav__item> <a href=../powertrain/ class=md-nav__link> <span class=md-ellipsis> Powertrain </span> </a> </li> <li class=md-nav__item> <a href=../battery/ class=md-nav__link> <span class=md-ellipsis> Battery </span> </a> </li> <li class=md-nav__item> <a href=../fuelcell/ class=md-nav__link> <span class=md-ellipsis> Fuel Cell </span> </a> </li> <li class=md-nav__item> <a href=../tank/ class=md-nav__link> <span class=md-ellipsis> LH2 Tank </span> </a> </li> <li class=md-nav__item> <a href=../thermal/ class=md-nav__link> <span class=md-ellipsis> Thermal Network </span> </a> </li> <li class=md-nav__item> <a href=../weight/ class=md-nav__link> <span class=md-ellipsis> Weight </span> </a> </li> <li class=md-nav__item> <a href=../performance/ class=md-nav__link> <span class=md-ellipsis> Performance </span> </a> </li> <li class=md-nav__item> <a href=../constraints/ class=md-nav__link> <span class=md-ellipsis> Constraints </span> </a> </li> <li class=md-nav__item> <a href=../aerodynamics/ class=md-nav__link> <span class=md-ellipsis> Aerodynamics </span> </a> </li> <li class=md-nav__item> <a href=../structures/ class=md-nav__link> <span class=md-ellipsis> Structures </span> </a> </li> <li class=md-nav__item> <a href=../welltowake/ class=md-nav__link> <span class=md-ellipsis> Well-to-Wake </span> </a> </li> <li class=md-nav__item> <a href=../climate-impact/ class=md-nav__link> <span class=md-ellipsis> Climate Impact </span> </a> </li> <li class=md-nav__item> <a href=../utilities/ class=md-nav__link> <span class=md-ellipsis> Utilities & API </span> </a> </li> </ul> </nav> </li> </ul> </nav> </div> </div> </div> <div class=md-content data-md-component=content> <article class="md-content__inner md-typeset"> <a href=https://github.com/rmalpica/PhlyGreen/edit/master/docs/api/outer-loop.md title="Edit this page" class="md-content__button md-icon" rel=edit> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg> </a> <h1 id=outer-loop-results-api>Outer-loop &amp; results API<a class=headerlink href=#outer-loop-results-api title="Permanent link">&para;</a></h1> <p>Pure, side-effect-free entry points for design studies (optimization, UQ, sweeps), the factory that wires an aircraft, and the structured result / post-processing helpers.</p> <h2 id=design-api>Design API<a class=headerlink href=#design-api title="Permanent link">&para;</a></h2> <div class="doc doc-object doc-module"> <a id=PhlyGreen.api></a> <div class="doc doc-contents first"> <p>A small, stateless API for driving the aircraft model from outer loops.</p> <p>Optimization, uncertainty quantification and parameter sweeps all need the same thing: a <em>pure function</em> that maps a design specification to results, with no shared state between calls so it is safe to run in a loop (or in parallel). That is :func:<code>run_design</code>.</p> <p>:func:<code>evaluate</code> adds the usual outer-loop pattern: take a baseline config, apply some parameters to a fresh copy of it, design, and return the results — without ever mutating the baseline.</p> <div class="doc doc-children"> <div class="doc doc-object doc-function"> <h2 id=PhlyGreen.api.evaluate class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code> <span class="doc doc-object-name doc-function-name">evaluate</span> <a href=#PhlyGreen.api.evaluate class=headerlink title="Permanent link">&para;</a></h2> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>evaluate</span><span class=p>(</span><span class=n>base_config</span><span class=p>,</span> <span class=n>apply</span><span class=p>,</span> <span class=n>x</span><span class=p>,</span> <span class=n>design</span><span class=o>=</span><span class=kc>True</span><span class=p>)</span>
+<!doctype html><html lang=en class=no-js> <head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><meta name=description content="User & Developer Manual for the PhlyGreen Aircraft Design Toolkit"><meta name=author content="Riccardo Malpica Galassi"><link href=https://rmalpica.github.io/PhlyGreen/api/outer-loop/ rel=canonical><link href=../../developer-guide/troubleshooting/ rel=prev><link href=../config/ rel=next><link rel=icon href=../../assets/images/favicon.png><meta name=generator content="mkdocs-1.6.1, mkdocs-material-9.7.6"><title>Outer Loop & Results - PhlyGreen Documentation</title><link rel=stylesheet href=../../assets/stylesheets/main.484c7ddc.min.css><link rel=stylesheet href=../../assets/stylesheets/palette.ab4e12ef.min.css><link rel=preconnect href=https://fonts.gstatic.com crossorigin><link rel=stylesheet href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CFira+Code:400,400i,700,700i&display=fallback"><style>:root{--md-text-font:"Inter";--md-code-font:"Fira Code"}</style><link rel=stylesheet href=../../assets/_mkdocstrings.css><link rel=stylesheet href=https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css><link rel=stylesheet href=../../css/custom.css><link rel=stylesheet href=../../css/extra.css><script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script></head> <body dir=ltr data-md-color-scheme=default data-md-color-primary=teal data-md-color-accent=cyan> <input class=md-toggle data-md-toggle=drawer type=checkbox id=__drawer autocomplete=off> <input class=md-toggle data-md-toggle=search type=checkbox id=__search autocomplete=off> <label class=md-overlay for=__drawer></label> <div data-md-component=skip> <a href=#outer-loop-results-api class=md-skip> Skip to content </a> </div> <div data-md-component=announce> </div> <header class="md-header md-header--shadow" data-md-component=header> <nav class="md-header__inner md-grid" aria-label=Header> <a href=../.. title="PhlyGreen Documentation" class="md-header__button md-logo" aria-label="PhlyGreen Documentation" data-md-component=logo> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg> </a> <label class="md-header__button md-icon" for=__drawer> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg> </label> <div class=md-header__title data-md-component=header-title> <div class=md-header__ellipsis> <div class=md-header__topic> <span class=md-ellipsis> PhlyGreen Documentation </span> </div> <div class=md-header__topic data-md-component=header-topic> <span class=md-ellipsis> Outer Loop & Results </span> </div> </div> </div> <form class=md-header__option data-md-component=palette> <input class=md-option data-md-color-media data-md-color-scheme=default data-md-color-primary=teal data-md-color-accent=cyan aria-hidden=true type=radio name=__palette id=__palette_0> <input class=md-option data-md-color-media data-md-color-scheme=slate data-md-color-primary=teal data-md-color-accent=cyan aria-label="Switch to light mode" type=radio name=__palette id=__palette_1> <label class="md-header__button md-icon" title="Switch to light mode" for=__palette_0 hidden> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg> </label> </form> <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script> <label class="md-header__button md-icon" for=__search> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg> </label> <div class=md-search data-md-component=search role=dialog> <label class=md-search__overlay for=__search></label> <div class=md-search__inner role=search> <form class=md-search__form name=search> <input type=text class=md-search__input name=query aria-label=Search placeholder=Search autocapitalize=off autocorrect=off autocomplete=off spellcheck=false data-md-component=search-query required> <label class="md-search__icon md-icon" for=__search> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg> </label> <nav class=md-search__options aria-label=Search> <button type=reset class="md-search__icon md-icon" title=Clear aria-label=Clear tabindex=-1> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg> </button> </nav> </form> <div class=md-search__output> <div class=md-search__scrollwrap tabindex=0 data-md-scrollfix> <div class=md-search-result data-md-component=search-result> <div class=md-search-result__meta> Initializing search </div> <ol class=md-search-result__list role=presentation></ol> </div> </div> </div> </div> </div> <div class=md-header__source> <a href=https://github.com/rmalpica/PhlyGreen title="Go to repository" class=md-source data-md-component=source> <div class="md-source__icon md-icon"> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 512 512"><!-- Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg> </div> <div class=md-source__repository> GitHub </div> </a> </div> </nav> </header> <div class=md-container data-md-component=container> <main class=md-main data-md-component=main> <div class="md-main__inner md-grid"> <div class="md-sidebar md-sidebar--primary" data-md-component=sidebar data-md-type=navigation> <div class=md-sidebar__scrollwrap> <div class=md-sidebar__inner> <nav class="md-nav md-nav--primary md-nav--integrated" aria-label=Navigation data-md-level=0> <label class=md-nav__title for=__drawer> <a href=../.. title="PhlyGreen Documentation" class="md-nav__button md-logo" aria-label="PhlyGreen Documentation" data-md-component=logo> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg> </a> PhlyGreen Documentation </label> <div class=md-nav__source> <a href=https://github.com/rmalpica/PhlyGreen title="Go to repository" class=md-source data-md-component=source> <div class="md-source__icon md-icon"> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 512 512"><!-- Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg> </div> <div class=md-source__repository> GitHub </div> </a> </div> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../.. class=md-nav__link> <span class=md-ellipsis> Home </span> </a> </li> <li class="md-nav__item md-nav__item--section md-nav__item--nested"> <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type=checkbox id=__nav_2> <label class=md-nav__link for=__nav_2 id=__nav_2_label tabindex> <span class=md-ellipsis> Getting Started </span> <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav data-md-level=1 aria-labelledby=__nav_2_label aria-expanded=false> <label class=md-nav__title for=__nav_2> <span class="md-nav__icon md-icon"></span> Getting Started </label> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../../getting-started/installation/ class=md-nav__link> <span class=md-ellipsis> Installation </span> </a> </li> <li class=md-nav__item> <a href=../../getting-started/theory/ class=md-nav__link> <span class=md-ellipsis> Theoretical Reference </span> </a> </li> <li class=md-nav__item> <a href=../../getting-started/logic/ class=md-nav__link> <span class=md-ellipsis> Program Logic </span> </a> </li> <li class=md-nav__item> <a href=../../getting-started/running-your-first-mission/ class=md-nav__link> <span class=md-ellipsis> Running your first mission </span> </a> </li> </ul> </nav> </li> <li class="md-nav__item md-nav__item--section md-nav__item--nested"> <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type=checkbox id=__nav_3> <label class=md-nav__link for=__nav_3 id=__nav_3_label tabindex> <span class=md-ellipsis> User Guide </span> <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav data-md-level=1 aria-labelledby=__nav_3_label aria-expanded=false> <label class=md-nav__title for=__nav_3> <span class="md-nav__icon md-icon"></span> User Guide </label> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../../user-guide/configuration/ class=md-nav__link> <span class=md-ellipsis> Configuration & Workflow </span> </a> </li> <li class=md-nav__item> <a href=../../user-guide/aircraft/ class=md-nav__link> <span class=md-ellipsis> Aircraft Module </span> </a> </li> <li class=md-nav__item> <a href=../../user-guide/constraints/ class=md-nav__link> <span class=md-ellipsis> Constraints Analysis </span> </a> </li> <li class=md-nav__item> <a href=../../user-guide/mission/ class=md-nav__link> <span class=md-ellipsis> Mission Module </span> </a> </li> <li class=md-nav__item> <a href=../../user-guide/weight/ class=md-nav__link> <span class=md-ellipsis> Weight Estimation </span> </a> </li> <li class=md-nav__item> <a href=../../user-guide/performance/ class=md-nav__link> <span class=md-ellipsis> Performance Module </span> </a> </li> <li class=md-nav__item> <a href=../../user-guide/powertrain/ class=md-nav__link> <span class=md-ellipsis> Powertrain Module </span> </a> </li> <li class=md-nav__item> <a href=../../user-guide/battery/ class=md-nav__link> <span class=md-ellipsis> Battery Module </span> </a> </li> <li class=md-nav__item> <a href=../../user-guide/hydrogen/ class=md-nav__link> <span class=md-ellipsis> Hydrogen (Fuel Cell & Tank) </span> </a> </li> <li class=md-nav__item> <a href=../../user-guide/aerodynamics/ class=md-nav__link> <span class=md-ellipsis> Aerodynamics Module </span> </a> </li> <li class=md-nav__item> <a href=../../user-guide/structures/ class=md-nav__link> <span class=md-ellipsis> Structures Module </span> </a> </li> <li class=md-nav__item> <a href=../../user-guide/surrogate-models/ class=md-nav__link> <span class=md-ellipsis> Surrogate Models </span> </a> </li> <li class=md-nav__item> <a href=../../user-guide/well-to-wake/ class=md-nav__link> <span class=md-ellipsis> Well-To-Wake Analysis </span> </a> </li> <li class=md-nav__item> <a href=../../user-guide/emissions/ class=md-nav__link> <span class=md-ellipsis> Emissions & Climate Impact </span> </a> </li> </ul> </nav> </li> <li class="md-nav__item md-nav__item--section md-nav__item--nested"> <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type=checkbox id=__nav_4> <label class=md-nav__link for=__nav_4 id=__nav_4_label tabindex> <span class=md-ellipsis> Developer Guide </span> <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav data-md-level=1 aria-labelledby=__nav_4_label aria-expanded=false> <label class=md-nav__title for=__nav_4> <span class="md-nav__icon md-icon"></span> Developer Guide </label> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../../developer-guide/architecture-overview/ class=md-nav__link> <span class=md-ellipsis> Architecture Overview </span> </a> </li> <li class=md-nav__item> <a href=../../developer-guide/flowcharts/ class=md-nav__link> <span class=md-ellipsis> Flowcharts </span> </a> </li> <li class=md-nav__item> <a href=../../developer-guide/module-reference/ class=md-nav__link> <span class=md-ellipsis> Module Reference </span> </a> </li> <li class=md-nav__item> <a href=../../developer-guide/extending-the-model/ class=md-nav__link> <span class=md-ellipsis> Extending the Model </span> </a> </li> <li class=md-nav__item> <a href=../../developer-guide/troubleshooting/ class=md-nav__link> <span class=md-ellipsis> Troubleshooting </span> </a> </li> </ul> </nav> </li> <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested"> <input class="md-nav__toggle md-toggle " type=checkbox id=__nav_5 checked> <label class=md-nav__link for=__nav_5 id=__nav_5_label tabindex> <span class=md-ellipsis> API Reference </span> <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav data-md-level=1 aria-labelledby=__nav_5_label aria-expanded=true> <label class=md-nav__title for=__nav_5> <span class="md-nav__icon md-icon"></span> API Reference </label> <ul class=md-nav__list data-md-scrollfix> <li class="md-nav__item md-nav__item--active"> <input class="md-nav__toggle md-toggle" type=checkbox id=__toc> <label class="md-nav__link md-nav__link--active" for=__toc> <span class=md-ellipsis> Outer Loop & Results </span> <span class="md-nav__icon md-icon"></span> </label> <a href=./ class="md-nav__link md-nav__link--active"> <span class=md-ellipsis> Outer Loop & Results </span> </a> <nav class="md-nav md-nav--secondary" aria-label="Table of contents"> <label class=md-nav__title for=__toc> <span class="md-nav__icon md-icon"></span> Table of contents </label> <ul class=md-nav__list data-md-component=toc data-md-scrollfix> <li class=md-nav__item> <a href=#design-api class=md-nav__link> <span class=md-ellipsis> Design API </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.api class=md-nav__link> <span class=md-ellipsis> api </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.api.evaluate class=md-nav__link> <span class=md-ellipsis> evaluate </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.api.run_design class=md-nav__link> <span class=md-ellipsis> run_design </span> </a> </li> <li class=md-nav__item> <a href=#aircraft-factory class=md-nav__link> <span class=md-ellipsis> Aircraft factory </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.factory class=md-nav__link> <span class=md-ellipsis> factory </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.factory.build_aircraft class=md-nav__link> <span class=md-ellipsis> build_aircraft </span> </a> </li> <li class=md-nav__item> <a href=#structured-results class=md-nav__link> <span class=md-ellipsis> Structured results </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.results class=md-nav__link> <span class=md-ellipsis> results </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.results.AircraftResults class=md-nav__link> <span class=md-ellipsis> AircraftResults </span> </a> <nav class=md-nav aria-label=AircraftResults> <ul class=md-nav__list> <li class=md-nav__item> <a href=#PhlyGreen.results.AircraftResults.from_aircraft class=md-nav__link> <span class=md-ellipsis> from_aircraft </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.results.AircraftResults.input_summary class=md-nav__link> <span class=md-ellipsis> input_summary </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.results.AircraftResults.print_input_summary class=md-nav__link> <span class=md-ellipsis> print_input_summary </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.results.AircraftResults.to_dict class=md-nav__link> <span class=md-ellipsis> to_dict </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.results.AircraftResults.write_timeseries class=md-nav__link> <span class=md-ellipsis> write_timeseries </span> </a> </li> </ul> </nav> </li> <li class=md-nav__item> <a href=#post-processing-time-series class=md-nav__link> <span class=md-ellipsis> Post-processing &amp; time series </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.postprocess class=md-nav__link> <span class=md-ellipsis> postprocess </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.postprocess.class_ii_components class=md-nav__link> <span class=md-ellipsis> class_ii_components </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.postprocess.component_timeseries class=md-nav__link> <span class=md-ellipsis> component_timeseries </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.postprocess.compute_tank_history class=md-nav__link> <span class=md-ellipsis> compute_tank_history </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.postprocess.mass_breakdown class=md-nav__link> <span class=md-ellipsis> mass_breakdown </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.postprocess.mission_timeseries class=md-nav__link> <span class=md-ellipsis> mission_timeseries </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.postprocess.plot_component_timeseries class=md-nav__link> <span class=md-ellipsis> plot_component_timeseries </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.postprocess.plot_constraint_diagram class=md-nav__link> <span class=md-ellipsis> plot_constraint_diagram </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.postprocess.plot_energy_timeseries class=md-nav__link> <span class=md-ellipsis> plot_energy_timeseries </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.postprocess.plot_mass_breakdown class=md-nav__link> <span class=md-ellipsis> plot_mass_breakdown </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.postprocess.plot_mission_profile class=md-nav__link> <span class=md-ellipsis> plot_mission_profile </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.postprocess.plot_power_timeseries class=md-nav__link> <span class=md-ellipsis> plot_power_timeseries </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.postprocess.plot_tank_state class=md-nav__link> <span class=md-ellipsis> plot_tank_state </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.postprocess.power_timeseries class=md-nav__link> <span class=md-ellipsis> power_timeseries </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.postprocess.timeseries_table class=md-nav__link> <span class=md-ellipsis> timeseries_table </span> </a> </li> <li class=md-nav__item> <a href=#PhlyGreen.postprocess.write_timeseries class=md-nav__link> <span class=md-ellipsis> write_timeseries </span> </a> </li> </ul> </nav> </li> <li class=md-nav__item> <a href=../config/ class=md-nav__link> <span class=md-ellipsis> Configuration </span> </a> </li> <li class=md-nav__item> <a href=../mission/ class=md-nav__link> <span class=md-ellipsis> Mission </span> </a> </li> <li class=md-nav__item> <a href=../powertrain/ class=md-nav__link> <span class=md-ellipsis> Powertrain </span> </a> </li> <li class=md-nav__item> <a href=../battery/ class=md-nav__link> <span class=md-ellipsis> Battery </span> </a> </li> <li class=md-nav__item> <a href=../fuelcell/ class=md-nav__link> <span class=md-ellipsis> Fuel Cell </span> </a> </li> <li class=md-nav__item> <a href=../tank/ class=md-nav__link> <span class=md-ellipsis> LH2 Tank </span> </a> </li> <li class=md-nav__item> <a href=../thermal/ class=md-nav__link> <span class=md-ellipsis> Thermal Network </span> </a> </li> <li class=md-nav__item> <a href=../weight/ class=md-nav__link> <span class=md-ellipsis> Weight </span> </a> </li> <li class=md-nav__item> <a href=../performance/ class=md-nav__link> <span class=md-ellipsis> Performance </span> </a> </li> <li class=md-nav__item> <a href=../constraints/ class=md-nav__link> <span class=md-ellipsis> Constraints </span> </a> </li> <li class=md-nav__item> <a href=../aerodynamics/ class=md-nav__link> <span class=md-ellipsis> Aerodynamics </span> </a> </li> <li class=md-nav__item> <a href=../structures/ class=md-nav__link> <span class=md-ellipsis> Structures </span> </a> </li> <li class=md-nav__item> <a href=../welltowake/ class=md-nav__link> <span class=md-ellipsis> Well-to-Wake </span> </a> </li> <li class=md-nav__item> <a href=../climate-impact/ class=md-nav__link> <span class=md-ellipsis> Climate Impact </span> </a> </li> <li class=md-nav__item> <a href=../utilities/ class=md-nav__link> <span class=md-ellipsis> Utilities & API </span> </a> </li> </ul> </nav> </li> </ul> </nav> </div> </div> </div> <div class=md-content data-md-component=content> <article class="md-content__inner md-typeset"> <a href=https://github.com/rmalpica/PhlyGreen/edit/master/docs/api/outer-loop.md title="Edit this page" class="md-content__button md-icon" rel=edit> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg> </a> <h1 id=outer-loop-results-api>Outer-loop &amp; results API<a class=headerlink href=#outer-loop-results-api title="Permanent link">&para;</a></h1> <p>Pure, side-effect-free entry points for design studies (optimization, UQ, sweeps), the factory that wires an aircraft, and the structured result / post-processing helpers.</p> <h2 id=design-api>Design API<a class=headerlink href=#design-api title="Permanent link">&para;</a></h2> <div class="doc doc-object doc-module"> <a id=PhlyGreen.api></a> <div class="doc doc-contents first"> <p>A small, stateless API for driving the aircraft model from outer loops.</p> <p>Optimization, uncertainty quantification and parameter sweeps all need the same thing: a <em>pure function</em> that maps a design specification to results, with no shared state between calls so it is safe to run in a loop (or in parallel). That is :func:<code>run_design</code>.</p> <p>:func:<code>evaluate</code> adds the usual outer-loop pattern: take a baseline config, apply some parameters to a fresh copy of it, design, and return the results — without ever mutating the baseline.</p> <div class="doc doc-children"> <div class="doc doc-object doc-function"> <h2 id=PhlyGreen.api.evaluate class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code> <span class="doc doc-object-name doc-function-name">evaluate</span> <a href=#PhlyGreen.api.evaluate class=headerlink title="Permanent link">&para;</a></h2> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>evaluate</span><span class=p>(</span><span class=n>base_config</span><span class=p>,</span> <span class=n>apply</span><span class=p>,</span> <span class=n>x</span><span class=p>,</span> <span class=n>design</span><span class=o>=</span><span class=kc>True</span><span class=p>)</span>
 </code></pre></div> <div class="doc doc-contents "> <p>Evaluate the design for parameter set <code>x</code> applied to a copy of <code>base_config</code>.</p> <p><span class=doc-section-title>Parameters:</span></p> <ul> <li class="doc-section-item field-body"> <b><code>base_config</code></b> (<code><a class="autorefs autorefs-internal" title="            AircraftConfig
 
 
@@ -341,29 +341,29 @@ powertrain.aircraft = myaircraft
     <span class=kn>from</span><span class=w> </span><span class=nn>.postprocess</span><span class=w> </span><span class=kn>import</span> <span class=n>write_timeseries</span> <span class=k>as</span> <span class=n>_write</span>
     <span class=k>return</span> <span class=n>_write</span><span class=p>(</span><span class=bp>self</span><span class=o>.</span><span class=n>_aircraft</span><span class=p>,</span> <span class=n>path</span><span class=p>,</span> <span class=n>include_components</span><span class=o>=</span><span class=n>include_components</span><span class=p>)</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> </div> </div> </div> </div> </div> </div><h2 id=post-processing-time-series>Post-processing &amp; time series<a class=headerlink href=#post-processing-time-series title="Permanent link">&para;</a></h2> <div class="doc doc-object doc-module"> <a id=PhlyGreen.postprocess></a> <div class="doc doc-contents first"> <p>Generic post-processing and plotting helpers for a designed aircraft.</p> <p>After <code>aircraft.configure(config)</code> (or <code>pg.run_design</code>), these functions extract the mission time histories and produce the common plots — the flight profile, the energy time-series, the constraint diagram, the mass breakdown, and the LH2 tank state — for any configuration (Traditional / Hybrid / Hydrogen / FuelCellBattery). Plot helpers accept an optional matplotlib <code>ax</code> and return it, so they compose into dashboards/notebooks.</p> <p>matplotlib is imported lazily; only :func:<code>mission_timeseries</code> works without it.</p> <div class="doc doc-children"> <div class="doc doc-object doc-function"> <h2 id=PhlyGreen.postprocess.class_ii_components class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code> <span class="doc doc-object-name doc-function-name">class_ii_components</span> <a href=#PhlyGreen.postprocess.class_ii_components class=headerlink title="Permanent link">&para;</a></h2> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>class_ii_components</span><span class=p>(</span><span class=n>aircraft</span><span class=p>)</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Return the set of powertrain components that used a <strong>Class-II</strong> (operating-point dependent) efficiency model in this design.</p> <p>Determined by inspecting the powertrain's per-component efficiency models: a :class:<code>~PhlyGreen.Systems.Powertrain.efficiency.ConstantEfficiency</code> is Class-I, anything else is Class-II. An externally-set <code>em_model</code> / <code>fc_model</code> also counts as Class-II. Used to decide <em>automatically</em> which component time series are meaningful for a given design (so a constant-efficiency design pulls in no surrogate columns).</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/postprocess.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>114</span>
-<span class=normal>115</span>
-<span class=normal>116</span>
-<span class=normal>117</span>
-<span class=normal>118</span>
-<span class=normal>119</span>
-<span class=normal>120</span>
-<span class=normal>121</span>
-<span class=normal>122</span>
-<span class=normal>123</span>
-<span class=normal>124</span>
-<span class=normal>125</span>
-<span class=normal>126</span>
-<span class=normal>127</span>
-<span class=normal>128</span>
-<span class=normal>129</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Return the set of powertrain components that used a <strong>Class-II</strong> (operating-point dependent) efficiency model in this design.</p> <p>Determined by inspecting the powertrain's per-component efficiency models: a :class:<code>~PhlyGreen.Systems.Powertrain.efficiency.ConstantEfficiency</code> is Class-I, anything else is Class-II. An externally-set <code>em_model</code> / <code>fc_model</code> also counts as Class-II. Used to decide <em>automatically</em> which component time series are meaningful for a given design (so a constant-efficiency design pulls in no surrogate columns).</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/postprocess.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>129</span>
 <span class=normal>130</span>
 <span class=normal>131</span>
 <span class=normal>132</span>
 <span class=normal>133</span>
 <span class=normal>134</span>
 <span class=normal>135</span>
-<span class=normal>136</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>class_ii_components</span><span class=p>(</span><span class=n>aircraft</span><span class=p>):</span>
+<span class=normal>136</span>
+<span class=normal>137</span>
+<span class=normal>138</span>
+<span class=normal>139</span>
+<span class=normal>140</span>
+<span class=normal>141</span>
+<span class=normal>142</span>
+<span class=normal>143</span>
+<span class=normal>144</span>
+<span class=normal>145</span>
+<span class=normal>146</span>
+<span class=normal>147</span>
+<span class=normal>148</span>
+<span class=normal>149</span>
+<span class=normal>150</span>
+<span class=normal>151</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>class_ii_components</span><span class=p>(</span><span class=n>aircraft</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;Return the set of powertrain components that used a **Class-II** (operating-point</span>
 <span class=sd>    dependent) efficiency model in this design.</span>
 
@@ -387,22 +387,7 @@ powertrain.aircraft = myaircraft
         <span class=n>found</span><span class=o>.</span><span class=n>add</span><span class=p>(</span><span class=s2>&quot;fuel_cell&quot;</span><span class=p>)</span>
     <span class=k>return</span> <span class=n>found</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h2 id=PhlyGreen.postprocess.component_timeseries class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code> <span class="doc doc-object-name doc-function-name">component_timeseries</span> <a href=#PhlyGreen.postprocess.component_timeseries class=headerlink title="Permanent link">&para;</a></h2> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>component_timeseries</span><span class=p>(</span><span class=n>aircraft</span><span class=p>,</span> <span class=n>components</span><span class=o>=</span><span class=kc>None</span><span class=p>,</span> <span class=n>n_engines</span><span class=o>=</span><span class=kc>None</span><span class=p>,</span> <span class=n>gt_design_hp</span><span class=o>=</span><span class=kc>None</span><span class=p>,</span> <span class=n>em_design</span><span class=o>=</span><span class=kc>None</span><span class=p>,</span> <span class=n>propeller_rpm</span><span class=o>=</span><span class=mf>1200.0</span><span class=p>)</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Evaluate the Class-II propulsion models along the flown mission.</p> <p>Walks the converged mission timeline and computes the power flow (<code>propulsive_power</code>/<code>gt_power</code>/<code>em_power</code> [W], also available cheaply via :func:<code>power_timeseries</code>) plus, for each requested component, its Class-II model outputs: gas-turbine efficiency &amp; throttle, electric-motor efficiency &amp; throttle (+ rpm), and propeller efficiency &amp; pitch.</p> <p><code>components</code> selects which Class-II models to evaluate — a subset of <code>{'gas_turbine', 'electric_motor', 'propeller'}</code>. <code>None</code> (default) evaluates all three (forced exploration). Only the requested components load their surrogate, so e.g. the propeller RBF is <em>not</em> loaded unless the propeller is requested.</p> <p>By default the GT/EM nominal powers and the engine count are taken from the <em>designed</em> aircraft (<code>powertrain.gt_design_power</code>/<code>em_design_power</code>/<code>n_engines</code>); pass overrides to explore other sizes. A component is skipped silently if its model/data is unavailable.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/postprocess.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>139</span>
-<span class=normal>140</span>
-<span class=normal>141</span>
-<span class=normal>142</span>
-<span class=normal>143</span>
-<span class=normal>144</span>
-<span class=normal>145</span>
-<span class=normal>146</span>
-<span class=normal>147</span>
-<span class=normal>148</span>
-<span class=normal>149</span>
-<span class=normal>150</span>
-<span class=normal>151</span>
-<span class=normal>152</span>
-<span class=normal>153</span>
-<span class=normal>154</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Evaluate the Class-II propulsion models along the flown mission.</p> <p>Walks the converged mission timeline and computes the power flow (<code>propulsive_power</code>/<code>gt_power</code>/<code>em_power</code> [W], also available cheaply via :func:<code>power_timeseries</code>) plus, for each requested component, its Class-II model outputs: gas-turbine efficiency &amp; throttle, electric-motor efficiency &amp; throttle (+ rpm), and propeller efficiency &amp; pitch.</p> <p><code>components</code> selects which Class-II models to evaluate — a subset of <code>{'gas_turbine', 'electric_motor', 'propeller'}</code>. <code>None</code> (default) evaluates all three (forced exploration). Only the requested components load their surrogate, so e.g. the propeller RBF is <em>not</em> loaded unless the propeller is requested.</p> <p>By default the GT/EM nominal powers and the engine count are taken from the <em>designed</em> aircraft (<code>powertrain.gt_design_power</code>/<code>em_design_power</code>/<code>n_engines</code>); pass overrides to explore other sizes. A component is skipped silently if its model/data is unavailable.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/postprocess.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>154</span>
 <span class=normal>155</span>
 <span class=normal>156</span>
 <span class=normal>157</span>
@@ -507,7 +492,22 @@ powertrain.aircraft = myaircraft
 <span class=normal>256</span>
 <span class=normal>257</span>
 <span class=normal>258</span>
-<span class=normal>259</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>component_timeseries</span><span class=p>(</span><span class=n>aircraft</span><span class=p>,</span> <span class=n>components</span><span class=o>=</span><span class=kc>None</span><span class=p>,</span> <span class=n>n_engines</span><span class=o>=</span><span class=kc>None</span><span class=p>,</span> <span class=n>gt_design_hp</span><span class=o>=</span><span class=kc>None</span><span class=p>,</span>
+<span class=normal>259</span>
+<span class=normal>260</span>
+<span class=normal>261</span>
+<span class=normal>262</span>
+<span class=normal>263</span>
+<span class=normal>264</span>
+<span class=normal>265</span>
+<span class=normal>266</span>
+<span class=normal>267</span>
+<span class=normal>268</span>
+<span class=normal>269</span>
+<span class=normal>270</span>
+<span class=normal>271</span>
+<span class=normal>272</span>
+<span class=normal>273</span>
+<span class=normal>274</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>component_timeseries</span><span class=p>(</span><span class=n>aircraft</span><span class=p>,</span> <span class=n>components</span><span class=o>=</span><span class=kc>None</span><span class=p>,</span> <span class=n>n_engines</span><span class=o>=</span><span class=kc>None</span><span class=p>,</span> <span class=n>gt_design_hp</span><span class=o>=</span><span class=kc>None</span><span class=p>,</span>
                          <span class=n>em_design</span><span class=o>=</span><span class=kc>None</span><span class=p>,</span> <span class=n>propeller_rpm</span><span class=o>=</span><span class=mf>1200.0</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;Evaluate the Class-II propulsion models along the flown mission.</span>
 
@@ -628,22 +628,80 @@ powertrain.aircraft = myaircraft
             <span class=k>pass</span>
 
     <span class=k>return</span> <span class=n>out</span>
+</code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h2 id=PhlyGreen.postprocess.compute_tank_history class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code> <span class="doc doc-object-name doc-function-name">compute_tank_history</span> <a href=#PhlyGreen.postprocess.compute_tank_history class=headerlink title="Permanent link">&para;</a></h2> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>compute_tank_history</span><span class=p>(</span><span class=n>aircraft</span><span class=p>)</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Advance the LH2 tank thermodynamic state along the converged mission, filling <code>aircraft.tank.history</code>.</p> <p>Works for any hydrogen architecture (<code>Hydrogen</code> and <code>FuelCellBattery</code>): it walks the flown mission solution and drives the tank with the hydrogen mass flow recovered from the cumulative hydrogen chemical energy (ODE state <code>y[0]</code>). Unlike setting <code>mission.track_tank</code> and re-flying, this is a cheap post-processing pass and needs no re-integration. Requires a physics LH2 tank (a <code>TankConfig</code> + CoolProp) and a flown mission.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/postprocess.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>560</span>
+<span class=normal>561</span>
+<span class=normal>562</span>
+<span class=normal>563</span>
+<span class=normal>564</span>
+<span class=normal>565</span>
+<span class=normal>566</span>
+<span class=normal>567</span>
+<span class=normal>568</span>
+<span class=normal>569</span>
+<span class=normal>570</span>
+<span class=normal>571</span>
+<span class=normal>572</span>
+<span class=normal>573</span>
+<span class=normal>574</span>
+<span class=normal>575</span>
+<span class=normal>576</span>
+<span class=normal>577</span>
+<span class=normal>578</span>
+<span class=normal>579</span>
+<span class=normal>580</span>
+<span class=normal>581</span>
+<span class=normal>582</span>
+<span class=normal>583</span>
+<span class=normal>584</span>
+<span class=normal>585</span>
+<span class=normal>586</span>
+<span class=normal>587</span>
+<span class=normal>588</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>compute_tank_history</span><span class=p>(</span><span class=n>aircraft</span><span class=p>):</span>
+<span class=w>    </span><span class=sd>&quot;&quot;&quot;Advance the LH2 tank thermodynamic state along the converged mission, filling</span>
+<span class=sd>    ``aircraft.tank.history``.</span>
+
+<span class=sd>    Works for any hydrogen architecture (``Hydrogen`` and ``FuelCellBattery``): it walks the</span>
+<span class=sd>    flown mission solution and drives the tank with the hydrogen mass flow recovered from the</span>
+<span class=sd>    cumulative hydrogen chemical energy (ODE state ``y[0]``). Unlike setting</span>
+<span class=sd>    ``mission.track_tank`` and re-flying, this is a cheap post-processing pass and needs no</span>
+<span class=sd>    re-integration. Requires a physics LH2 tank (a ``TankConfig`` + CoolProp) and a flown mission.</span>
+<span class=sd>    &quot;&quot;&quot;</span>
+    <span class=n>tank</span> <span class=o>=</span> <span class=nb>getattr</span><span class=p>(</span><span class=n>aircraft</span><span class=p>,</span> <span class=s2>&quot;tank&quot;</span><span class=p>,</span> <span class=kc>None</span><span class=p>)</span>
+    <span class=n>m</span> <span class=o>=</span> <span class=nb>getattr</span><span class=p>(</span><span class=n>aircraft</span><span class=p>,</span> <span class=s2>&quot;mission&quot;</span><span class=p>,</span> <span class=kc>None</span><span class=p>)</span>
+    <span class=k>if</span> <span class=n>tank</span> <span class=ow>is</span> <span class=kc>None</span> <span class=ow>or</span> <span class=ow>not</span> <span class=nb>hasattr</span><span class=p>(</span><span class=n>tank</span><span class=p>,</span> <span class=s2>&quot;time_step&quot;</span><span class=p>):</span>
+        <span class=k>raise</span> <span class=ne>ValueError</span><span class=p>(</span><span class=s2>&quot;No physics LH2 tank — attach a TankConfig (needs CoolProp).&quot;</span><span class=p>)</span>
+    <span class=k>if</span> <span class=n>m</span> <span class=ow>is</span> <span class=kc>None</span> <span class=ow>or</span> <span class=ow>not</span> <span class=nb>getattr</span><span class=p>(</span><span class=n>m</span><span class=p>,</span> <span class=s2>&quot;integral_solution&quot;</span><span class=p>,</span> <span class=kc>None</span><span class=p>):</span>
+        <span class=k>raise</span> <span class=ne>ValueError</span><span class=p>(</span><span class=s2>&quot;No mission solution — design the aircraft first.&quot;</span><span class=p>)</span>
+    <span class=n>tank</span><span class=o>.</span><span class=n>m_curr</span> <span class=o>=</span> <span class=n>tank</span><span class=o>.</span><span class=n>capacity_single</span>        <span class=c1># start full</span>
+    <span class=n>tank</span><span class=o>.</span><span class=n>P_curr</span> <span class=o>=</span> <span class=n>tank</span><span class=o>.</span><span class=n>P_min</span>
+    <span class=n>tank</span><span class=o>.</span><span class=n>history</span> <span class=o>=</span> <span class=p>{</span><span class=s1>&#39;t&#39;</span><span class=p>:</span> <span class=p>[],</span> <span class=s1>&#39;P&#39;</span><span class=p>:</span> <span class=p>[],</span> <span class=s1>&#39;m_tot&#39;</span><span class=p>:</span> <span class=p>[],</span> <span class=s1>&#39;Vent&#39;</span><span class=p>:</span> <span class=p>[],</span> <span class=s1>&#39;Q_in&#39;</span><span class=p>:</span> <span class=p>[],</span>
+                    <span class=s1>&#39;Alt&#39;</span><span class=p>:</span> <span class=p>[],</span> <span class=s1>&#39;Q_heater&#39;</span><span class=p>:</span> <span class=p>[],</span> <span class=s1>&#39;m_vent_cum&#39;</span><span class=p>:</span> <span class=p>[],</span> <span class=s1>&#39;Consumption&#39;</span><span class=p>:</span> <span class=p>[]}</span>
+    <span class=n>tank</span><span class=o>.</span><span class=n>cum_vented_mass</span> <span class=o>=</span> <span class=mf>0.0</span>
+    <span class=k>for</span> <span class=n>arr</span> <span class=ow>in</span> <span class=n>m</span><span class=o>.</span><span class=n>integral_solution</span><span class=p>:</span>
+        <span class=k>for</span> <span class=n>k</span> <span class=ow>in</span> <span class=nb>range</span><span class=p>(</span><span class=mi>1</span><span class=p>,</span> <span class=nb>len</span><span class=p>(</span><span class=n>arr</span><span class=o>.</span><span class=n>t</span><span class=p>)):</span>
+            <span class=n>dt</span> <span class=o>=</span> <span class=n>arr</span><span class=o>.</span><span class=n>t</span><span class=p>[</span><span class=n>k</span><span class=p>]</span> <span class=o>-</span> <span class=n>arr</span><span class=o>.</span><span class=n>t</span><span class=p>[</span><span class=n>k</span> <span class=o>-</span> <span class=mi>1</span><span class=p>]</span>
+            <span class=n>dE</span> <span class=o>=</span> <span class=nb>max</span><span class=p>(</span><span class=nb>float</span><span class=p>(</span><span class=n>arr</span><span class=o>.</span><span class=n>y</span><span class=p>[</span><span class=mi>0</span><span class=p>][</span><span class=n>k</span><span class=p>]</span> <span class=o>-</span> <span class=n>arr</span><span class=o>.</span><span class=n>y</span><span class=p>[</span><span class=mi>0</span><span class=p>][</span><span class=n>k</span> <span class=o>-</span> <span class=mi>1</span><span class=p>]),</span> <span class=mf>0.0</span><span class=p>)</span>   <span class=c1># hydrogen chemical energy used</span>
+            <span class=n>m_dot</span> <span class=o>=</span> <span class=p>(</span><span class=n>dE</span> <span class=o>/</span> <span class=n>m</span><span class=o>.</span><span class=n>ef</span><span class=p>)</span> <span class=o>/</span> <span class=n>dt</span> <span class=k>if</span> <span class=n>dt</span> <span class=o>&gt;</span> <span class=mi>0</span> <span class=k>else</span> <span class=mf>0.0</span>
+            <span class=n>t_mid</span> <span class=o>=</span> <span class=mf>0.5</span> <span class=o>*</span> <span class=p>(</span><span class=n>arr</span><span class=o>.</span><span class=n>t</span><span class=p>[</span><span class=n>k</span><span class=p>]</span> <span class=o>+</span> <span class=n>arr</span><span class=o>.</span><span class=n>t</span><span class=p>[</span><span class=n>k</span> <span class=o>-</span> <span class=mi>1</span><span class=p>])</span>
+            <span class=n>tank</span><span class=o>.</span><span class=n>time_step</span><span class=p>(</span><span class=n>dt</span><span class=p>,</span> <span class=n>m_dot</span><span class=p>,</span> <span class=nb>float</span><span class=p>(</span><span class=n>m</span><span class=o>.</span><span class=n>profile</span><span class=o>.</span><span class=n>Altitude</span><span class=p>(</span><span class=n>t_mid</span><span class=p>)))</span>
+    <span class=k>return</span> <span class=n>tank</span><span class=o>.</span><span class=n>history</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h2 id=PhlyGreen.postprocess.mass_breakdown class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code> <span class="doc doc-object-name doc-function-name">mass_breakdown</span> <a href=#PhlyGreen.postprocess.mass_breakdown class=headerlink title="Permanent link">&para;</a></h2> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>mass_breakdown</span><span class=p>(</span><span class=n>aircraft</span><span class=p>)</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Return an ordered <code>{component: mass_kg}</code> dict (omitting absent/zero items).</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/postprocess.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>489</span>
-<span class=normal>490</span>
-<span class=normal>491</span>
-<span class=normal>492</span>
-<span class=normal>493</span>
-<span class=normal>494</span>
-<span class=normal>495</span>
-<span class=normal>496</span>
-<span class=normal>497</span>
-<span class=normal>498</span>
-<span class=normal>499</span>
-<span class=normal>500</span>
-<span class=normal>501</span>
-<span class=normal>502</span>
-<span class=normal>503</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>mass_breakdown</span><span class=p>(</span><span class=n>aircraft</span><span class=p>):</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Return an ordered <code>{component: mass_kg}</code> dict (omitting absent/zero items).</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/postprocess.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>528</span>
+<span class=normal>529</span>
+<span class=normal>530</span>
+<span class=normal>531</span>
+<span class=normal>532</span>
+<span class=normal>533</span>
+<span class=normal>534</span>
+<span class=normal>535</span>
+<span class=normal>536</span>
+<span class=normal>537</span>
+<span class=normal>538</span>
+<span class=normal>539</span>
+<span class=normal>540</span>
+<span class=normal>541</span>
+<span class=normal>542</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>mass_breakdown</span><span class=p>(</span><span class=n>aircraft</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;Return an ordered ``{component: mass_kg}`` dict (omitting absent/zero items).&quot;&quot;&quot;</span>
     <span class=n>w</span> <span class=o>=</span> <span class=n>aircraft</span><span class=o>.</span><span class=n>weight</span>
     <span class=n>items</span> <span class=o>=</span> <span class=p>[</span>
@@ -716,7 +774,9 @@ powertrain.aircraft = myaircraft
 <span class=normal>69</span>
 <span class=normal>70</span>
 <span class=normal>71</span>
-<span class=normal>72</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>mission_timeseries</span><span class=p>(</span><span class=n>aircraft</span><span class=p>):</span>
+<span class=normal>72</span>
+<span class=normal>73</span>
+<span class=normal>74</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>mission_timeseries</span><span class=p>(</span><span class=n>aircraft</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;Extract mission time histories into a dict of equal-length numpy arrays.</span>
 
 <span class=sd>    Keys always present: ``time`` [s], ``altitude`` [m], ``velocity`` [m/s] (TAS),</span>
@@ -752,8 +812,10 @@ powertrain.aircraft = myaircraft
     <span class=k>if</span> <span class=n>config</span> <span class=ow>in</span> <span class=p>(</span><span class=s2>&quot;Hybrid&quot;</span><span class=p>,</span> <span class=s2>&quot;FuelCellBattery&quot;</span><span class=p>):</span>
         <span class=n>out</span><span class=p>[</span><span class=s2>&quot;phi&quot;</span><span class=p>]</span> <span class=o>=</span> <span class=n>np</span><span class=o>.</span><span class=n>array</span><span class=p>([</span><span class=nb>float</span><span class=p>(</span><span class=n>profile</span><span class=o>.</span><span class=n>SuppliedPowerRatio</span><span class=p>(</span><span class=n>t</span><span class=p>))</span> <span class=k>for</span> <span class=n>t</span> <span class=ow>in</span> <span class=n>time</span><span class=p>])</span>
 
-    <span class=c1># Battery energy time-series exists as an ODE state only for the Hybrid configuration.</span>
-    <span class=k>if</span> <span class=n>config</span> <span class=o>==</span> <span class=s2>&quot;Hybrid&quot;</span><span class=p>:</span>
+    <span class=c1># Battery energy / SOC / temperature time-series exist as ODE states for the Hybrid and the</span>
+    <span class=c1># Class-II fuel-cell+battery configurations (the battery energy is the 2nd state). The Class-I</span>
+    <span class=c1># fuel-cell+battery integrates no battery state ([E_h2, Beta]), so it has none.</span>
+    <span class=k>if</span> <span class=n>config</span> <span class=ow>in</span> <span class=p>(</span><span class=s2>&quot;Hybrid&quot;</span><span class=p>,</span> <span class=s2>&quot;FuelCellBattery&quot;</span><span class=p>)</span> <span class=ow>and</span> <span class=n>sols</span><span class=p>[</span><span class=mi>0</span><span class=p>]</span><span class=o>.</span><span class=n>y</span><span class=o>.</span><span class=n>shape</span><span class=p>[</span><span class=mi>0</span><span class=p>]</span> <span class=o>&gt;=</span> <span class=mi>3</span><span class=p>:</span>
         <span class=n>nstates</span> <span class=o>=</span> <span class=n>sols</span><span class=p>[</span><span class=mi>0</span><span class=p>]</span><span class=o>.</span><span class=n>y</span><span class=o>.</span><span class=n>shape</span><span class=p>[</span><span class=mi>0</span><span class=p>]</span>
         <span class=n>out</span><span class=p>[</span><span class=s2>&quot;battery_energy&quot;</span><span class=p>]</span> <span class=o>=</span> <span class=n>np</span><span class=o>.</span><span class=n>concatenate</span><span class=p>([</span><span class=n>s</span><span class=o>.</span><span class=n>y</span><span class=p>[</span><span class=mi>1</span><span class=p>]</span> <span class=k>for</span> <span class=n>s</span> <span class=ow>in</span> <span class=n>sols</span><span class=p>])</span>
         <span class=n>b</span> <span class=o>=</span> <span class=n>aircraft</span><span class=o>.</span><span class=n>battery</span>
@@ -775,37 +837,37 @@ powertrain.aircraft = myaircraft
 
     <span class=k>return</span> <span class=n>out</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h2 id=PhlyGreen.postprocess.plot_component_timeseries class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code> <span class="doc doc-object-name doc-function-name">plot_component_timeseries</span> <a href=#PhlyGreen.postprocess.plot_component_timeseries class=headerlink title="Permanent link">&para;</a></h2> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>plot_component_timeseries</span><span class=p>(</span><span class=n>aircraft</span><span class=p>,</span> <span class=o>**</span><span class=n>kwargs</span><span class=p>)</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Plot the Class-II component time series from :func:<code>component_timeseries</code>.</p> <p>By default (no <code>components</code> kwarg) all three component models are forced, so this works as an explicit "show me the component behaviour" request; only the curves actually present are drawn.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/postprocess.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>379</span>
-<span class=normal>380</span>
-<span class=normal>381</span>
-<span class=normal>382</span>
-<span class=normal>383</span>
-<span class=normal>384</span>
-<span class=normal>385</span>
-<span class=normal>386</span>
-<span class=normal>387</span>
-<span class=normal>388</span>
-<span class=normal>389</span>
-<span class=normal>390</span>
-<span class=normal>391</span>
-<span class=normal>392</span>
-<span class=normal>393</span>
-<span class=normal>394</span>
-<span class=normal>395</span>
-<span class=normal>396</span>
-<span class=normal>397</span>
-<span class=normal>398</span>
-<span class=normal>399</span>
-<span class=normal>400</span>
-<span class=normal>401</span>
-<span class=normal>402</span>
-<span class=normal>403</span>
-<span class=normal>404</span>
-<span class=normal>405</span>
-<span class=normal>406</span>
-<span class=normal>407</span>
-<span class=normal>408</span>
-<span class=normal>409</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>plot_component_timeseries</span><span class=p>(</span><span class=n>aircraft</span><span class=p>,</span> <span class=o>**</span><span class=n>kwargs</span><span class=p>):</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Plot the Class-II component time series from :func:<code>component_timeseries</code>.</p> <p>By default (no <code>components</code> kwarg) all three component models are forced, so this works as an explicit "show me the component behaviour" request; only the curves actually present are drawn.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/postprocess.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>418</span>
+<span class=normal>419</span>
+<span class=normal>420</span>
+<span class=normal>421</span>
+<span class=normal>422</span>
+<span class=normal>423</span>
+<span class=normal>424</span>
+<span class=normal>425</span>
+<span class=normal>426</span>
+<span class=normal>427</span>
+<span class=normal>428</span>
+<span class=normal>429</span>
+<span class=normal>430</span>
+<span class=normal>431</span>
+<span class=normal>432</span>
+<span class=normal>433</span>
+<span class=normal>434</span>
+<span class=normal>435</span>
+<span class=normal>436</span>
+<span class=normal>437</span>
+<span class=normal>438</span>
+<span class=normal>439</span>
+<span class=normal>440</span>
+<span class=normal>441</span>
+<span class=normal>442</span>
+<span class=normal>443</span>
+<span class=normal>444</span>
+<span class=normal>445</span>
+<span class=normal>446</span>
+<span class=normal>447</span>
+<span class=normal>448</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>plot_component_timeseries</span><span class=p>(</span><span class=n>aircraft</span><span class=p>,</span> <span class=o>**</span><span class=n>kwargs</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;Plot the Class-II component time series from :func:`component_timeseries`.</span>
 
 <span class=sd>    By default (no ``components`` kwarg) all three component models are forced, so this works</span>
@@ -837,39 +899,39 @@ powertrain.aircraft = myaircraft
         <span class=n>ax</span><span class=o>.</span><span class=n>grid</span><span class=p>(</span><span class=n>alpha</span><span class=o>=</span><span class=mf>0.3</span><span class=p>)</span>
     <span class=k>return</span> <span class=n>axes</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h2 id=PhlyGreen.postprocess.plot_constraint_diagram class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code> <span class="doc doc-object-name doc-function-name">plot_constraint_diagram</span> <a href=#PhlyGreen.postprocess.plot_constraint_diagram class=headerlink title="Permanent link">&para;</a></h2> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>plot_constraint_diagram</span><span class=p>(</span><span class=n>aircraft</span><span class=p>,</span> <span class=n>ax</span><span class=o>=</span><span class=kc>None</span><span class=p>)</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Plot the constraint diagram (P/W vs W/S) with the design point.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/postprocess.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>454</span>
-<span class=normal>455</span>
-<span class=normal>456</span>
-<span class=normal>457</span>
-<span class=normal>458</span>
-<span class=normal>459</span>
-<span class=normal>460</span>
-<span class=normal>461</span>
-<span class=normal>462</span>
-<span class=normal>463</span>
-<span class=normal>464</span>
-<span class=normal>465</span>
-<span class=normal>466</span>
-<span class=normal>467</span>
-<span class=normal>468</span>
-<span class=normal>469</span>
-<span class=normal>470</span>
-<span class=normal>471</span>
-<span class=normal>472</span>
-<span class=normal>473</span>
-<span class=normal>474</span>
-<span class=normal>475</span>
-<span class=normal>476</span>
-<span class=normal>477</span>
-<span class=normal>478</span>
-<span class=normal>479</span>
-<span class=normal>480</span>
-<span class=normal>481</span>
-<span class=normal>482</span>
-<span class=normal>483</span>
-<span class=normal>484</span>
-<span class=normal>485</span>
-<span class=normal>486</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>plot_constraint_diagram</span><span class=p>(</span><span class=n>aircraft</span><span class=p>,</span> <span class=n>ax</span><span class=o>=</span><span class=kc>None</span><span class=p>):</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Plot the constraint diagram (P/W vs W/S) with the design point.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/postprocess.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>493</span>
+<span class=normal>494</span>
+<span class=normal>495</span>
+<span class=normal>496</span>
+<span class=normal>497</span>
+<span class=normal>498</span>
+<span class=normal>499</span>
+<span class=normal>500</span>
+<span class=normal>501</span>
+<span class=normal>502</span>
+<span class=normal>503</span>
+<span class=normal>504</span>
+<span class=normal>505</span>
+<span class=normal>506</span>
+<span class=normal>507</span>
+<span class=normal>508</span>
+<span class=normal>509</span>
+<span class=normal>510</span>
+<span class=normal>511</span>
+<span class=normal>512</span>
+<span class=normal>513</span>
+<span class=normal>514</span>
+<span class=normal>515</span>
+<span class=normal>516</span>
+<span class=normal>517</span>
+<span class=normal>518</span>
+<span class=normal>519</span>
+<span class=normal>520</span>
+<span class=normal>521</span>
+<span class=normal>522</span>
+<span class=normal>523</span>
+<span class=normal>524</span>
+<span class=normal>525</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>plot_constraint_diagram</span><span class=p>(</span><span class=n>aircraft</span><span class=p>,</span> <span class=n>ax</span><span class=o>=</span><span class=kc>None</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;Plot the constraint diagram (P/W vs W/S) with the design point.&quot;&quot;&quot;</span>
     <span class=kn>import</span><span class=w> </span><span class=nn>matplotlib.pyplot</span><span class=w> </span><span class=k>as</span><span class=w> </span><span class=nn>plt</span>
     <span class=n>c</span> <span class=o>=</span> <span class=n>aircraft</span><span class=o>.</span><span class=n>constraint</span>
@@ -903,24 +965,24 @@ powertrain.aircraft = myaircraft
     <span class=n>ax</span><span class=o>.</span><span class=n>grid</span><span class=p>(</span><span class=n>alpha</span><span class=o>=</span><span class=mf>0.3</span><span class=p>);</span> <span class=n>ax</span><span class=o>.</span><span class=n>legend</span><span class=p>(</span><span class=n>fontsize</span><span class=o>=</span><span class=mi>8</span><span class=p>)</span>
     <span class=k>return</span> <span class=n>ax</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h2 id=PhlyGreen.postprocess.plot_energy_timeseries class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code> <span class="doc doc-object-name doc-function-name">plot_energy_timeseries</span> <a href=#PhlyGreen.postprocess.plot_energy_timeseries class=headerlink title="Permanent link">&para;</a></h2> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>plot_energy_timeseries</span><span class=p>(</span><span class=n>aircraft</span><span class=p>,</span> <span class=n>ax</span><span class=o>=</span><span class=kc>None</span><span class=p>)</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Plot cumulative fuel (and battery) energy, and SOC if available, versus time.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/postprocess.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>434</span>
-<span class=normal>435</span>
-<span class=normal>436</span>
-<span class=normal>437</span>
-<span class=normal>438</span>
-<span class=normal>439</span>
-<span class=normal>440</span>
-<span class=normal>441</span>
-<span class=normal>442</span>
-<span class=normal>443</span>
-<span class=normal>444</span>
-<span class=normal>445</span>
-<span class=normal>446</span>
-<span class=normal>447</span>
-<span class=normal>448</span>
-<span class=normal>449</span>
-<span class=normal>450</span>
-<span class=normal>451</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>plot_energy_timeseries</span><span class=p>(</span><span class=n>aircraft</span><span class=p>,</span> <span class=n>ax</span><span class=o>=</span><span class=kc>None</span><span class=p>):</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Plot cumulative fuel (and battery) energy, and SOC if available, versus time.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/postprocess.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>473</span>
+<span class=normal>474</span>
+<span class=normal>475</span>
+<span class=normal>476</span>
+<span class=normal>477</span>
+<span class=normal>478</span>
+<span class=normal>479</span>
+<span class=normal>480</span>
+<span class=normal>481</span>
+<span class=normal>482</span>
+<span class=normal>483</span>
+<span class=normal>484</span>
+<span class=normal>485</span>
+<span class=normal>486</span>
+<span class=normal>487</span>
+<span class=normal>488</span>
+<span class=normal>489</span>
+<span class=normal>490</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>plot_energy_timeseries</span><span class=p>(</span><span class=n>aircraft</span><span class=p>,</span> <span class=n>ax</span><span class=o>=</span><span class=kc>None</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;Plot cumulative fuel (and battery) energy, and SOC if available, versus time.&quot;&quot;&quot;</span>
     <span class=kn>import</span><span class=w> </span><span class=nn>matplotlib.pyplot</span><span class=w> </span><span class=k>as</span><span class=w> </span><span class=nn>plt</span>
     <span class=n>ts</span> <span class=o>=</span> <span class=n>mission_timeseries</span><span class=p>(</span><span class=n>aircraft</span><span class=p>)</span>
@@ -939,19 +1001,19 @@ powertrain.aircraft = myaircraft
     <span class=n>ax</span><span class=o>.</span><span class=n>legend</span><span class=p>(</span><span class=n>loc</span><span class=o>=</span><span class=s2>&quot;upper left&quot;</span><span class=p>)</span>
     <span class=k>return</span> <span class=n>ax</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h2 id=PhlyGreen.postprocess.plot_mass_breakdown class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code> <span class="doc doc-object-name doc-function-name">plot_mass_breakdown</span> <a href=#PhlyGreen.postprocess.plot_mass_breakdown class=headerlink title="Permanent link">&para;</a></h2> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>plot_mass_breakdown</span><span class=p>(</span><span class=n>aircraft</span><span class=p>,</span> <span class=n>ax</span><span class=o>=</span><span class=kc>None</span><span class=p>)</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Bar chart of the take-off mass breakdown.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/postprocess.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>506</span>
-<span class=normal>507</span>
-<span class=normal>508</span>
-<span class=normal>509</span>
-<span class=normal>510</span>
-<span class=normal>511</span>
-<span class=normal>512</span>
-<span class=normal>513</span>
-<span class=normal>514</span>
-<span class=normal>515</span>
-<span class=normal>516</span>
-<span class=normal>517</span>
-<span class=normal>518</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>plot_mass_breakdown</span><span class=p>(</span><span class=n>aircraft</span><span class=p>,</span> <span class=n>ax</span><span class=o>=</span><span class=kc>None</span><span class=p>):</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Bar chart of the take-off mass breakdown.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/postprocess.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>545</span>
+<span class=normal>546</span>
+<span class=normal>547</span>
+<span class=normal>548</span>
+<span class=normal>549</span>
+<span class=normal>550</span>
+<span class=normal>551</span>
+<span class=normal>552</span>
+<span class=normal>553</span>
+<span class=normal>554</span>
+<span class=normal>555</span>
+<span class=normal>556</span>
+<span class=normal>557</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>plot_mass_breakdown</span><span class=p>(</span><span class=n>aircraft</span><span class=p>,</span> <span class=n>ax</span><span class=o>=</span><span class=kc>None</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;Bar chart of the take-off mass breakdown.&quot;&quot;&quot;</span>
     <span class=kn>import</span><span class=w> </span><span class=nn>matplotlib.pyplot</span><span class=w> </span><span class=k>as</span><span class=w> </span><span class=nn>plt</span>
     <span class=n>masses</span> <span class=o>=</span> <span class=n>mass_breakdown</span><span class=p>(</span><span class=n>aircraft</span><span class=p>)</span>
@@ -965,26 +1027,26 @@ powertrain.aircraft = myaircraft
     <span class=n>ax</span><span class=o>.</span><span class=n>grid</span><span class=p>(</span><span class=n>axis</span><span class=o>=</span><span class=s2>&quot;y&quot;</span><span class=p>,</span> <span class=n>alpha</span><span class=o>=</span><span class=mf>0.3</span><span class=p>)</span>
     <span class=k>return</span> <span class=n>ax</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h2 id=PhlyGreen.postprocess.plot_mission_profile class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code> <span class="doc doc-object-name doc-function-name">plot_mission_profile</span> <a href=#PhlyGreen.postprocess.plot_mission_profile class=headerlink title="Permanent link">&para;</a></h2> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>plot_mission_profile</span><span class=p>(</span><span class=n>aircraft</span><span class=p>,</span> <span class=n>axes</span><span class=o>=</span><span class=kc>None</span><span class=p>)</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Plot altitude, true airspeed and (for hybrids) phi versus time.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/postprocess.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>412</span>
-<span class=normal>413</span>
-<span class=normal>414</span>
-<span class=normal>415</span>
-<span class=normal>416</span>
-<span class=normal>417</span>
-<span class=normal>418</span>
-<span class=normal>419</span>
-<span class=normal>420</span>
-<span class=normal>421</span>
-<span class=normal>422</span>
-<span class=normal>423</span>
-<span class=normal>424</span>
-<span class=normal>425</span>
-<span class=normal>426</span>
-<span class=normal>427</span>
-<span class=normal>428</span>
-<span class=normal>429</span>
-<span class=normal>430</span>
-<span class=normal>431</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>plot_mission_profile</span><span class=p>(</span><span class=n>aircraft</span><span class=p>,</span> <span class=n>axes</span><span class=o>=</span><span class=kc>None</span><span class=p>):</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Plot altitude, true airspeed and (for hybrids) phi versus time.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/postprocess.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>451</span>
+<span class=normal>452</span>
+<span class=normal>453</span>
+<span class=normal>454</span>
+<span class=normal>455</span>
+<span class=normal>456</span>
+<span class=normal>457</span>
+<span class=normal>458</span>
+<span class=normal>459</span>
+<span class=normal>460</span>
+<span class=normal>461</span>
+<span class=normal>462</span>
+<span class=normal>463</span>
+<span class=normal>464</span>
+<span class=normal>465</span>
+<span class=normal>466</span>
+<span class=normal>467</span>
+<span class=normal>468</span>
+<span class=normal>469</span>
+<span class=normal>470</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>plot_mission_profile</span><span class=p>(</span><span class=n>aircraft</span><span class=p>,</span> <span class=n>axes</span><span class=o>=</span><span class=kc>None</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;Plot altitude, true airspeed and (for hybrids) phi versus time.&quot;&quot;&quot;</span>
     <span class=kn>import</span><span class=w> </span><span class=nn>matplotlib.pyplot</span><span class=w> </span><span class=k>as</span><span class=w> </span><span class=nn>plt</span>
     <span class=n>ts</span> <span class=o>=</span> <span class=n>mission_timeseries</span><span class=p>(</span><span class=n>aircraft</span><span class=p>)</span>
@@ -1005,26 +1067,74 @@ powertrain.aircraft = myaircraft
         <span class=n>ax</span><span class=o>.</span><span class=n>grid</span><span class=p>(</span><span class=n>alpha</span><span class=o>=</span><span class=mf>0.3</span><span class=p>)</span>
     <span class=k>return</span> <span class=n>axes</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h2 id=PhlyGreen.postprocess.plot_power_timeseries class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code> <span class="doc doc-object-name doc-function-name">plot_power_timeseries</span> <a href=#PhlyGreen.postprocess.plot_power_timeseries class=headerlink title="Permanent link">&para;</a></h2> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>plot_power_timeseries</span><span class=p>(</span><span class=n>aircraft</span><span class=p>,</span> <span class=n>ax</span><span class=o>=</span><span class=kc>None</span><span class=p>)</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Plot propulsive, gas-turbine and electric-motor power vs time (totals, kW).</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/postprocess.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>363</span>
-<span class=normal>364</span>
-<span class=normal>365</span>
-<span class=normal>366</span>
-<span class=normal>367</span>
-<span class=normal>368</span>
-<span class=normal>369</span>
-<span class=normal>370</span>
-<span class=normal>371</span>
-<span class=normal>372</span>
-<span class=normal>373</span>
-<span class=normal>374</span>
-<span class=normal>375</span>
-<span class=normal>376</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>plot_power_timeseries</span><span class=p>(</span><span class=n>aircraft</span><span class=p>,</span> <span class=n>ax</span><span class=o>=</span><span class=kc>None</span><span class=p>):</span>
-<span class=w>    </span><span class=sd>&quot;&quot;&quot;Plot propulsive, gas-turbine and electric-motor power vs time (totals, kW).&quot;&quot;&quot;</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Plot the mission power flow vs time (totals, kW).</p> <p>Thermal architectures (Traditional / Hybrid) show propulsive, gas-turbine and electric-motor power; the hydrogen architectures (Hydrogen / FuelCellBattery) show propulsive, fuel-cell and battery power, with the hydrogen remaining in the tank on a second axis.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/postprocess.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>378</span>
+<span class=normal>379</span>
+<span class=normal>380</span>
+<span class=normal>381</span>
+<span class=normal>382</span>
+<span class=normal>383</span>
+<span class=normal>384</span>
+<span class=normal>385</span>
+<span class=normal>386</span>
+<span class=normal>387</span>
+<span class=normal>388</span>
+<span class=normal>389</span>
+<span class=normal>390</span>
+<span class=normal>391</span>
+<span class=normal>392</span>
+<span class=normal>393</span>
+<span class=normal>394</span>
+<span class=normal>395</span>
+<span class=normal>396</span>
+<span class=normal>397</span>
+<span class=normal>398</span>
+<span class=normal>399</span>
+<span class=normal>400</span>
+<span class=normal>401</span>
+<span class=normal>402</span>
+<span class=normal>403</span>
+<span class=normal>404</span>
+<span class=normal>405</span>
+<span class=normal>406</span>
+<span class=normal>407</span>
+<span class=normal>408</span>
+<span class=normal>409</span>
+<span class=normal>410</span>
+<span class=normal>411</span>
+<span class=normal>412</span>
+<span class=normal>413</span>
+<span class=normal>414</span>
+<span class=normal>415</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>plot_power_timeseries</span><span class=p>(</span><span class=n>aircraft</span><span class=p>,</span> <span class=n>ax</span><span class=o>=</span><span class=kc>None</span><span class=p>):</span>
+<span class=w>    </span><span class=sd>&quot;&quot;&quot;Plot the mission power flow vs time (totals, kW).</span>
+
+<span class=sd>    Thermal architectures (Traditional / Hybrid) show propulsive, gas-turbine and electric-motor</span>
+<span class=sd>    power; the hydrogen architectures (Hydrogen / FuelCellBattery) show propulsive, fuel-cell and</span>
+<span class=sd>    battery power, with the hydrogen remaining in the tank on a second axis.</span>
+<span class=sd>    &quot;&quot;&quot;</span>
     <span class=kn>import</span><span class=w> </span><span class=nn>matplotlib.pyplot</span><span class=w> </span><span class=k>as</span><span class=w> </span><span class=nn>plt</span>
     <span class=n>ps</span> <span class=o>=</span> <span class=n>power_timeseries</span><span class=p>(</span><span class=n>aircraft</span><span class=p>)</span>
     <span class=n>t</span> <span class=o>=</span> <span class=n>ps</span><span class=p>[</span><span class=s2>&quot;time&quot;</span><span class=p>]</span> <span class=o>/</span> <span class=mf>60.0</span>
     <span class=k>if</span> <span class=n>ax</span> <span class=ow>is</span> <span class=kc>None</span><span class=p>:</span>
         <span class=n>_</span><span class=p>,</span> <span class=n>ax</span> <span class=o>=</span> <span class=n>plt</span><span class=o>.</span><span class=n>subplots</span><span class=p>(</span><span class=n>figsize</span><span class=o>=</span><span class=p>(</span><span class=mi>8</span><span class=p>,</span> <span class=mf>4.5</span><span class=p>))</span>
+    <span class=n>config</span> <span class=o>=</span> <span class=nb>getattr</span><span class=p>(</span><span class=n>aircraft</span><span class=p>,</span> <span class=s2>&quot;Configuration&quot;</span><span class=p>,</span> <span class=kc>None</span><span class=p>)</span>
+
+    <span class=k>if</span> <span class=n>config</span> <span class=ow>in</span> <span class=p>(</span><span class=s2>&quot;Hydrogen&quot;</span><span class=p>,</span> <span class=s2>&quot;FuelCellBattery&quot;</span><span class=p>):</span>
+        <span class=n>ax</span><span class=o>.</span><span class=n>plot</span><span class=p>(</span><span class=n>t</span><span class=p>,</span> <span class=n>ps</span><span class=p>[</span><span class=s2>&quot;propulsive_power&quot;</span><span class=p>]</span> <span class=o>/</span> <span class=mf>1e3</span><span class=p>,</span> <span class=n>color</span><span class=o>=</span><span class=s2>&quot;tab:green&quot;</span><span class=p>,</span> <span class=n>label</span><span class=o>=</span><span class=s2>&quot;propulsive&quot;</span><span class=p>)</span>
+        <span class=n>ax</span><span class=o>.</span><span class=n>plot</span><span class=p>(</span><span class=n>t</span><span class=p>,</span> <span class=n>ps</span><span class=p>[</span><span class=s2>&quot;fc_power&quot;</span><span class=p>]</span> <span class=o>/</span> <span class=mf>1e3</span><span class=p>,</span> <span class=n>color</span><span class=o>=</span><span class=s2>&quot;tab:red&quot;</span><span class=p>,</span> <span class=n>label</span><span class=o>=</span><span class=s2>&quot;fuel cell&quot;</span><span class=p>)</span>
+        <span class=k>if</span> <span class=n>np</span><span class=o>.</span><span class=n>any</span><span class=p>(</span><span class=n>np</span><span class=o>.</span><span class=n>nan_to_num</span><span class=p>(</span><span class=n>ps</span><span class=o>.</span><span class=n>get</span><span class=p>(</span><span class=s2>&quot;battery_power&quot;</span><span class=p>))</span> <span class=o>!=</span> <span class=mi>0</span><span class=p>):</span>
+            <span class=n>ax</span><span class=o>.</span><span class=n>plot</span><span class=p>(</span><span class=n>t</span><span class=p>,</span> <span class=n>ps</span><span class=p>[</span><span class=s2>&quot;battery_power&quot;</span><span class=p>]</span> <span class=o>/</span> <span class=mf>1e3</span><span class=p>,</span> <span class=n>color</span><span class=o>=</span><span class=s2>&quot;tab:blue&quot;</span><span class=p>,</span> <span class=n>label</span><span class=o>=</span><span class=s2>&quot;battery&quot;</span><span class=p>)</span>
+        <span class=n>ax</span><span class=o>.</span><span class=n>set_xlabel</span><span class=p>(</span><span class=s2>&quot;time [min]&quot;</span><span class=p>);</span> <span class=n>ax</span><span class=o>.</span><span class=n>set_ylabel</span><span class=p>(</span><span class=s2>&quot;power [kW] (total)&quot;</span><span class=p>);</span> <span class=n>ax</span><span class=o>.</span><span class=n>grid</span><span class=p>(</span><span class=n>alpha</span><span class=o>=</span><span class=mf>0.3</span><span class=p>)</span>
+        <span class=k>if</span> <span class=s2>&quot;h2_remaining&quot;</span> <span class=ow>in</span> <span class=n>ps</span><span class=p>:</span>
+            <span class=n>ax2</span> <span class=o>=</span> <span class=n>ax</span><span class=o>.</span><span class=n>twinx</span><span class=p>()</span>
+            <span class=n>ax2</span><span class=o>.</span><span class=n>plot</span><span class=p>(</span><span class=n>t</span><span class=p>,</span> <span class=n>ps</span><span class=p>[</span><span class=s2>&quot;h2_remaining&quot;</span><span class=p>],</span> <span class=n>color</span><span class=o>=</span><span class=s2>&quot;tab:purple&quot;</span><span class=p>,</span> <span class=n>ls</span><span class=o>=</span><span class=s2>&quot;--&quot;</span><span class=p>,</span> <span class=n>label</span><span class=o>=</span><span class=s2>&quot;H2 in tank&quot;</span><span class=p>)</span>
+            <span class=n>ax2</span><span class=o>.</span><span class=n>set_ylabel</span><span class=p>(</span><span class=s2>&quot;H2 in tank [kg]&quot;</span><span class=p>)</span>
+            <span class=n>h1</span><span class=p>,</span> <span class=n>l1</span> <span class=o>=</span> <span class=n>ax</span><span class=o>.</span><span class=n>get_legend_handles_labels</span><span class=p>()</span>
+            <span class=n>h2</span><span class=p>,</span> <span class=n>l2</span> <span class=o>=</span> <span class=n>ax2</span><span class=o>.</span><span class=n>get_legend_handles_labels</span><span class=p>()</span>
+            <span class=n>ax</span><span class=o>.</span><span class=n>legend</span><span class=p>(</span><span class=n>h1</span> <span class=o>+</span> <span class=n>h2</span><span class=p>,</span> <span class=n>l1</span> <span class=o>+</span> <span class=n>l2</span><span class=p>,</span> <span class=n>fontsize</span><span class=o>=</span><span class=mi>8</span><span class=p>)</span>
+        <span class=k>else</span><span class=p>:</span>
+            <span class=n>ax</span><span class=o>.</span><span class=n>legend</span><span class=p>()</span>
+        <span class=k>return</span> <span class=n>ax</span>
+
     <span class=n>ax</span><span class=o>.</span><span class=n>plot</span><span class=p>(</span><span class=n>t</span><span class=p>,</span> <span class=n>ps</span><span class=p>[</span><span class=s2>&quot;propulsive_power&quot;</span><span class=p>]</span> <span class=o>/</span> <span class=mf>1e3</span><span class=p>,</span> <span class=n>color</span><span class=o>=</span><span class=s2>&quot;tab:green&quot;</span><span class=p>,</span> <span class=n>label</span><span class=o>=</span><span class=s2>&quot;propulsive&quot;</span><span class=p>)</span>
     <span class=n>ax</span><span class=o>.</span><span class=n>plot</span><span class=p>(</span><span class=n>t</span><span class=p>,</span> <span class=n>ps</span><span class=p>[</span><span class=s2>&quot;gt_power&quot;</span><span class=p>]</span> <span class=o>/</span> <span class=mf>1e3</span><span class=p>,</span> <span class=n>color</span><span class=o>=</span><span class=s2>&quot;tab:red&quot;</span><span class=p>,</span> <span class=n>label</span><span class=o>=</span><span class=s2>&quot;gas turbine&quot;</span><span class=p>)</span>
     <span class=k>if</span> <span class=n>np</span><span class=o>.</span><span class=n>any</span><span class=p>(</span><span class=n>np</span><span class=o>.</span><span class=n>nan_to_num</span><span class=p>(</span><span class=n>ps</span><span class=p>[</span><span class=s2>&quot;em_power&quot;</span><span class=p>])</span> <span class=o>!=</span> <span class=mi>0</span><span class=p>):</span>
@@ -1033,31 +1143,40 @@ powertrain.aircraft = myaircraft
     <span class=n>ax</span><span class=o>.</span><span class=n>grid</span><span class=p>(</span><span class=n>alpha</span><span class=o>=</span><span class=mf>0.3</span><span class=p>);</span> <span class=n>ax</span><span class=o>.</span><span class=n>legend</span><span class=p>()</span>
     <span class=k>return</span> <span class=n>ax</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h2 id=PhlyGreen.postprocess.plot_tank_state class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code> <span class="doc doc-object-name doc-function-name">plot_tank_state</span> <a href=#PhlyGreen.postprocess.plot_tank_state class=headerlink title="Permanent link">&para;</a></h2> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>plot_tank_state</span><span class=p>(</span><span class=n>aircraft</span><span class=p>,</span> <span class=n>axes</span><span class=o>=</span><span class=kc>None</span><span class=p>)</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Plot LH2 tank pressure, stored mass and vent flow vs time.</p> <p>Requires the tank thermodynamics to have been tracked, i.e. set <code>aircraft.mission.track_tank = True</code> and re-run <code>EvaluateMission</code> first.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/postprocess.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>521</span>
-<span class=normal>522</span>
-<span class=normal>523</span>
-<span class=normal>524</span>
-<span class=normal>525</span>
-<span class=normal>526</span>
-<span class=normal>527</span>
-<span class=normal>528</span>
-<span class=normal>529</span>
-<span class=normal>530</span>
-<span class=normal>531</span>
-<span class=normal>532</span>
-<span class=normal>533</span>
-<span class=normal>534</span>
-<span class=normal>535</span>
-<span class=normal>536</span>
-<span class=normal>537</span>
-<span class=normal>538</span>
-<span class=normal>539</span>
-<span class=normal>540</span>
-<span class=normal>541</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>plot_tank_state</span><span class=p>(</span><span class=n>aircraft</span><span class=p>,</span> <span class=n>axes</span><span class=o>=</span><span class=kc>None</span><span class=p>):</span>
-<span class=w>    </span><span class=sd>&quot;&quot;&quot;Plot LH2 tank pressure, stored mass and vent flow vs time.</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Plot LH2 tank pressure, stored mass, vent flow and heater power vs time.</p> <p>The vent flow and heater power are the two active thermal-management actions: the tank vents hydrogen when it reaches the maximum pressure, and the heater adds power when it falls to the minimum pressure. Requires the tank thermodynamics to have been tracked: either set <code>aircraft.mission.track_tank = True</code> and re-run <code>EvaluateMission</code>, or call :func:<code>compute_tank_history</code> (which works for the fuel-cell + battery configuration too).</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/postprocess.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>591</span>
+<span class=normal>592</span>
+<span class=normal>593</span>
+<span class=normal>594</span>
+<span class=normal>595</span>
+<span class=normal>596</span>
+<span class=normal>597</span>
+<span class=normal>598</span>
+<span class=normal>599</span>
+<span class=normal>600</span>
+<span class=normal>601</span>
+<span class=normal>602</span>
+<span class=normal>603</span>
+<span class=normal>604</span>
+<span class=normal>605</span>
+<span class=normal>606</span>
+<span class=normal>607</span>
+<span class=normal>608</span>
+<span class=normal>609</span>
+<span class=normal>610</span>
+<span class=normal>611</span>
+<span class=normal>612</span>
+<span class=normal>613</span>
+<span class=normal>614</span>
+<span class=normal>615</span>
+<span class=normal>616</span>
+<span class=normal>617</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>plot_tank_state</span><span class=p>(</span><span class=n>aircraft</span><span class=p>,</span> <span class=n>axes</span><span class=o>=</span><span class=kc>None</span><span class=p>):</span>
+<span class=w>    </span><span class=sd>&quot;&quot;&quot;Plot LH2 tank pressure, stored mass, vent flow and heater power vs time.</span>
 
-<span class=sd>    Requires the tank thermodynamics to have been tracked, i.e. set</span>
-<span class=sd>    ``aircraft.mission.track_tank = True`` and re-run ``EvaluateMission`` first.</span>
+<span class=sd>    The vent flow and heater power are the two active thermal-management actions: the tank vents</span>
+<span class=sd>    hydrogen when it reaches the maximum pressure, and the heater adds power when it falls to the</span>
+<span class=sd>    minimum pressure. Requires the tank thermodynamics to have been tracked: either set</span>
+<span class=sd>    ``aircraft.mission.track_tank = True`` and re-run ``EvaluateMission``, or call</span>
+<span class=sd>    :func:`compute_tank_history` (which works for the fuel-cell + battery configuration too).</span>
 <span class=sd>    &quot;&quot;&quot;</span>
     <span class=kn>import</span><span class=w> </span><span class=nn>matplotlib.pyplot</span><span class=w> </span><span class=k>as</span><span class=w> </span><span class=nn>plt</span>
     <span class=n>tank</span> <span class=o>=</span> <span class=nb>getattr</span><span class=p>(</span><span class=n>aircraft</span><span class=p>,</span> <span class=s2>&quot;tank&quot;</span><span class=p>,</span> <span class=kc>None</span><span class=p>)</span>
@@ -1066,18 +1185,19 @@ powertrain.aircraft = myaircraft
     <span class=n>h</span> <span class=o>=</span> <span class=n>tank</span><span class=o>.</span><span class=n>history</span>
     <span class=n>t_min</span> <span class=o>=</span> <span class=n>np</span><span class=o>.</span><span class=n>array</span><span class=p>(</span><span class=n>h</span><span class=p>[</span><span class=s2>&quot;t&quot;</span><span class=p>])</span> <span class=o>/</span> <span class=mf>60.0</span>
     <span class=k>if</span> <span class=n>axes</span> <span class=ow>is</span> <span class=kc>None</span><span class=p>:</span>
-        <span class=n>_</span><span class=p>,</span> <span class=n>axes</span> <span class=o>=</span> <span class=n>plt</span><span class=o>.</span><span class=n>subplots</span><span class=p>(</span><span class=mi>3</span><span class=p>,</span> <span class=mi>1</span><span class=p>,</span> <span class=n>sharex</span><span class=o>=</span><span class=kc>True</span><span class=p>,</span> <span class=n>figsize</span><span class=o>=</span><span class=p>(</span><span class=mi>8</span><span class=p>,</span> <span class=mi>8</span><span class=p>))</span>
+        <span class=n>_</span><span class=p>,</span> <span class=n>axes</span> <span class=o>=</span> <span class=n>plt</span><span class=o>.</span><span class=n>subplots</span><span class=p>(</span><span class=mi>4</span><span class=p>,</span> <span class=mi>1</span><span class=p>,</span> <span class=n>sharex</span><span class=o>=</span><span class=kc>True</span><span class=p>,</span> <span class=n>figsize</span><span class=o>=</span><span class=p>(</span><span class=mi>8</span><span class=p>,</span> <span class=mi>10</span><span class=p>))</span>
     <span class=n>axes</span><span class=p>[</span><span class=mi>0</span><span class=p>]</span><span class=o>.</span><span class=n>plot</span><span class=p>(</span><span class=n>t_min</span><span class=p>,</span> <span class=n>h</span><span class=p>[</span><span class=s2>&quot;P&quot;</span><span class=p>],</span> <span class=n>color</span><span class=o>=</span><span class=s2>&quot;tab:blue&quot;</span><span class=p>);</span> <span class=n>axes</span><span class=p>[</span><span class=mi>0</span><span class=p>]</span><span class=o>.</span><span class=n>set_ylabel</span><span class=p>(</span><span class=s2>&quot;pressure [bar]&quot;</span><span class=p>)</span>
     <span class=n>axes</span><span class=p>[</span><span class=mi>1</span><span class=p>]</span><span class=o>.</span><span class=n>plot</span><span class=p>(</span><span class=n>t_min</span><span class=p>,</span> <span class=n>h</span><span class=p>[</span><span class=s2>&quot;m_tot&quot;</span><span class=p>],</span> <span class=n>color</span><span class=o>=</span><span class=s2>&quot;tab:green&quot;</span><span class=p>);</span> <span class=n>axes</span><span class=p>[</span><span class=mi>1</span><span class=p>]</span><span class=o>.</span><span class=n>set_ylabel</span><span class=p>(</span><span class=s2>&quot;stored H2 [kg]&quot;</span><span class=p>)</span>
     <span class=n>axes</span><span class=p>[</span><span class=mi>2</span><span class=p>]</span><span class=o>.</span><span class=n>plot</span><span class=p>(</span><span class=n>t_min</span><span class=p>,</span> <span class=n>h</span><span class=p>[</span><span class=s2>&quot;Vent&quot;</span><span class=p>],</span> <span class=n>color</span><span class=o>=</span><span class=s2>&quot;tab:red&quot;</span><span class=p>);</span> <span class=n>axes</span><span class=p>[</span><span class=mi>2</span><span class=p>]</span><span class=o>.</span><span class=n>set_ylabel</span><span class=p>(</span><span class=s2>&quot;vent flow [kg/s]&quot;</span><span class=p>)</span>
+    <span class=k>if</span> <span class=nb>len</span><span class=p>(</span><span class=n>axes</span><span class=p>)</span> <span class=o>&gt;</span> <span class=mi>3</span><span class=p>:</span>
+        <span class=n>axes</span><span class=p>[</span><span class=mi>3</span><span class=p>]</span><span class=o>.</span><span class=n>plot</span><span class=p>(</span><span class=n>t_min</span><span class=p>,</span> <span class=n>np</span><span class=o>.</span><span class=n>array</span><span class=p>(</span><span class=n>h</span><span class=p>[</span><span class=s2>&quot;Q_heater&quot;</span><span class=p>])</span> <span class=o>/</span> <span class=mf>1e3</span><span class=p>,</span> <span class=n>color</span><span class=o>=</span><span class=s2>&quot;tab:orange&quot;</span><span class=p>)</span>
+        <span class=n>axes</span><span class=p>[</span><span class=mi>3</span><span class=p>]</span><span class=o>.</span><span class=n>set_ylabel</span><span class=p>(</span><span class=s2>&quot;heater power [kW]&quot;</span><span class=p>)</span>
     <span class=n>axes</span><span class=p>[</span><span class=o>-</span><span class=mi>1</span><span class=p>]</span><span class=o>.</span><span class=n>set_xlabel</span><span class=p>(</span><span class=s2>&quot;time [min]&quot;</span><span class=p>)</span>
     <span class=k>for</span> <span class=n>ax</span> <span class=ow>in</span> <span class=n>axes</span><span class=p>:</span>
         <span class=n>ax</span><span class=o>.</span><span class=n>grid</span><span class=p>(</span><span class=n>alpha</span><span class=o>=</span><span class=mf>0.3</span><span class=p>)</span>
     <span class=k>return</span> <span class=n>axes</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h2 id=PhlyGreen.postprocess.power_timeseries class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code> <span class="doc doc-object-name doc-function-name">power_timeseries</span> <a href=#PhlyGreen.postprocess.power_timeseries class=headerlink title="Permanent link">&para;</a></h2> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>power_timeseries</span><span class=p>(</span><span class=n>aircraft</span><span class=p>)</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Mission power flow: propulsive, gas-turbine and electric-motor power vs time.</p> <p>Returns equal-length arrays <code>time</code> [s], <code>propulsive_power</code> [W] (total shaft power the propellers must deliver), <code>gt_power</code> [W] (gas-turbine shaft power) and <code>em_power</code> [W] (electric-motor / battery power). These come straight from the powertrain power-ratio solve (<code>Powertrain.Traditional</code> / <code>Powertrain.Hybrid</code>) at every mission time point, so they are correct for both Class-I (constant) and Class-II efficiencies and need no surrogates.</p> <p>All powers are <strong>totals for the whole aircraft</strong> (summed over the engines). For a fuel-only aircraft <code>em_power</code> is zero; for configurations without a gas turbine (Hydrogen / FuelCellBattery) <code>gt_power</code>/<code>em_power</code> are returned as <code>NaN</code>.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/postprocess.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal> 75</span>
-<span class=normal> 76</span>
-<span class=normal> 77</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Mission power flow: propulsive, gas-turbine and electric-motor power vs time.</p> <p>Returns equal-length arrays <code>time</code> [s], <code>propulsive_power</code> [W] (total shaft power the propellers must deliver), <code>gt_power</code> [W] (gas-turbine shaft power) and <code>em_power</code> [W] (electric-motor / battery power). These come straight from the powertrain power-ratio solve (<code>Powertrain.Traditional</code> / <code>Powertrain.Hybrid</code>) at every mission time point, so they are correct for both Class-I (constant) and Class-II efficiencies and need no surrogates.</p> <p>All powers are <strong>totals for the whole aircraft</strong> (summed over the engines). For a fuel-only aircraft <code>em_power</code> is zero; for configurations without a gas turbine (Hydrogen / FuelCellBattery) <code>gt_power</code>/<code>em_power</code> are returned as <code>NaN</code>.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/postprocess.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal> 77</span>
 <span class=normal> 78</span>
 <span class=normal> 79</span>
 <span class=normal> 80</span>
@@ -1111,7 +1231,22 @@ powertrain.aircraft = myaircraft
 <span class=normal>108</span>
 <span class=normal>109</span>
 <span class=normal>110</span>
-<span class=normal>111</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>power_timeseries</span><span class=p>(</span><span class=n>aircraft</span><span class=p>):</span>
+<span class=normal>111</span>
+<span class=normal>112</span>
+<span class=normal>113</span>
+<span class=normal>114</span>
+<span class=normal>115</span>
+<span class=normal>116</span>
+<span class=normal>117</span>
+<span class=normal>118</span>
+<span class=normal>119</span>
+<span class=normal>120</span>
+<span class=normal>121</span>
+<span class=normal>122</span>
+<span class=normal>123</span>
+<span class=normal>124</span>
+<span class=normal>125</span>
+<span class=normal>126</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>power_timeseries</span><span class=p>(</span><span class=n>aircraft</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;Mission power flow: propulsive, gas-turbine and electric-motor power vs time.</span>
 
 <span class=sd>    Returns equal-length arrays ``time`` [s], ``propulsive_power`` [W] (total shaft power the</span>
@@ -1147,24 +1282,22 @@ powertrain.aircraft = myaircraft
         <span class=n>gt_power</span> <span class=o>=</span> <span class=n>np</span><span class=o>.</span><span class=n>full_like</span><span class=p>(</span><span class=n>PP</span><span class=p>,</span> <span class=n>np</span><span class=o>.</span><span class=n>nan</span><span class=p>)</span>
         <span class=n>em_power</span> <span class=o>=</span> <span class=n>np</span><span class=o>.</span><span class=n>full_like</span><span class=p>(</span><span class=n>PP</span><span class=p>,</span> <span class=n>np</span><span class=o>.</span><span class=n>nan</span><span class=p>)</span>
 
-    <span class=k>return</span> <span class=p>{</span><span class=s2>&quot;time&quot;</span><span class=p>:</span> <span class=n>t</span><span class=p>,</span> <span class=s2>&quot;propulsive_power&quot;</span><span class=p>:</span> <span class=n>PP</span><span class=p>,</span> <span class=s2>&quot;gt_power&quot;</span><span class=p>:</span> <span class=n>gt_power</span><span class=p>,</span> <span class=s2>&quot;em_power&quot;</span><span class=p>:</span> <span class=n>em_power</span><span class=p>}</span>
+    <span class=n>result</span> <span class=o>=</span> <span class=p>{</span><span class=s2>&quot;time&quot;</span><span class=p>:</span> <span class=n>t</span><span class=p>,</span> <span class=s2>&quot;propulsive_power&quot;</span><span class=p>:</span> <span class=n>PP</span><span class=p>,</span> <span class=s2>&quot;gt_power&quot;</span><span class=p>:</span> <span class=n>gt_power</span><span class=p>,</span> <span class=s2>&quot;em_power&quot;</span><span class=p>:</span> <span class=n>em_power</span><span class=p>}</span>
+
+    <span class=c1># Fuel-cell / battery / tank outputs for the hydrogen architectures: the battery supplies a</span>
+    <span class=c1># share ``phi`` of the propulsive power and the fuel cell the rest; the tank empties as the</span>
+    <span class=c1># cumulative hydrogen chemical energy is drawn.</span>
+    <span class=k>if</span> <span class=n>config</span> <span class=ow>in</span> <span class=p>(</span><span class=s2>&quot;Hydrogen&quot;</span><span class=p>,</span> <span class=s2>&quot;FuelCellBattery&quot;</span><span class=p>):</span>
+        <span class=n>result</span><span class=p>[</span><span class=s2>&quot;fc_power&quot;</span><span class=p>]</span> <span class=o>=</span> <span class=p>(</span><span class=mf>1.0</span> <span class=o>-</span> <span class=n>phi</span><span class=p>)</span> <span class=o>*</span> <span class=n>PP</span>        <span class=c1># fuel-cell propulsive share [W]</span>
+        <span class=n>result</span><span class=p>[</span><span class=s2>&quot;battery_power&quot;</span><span class=p>]</span> <span class=o>=</span> <span class=n>phi</span> <span class=o>*</span> <span class=n>PP</span>           <span class=c1># battery propulsive share [W]</span>
+        <span class=n>ef</span> <span class=o>=</span> <span class=nb>getattr</span><span class=p>(</span><span class=n>aircraft</span><span class=o>.</span><span class=n>mission</span><span class=p>,</span> <span class=s2>&quot;ef&quot;</span><span class=p>,</span> <span class=kc>None</span><span class=p>)</span>   <span class=c1># H2 lower heating value [J/kg]</span>
+        <span class=n>WH2</span> <span class=o>=</span> <span class=nb>getattr</span><span class=p>(</span><span class=n>aircraft</span><span class=o>.</span><span class=n>weight</span><span class=p>,</span> <span class=s2>&quot;WH2_Fuel&quot;</span><span class=p>,</span> <span class=kc>None</span><span class=p>)</span>
+        <span class=k>if</span> <span class=n>ef</span> <span class=ow>and</span> <span class=n>WH2</span><span class=p>:</span>
+            <span class=n>result</span><span class=p>[</span><span class=s2>&quot;h2_remaining&quot;</span><span class=p>]</span> <span class=o>=</span> <span class=n>np</span><span class=o>.</span><span class=n>clip</span><span class=p>(</span><span class=n>WH2</span> <span class=o>-</span> <span class=n>ts</span><span class=p>[</span><span class=s2>&quot;fuel_energy&quot;</span><span class=p>]</span> <span class=o>/</span> <span class=n>ef</span><span class=p>,</span> <span class=mf>0.0</span><span class=p>,</span> <span class=kc>None</span><span class=p>)</span>  <span class=c1># [kg]</span>
+
+    <span class=k>return</span> <span class=n>result</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h2 id=PhlyGreen.postprocess.timeseries_table class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code> <span class="doc doc-object-name doc-function-name">timeseries_table</span> <a href=#PhlyGreen.postprocess.timeseries_table class=headerlink title="Permanent link">&para;</a></h2> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>timeseries_table</span><span class=p>(</span><span class=n>aircraft</span><span class=p>,</span> <span class=n>include_components</span><span class=o>=</span><span class=s1>&#39;auto&#39;</span><span class=p>)</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Collect <em>every</em> time-evolving mission variable into one aligned table (debug).</p> <p>Returns <code>(header, columns)</code> where <code>header</code> is a list of column names and <code>columns</code> is a list of equal-length numpy arrays (one per name), all sampled at the solver time points of the converged mission. It gathers:</p> <ul> <li>the raw ODE states (<code>state_0</code> … <code>state_n</code> — fuel/battery energy, Beta, and, for the Class-II battery, charge throughput and temperature) straight from <code>mission.integral_solution</code> — nothing is lost or smoothed;</li> <li>the derived mission quantities from :func:<code>mission_timeseries</code> (altitude, velocity, power excess, SOC, phi, …);</li> <li>the power flow from :func:<code>power_timeseries</code> (<code>propulsive_power</code>, <code>gt_power</code>, <code>em_power</code> [W]);</li> <li>the Class-II component quantities from :func:<code>component_timeseries</code> (gas-turbine / electric-motor / propeller efficiencies, throttles, pitch).</li> </ul> <p><code>include_components</code> controls the last group:</p> <ul> <li><code>"auto"</code> (default) — include only the components that <em>actually used</em> a Class-II model in this design (detected with :func:<code>class_ii_components</code>); a fully constant-efficiency design therefore pulls in no surrogate columns and loads no surrogate.</li> <li><code>True</code> — force all three component models (loads every surrogate).</li> <li><code>False</code> — omit the component columns entirely.</li> </ul> <p><code>time</code> is always the first column; the remaining columns are sorted by name.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/postprocess.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>262</span>
-<span class=normal>263</span>
-<span class=normal>264</span>
-<span class=normal>265</span>
-<span class=normal>266</span>
-<span class=normal>267</span>
-<span class=normal>268</span>
-<span class=normal>269</span>
-<span class=normal>270</span>
-<span class=normal>271</span>
-<span class=normal>272</span>
-<span class=normal>273</span>
-<span class=normal>274</span>
-<span class=normal>275</span>
-<span class=normal>276</span>
-<span class=normal>277</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Collect <em>every</em> time-evolving mission variable into one aligned table (debug).</p> <p>Returns <code>(header, columns)</code> where <code>header</code> is a list of column names and <code>columns</code> is a list of equal-length numpy arrays (one per name), all sampled at the solver time points of the converged mission. It gathers:</p> <ul> <li>the raw ODE states (<code>state_0</code> … <code>state_n</code> — fuel/battery energy, Beta, and, for the Class-II battery, charge throughput and temperature) straight from <code>mission.integral_solution</code> — nothing is lost or smoothed;</li> <li>the derived mission quantities from :func:<code>mission_timeseries</code> (altitude, velocity, power excess, SOC, phi, …);</li> <li>the power flow from :func:<code>power_timeseries</code> (<code>propulsive_power</code>, <code>gt_power</code>, <code>em_power</code> [W]);</li> <li>the Class-II component quantities from :func:<code>component_timeseries</code> (gas-turbine / electric-motor / propeller efficiencies, throttles, pitch).</li> </ul> <p><code>include_components</code> controls the last group:</p> <ul> <li><code>"auto"</code> (default) — include only the components that <em>actually used</em> a Class-II model in this design (detected with :func:<code>class_ii_components</code>); a fully constant-efficiency design therefore pulls in no surrogate columns and loads no surrogate.</li> <li><code>True</code> — force all three component models (loads every surrogate).</li> <li><code>False</code> — omit the component columns entirely.</li> </ul> <p><code>time</code> is always the first column; the remaining columns are sorted by name.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/postprocess.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>277</span>
 <span class=normal>278</span>
 <span class=normal>279</span>
 <span class=normal>280</span>
@@ -1231,7 +1364,22 @@ powertrain.aircraft = myaircraft
 <span class=normal>341</span>
 <span class=normal>342</span>
 <span class=normal>343</span>
-<span class=normal>344</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>timeseries_table</span><span class=p>(</span><span class=n>aircraft</span><span class=p>,</span> <span class=n>include_components</span><span class=o>=</span><span class=s2>&quot;auto&quot;</span><span class=p>):</span>
+<span class=normal>344</span>
+<span class=normal>345</span>
+<span class=normal>346</span>
+<span class=normal>347</span>
+<span class=normal>348</span>
+<span class=normal>349</span>
+<span class=normal>350</span>
+<span class=normal>351</span>
+<span class=normal>352</span>
+<span class=normal>353</span>
+<span class=normal>354</span>
+<span class=normal>355</span>
+<span class=normal>356</span>
+<span class=normal>357</span>
+<span class=normal>358</span>
+<span class=normal>359</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>timeseries_table</span><span class=p>(</span><span class=n>aircraft</span><span class=p>,</span> <span class=n>include_components</span><span class=o>=</span><span class=s2>&quot;auto&quot;</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;Collect *every* time-evolving mission variable into one aligned table (debug).</span>
 
 <span class=sd>    Returns ``(header, columns)`` where ``header`` is a list of column names and ``columns``</span>
@@ -1315,20 +1463,20 @@ powertrain.aircraft = myaircraft
     <span class=n>columns</span> <span class=o>=</span> <span class=p>[</span><span class=n>v</span> <span class=k>for</span> <span class=n>_</span><span class=p>,</span> <span class=n>v</span> <span class=ow>in</span> <span class=n>cols</span><span class=p>]</span>
     <span class=k>return</span> <span class=n>header</span><span class=p>,</span> <span class=n>columns</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h2 id=PhlyGreen.postprocess.write_timeseries class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code> <span class="doc doc-object-name doc-function-name">write_timeseries</span> <a href=#PhlyGreen.postprocess.write_timeseries class=headerlink title="Permanent link">&para;</a></h2> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>write_timeseries</span><span class=p>(</span><span class=n>aircraft</span><span class=p>,</span> <span class=n>path</span><span class=p>,</span> <span class=n>include_components</span><span class=o>=</span><span class=s1>&#39;auto&#39;</span><span class=p>)</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Dump every time-evolving mission variable to a CSV file (debug helper).</p> <p>Writes one row per solver time point and one column per variable returned by :func:<code>timeseries_table</code> (raw ODE states + derived mission quantities + the power flow + Class-II component quantities). <code>include_components</code> defaults to <code>"auto"</code>: only the components that actually used a Class-II model in this design are added (so a constant-efficiency design loads no surrogates). Pass <code>True</code> to force all component models or <code>False</code> to omit them. Returns the path written.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/postprocess.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>347</span>
-<span class=normal>348</span>
-<span class=normal>349</span>
-<span class=normal>350</span>
-<span class=normal>351</span>
-<span class=normal>352</span>
-<span class=normal>353</span>
-<span class=normal>354</span>
-<span class=normal>355</span>
-<span class=normal>356</span>
-<span class=normal>357</span>
-<span class=normal>358</span>
-<span class=normal>359</span>
-<span class=normal>360</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>write_timeseries</span><span class=p>(</span><span class=n>aircraft</span><span class=p>,</span> <span class=n>path</span><span class=p>,</span> <span class=n>include_components</span><span class=o>=</span><span class=s2>&quot;auto&quot;</span><span class=p>):</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Dump every time-evolving mission variable to a CSV file (debug helper).</p> <p>Writes one row per solver time point and one column per variable returned by :func:<code>timeseries_table</code> (raw ODE states + derived mission quantities + the power flow + Class-II component quantities). <code>include_components</code> defaults to <code>"auto"</code>: only the components that actually used a Class-II model in this design are added (so a constant-efficiency design loads no surrogates). Pass <code>True</code> to force all component models or <code>False</code> to omit them. Returns the path written.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/postprocess.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>362</span>
+<span class=normal>363</span>
+<span class=normal>364</span>
+<span class=normal>365</span>
+<span class=normal>366</span>
+<span class=normal>367</span>
+<span class=normal>368</span>
+<span class=normal>369</span>
+<span class=normal>370</span>
+<span class=normal>371</span>
+<span class=normal>372</span>
+<span class=normal>373</span>
+<span class=normal>374</span>
+<span class=normal>375</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>write_timeseries</span><span class=p>(</span><span class=n>aircraft</span><span class=p>,</span> <span class=n>path</span><span class=p>,</span> <span class=n>include_components</span><span class=o>=</span><span class=s2>&quot;auto&quot;</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;Dump every time-evolving mission variable to a CSV file (debug helper).</span>
 
 <span class=sd>    Writes one row per solver time point and one column per variable returned by</span>
