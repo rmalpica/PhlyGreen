@@ -77,10 +77,13 @@ class FuelCell:
         self.P_fc_rated = 0.0  
         self.Q_thermal = 0.0  
         
-        # --- SUMMARY OUTPUTS ---
+        # --- SUMMARY OUTPUTS (last ComputePRatio operating point) ---
         self.P_gross_last = 0.0
         self.P_comp_net_last = 0.0
         self.P_turb_last = 0.0
+        self.i_op_last = 0.0      # operating current density [A/cm^2]
+        self.v_cell_last = 0.0    # operating cell voltage [V]
+        self.eta_fcs_last = 0.0   # net fuel-cell-system efficiency (electrical/chemical) [-]
 
         # --- ADEQUACY TRACKING (worst-case power-limit over the last flown mission) ---
         # Populated by ComputePRatio at every operating point and read by report_sizing().
@@ -247,6 +250,13 @@ class FuelCell:
     # constraints the caller passes in, not from hidden fudge factors.
     SizingMargin = 1.0
 
+    # Fraction of *gross* stack power left after the air-system (compressor) + fixed auxiliaries
+    # at the sizing (peak) condition. The active area is sized from gross = net / this, so the cell
+    # operates near its design voltage at the peak. The real parasitic draw is ~4 % (sea level) to
+    # ~12 % (cruise altitude); 0.72 leaves a modest power margin so the cell is not power-limited at
+    # altitude (checked by report_sizing) while still operating near its design voltage at the peak.
+    BoP_Power_Sizing_Efficiency = 0.72
+
     def _size_stack(self, P_propulsive_design):
         """Size the stack / BoP / electric motor from a required *propulsive* power [W].
 
@@ -271,9 +281,14 @@ class FuelCell:
 
         self.N_cells = max(int(1000.0 / self.V_cell_design), 100)
 
-        # Gross stack power = net + balance-of-plant (air-system) allowance.
-        Efficiency_BoP_Estimate = 0.65
-        P_gross_design = (self.P_fc_rated * 1.30) / Efficiency_BoP_Estimate
+        # Active area is sized so that at the *design* current density the stack delivers the net
+        # rating after the air-system + fixed auxiliaries. Those parasitics are only ~4 % of gross
+        # at sea level and ~12 % at cruise altitude (measured from the air-system model), so the
+        # gross is the net rating divided by ~0.85 — not the former 1.30/0.65 ≈ 2x, which oversized
+        # the stack and made the cell loaf at a fraction of its design current over the whole
+        # mission. Any intended power margin is the explicit, single ``SizingMargin`` (applied by
+        # the caller); the cell now operates near its design voltage at the sizing (peak) point.
+        P_gross_design = self.P_fc_rated / self.BoP_Power_Sizing_Efficiency
         surf_power_dens = self.V_cell_design * self.i_max_density
         Total_Active_Area = P_gross_design / surf_power_dens
         self.A_cell_reale = Total_Active_Area / self.N_cells
@@ -422,16 +437,24 @@ class FuelCell:
             Eta_Total_Sys = np.clip(Eta_FCS * eta_mech, 0.01, 0.85)
 
             p_th_cell = i_op * (self.DELTA_H_REACT / (2 * self.FARADAY_CONST) - v_cell)
-            self.Q_thermal = p_th_cell * self.N_cells * self.A_cell_reale 
+            self.Q_thermal = p_th_cell * self.N_cells * self.A_cell_reale
+
+            # Expose the operating point for post-processing (tutorials / mission timelines).
+            self.i_op_last = i_op
+            self.v_cell_last = v_cell
+            self.eta_fcs_last = Eta_FCS
 
             return np.array([1.0/Eta_Total_Sys, 1.0])
         else:
             # Fallback to analytical scaling if physical limits are exceeded
             P_idle_chem = (self.P_fc_rated * self.Fixed_Aux_Load) / 0.40
             P_chem_total = P_idle_chem + (P_req_net / 0.40) 
-            self.Q_thermal = P_chem_total * 0.60 
+            self.Q_thermal = P_chem_total * 0.60
             self.P_gross_last = P_chem_total * 0.40
             self.P_comp_net_last = P_chem_total * 0.10
+            self.i_op_last = float('nan')      # no physical operating point at this condition
+            self.v_cell_last = float('nan')
+            self.eta_fcs_last = 0.40
             return np.array([P_chem_total / max(P_req_net, 1.0), 1.0])
 
     def report_sizing(self, raise_on_undersize=False):

@@ -39,6 +39,7 @@ and use **no absolute paths**, so they run from anywhere under the repo.
 | 04 | `04_why_batteries_are_hard_for_aviation.ipynb` | The battery specific-energy wall | battery Wh/kg | mass fraction & feasibility vs Wh/kg |
 | 05 | `05_hydrogen_is_not_free.ipynb` | Hydrogen's mass *and volume* and storage penalty | H₂ mass, tank gravimetric index | fuel/volume/mass comparisons |
 | 06 | `06_climate_vs_fuel_tradeoff.ipynb` | Does minimum fuel mean minimum climate? (real CO₂ + non-CO₂ ATR) | cruise altitude | fuel & ATR vs altitude, non-CO₂ share, Pareto |
+| 07 | `07_fuel_cell_deep_dive.ipynb` | Open the fuel-cell box: cell physics, auxiliaries, and how they size the aircraft | design cell voltage V_cell, cathode pressure, BoP mass | polarization & system-efficiency curves, weight breakdown, WTO-vs-V_cell optimum, compressor & BoP impact, cell operating point / stack heat / LH₂ tank along the mission |
 
 ## Helper module
 

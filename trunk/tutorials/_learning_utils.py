@@ -75,17 +75,24 @@ def set_battery_specific_energy(config, wh_per_kg):
 def set_cruise_altitude(config, altitude_m):
     """Move the whole cruise to ``altitude_m`` and keep the profile self-consistent.
 
-    Sets the cruise segment altitude, the end of the last climb and the start of the first
-    descent to the same value, so the altitude timeline stays monotonic. Assumes the
-    ``examples/common.py`` profile (a ``ConstantMachCruise`` cruise bracketed by a final
-    ``ConstantRateClimb`` named ``Climb3`` and a ``ConstantRateDescent``).
+    The climb is several stacked ``ConstantRateClimb`` segments. To retarget the cruise for any
+    number of segments, linearly rescale every climb segment's start/end altitude from the
+    template climb span ``[ground, top]`` to ``[ground, altitude_m]`` so the breakpoints stay in
+    proportion and the climb stays monotonic; the cruise altitude and the top of the descent are
+    set to ``altitude_m`` too.
     """
     alt = float(altitude_m)
+    climbs = [s for s in config.mission_stages.segments if s.segment_type == "ConstantRateClimb"]
+    if climbs:
+        lo = min(s.inputs["StartAltitude"] for s in climbs)
+        hi = max(s.inputs["EndAltitude"] for s in climbs)
+        span = (hi - lo) or 1.0
+        for s in climbs:
+            s.inputs["StartAltitude"] = lo + (s.inputs["StartAltitude"] - lo) / span * (alt - lo)
+            s.inputs["EndAltitude"] = lo + (s.inputs["EndAltitude"] - lo) / span * (alt - lo)
     for seg in config.mission_stages.segments:
         if seg.segment_type == "ConstantMachCruise":
             seg.inputs["Altitude"] = alt
-        elif seg.name == "Climb3":
-            seg.inputs["EndAltitude"] = alt
         elif seg.segment_type == "ConstantRateDescent":
             seg.inputs["StartAltitude"] = alt
     return config
