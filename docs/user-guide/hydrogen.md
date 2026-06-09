@@ -212,7 +212,6 @@ the same interfaces.
 ## References
 
 - Kulikovsky, A. A. *A physically–based analytical polarization curve of a PEM fuel cell.*
-  Journal of The Electrochemical Society, 161(3):F263–F270, 2014.
-- Massaro et al. *Analytical modelling of PEM fuel-cell systems for aircraft.*
-- Svensson, F. *Potential of reducing the environmental impact of civil subsonic aviation by
-  using liquid hydrogen.* (LH2 tank sizing.)
+  Electrochemistry Communications, 6(10):1069–1077, 2004.
+- Massaro, M.C. et al. *Optimal design of a hydrogen-powered fuel cell system for aircraft applications.* Energy Conversion and Management, 306:118266, 2024.
+- Svensson, C. et al. *Modelling hydrogen fuel cell aircraft in SUAVE.* ICAS 2024.
