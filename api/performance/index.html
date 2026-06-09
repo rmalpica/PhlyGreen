@@ -47,21 +47,21 @@
     <span class=n>PW</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>g_acc</span> <span class=o>*</span> <span class=p>(</span> <span class=mf>1.0</span><span class=o>/</span><span class=n>WTOoS</span> <span class=o>*</span> <span class=n>q</span> <span class=o>*</span> <span class=n>TASCeiling</span> <span class=o>*</span> <span class=n>Cd</span> <span class=o>+</span> <span class=n>beta</span> <span class=o>*</span> <span class=n>Ps</span> <span class=p>)</span>
     <span class=k>return</span> <span class=n>PW</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.Performance.Performance.Performance.ClimbFinger class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">ClimbFinger</span> <a href=#PhlyGreen.Performance.Performance.Performance.ClimbFinger class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>ClimbFinger</span><span class=p>(</span><span class=n>WTOoS</span><span class=p>,</span> <span class=n>beta</span><span class=p>,</span> <span class=n>Ps</span><span class=p>,</span> <span class=n>n</span><span class=p>,</span> <span class=n>altitude</span><span class=p>,</span> <span class=n>DISA</span><span class=p>,</span> <span class=n>speed</span><span class=p>,</span> <span class=n>speedtype</span><span class=p>)</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Finger method for climb constraint (approximate but explicit).</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Performance/Performance.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>293</span>
-<span class=normal>294</span>
-<span class=normal>295</span>
-<span class=normal>296</span>
-<span class=normal>297</span>
-<span class=normal>298</span>
-<span class=normal>299</span>
-<span class=normal>300</span>
-<span class=normal>301</span>
-<span class=normal>302</span>
-<span class=normal>303</span>
-<span class=normal>304</span>
-<span class=normal>305</span>
-<span class=normal>306</span>
-<span class=normal>307</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>ClimbFinger</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span><span class=n>WTOoS</span><span class=p>,</span><span class=n>beta</span><span class=p>,</span><span class=n>Ps</span><span class=p>,</span><span class=n>n</span><span class=p>,</span><span class=n>altitude</span><span class=p>,</span><span class=n>DISA</span><span class=p>,</span><span class=n>speed</span><span class=p>,</span><span class=n>speedtype</span><span class=p>):</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Finger method for climb constraint (approximate but explicit).</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Performance/Performance.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>313</span>
+<span class=normal>314</span>
+<span class=normal>315</span>
+<span class=normal>316</span>
+<span class=normal>317</span>
+<span class=normal>318</span>
+<span class=normal>319</span>
+<span class=normal>320</span>
+<span class=normal>321</span>
+<span class=normal>322</span>
+<span class=normal>323</span>
+<span class=normal>324</span>
+<span class=normal>325</span>
+<span class=normal>326</span>
+<span class=normal>327</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>ClimbFinger</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span><span class=n>WTOoS</span><span class=p>,</span><span class=n>beta</span><span class=p>,</span><span class=n>Ps</span><span class=p>,</span><span class=n>n</span><span class=p>,</span><span class=n>altitude</span><span class=p>,</span><span class=n>DISA</span><span class=p>,</span><span class=n>speed</span><span class=p>,</span><span class=n>speedtype</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;</span>
 <span class=sd>    Finger method for climb constraint (approximate but explicit).</span>
 <span class=sd>    &quot;&quot;&quot;</span>
@@ -76,8 +76,9 @@
     <span class=n>PW</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>g_acc</span>  <span class=o>*</span><span class=p>(</span><span class=n>V</span><span class=o>*</span> <span class=mf>1.0</span><span class=o>/</span><span class=n>WTOoS</span> <span class=o>*</span> <span class=n>q</span> <span class=o>*</span> <span class=p>(</span><span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>aerodynamics</span><span class=o>.</span><span class=n>Cd0</span><span class=p>(</span><span class=bp>self</span><span class=o>.</span><span class=n>Mach</span><span class=p>)</span> <span class=o>+</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>aerodynamics</span><span class=o>.</span><span class=n>ki</span><span class=p>()</span><span class=o>*</span><span class=p>(</span><span class=n>WTOoS</span><span class=o>/</span><span class=n>q</span> <span class=o>-</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>aerodynamics</span><span class=o>.</span><span class=n>ClMin</span><span class=p>)</span><span class=o>**</span><span class=mi>2</span><span class=p>)</span>  <span class=o>+</span> <span class=n>beta</span> <span class=o>*</span> <span class=n>Ps</span> <span class=p>)</span>
 
     <span class=k>return</span> <span class=n>PW</span>
-</code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.Performance.Performance.Performance.Landing class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">Landing</span> <a href=#PhlyGreen.Performance.Performance.Performance.Landing class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>Landing</span><span class=p>(</span><span class=n>WTOoS</span><span class=p>,</span> <span class=n>altitude</span><span class=p>,</span> <span class=n>speed</span><span class=p>,</span> <span class=n>speedtype</span><span class=p>,</span> <span class=n>DISA</span><span class=p>)</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Landing constraint: determines maximum allowable W/S.</p> <h5 id=PhlyGreen.Performance.Performance.Performance.Landing--returns>Returns<a class=headerlink href=#PhlyGreen.Performance.Performance.Performance.Landing--returns title="Permanent link">&para;</a></h5> <p>PW_landing : ndarray Always zero line (landing does not impose P/W) WTOoS_landing : ndarray Maximum allowable W/S based on stall / approach limits.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Performance/Performance.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>257</span>
+</code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.Performance.Performance.Performance.Landing class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">Landing</span> <a href=#PhlyGreen.Performance.Performance.Performance.Landing class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>Landing</span><span class=p>(</span><span class=n>WTOoS</span><span class=p>,</span> <span class=n>altitude</span><span class=p>,</span> <span class=n>speed</span><span class=p>,</span> <span class=n>speedtype</span><span class=p>,</span> <span class=n>DISA</span><span class=p>,</span> <span class=n>approach_factor</span><span class=o>=</span><span class=mf>1.23</span><span class=p>,</span> <span class=n>landing_mass_fraction</span><span class=o>=</span><span class=mf>1.0</span><span class=p>)</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Landing constraint: determines the maximum allowable take-off W/S from the approach speed.</p> <p>The input <code>speed</code> is the <strong>approach speed</strong> V_app (e.g. the certification reference speed Vref, ~115 kt for a regional turboprop). Certification (CS-25 25.125) sets V_app = <code>approach_factor</code> * V_stall with <code>approach_factor</code> = 1.23 (use 1.3 for CS-23), so the stall speed is V_app / approach_factor and the landing wing loading is</p> <pre><code>(m_Ldg g) / S = 1/2 * rho * CL_max * (V_app / approach_factor)^2 .
+</code></pre> <p>Dividing by the landing mass fraction <code>landing_mass_fraction</code> = m_Ldg / m0 converts this landing-weight limit to a take-off (MTOW) wing loading — landing lighter than MTOW relaxes the take-off W/S limit. The default 1.0 means landing at MTOW (conservative).</p> <p>NB: the previous implementation treated <code>speed</code> directly as the stall speed (no 1.23 factor, no mass fraction), which over-stated the allowable W/S by approach_factor^2 (~1.51) and made the landing constraint non-binding — see the Schlittenhardt 2025 validation in paper/validation/.</p> <h5 id=PhlyGreen.Performance.Performance.Performance.Landing--returns>Returns<a class=headerlink href=#PhlyGreen.Performance.Performance.Performance.Landing--returns title="Permanent link">&para;</a></h5> <p>PW_landing : ndarray Always a (0..400) line — landing does not impose a P/W requirement, only a W/S cap. WTOoS_landing : ndarray Maximum allowable take-off W/S (a constant array — a vertical wall on the diagram).</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Performance/Performance.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>257</span>
 <span class=normal>258</span>
 <span class=normal>259</span>
 <span class=normal>260</span>
@@ -91,20 +92,60 @@
 <span class=normal>268</span>
 <span class=normal>269</span>
 <span class=normal>270</span>
-<span class=normal>271</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>Landing</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span><span class=n>WTOoS</span><span class=p>,</span><span class=n>altitude</span><span class=p>,</span><span class=n>speed</span><span class=p>,</span><span class=n>speedtype</span><span class=p>,</span><span class=n>DISA</span><span class=p>):</span>
+<span class=normal>271</span>
+<span class=normal>272</span>
+<span class=normal>273</span>
+<span class=normal>274</span>
+<span class=normal>275</span>
+<span class=normal>276</span>
+<span class=normal>277</span>
+<span class=normal>278</span>
+<span class=normal>279</span>
+<span class=normal>280</span>
+<span class=normal>281</span>
+<span class=normal>282</span>
+<span class=normal>283</span>
+<span class=normal>284</span>
+<span class=normal>285</span>
+<span class=normal>286</span>
+<span class=normal>287</span>
+<span class=normal>288</span>
+<span class=normal>289</span>
+<span class=normal>290</span>
+<span class=normal>291</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>Landing</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>WTOoS</span><span class=p>,</span> <span class=n>altitude</span><span class=p>,</span> <span class=n>speed</span><span class=p>,</span> <span class=n>speedtype</span><span class=p>,</span> <span class=n>DISA</span><span class=p>,</span>
+            <span class=n>approach_factor</span><span class=o>=</span><span class=mf>1.23</span><span class=p>,</span> <span class=n>landing_mass_fraction</span><span class=o>=</span><span class=mf>1.0</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;</span>
-<span class=sd>    Landing constraint: determines maximum allowable W/S.</span>
+<span class=sd>    Landing constraint: determines the maximum allowable take-off W/S from the</span>
+<span class=sd>    approach speed.</span>
+
+<span class=sd>    The input ``speed`` is the **approach speed** V_app (e.g. the certification reference</span>
+<span class=sd>    speed Vref, ~115 kt for a regional turboprop). Certification (CS-25 25.125) sets</span>
+<span class=sd>    V_app = ``approach_factor`` * V_stall with ``approach_factor`` = 1.23 (use 1.3 for</span>
+<span class=sd>    CS-23), so the stall speed is V_app / approach_factor and the landing wing loading is</span>
+
+<span class=sd>        (m_Ldg g) / S = 1/2 * rho * CL_max * (V_app / approach_factor)^2 .</span>
+
+<span class=sd>    Dividing by the landing mass fraction ``landing_mass_fraction`` = m_Ldg / m0 converts</span>
+<span class=sd>    this landing-weight limit to a take-off (MTOW) wing loading — landing lighter than MTOW</span>
+<span class=sd>    relaxes the take-off W/S limit. The default 1.0 means landing at MTOW (conservative).</span>
+
+<span class=sd>    NB: the previous implementation treated ``speed`` directly as the stall speed (no 1.23</span>
+<span class=sd>    factor, no mass fraction), which over-stated the allowable W/S by approach_factor^2</span>
+<span class=sd>    (~1.51) and made the landing constraint non-binding — see the Schlittenhardt 2025</span>
+<span class=sd>    validation in paper/validation/.</span>
 
 <span class=sd>    Returns</span>
 <span class=sd>    -------</span>
 <span class=sd>    PW_landing : ndarray</span>
-<span class=sd>        Always zero line (landing does not impose P/W)</span>
+<span class=sd>        Always a (0..400) line — landing does not impose a P/W requirement, only a W/S cap.</span>
 <span class=sd>    WTOoS_landing : ndarray</span>
-<span class=sd>        Maximum allowable W/S based on stall / approach limits.</span>
+<span class=sd>        Maximum allowable take-off W/S (a constant array — a vertical wall on the diagram).</span>
 <span class=sd>    &quot;&quot;&quot;</span>
     <span class=bp>self</span><span class=o>.</span><span class=n>set_speed</span><span class=p>(</span><span class=n>altitude</span><span class=p>,</span> <span class=n>speed</span><span class=p>,</span> <span class=n>speedtype</span><span class=p>,</span> <span class=n>DISA</span><span class=p>)</span>
-    <span class=n>PWLanding</span> <span class=o>=</span> <span class=n>np</span><span class=o>.</span><span class=n>linspace</span><span class=p>(</span><span class=mi>0</span><span class=p>,</span> <span class=mi>400</span><span class=p>,</span><span class=n>num</span><span class=o>=</span> <span class=nb>len</span><span class=p>(</span><span class=n>WTOoS</span><span class=p>))</span>
-    <span class=n>WTOoSLanding</span> <span class=o>=</span> <span class=n>np</span><span class=o>.</span><span class=n>ones</span><span class=p>(</span><span class=nb>len</span><span class=p>(</span><span class=n>WTOoS</span><span class=p>))</span> <span class=o>*</span> <span class=p>(</span><span class=n>ISA</span><span class=o>.</span><span class=n>atmosphere</span><span class=o>.</span><span class=n>RHOstd</span><span class=p>(</span><span class=n>altitude</span><span class=p>,</span> <span class=n>DISA</span><span class=p>)</span><span class=o>/</span><span class=mi>2</span> <span class=o>*</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>aerodynamics</span><span class=o>.</span><span class=n>ClMax</span> <span class=o>*</span> <span class=bp>self</span><span class=o>.</span><span class=n>TAS</span><span class=o>**</span><span class=mi>2</span><span class=p>)</span>
+    <span class=n>V_stall</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>TAS</span> <span class=o>/</span> <span class=n>approach_factor</span>
+    <span class=n>WS_landing</span> <span class=o>=</span> <span class=n>ISA</span><span class=o>.</span><span class=n>atmosphere</span><span class=o>.</span><span class=n>RHOstd</span><span class=p>(</span><span class=n>altitude</span><span class=p>,</span> <span class=n>DISA</span><span class=p>)</span> <span class=o>/</span> <span class=mi>2</span> <span class=o>*</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>aerodynamics</span><span class=o>.</span><span class=n>ClMax</span> <span class=o>*</span> <span class=n>V_stall</span> <span class=o>**</span> <span class=mi>2</span>
+    <span class=n>PWLanding</span> <span class=o>=</span> <span class=n>np</span><span class=o>.</span><span class=n>linspace</span><span class=p>(</span><span class=mi>0</span><span class=p>,</span> <span class=mi>400</span><span class=p>,</span> <span class=n>num</span><span class=o>=</span><span class=nb>len</span><span class=p>(</span><span class=n>WTOoS</span><span class=p>))</span>
+    <span class=n>WTOoSLanding</span> <span class=o>=</span> <span class=n>np</span><span class=o>.</span><span class=n>ones</span><span class=p>(</span><span class=nb>len</span><span class=p>(</span><span class=n>WTOoS</span><span class=p>))</span> <span class=o>*</span> <span class=p>(</span><span class=n>WS_landing</span> <span class=o>/</span> <span class=n>landing_mass_fraction</span><span class=p>)</span>
     <span class=k>return</span> <span class=n>PWLanding</span><span class=p>,</span> <span class=n>WTOoSLanding</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.Performance.Performance.Performance.OEIClimb class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">OEIClimb</span> <a href=#PhlyGreen.Performance.Performance.Performance.OEIClimb class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>OEIClimb</span><span class=p>(</span><span class=n>WTOoS</span><span class=p>,</span> <span class=n>beta</span><span class=p>,</span> <span class=n>Ps</span><span class=p>,</span> <span class=n>n</span><span class=p>,</span> <span class=n>altitude</span><span class=p>,</span> <span class=n>DISA</span><span class=p>,</span> <span class=n>speed</span><span class=p>,</span> <span class=n>speedtype</span><span class=p>)</span>
 </code></pre></div> <div class="doc doc-contents "> <p>One-engine-inoperative (OEI) climb P/W requirement.</p> <p>Includes correction factor n_eng/(n_eng - 1) because available thrust decreases but required includes OEI climb gradient.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Performance/Performance.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>216</span>
@@ -133,21 +174,21 @@
     <span class=n>PW</span> <span class=o>=</span>  <span class=p>(</span><span class=bp>self</span><span class=o>.</span><span class=n>n_engines</span><span class=o>/</span><span class=p>(</span><span class=bp>self</span><span class=o>.</span><span class=n>n_engines</span><span class=o>-</span><span class=mi>1</span><span class=p>))</span><span class=o>*</span><span class=p>(</span><span class=bp>self</span><span class=o>.</span><span class=n>g_acc</span> <span class=o>*</span> <span class=p>(</span><span class=mf>1.0</span><span class=o>/</span><span class=n>WTOoS</span> <span class=o>*</span> <span class=n>q</span> <span class=o>*</span> <span class=bp>self</span><span class=o>.</span><span class=n>TAS</span> <span class=o>*</span> <span class=n>Cd</span> <span class=o>+</span> <span class=n>beta</span> <span class=o>*</span> <span class=n>Ps</span><span class=p>))</span>
     <span class=k>return</span> <span class=n>PW</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.Performance.Performance.Performance.OEIClimbFinger class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">OEIClimbFinger</span> <a href=#PhlyGreen.Performance.Performance.Performance.OEIClimbFinger class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>OEIClimbFinger</span><span class=p>(</span><span class=n>WTOoS</span><span class=p>,</span> <span class=n>beta</span><span class=p>,</span> <span class=n>Ps</span><span class=p>,</span> <span class=n>n</span><span class=p>,</span> <span class=n>altitude</span><span class=p>,</span> <span class=n>DISA</span><span class=p>,</span> <span class=n>speed</span><span class=p>,</span> <span class=n>speedtype</span><span class=p>)</span>
-</code></pre></div> <div class="doc doc-contents "> <p>OEI version of Finger climb method.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Performance/Performance.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>309</span>
-<span class=normal>310</span>
-<span class=normal>311</span>
-<span class=normal>312</span>
-<span class=normal>313</span>
-<span class=normal>314</span>
-<span class=normal>315</span>
-<span class=normal>316</span>
-<span class=normal>317</span>
-<span class=normal>318</span>
-<span class=normal>319</span>
-<span class=normal>320</span>
-<span class=normal>321</span>
-<span class=normal>322</span>
-<span class=normal>323</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>OEIClimbFinger</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span><span class=n>WTOoS</span><span class=p>,</span><span class=n>beta</span><span class=p>,</span><span class=n>Ps</span><span class=p>,</span><span class=n>n</span><span class=p>,</span><span class=n>altitude</span><span class=p>,</span><span class=n>DISA</span><span class=p>,</span><span class=n>speed</span><span class=p>,</span><span class=n>speedtype</span><span class=p>):</span>
+</code></pre></div> <div class="doc doc-contents "> <p>OEI version of Finger climb method.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Performance/Performance.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>329</span>
+<span class=normal>330</span>
+<span class=normal>331</span>
+<span class=normal>332</span>
+<span class=normal>333</span>
+<span class=normal>334</span>
+<span class=normal>335</span>
+<span class=normal>336</span>
+<span class=normal>337</span>
+<span class=normal>338</span>
+<span class=normal>339</span>
+<span class=normal>340</span>
+<span class=normal>341</span>
+<span class=normal>342</span>
+<span class=normal>343</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>OEIClimbFinger</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span><span class=n>WTOoS</span><span class=p>,</span><span class=n>beta</span><span class=p>,</span><span class=n>Ps</span><span class=p>,</span><span class=n>n</span><span class=p>,</span><span class=n>altitude</span><span class=p>,</span><span class=n>DISA</span><span class=p>,</span><span class=n>speed</span><span class=p>,</span><span class=n>speedtype</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;</span>
 <span class=sd>    OEI version of Finger climb method.</span>
 <span class=sd>    &quot;&quot;&quot;</span>
@@ -256,16 +297,16 @@
     <span class=n>PW</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>TAS</span> <span class=o>*</span> <span class=n>beta</span><span class=o>**</span><span class=mi>2</span> <span class=o>*</span> <span class=n>WTOoS</span> <span class=o>*</span> <span class=p>(</span><span class=n>kTO</span><span class=o>**</span><span class=mi>2</span><span class=p>)</span> <span class=o>/</span> <span class=p>(</span><span class=n>sTO</span> <span class=o>*</span> <span class=n>ISA</span><span class=o>.</span><span class=n>atmosphere</span><span class=o>.</span><span class=n>RHOstd</span><span class=p>(</span><span class=n>altitudeTO</span><span class=p>,</span><span class=n>DISA</span><span class=p>)</span> <span class=o>*</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>aerodynamics</span><span class=o>.</span><span class=n>Cl_TO</span><span class=p>)</span>
     <span class=k>return</span> <span class=n>PW</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.Performance.Performance.Performance.TakeOff_Finger class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">TakeOff_Finger</span> <a href=#PhlyGreen.Performance.Performance.Performance.TakeOff_Finger class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>TakeOff_Finger</span><span class=p>(</span><span class=n>WTOoS</span><span class=p>,</span> <span class=n>beta</span><span class=p>,</span> <span class=n>altitudeTO</span><span class=p>,</span> <span class=n>kTO</span><span class=p>,</span> <span class=n>sTO</span><span class=p>,</span> <span class=n>DISA</span><span class=p>,</span> <span class=n>speed</span><span class=p>,</span> <span class=n>speedtype</span><span class=p>)</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Finger method for takeoff performance. More explicit than the default Raymer approach.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Performance/Performance.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>325</span>
-<span class=normal>326</span>
-<span class=normal>327</span>
-<span class=normal>328</span>
-<span class=normal>329</span>
-<span class=normal>330</span>
-<span class=normal>331</span>
-<span class=normal>332</span>
-<span class=normal>333</span>
-<span class=normal>334</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>TakeOff_Finger</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span><span class=n>WTOoS</span><span class=p>,</span><span class=n>beta</span><span class=p>,</span><span class=n>altitudeTO</span><span class=p>,</span><span class=n>kTO</span><span class=p>,</span><span class=n>sTO</span><span class=p>,</span><span class=n>DISA</span><span class=p>,</span><span class=n>speed</span><span class=p>,</span><span class=n>speedtype</span><span class=p>):</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Finger method for takeoff performance. More explicit than the default Raymer approach.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Performance/Performance.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>345</span>
+<span class=normal>346</span>
+<span class=normal>347</span>
+<span class=normal>348</span>
+<span class=normal>349</span>
+<span class=normal>350</span>
+<span class=normal>351</span>
+<span class=normal>352</span>
+<span class=normal>353</span>
+<span class=normal>354</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>TakeOff_Finger</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span><span class=n>WTOoS</span><span class=p>,</span><span class=n>beta</span><span class=p>,</span><span class=n>altitudeTO</span><span class=p>,</span><span class=n>kTO</span><span class=p>,</span><span class=n>sTO</span><span class=p>,</span><span class=n>DISA</span><span class=p>,</span><span class=n>speed</span><span class=p>,</span><span class=n>speedtype</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;</span>
 <span class=sd>    Finger method for takeoff performance.</span>
 <span class=sd>    More explicit than the default Raymer approach.</span>
@@ -276,19 +317,19 @@
                      <span class=mf>0.21</span> <span class=o>*</span> <span class=mf>0.04</span><span class=p>)</span>
     <span class=k>return</span> <span class=n>PW</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.Performance.Performance.Performance.TakeOff_TORENBEEK class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">TakeOff_TORENBEEK</span> <a href=#PhlyGreen.Performance.Performance.Performance.TakeOff_TORENBEEK class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>TakeOff_TORENBEEK</span><span class=p>(</span><span class=n>altitudeTO</span><span class=p>,</span> <span class=n>sTO</span><span class=p>,</span> <span class=n>fTO</span><span class=p>,</span> <span class=n>hTO</span><span class=p>,</span> <span class=n>V3oVS</span><span class=p>,</span> <span class=n>mu</span><span class=p>,</span> <span class=n>speed</span><span class=p>,</span> <span class=n>speedtype</span><span class=p>,</span> <span class=n>DISA</span><span class=p>)</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Torenbeek-style analytical takeoff curve generator. Provides (P/W, W/S) parametric curve.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Performance/Performance.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>279</span>
-<span class=normal>280</span>
-<span class=normal>281</span>
-<span class=normal>282</span>
-<span class=normal>283</span>
-<span class=normal>284</span>
-<span class=normal>285</span>
-<span class=normal>286</span>
-<span class=normal>287</span>
-<span class=normal>288</span>
-<span class=normal>289</span>
-<span class=normal>290</span>
-<span class=normal>291</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>TakeOff_TORENBEEK</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>altitudeTO</span><span class=p>,</span> <span class=n>sTO</span><span class=p>,</span> <span class=n>fTO</span><span class=p>,</span> <span class=n>hTO</span><span class=p>,</span> <span class=n>V3oVS</span><span class=p>,</span> <span class=n>mu</span><span class=p>,</span> <span class=n>speed</span><span class=p>,</span> <span class=n>speedtype</span><span class=p>,</span> <span class=n>DISA</span><span class=p>):</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Torenbeek-style analytical takeoff curve generator. Provides (P/W, W/S) parametric curve.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Performance/Performance.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>299</span>
+<span class=normal>300</span>
+<span class=normal>301</span>
+<span class=normal>302</span>
+<span class=normal>303</span>
+<span class=normal>304</span>
+<span class=normal>305</span>
+<span class=normal>306</span>
+<span class=normal>307</span>
+<span class=normal>308</span>
+<span class=normal>309</span>
+<span class=normal>310</span>
+<span class=normal>311</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>TakeOff_TORENBEEK</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>altitudeTO</span><span class=p>,</span> <span class=n>sTO</span><span class=p>,</span> <span class=n>fTO</span><span class=p>,</span> <span class=n>hTO</span><span class=p>,</span> <span class=n>V3oVS</span><span class=p>,</span> <span class=n>mu</span><span class=p>,</span> <span class=n>speed</span><span class=p>,</span> <span class=n>speedtype</span><span class=p>,</span> <span class=n>DISA</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;</span>
 <span class=sd>    Torenbeek-style analytical takeoff curve generator.</span>
 <span class=sd>    Provides (P/W, W/S) parametric curve.</span>
