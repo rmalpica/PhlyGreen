@@ -152,8 +152,14 @@ class SystemEquipment:
 
     def SystemEquipmentMass(self):
 
-        self.system_equipment_mass = self.AirConditioningMass() + self.AntiIcingMass() + self.APUMass() + self.AvionicsMass() 
-        + self.ElectricalMass() + self.FurnishingMass() + self.HydraulicsMass() + self.InstrumentsMass()
-        + self.SurfaceControlsMass()
+        # NB: the summands must stay inside the parentheses — without them the trailing
+        # "+ self.ElectricalMass() + ..." lines are bare expressions whose results are discarded,
+        # which silently dropped ~half of the system-equipment mass (electrical, furnishing,
+        # hydraulics, instruments, surface controls).
+        self.system_equipment_mass = (
+            self.AirConditioningMass() + self.AntiIcingMass() + self.APUMass() + self.AvionicsMass()
+            + self.ElectricalMass() + self.FurnishingMass() + self.HydraulicsMass()
+            + self.InstrumentsMass() + self.SurfaceControlsMass()
+        )
 
         return None
