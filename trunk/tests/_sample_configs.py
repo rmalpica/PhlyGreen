@@ -73,7 +73,7 @@ CELL_INPUT = {
 AERODYNAMICS_INPUT = {
     'AnalyticPolar': {'type': 'Quadratic', 'input': {'AR': 11, 'e_osw': 0.8}},
     'Take Off Cl': 1.9,
-    'Landing Cl': 1.9,
+    'Landing Cl': 2.6,    # realistic landing-flap CLmax (> take-off); used by the landing-field constraint
     'Minimum Cl': 0.20,
     'Cd0': 0.017,
 }

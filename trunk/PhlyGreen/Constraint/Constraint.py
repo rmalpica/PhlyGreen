@@ -256,11 +256,15 @@ class Constraint:
         # =============================================================
         if len(self.LandingConstraints) > 0:
             self.PWLanding, self.WTOoSLanding = self.aircraft.performance.Landing(
-                WTOoS, 
-                self.LandingConstraints['Altitude'], 
-                self.LandingConstraints['Speed'], 
-                self.LandingConstraints['Speed Type'], 
-                DISA
+                WTOoS,
+                self.LandingConstraints['Altitude'],
+                self.LandingConstraints['Speed'],
+                self.LandingConstraints['Speed Type'],
+                DISA,
+                # approach speed = approach_factor * V_stall (CS-25: 1.23, CS-23: 1.3); the
+                # landing mass fraction m_Ldg/m0 converts the landing-weight W/S to a MTOW W/S.
+                self.LandingConstraints.get('Approach Factor', 1.23),
+                self.LandingConstraints.get('Mass Fraction', 1.0),
             )
         else:
             self.PWLanding = np.linspace(0, 400, num= len(WTOoS))

@@ -254,20 +254,40 @@ class Performance:
         PW = self.TAS * beta**2 * WTOoS * (kTO**2) / (sTO * ISA.atmosphere.RHOstd(altitudeTO,DISA) * self.aircraft.aerodynamics.Cl_TO)
         return PW
         
-    def Landing(self,WTOoS,altitude,speed,speedtype,DISA):
+    def Landing(self, WTOoS, altitude, speed, speedtype, DISA,
+                approach_factor=1.23, landing_mass_fraction=1.0):
         """
-        Landing constraint: determines maximum allowable W/S.
+        Landing constraint: determines the maximum allowable take-off W/S from the
+        approach speed.
+
+        The input ``speed`` is the **approach speed** V_app (e.g. the certification reference
+        speed Vref, ~115 kt for a regional turboprop). Certification (CS-25 25.125) sets
+        V_app = ``approach_factor`` * V_stall with ``approach_factor`` = 1.23 (use 1.3 for
+        CS-23), so the stall speed is V_app / approach_factor and the landing wing loading is
+
+            (m_Ldg g) / S = 1/2 * rho * CL_max * (V_app / approach_factor)^2 .
+
+        Dividing by the landing mass fraction ``landing_mass_fraction`` = m_Ldg / m0 converts
+        this landing-weight limit to a take-off (MTOW) wing loading — landing lighter than MTOW
+        relaxes the take-off W/S limit. The default 1.0 means landing at MTOW (conservative).
+
+        NB: the previous implementation treated ``speed`` directly as the stall speed (no 1.23
+        factor, no mass fraction), which over-stated the allowable W/S by approach_factor^2
+        (~1.51) and made the landing constraint non-binding — see the Schlittenhardt 2025
+        validation in paper/validation/.
 
         Returns
         -------
         PW_landing : ndarray
-            Always zero line (landing does not impose P/W)
+            Always a (0..400) line — landing does not impose a P/W requirement, only a W/S cap.
         WTOoS_landing : ndarray
-            Maximum allowable W/S based on stall / approach limits.
+            Maximum allowable take-off W/S (a constant array — a vertical wall on the diagram).
         """
         self.set_speed(altitude, speed, speedtype, DISA)
-        PWLanding = np.linspace(0, 400,num= len(WTOoS))
-        WTOoSLanding = np.ones(len(WTOoS)) * (ISA.atmosphere.RHOstd(altitude, DISA)/2 * self.aircraft.aerodynamics.ClMax * self.TAS**2)
+        V_stall = self.TAS / approach_factor
+        WS_landing = ISA.atmosphere.RHOstd(altitude, DISA) / 2 * self.aircraft.aerodynamics.ClMax * V_stall ** 2
+        PWLanding = np.linspace(0, 400, num=len(WTOoS))
+        WTOoSLanding = np.ones(len(WTOoS)) * (WS_landing / landing_mass_fraction)
         return PWLanding, WTOoSLanding
         
             #-----------------------              WIP            ------------------------#    

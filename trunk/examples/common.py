@@ -41,7 +41,10 @@ def _constraints():
 def _aerodynamics():
     # A simple quadratic drag polar: Cd = Cd0 + Cl^2 / (pi * AR * e).
     return AerodynamicsConfig(
-        take_off_cl=1.9, landing_cl=1.9, minimum_cl=0.20, cd0=0.017,
+        # landing CLmax > take-off CLmax (landing flaps deploy further). The landing-field
+        # constraint uses the *landing* value with the CS-25 approach factor (V_app = 1.23 Vs),
+        # so it must be a realistic landing high-lift value, not the take-off one.
+        take_off_cl=1.9, landing_cl=2.6, minimum_cl=0.20, cd0=0.017,
         analytic_polar={'type': 'Quadratic', 'input': {'AR': 11, 'e_osw': 0.8}},
     )
 
