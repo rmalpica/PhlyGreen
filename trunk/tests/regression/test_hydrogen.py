@@ -20,7 +20,7 @@ def _hydrogen_config(v_cell_design=0.5):
         Ef=120e6, eta_gearbox=0.96, eta_pmad=0.99, eta_electric_motor=0.96,
         eta_gas_turbine_model='constant', eta_gas_turbine=0.22,
         eta_propulsive_model='constant', eta_propulsive=0.9,
-        specific_power_powertrain=[3900, 7700],
+        specific_power_powertrain=[3900, 5000], specific_power_pmad=10000,
         fc_model='PEMFC_GoodPerformance', i_rated=2.5, v_cell_design=v_cell_design,
         stack_power_density=3000, bop_mass_ratio=0.40, h2_gravimetric_index=0.35,
     )

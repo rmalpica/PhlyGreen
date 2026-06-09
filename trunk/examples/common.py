@@ -104,8 +104,8 @@ def _energy():
         eta_propulsive_model='constant', eta_propulsive=0.9,
         eta_electric_motor=0.98, eta_pmad=0.99,
         eta_electric_motor_1=0.96, eta_electric_motor_2=0.96,
-        specific_power_powertrain=[3900, 7700],  # [thermal, electric] W/kg
-        specific_power_pmad=[2200, 2200, 2200],  # W/kg
+        specific_power_powertrain=[3900, 5000],  # [thermal, electric motor] W/kg (motor ~current SOA)
+        specific_power_pmad=10000,               # power-management / inverter [W/kg] (~current SOA)
     )
 
 
@@ -130,7 +130,8 @@ def _energy_hydrogen(v_cell_design=0.5):
         eta_gearbox=0.96, eta_pmad=0.99, eta_electric_motor=0.96,
         eta_gas_turbine_model='constant', eta_gas_turbine=0.22,
         eta_propulsive_model='constant', eta_propulsive=0.9,
-        specific_power_powertrain=[3900, 7700],
+        specific_power_powertrain=[3900, 5000],  # [thermal, electric motor] W/kg
+        specific_power_pmad=10000,               # power-management / inverter [W/kg]
         # --- fuel-cell stack ---
         fc_model='PEMFC_GoodPerformance',  # see PhlyGreen.Systems.FuelCell.FC_Database
         i_rated=2.5,                       # rated current density [A/cm^2]

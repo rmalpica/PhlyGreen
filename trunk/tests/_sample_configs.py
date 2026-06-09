@@ -55,8 +55,8 @@ ENERGY_INPUT = {
     'Eta Electric Motor 2': 0.96,
     'Eta Electric Motor': 0.98,
     'Eta PMAD': 0.99,
-    'Specific Power Powertrain': [3900, 7700],  # [W/kg]
-    'Specific Power PMAD': [2200, 2200, 2200],  # [W/kg]
+    'Specific Power Powertrain': [3900, 5000],  # [thermal, electric motor] [W/kg]
+    'Specific Power PMAD': 10000,               # power-management / inverter [W/kg]
 }
 
 CELL_INPUT = {
@@ -97,7 +97,8 @@ HYDROGEN_ENERGY_INPUT = {
     'Eta Gas Turbine': 0.22,
     'Eta Propulsive Model': 'constant',
     'Eta Propulsive': 0.9,
-    'Specific Power Powertrain': [3900, 7700],
+    'Specific Power Powertrain': [3900, 5000],
+    'Specific Power PMAD': 10000,
     # --- fuel-cell stack ---
     'Model': 'PEMFC_GoodPerformance',
     'i Rated': 2.5,

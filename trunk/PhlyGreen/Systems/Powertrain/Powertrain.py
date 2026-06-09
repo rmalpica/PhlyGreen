@@ -336,6 +336,10 @@ class Powertrain:
 
         self.EtaGB = self.aircraft.EnergyInput['Eta Gearbox']
         self.SPowerPT = self.aircraft.EnergyInput['Specific Power Powertrain']
+        # Power-management / inverter specific power [W/kg] — read for every configuration so the
+        # electric drive (motor + PMAD) is sized the same way in the hybrid powertrain and in the
+        # fuel-cell system. Defaulted in pmad_specific_power() when absent.
+        self.SPowerPMAD = self.aircraft.EnergyInput.get('Specific Power PMAD', None)
 
 
         # Optional fuel-cell system efficiency (used by PowerRatioFuelCellBattery).
@@ -345,9 +349,6 @@ class Powertrain:
         if (self.aircraft.Configuration == 'Hybrid'):
 
             self.EtaPM = self.aircraft.EnergyInput['Eta PMAD']
-            # NOTE: SPowerPMAD is read and stored but not yet consumed by WeightPowertrain.
-            # It is reserved for a future PMAD-mass term (SPowerPT is the one used today).
-            self.SPowerPMAD = self.aircraft.EnergyInput['Specific Power PMAD']
 
             
             if (self.aircraft.HybridType == 'Parallel'):
@@ -764,6 +765,19 @@ class Powertrain:
         return np.abs(PowerRatio)  #here abs is used to avoid that Pbat/Pp = -0 when phi=0
         
         
+    def pmad_specific_power(self):
+        """Power-management / inverter specific power [W/kg], used to size the PMAD mass.
+
+        Reads ``Specific Power PMAD`` (``SPowerPMAD``). Older configs passed a list (one entry per
+        rail); the first entry is taken. Defaults to 10000 W/kg (≈ current-to-near-term aviation
+        power electronics) when unset. Shared by the hybrid powertrain and the fuel-cell system so
+        every configuration sizes the inverter the same way.
+        """
+        sp = getattr(self, "SPowerPMAD", None)
+        if isinstance(sp, (list, tuple)):
+            sp = sp[0] if sp else None
+        return float(sp) if sp else 10000.0
+
     def WeightPowertrain(self,WTO):
         """
         This function estimates the total weight of the propulsion powertrain based on the aircraft
@@ -844,9 +858,14 @@ class Powertrain:
                 self.engineRating = PeakPwrEng #shaft power
 
                 self.WThermal = PeakPwrEng /self.SPowerPT[0]
-                self.WElectric = PeakPwrBat /self.SPowerPT[1] 
+                # Electric drive = motor (SPowerPT[1]) + power-management/inverter (PMAD). The PMAD
+                # mass was previously omitted here; it is now sized with the same specific power the
+                # fuel-cell system uses, so the electric drive is consistent across configurations.
+                self.WMotor = PeakPwrBat / self.SPowerPT[1]
+                self.WPMAD = PeakPwrBat / self.pmad_specific_power()
+                self.WElectric = self.WMotor + self.WPMAD
 
-                WPT = self.WThermal + self.WElectric 
+                WPT = self.WThermal + self.WElectric
 
         else:
              raise Exception("Unknown aircraft configuration: %s" %self.aircraft.Configuration)

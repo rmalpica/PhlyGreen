@@ -77,8 +77,8 @@ class EnergyConfig(DictConfig):
     eta_electric_motor_1: Optional[float] = None   # serial config (generator)
     eta_electric_motor_2: Optional[float] = None   # serial config (motor)
     eta_pmad: Optional[float] = None
-    specific_power_powertrain: Optional[List[float]] = None  # [thermal, electric] W/kg
-    specific_power_pmad: Optional[List[float]] = None        # W/kg
+    specific_power_powertrain: Optional[List[float]] = None  # [thermal, electric motor] W/kg
+    specific_power_pmad: Optional[float] = None              # power-management / inverter [W/kg]
     # --- hydrogen fuel-cell parameters (Hydrogen configuration only) ---
     fc_model: Optional[str] = None              # key into FC_Database
     i_rated: Optional[float] = None             # rated current density [A/cm^2]

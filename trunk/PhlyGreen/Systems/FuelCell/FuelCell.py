@@ -301,8 +301,17 @@ class FuelCell:
 
         M_Stack = Total_Active_Area * kg_per_cm2
         M_BoP = M_Stack * self.BoP_Mass_Ratio
-        M_EM = (self.P_fc_rated * self.EtaPM) / 5000.0
-        M_PM = self.P_fc_rated / 10000.0
+        # Electric drive sized with the *same* specific powers as the hybrid powertrain, so the
+        # motor + power-management mass is consistent across configurations (no hard-coded values).
+        # The motor carries the power downstream of the PMAD (P_fc_rated · EtaPM); the PMAD carries
+        # the full net rating. Specific powers come from the powertrain (config), with literature
+        # current-SOA fallbacks (motor 5000, inverter 10000 W/kg).
+        pt = getattr(self.aircraft, 'powertrain', None)
+        sp_powertrain = getattr(pt, 'SPowerPT', None) if pt is not None else None
+        sp_motor = sp_powertrain[1] if sp_powertrain else 5000.0
+        sp_pmad = pt.pmad_specific_power() if (pt is not None and hasattr(pt, 'pmad_specific_power')) else 10000.0
+        M_EM = (self.P_fc_rated * self.EtaPM) / sp_motor
+        M_PM = self.P_fc_rated / sp_pmad
 
         self._Weight = M_Stack + M_BoP + M_EM + M_PM
         self.Sizing_Done = True

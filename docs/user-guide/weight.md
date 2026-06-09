@@ -134,15 +134,19 @@ The code stores which term dominates (`WBatidx`).
 
 # 5. Powertrain Weight
 
-For both traditional and hybrid aircraft, powertrain mass scales with subsystem specific powers, hence it is a Class I estimation:
+For both traditional and hybrid aircraft, powertrain mass scales with subsystem specific powers, hence it is a Class I estimation. The electric branch is split into the **motor** and the **power-management / inverter (PMAD)**, each with its own specific power:
 
 \[
 W_{\text{PT}}
 =
-\frac{P_{\text{thermal,max}}}{SP_{\text{thermal}}}
+\underbrace{\frac{P_{\text{thermal,max}}}{SP_{\text{thermal}}}}_{\text{gas turbine + gearbox}}
 +
-\frac{P_{\text{electric,max}}}{SP_{\text{electric}}}
+\underbrace{\frac{P_{\text{electric,max}}}{SP_{\text{motor}}}}_{\text{electric motor}}
++
+\underbrace{\frac{P_{\text{electric,max}}}{SP_{\text{PMAD}}}}_{\text{power management}}
 \]
+
+The same `SP_motor` (`Specific Power Powertrain[1]`) and `SP_PMAD` (`Specific Power PMAD`) are used to size the electric drive of the **fuel-cell system** too, so the motor + power-management mass is consistent across all configurations. Defaults are current-state-of-the-art values (motor ≈ 5 kW/kg, inverter ≈ 10 kW/kg); raise them to model future power electronics. The fuel-cell stack, balance-of-plant, hydrogen, tank and cooling masses are added on top for the hydrogen / fuel-cell-battery configurations (see [Hydrogen](hydrogen.md)).
 
 
 ---
