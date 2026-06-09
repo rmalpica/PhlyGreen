@@ -56,7 +56,10 @@
 <span class=normal>93</span>
 <span class=normal>94</span>
 <span class=normal>95</span>
-<span class=normal>96</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=fm>__init__</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>aircraft</span><span class=p>):</span>
+<span class=normal>96</span>
+<span class=normal>97</span>
+<span class=normal>98</span>
+<span class=normal>99</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=fm>__init__</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>aircraft</span><span class=p>):</span>
     <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span> <span class=o>=</span> <span class=n>aircraft</span>
     <span class=bp>self</span><span class=o>.</span><span class=n>_Weight</span> <span class=o>=</span> <span class=mf>0.0</span>
     <span class=bp>self</span><span class=o>.</span><span class=n>Sizing_Done</span> <span class=o>=</span> <span class=kc>False</span>
@@ -97,10 +100,13 @@
     <span class=bp>self</span><span class=o>.</span><span class=n>P_fc_rated</span> <span class=o>=</span> <span class=mf>0.0</span>  
     <span class=bp>self</span><span class=o>.</span><span class=n>Q_thermal</span> <span class=o>=</span> <span class=mf>0.0</span>  
 
-    <span class=c1># --- SUMMARY OUTPUTS ---</span>
+    <span class=c1># --- SUMMARY OUTPUTS (last ComputePRatio operating point) ---</span>
     <span class=bp>self</span><span class=o>.</span><span class=n>P_gross_last</span> <span class=o>=</span> <span class=mf>0.0</span>
     <span class=bp>self</span><span class=o>.</span><span class=n>P_comp_net_last</span> <span class=o>=</span> <span class=mf>0.0</span>
     <span class=bp>self</span><span class=o>.</span><span class=n>P_turb_last</span> <span class=o>=</span> <span class=mf>0.0</span>
+    <span class=bp>self</span><span class=o>.</span><span class=n>i_op_last</span> <span class=o>=</span> <span class=mf>0.0</span>      <span class=c1># operating current density [A/cm^2]</span>
+    <span class=bp>self</span><span class=o>.</span><span class=n>v_cell_last</span> <span class=o>=</span> <span class=mf>0.0</span>    <span class=c1># operating cell voltage [V]</span>
+    <span class=bp>self</span><span class=o>.</span><span class=n>eta_fcs_last</span> <span class=o>=</span> <span class=mf>0.0</span>   <span class=c1># net fuel-cell-system efficiency (electrical/chemical) [-]</span>
 
     <span class=c1># --- ADEQUACY TRACKING (worst-case power-limit over the last flown mission) ---</span>
     <span class=c1># Populated by ComputePRatio at every operating point and read by report_sizing().</span>
@@ -115,28 +121,13 @@
     <span class=bp>self</span><span class=o>.</span><span class=n>EtaEM</span> <span class=o>=</span> <span class=kc>None</span>
     <span class=bp>self</span><span class=o>.</span><span class=n>EtaGB</span> <span class=o>=</span> <span class=kc>None</span>
 </code></pre></div></td></tr></table></div> </details> <div class="doc doc-children"> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.Systems.FuelCell.FuelCell.FuelCell.ComputeAndStoreWeights class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">ComputeAndStoreWeights</span> <a href=#PhlyGreen.Systems.FuelCell.FuelCell.FuelCell.ComputeAndStoreWeights class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>ComputeAndStoreWeights</span><span class=p>(</span><span class=n>WTO</span><span class=p>)</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Backwards-compatible alias for :meth:<code>SizeFromConstraint</code>.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Systems/FuelCell/FuelCell.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>325</span>
-<span class=normal>326</span>
-<span class=normal>327</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>ComputeAndStoreWeights</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>WTO</span><span class=p>):</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Backwards-compatible alias for :meth:<code>SizeFromConstraint</code>.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Systems/FuelCell/FuelCell.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>340</span>
+<span class=normal>341</span>
+<span class=normal>342</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>ComputeAndStoreWeights</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>WTO</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;Backwards-compatible alias for :meth:`SizeFromConstraint`.&quot;&quot;&quot;</span>
     <span class=k>return</span> <span class=bp>self</span><span class=o>.</span><span class=n>SizeFromConstraint</span><span class=p>(</span><span class=n>WTO</span><span class=p>)</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.Systems.FuelCell.FuelCell.FuelCell.ComputePRatio class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">ComputePRatio</span> <a href=#PhlyGreen.Systems.FuelCell.FuelCell.FuelCell.ComputePRatio class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>ComputePRatio</span><span class=p>(</span><span class=n>alt</span><span class=p>,</span> <span class=n>vel</span><span class=p>,</span> <span class=n>P_req_net</span><span class=p>)</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Computes operational state given altitude, velocity and required net power.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Systems/FuelCell/FuelCell.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>339</span>
-<span class=normal>340</span>
-<span class=normal>341</span>
-<span class=normal>342</span>
-<span class=normal>343</span>
-<span class=normal>344</span>
-<span class=normal>345</span>
-<span class=normal>346</span>
-<span class=normal>347</span>
-<span class=normal>348</span>
-<span class=normal>349</span>
-<span class=normal>350</span>
-<span class=normal>351</span>
-<span class=normal>352</span>
-<span class=normal>353</span>
-<span class=normal>354</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Computes operational state given altitude, velocity and required net power.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Systems/FuelCell/FuelCell.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>354</span>
 <span class=normal>355</span>
 <span class=normal>356</span>
 <span class=normal>357</span>
@@ -217,7 +208,30 @@
 <span class=normal>432</span>
 <span class=normal>433</span>
 <span class=normal>434</span>
-<span class=normal>435</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>ComputePRatio</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>alt</span><span class=p>,</span> <span class=n>vel</span><span class=p>,</span> <span class=n>P_req_net</span><span class=p>):</span>
+<span class=normal>435</span>
+<span class=normal>436</span>
+<span class=normal>437</span>
+<span class=normal>438</span>
+<span class=normal>439</span>
+<span class=normal>440</span>
+<span class=normal>441</span>
+<span class=normal>442</span>
+<span class=normal>443</span>
+<span class=normal>444</span>
+<span class=normal>445</span>
+<span class=normal>446</span>
+<span class=normal>447</span>
+<span class=normal>448</span>
+<span class=normal>449</span>
+<span class=normal>450</span>
+<span class=normal>451</span>
+<span class=normal>452</span>
+<span class=normal>453</span>
+<span class=normal>454</span>
+<span class=normal>455</span>
+<span class=normal>456</span>
+<span class=normal>457</span>
+<span class=normal>458</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>ComputePRatio</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>alt</span><span class=p>,</span> <span class=n>vel</span><span class=p>,</span> <span class=n>P_req_net</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;Computes operational state given altitude, velocity and required net power.&quot;&quot;&quot;</span>
     <span class=k>if</span> <span class=ow>not</span> <span class=bp>self</span><span class=o>.</span><span class=n>Sizing_Done</span><span class=p>:</span> <span class=bp>self</span><span class=o>.</span><span class=n>ComputeAndStoreWeights</span><span class=p>(</span><span class=mf>1000.0</span><span class=p>)</span>
 
@@ -303,22 +317,27 @@
         <span class=n>Eta_Total_Sys</span> <span class=o>=</span> <span class=n>np</span><span class=o>.</span><span class=n>clip</span><span class=p>(</span><span class=n>Eta_FCS</span> <span class=o>*</span> <span class=n>eta_mech</span><span class=p>,</span> <span class=mf>0.01</span><span class=p>,</span> <span class=mf>0.85</span><span class=p>)</span>
 
         <span class=n>p_th_cell</span> <span class=o>=</span> <span class=n>i_op</span> <span class=o>*</span> <span class=p>(</span><span class=bp>self</span><span class=o>.</span><span class=n>DELTA_H_REACT</span> <span class=o>/</span> <span class=p>(</span><span class=mi>2</span> <span class=o>*</span> <span class=bp>self</span><span class=o>.</span><span class=n>FARADAY_CONST</span><span class=p>)</span> <span class=o>-</span> <span class=n>v_cell</span><span class=p>)</span>
-        <span class=bp>self</span><span class=o>.</span><span class=n>Q_thermal</span> <span class=o>=</span> <span class=n>p_th_cell</span> <span class=o>*</span> <span class=bp>self</span><span class=o>.</span><span class=n>N_cells</span> <span class=o>*</span> <span class=bp>self</span><span class=o>.</span><span class=n>A_cell_reale</span> 
+        <span class=bp>self</span><span class=o>.</span><span class=n>Q_thermal</span> <span class=o>=</span> <span class=n>p_th_cell</span> <span class=o>*</span> <span class=bp>self</span><span class=o>.</span><span class=n>N_cells</span> <span class=o>*</span> <span class=bp>self</span><span class=o>.</span><span class=n>A_cell_reale</span>
+
+        <span class=c1># Expose the operating point for post-processing (tutorials / mission timelines).</span>
+        <span class=bp>self</span><span class=o>.</span><span class=n>i_op_last</span> <span class=o>=</span> <span class=n>i_op</span>
+        <span class=bp>self</span><span class=o>.</span><span class=n>v_cell_last</span> <span class=o>=</span> <span class=n>v_cell</span>
+        <span class=bp>self</span><span class=o>.</span><span class=n>eta_fcs_last</span> <span class=o>=</span> <span class=n>Eta_FCS</span>
 
         <span class=k>return</span> <span class=n>np</span><span class=o>.</span><span class=n>array</span><span class=p>([</span><span class=mf>1.0</span><span class=o>/</span><span class=n>Eta_Total_Sys</span><span class=p>,</span> <span class=mf>1.0</span><span class=p>])</span>
     <span class=k>else</span><span class=p>:</span>
         <span class=c1># Fallback to analytical scaling if physical limits are exceeded</span>
         <span class=n>P_idle_chem</span> <span class=o>=</span> <span class=p>(</span><span class=bp>self</span><span class=o>.</span><span class=n>P_fc_rated</span> <span class=o>*</span> <span class=bp>self</span><span class=o>.</span><span class=n>Fixed_Aux_Load</span><span class=p>)</span> <span class=o>/</span> <span class=mf>0.40</span>
         <span class=n>P_chem_total</span> <span class=o>=</span> <span class=n>P_idle_chem</span> <span class=o>+</span> <span class=p>(</span><span class=n>P_req_net</span> <span class=o>/</span> <span class=mf>0.40</span><span class=p>)</span> 
-        <span class=bp>self</span><span class=o>.</span><span class=n>Q_thermal</span> <span class=o>=</span> <span class=n>P_chem_total</span> <span class=o>*</span> <span class=mf>0.60</span> 
+        <span class=bp>self</span><span class=o>.</span><span class=n>Q_thermal</span> <span class=o>=</span> <span class=n>P_chem_total</span> <span class=o>*</span> <span class=mf>0.60</span>
         <span class=bp>self</span><span class=o>.</span><span class=n>P_gross_last</span> <span class=o>=</span> <span class=n>P_chem_total</span> <span class=o>*</span> <span class=mf>0.40</span>
         <span class=bp>self</span><span class=o>.</span><span class=n>P_comp_net_last</span> <span class=o>=</span> <span class=n>P_chem_total</span> <span class=o>*</span> <span class=mf>0.10</span>
+        <span class=bp>self</span><span class=o>.</span><span class=n>i_op_last</span> <span class=o>=</span> <span class=nb>float</span><span class=p>(</span><span class=s1>&#39;nan&#39;</span><span class=p>)</span>      <span class=c1># no physical operating point at this condition</span>
+        <span class=bp>self</span><span class=o>.</span><span class=n>v_cell_last</span> <span class=o>=</span> <span class=nb>float</span><span class=p>(</span><span class=s1>&#39;nan&#39;</span><span class=p>)</span>
+        <span class=bp>self</span><span class=o>.</span><span class=n>eta_fcs_last</span> <span class=o>=</span> <span class=mf>0.40</span>
         <span class=k>return</span> <span class=n>np</span><span class=o>.</span><span class=n>array</span><span class=p>([</span><span class=n>P_chem_total</span> <span class=o>/</span> <span class=nb>max</span><span class=p>(</span><span class=n>P_req_net</span><span class=p>,</span> <span class=mf>1.0</span><span class=p>),</span> <span class=mf>1.0</span><span class=p>])</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.Systems.FuelCell.FuelCell.FuelCell.ComputeSystemEfficiency class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">ComputeSystemEfficiency</span> <a href=#PhlyGreen.Systems.FuelCell.FuelCell.FuelCell.ComputeSystemEfficiency class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>ComputeSystemEfficiency</span><span class=p>(</span><span class=n>i_dens</span><span class=p>,</span> <span class=n>alt</span><span class=p>)</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Computes net efficiency assuming constant pressure at the cathode.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Systems/FuelCell/FuelCell.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>226</span>
-<span class=normal>227</span>
-<span class=normal>228</span>
-<span class=normal>229</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Computes net efficiency assuming constant pressure at the cathode.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Systems/FuelCell/FuelCell.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>229</span>
 <span class=normal>230</span>
 <span class=normal>231</span>
 <span class=normal>232</span>
@@ -332,7 +351,10 @@
 <span class=normal>240</span>
 <span class=normal>241</span>
 <span class=normal>242</span>
-<span class=normal>243</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>ComputeSystemEfficiency</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>i_dens</span><span class=p>,</span> <span class=n>alt</span><span class=p>):</span>
+<span class=normal>243</span>
+<span class=normal>244</span>
+<span class=normal>245</span>
+<span class=normal>246</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>ComputeSystemEfficiency</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>i_dens</span><span class=p>,</span> <span class=n>alt</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;Computes net efficiency assuming constant pressure at the cathode.&quot;&quot;&quot;</span>
     <span class=k>if</span> <span class=ow>not</span> <span class=bp>self</span><span class=o>.</span><span class=n>Sizing_Done</span> <span class=ow>or</span> <span class=bp>self</span><span class=o>.</span><span class=n>N_cells</span> <span class=o>==</span> <span class=mi>0</span><span class=p>:</span>
         <span class=k>return</span> <span class=mf>0.0</span>
@@ -351,10 +373,7 @@
 
     <span class=k>return</span> <span class=n>P_net</span> <span class=o>/</span> <span class=n>P_chem</span> <span class=k>if</span> <span class=n>P_chem</span> <span class=o>&gt;</span> <span class=mi>0</span> <span class=k>else</span> <span class=mf>0.0</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.Systems.FuelCell.FuelCell.FuelCell.PolarizationCurve class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">PolarizationCurve</span> <a href=#PhlyGreen.Systems.FuelCell.FuelCell.FuelCell.PolarizationCurve class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>PolarizationCurve</span><span class=p>(</span><span class=n>i_dens</span><span class=p>,</span> <span class=n>P_internal_Pa</span><span class=p>,</span> <span class=n>T_amb</span><span class=o>=</span><span class=kc>None</span><span class=p>)</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Computes the cell voltage (Kulikovsky analytical model).</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Systems/FuelCell/FuelCell.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>162</span>
-<span class=normal>163</span>
-<span class=normal>164</span>
-<span class=normal>165</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Computes the cell voltage (Kulikovsky analytical model).</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Systems/FuelCell/FuelCell.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>165</span>
 <span class=normal>166</span>
 <span class=normal>167</span>
 <span class=normal>168</span>
@@ -389,7 +408,10 @@
 <span class=normal>197</span>
 <span class=normal>198</span>
 <span class=normal>199</span>
-<span class=normal>200</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>PolarizationCurve</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>i_dens</span><span class=p>,</span> <span class=n>P_internal_Pa</span><span class=p>,</span> <span class=n>T_amb</span><span class=o>=</span><span class=kc>None</span><span class=p>):</span>
+<span class=normal>200</span>
+<span class=normal>201</span>
+<span class=normal>202</span>
+<span class=normal>203</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>PolarizationCurve</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>i_dens</span><span class=p>,</span> <span class=n>P_internal_Pa</span><span class=p>,</span> <span class=n>T_amb</span><span class=o>=</span><span class=kc>None</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;Computes the cell voltage (Kulikovsky analytical model).&quot;&quot;&quot;</span>
     <span class=k>if</span> <span class=bp>self</span><span class=o>.</span><span class=n>Voc</span> <span class=ow>is</span> <span class=kc>None</span><span class=p>:</span> <span class=bp>self</span><span class=o>.</span><span class=n>SetInput</span><span class=p>()</span>
 
@@ -429,10 +451,7 @@
     <span class=n>V_cell</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>Voc</span> <span class=o>-</span> <span class=p>(</span><span class=bp>self</span><span class=o>.</span><span class=n>R_ohm</span> <span class=o>*</span> <span class=n>j0</span><span class=p>)</span> <span class=o>-</span> <span class=n>eta_0</span> <span class=o>-</span> <span class=n>V_conc</span>
     <span class=k>return</span> <span class=nb>max</span><span class=p>(</span><span class=mf>1e-3</span><span class=p>,</span> <span class=n>V_cell</span><span class=p>)</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.Systems.FuelCell.FuelCell.FuelCell.SetInput class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">SetInput</span> <a href=#PhlyGreen.Systems.FuelCell.FuelCell.FuelCell.SetInput class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>SetInput</span><span class=p>()</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Loads FC parameters strictly from the aircraft dictionary and FC_Database (Fail-Fast).</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Systems/FuelCell/FuelCell.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal> 99</span>
-<span class=normal>100</span>
-<span class=normal>101</span>
-<span class=normal>102</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Loads FC parameters strictly from the aircraft dictionary and FC_Database (Fail-Fast).</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Systems/FuelCell/FuelCell.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>102</span>
 <span class=normal>103</span>
 <span class=normal>104</span>
 <span class=normal>105</span>
@@ -489,7 +508,10 @@
 <span class=normal>156</span>
 <span class=normal>157</span>
 <span class=normal>158</span>
-<span class=normal>159</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>SetInput</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
+<span class=normal>159</span>
+<span class=normal>160</span>
+<span class=normal>161</span>
+<span class=normal>162</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>SetInput</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;Loads FC parameters strictly from the aircraft dictionary and FC_Database (Fail-Fast).&quot;&quot;&quot;</span>
     <span class=n>inp</span> <span class=o>=</span> <span class=nb>getattr</span><span class=p>(</span><span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=p>,</span> <span class=s1>&#39;EnergyInput&#39;</span><span class=p>,</span> <span class=kc>None</span><span class=p>)</span>
 
@@ -551,13 +573,13 @@
     <span class=bp>self</span><span class=o>.</span><span class=n>T_op</span> <span class=o>=</span> <span class=n>params</span><span class=p>[</span><span class=s1>&#39;T_op&#39;</span><span class=p>]</span>
     <span class=bp>self</span><span class=o>.</span><span class=n>Target_Press</span> <span class=o>=</span> <span class=n>params</span><span class=p>[</span><span class=s1>&#39;Target_Press&#39;</span><span class=p>]</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.Systems.FuelCell.FuelCell.FuelCell.SizeForPropulsivePower class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">SizeForPropulsivePower</span> <a href=#PhlyGreen.Systems.FuelCell.FuelCell.FuelCell.SizeForPropulsivePower class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>SizeForPropulsivePower</span><span class=p>(</span><span class=n>P_propulsive_req</span><span class=p>)</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Size the fuel cell to deliver a required <em>propulsive</em> power [W].</p> <p><code>P_propulsive_req</code> is the worst case of (mission peak, take-off, OEI climb), assembled by the caller (the weight loop). The only sizing margin applied is :attr:<code>SizingMargin</code>.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Systems/FuelCell/FuelCell.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>306</span>
-<span class=normal>307</span>
-<span class=normal>308</span>
-<span class=normal>309</span>
-<span class=normal>310</span>
-<span class=normal>311</span>
-<span class=normal>312</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>SizeForPropulsivePower</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>P_propulsive_req</span><span class=p>):</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Size the fuel cell to deliver a required <em>propulsive</em> power [W].</p> <p><code>P_propulsive_req</code> is the worst case of (mission peak, take-off, OEI climb), assembled by the caller (the weight loop). The only sizing margin applied is :attr:<code>SizingMargin</code>.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Systems/FuelCell/FuelCell.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>321</span>
+<span class=normal>322</span>
+<span class=normal>323</span>
+<span class=normal>324</span>
+<span class=normal>325</span>
+<span class=normal>326</span>
+<span class=normal>327</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>SizeForPropulsivePower</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>P_propulsive_req</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;Size the fuel cell to deliver a required *propulsive* power [W].</span>
 
 <span class=sd>    ``P_propulsive_req`` is the worst case of (mission peak, take-off, OEI climb), assembled</span>
@@ -565,16 +587,16 @@
 <span class=sd>    &quot;&quot;&quot;</span>
     <span class=k>return</span> <span class=bp>self</span><span class=o>.</span><span class=n>_size_stack</span><span class=p>(</span><span class=n>P_propulsive_req</span> <span class=o>*</span> <span class=bp>self</span><span class=o>.</span><span class=n>SizingMargin</span><span class=p>)</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.Systems.FuelCell.FuelCell.FuelCell.SizeFromConstraint class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">SizeFromConstraint</span> <a href=#PhlyGreen.Systems.FuelCell.FuelCell.FuelCell.SizeFromConstraint class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>SizeFromConstraint</span><span class=p>(</span><span class=n>WTO</span><span class=p>)</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Seed the fuel-cell geometry from the constraint power-to-weight <code>DesignPW</code>.</p> <p><code>DesignPW</code> is the constraint-diagram envelope (which already includes the take-off and OEI requirements), so this gives a representative fuel cell for the <em>first</em> mission pass before the mission-peak resize loop refines it self-consistently.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Systems/FuelCell/FuelCell.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>314</span>
-<span class=normal>315</span>
-<span class=normal>316</span>
-<span class=normal>317</span>
-<span class=normal>318</span>
-<span class=normal>319</span>
-<span class=normal>320</span>
-<span class=normal>321</span>
-<span class=normal>322</span>
-<span class=normal>323</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>SizeFromConstraint</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>WTO</span><span class=p>):</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Seed the fuel-cell geometry from the constraint power-to-weight <code>DesignPW</code>.</p> <p><code>DesignPW</code> is the constraint-diagram envelope (which already includes the take-off and OEI requirements), so this gives a representative fuel cell for the <em>first</em> mission pass before the mission-peak resize loop refines it self-consistently.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Systems/FuelCell/FuelCell.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>329</span>
+<span class=normal>330</span>
+<span class=normal>331</span>
+<span class=normal>332</span>
+<span class=normal>333</span>
+<span class=normal>334</span>
+<span class=normal>335</span>
+<span class=normal>336</span>
+<span class=normal>337</span>
+<span class=normal>338</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>SizeFromConstraint</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>WTO</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;Seed the fuel-cell geometry from the constraint power-to-weight ``DesignPW``.</span>
 
 <span class=sd>    ``DesignPW`` is the constraint-diagram envelope (which already includes the take-off</span>
@@ -585,30 +607,7 @@
     <span class=n>sizing_mass</span> <span class=o>=</span> <span class=mf>25000.0</span> <span class=k>if</span> <span class=n>WTO</span> <span class=o>&lt;</span> <span class=mf>10000.0</span> <span class=k>else</span> <span class=n>WTO</span>
     <span class=k>return</span> <span class=bp>self</span><span class=o>.</span><span class=n>_size_stack</span><span class=p>(</span><span class=n>pw</span> <span class=o>*</span> <span class=n>sizing_mass</span><span class=p>)</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.Systems.FuelCell.FuelCell.FuelCell.report_sizing class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">report_sizing</span> <a href=#PhlyGreen.Systems.FuelCell.FuelCell.FuelCell.report_sizing class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>report_sizing</span><span class=p>(</span><span class=n>raise_on_undersize</span><span class=o>=</span><span class=kc>False</span><span class=p>)</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Check that the sized fuel cell can deliver the power the mission demands.</p> <p>Mirrors :meth:<code>Powertrain.report_class_ii_sizing</code> for the fuel cell. Run <em>after</em> the weight-sizing loop has flown the mission: :meth:<code>ComputePRatio</code> records, at every operating point, the ratio of required to <em>available</em> net power (the available power falls with altitude as the air-system draws more), so a stack whose sea-level rating looks sufficient can still be <strong>power-limited at altitude</strong>. Without this check that shortfall is hidden — <code>ComputePRatio</code> silently substitutes an analytical fallback.</p> <p>Returns a <code>dict</code> with the rated power, the worst-case load ratio and its altitude, whether the stack is <code>power_limited</code> and the <code>min_rating</code> needed to avoid it, and warns (or, with <code>raise_on_undersize=True</code>, raises) when the cell is undersized.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Systems/FuelCell/FuelCell.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>437</span>
-<span class=normal>438</span>
-<span class=normal>439</span>
-<span class=normal>440</span>
-<span class=normal>441</span>
-<span class=normal>442</span>
-<span class=normal>443</span>
-<span class=normal>444</span>
-<span class=normal>445</span>
-<span class=normal>446</span>
-<span class=normal>447</span>
-<span class=normal>448</span>
-<span class=normal>449</span>
-<span class=normal>450</span>
-<span class=normal>451</span>
-<span class=normal>452</span>
-<span class=normal>453</span>
-<span class=normal>454</span>
-<span class=normal>455</span>
-<span class=normal>456</span>
-<span class=normal>457</span>
-<span class=normal>458</span>
-<span class=normal>459</span>
-<span class=normal>460</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Check that the sized fuel cell can deliver the power the mission demands.</p> <p>Mirrors :meth:<code>Powertrain.report_class_ii_sizing</code> for the fuel cell. Run <em>after</em> the weight-sizing loop has flown the mission: :meth:<code>ComputePRatio</code> records, at every operating point, the ratio of required to <em>available</em> net power (the available power falls with altitude as the air-system draws more), so a stack whose sea-level rating looks sufficient can still be <strong>power-limited at altitude</strong>. Without this check that shortfall is hidden — <code>ComputePRatio</code> silently substitutes an analytical fallback.</p> <p>Returns a <code>dict</code> with the rated power, the worst-case load ratio and its altitude, whether the stack is <code>power_limited</code> and the <code>min_rating</code> needed to avoid it, and warns (or, with <code>raise_on_undersize=True</code>, raises) when the cell is undersized.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Systems/FuelCell/FuelCell.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>460</span>
 <span class=normal>461</span>
 <span class=normal>462</span>
 <span class=normal>463</span>
@@ -632,7 +631,30 @@
 <span class=normal>481</span>
 <span class=normal>482</span>
 <span class=normal>483</span>
-<span class=normal>484</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>report_sizing</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>raise_on_undersize</span><span class=o>=</span><span class=kc>False</span><span class=p>):</span>
+<span class=normal>484</span>
+<span class=normal>485</span>
+<span class=normal>486</span>
+<span class=normal>487</span>
+<span class=normal>488</span>
+<span class=normal>489</span>
+<span class=normal>490</span>
+<span class=normal>491</span>
+<span class=normal>492</span>
+<span class=normal>493</span>
+<span class=normal>494</span>
+<span class=normal>495</span>
+<span class=normal>496</span>
+<span class=normal>497</span>
+<span class=normal>498</span>
+<span class=normal>499</span>
+<span class=normal>500</span>
+<span class=normal>501</span>
+<span class=normal>502</span>
+<span class=normal>503</span>
+<span class=normal>504</span>
+<span class=normal>505</span>
+<span class=normal>506</span>
+<span class=normal>507</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>report_sizing</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>raise_on_undersize</span><span class=o>=</span><span class=kc>False</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;Check that the sized fuel cell can deliver the power the mission demands.</span>
 
 <span class=sd>    Mirrors :meth:`Powertrain.report_class_ii_sizing` for the fuel cell. Run *after* the</span>
