@@ -448,10 +448,35 @@ def plot_component_timeseries(aircraft, **kwargs):
     return axes
 
 
-def plot_mission_profile(aircraft, axes=None):
-    """Plot altitude, true airspeed and (for hybrids) phi versus time."""
+def _flown_mask(aircraft, n):
+    """Boolean mask over the concatenated time array that drops the loiter/hold (a reserve
+    calculation, not an actually flown trajectory). All points at or after the loiter's start time
+    are dropped, which also removes the segment-boundary point whose altitude the piecewise profile
+    evaluates at the loiter level. Falls back to all-True if segment phases are unavailable."""
+    m = getattr(aircraft, "mission", None)
+    prof = getattr(m, "profile", None)
+    sols = getattr(m, "integral_solution", None)
+    segs = getattr(prof, "_segments", None)
+    if not sols or segs is None or len(segs) != len(sols):
+        return np.ones(n, dtype=bool)
+    loiter_starts = [float(s.t[0]) for s, seg in zip(sols, segs)
+                     if getattr(seg, "phase", "") == "Loiter"]
+    if not loiter_starts:
+        return np.ones(n, dtype=bool)
+    time = np.concatenate([s.t for s in sols])
+    mask = time < min(loiter_starts)
+    return mask if mask.shape[0] == n else np.ones(n, dtype=bool)
+
+
+def plot_mission_profile(aircraft, axes=None, include_loiter=False):
+    """Plot altitude, true airspeed and (for hybrids) phi versus time.
+
+    By default the final loiter/hold is excluded (``include_loiter=False``): it is flown only to
+    size the fuel reserve, not as part of the actual mission trajectory."""
     import matplotlib.pyplot as plt
     ts = mission_timeseries(aircraft)
+    mask = np.ones(len(ts["time"]), dtype=bool) if include_loiter else _flown_mask(aircraft, len(ts["time"]))
+    ts = {k: (v[mask] if hasattr(v, "shape") and v.shape[:1] == mask.shape else v) for k, v in ts.items()}
     t_min = ts["time"] / 60.0
     has_phi = "phi" in ts
     n = 3 if has_phi else 2
