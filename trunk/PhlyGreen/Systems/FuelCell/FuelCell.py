@@ -257,9 +257,10 @@ class FuelCell:
     # Fraction of *gross* stack power left after the air-system (compressor) + fixed auxiliaries
     # at the sizing (peak) condition. The active area is sized from gross = net / this, so the cell
     # operates near its design voltage at the peak. The real parasitic draw is ~4 % (sea level) to
-    # ~12 % (cruise altitude); 0.72 leaves a modest power margin so the cell is not power-limited at
-    # altitude (checked by report_sizing) while still operating near its design voltage at the peak.
-    BoP_Power_Sizing_Efficiency = 0.72
+    # ~12 % (cruise altitude); 0.85 covers the worst-case parasitic with a small (~4 %) power margin
+    # so the cell is not power-limited at altitude (checked by report_sizing) without over-sizing the
+    # stack, which a looser factor (e.g. 0.72) would do.
+    BoP_Power_Sizing_Efficiency = 0.85
 
     def _size_stack(self, P_propulsive_design):
         """Size the stack / BoP / electric motor from a required *propulsive* power [W].

@@ -132,14 +132,14 @@ def _energy_hydrogen(v_cell_design=0.5):
         Ef=120e6,                          # hydrogen LHV [J/kg]
         eta_gearbox=0.96, eta_pmad=0.99, eta_electric_motor=0.96,
         eta_gas_turbine_model='constant', eta_gas_turbine=0.22,
-        eta_propulsive_model='constant', eta_propulsive=0.9,
-        specific_power_powertrain=[3900, 5000],  # [thermal, electric motor] W/kg
+        eta_propulsive_model='constant', eta_propulsive=0.85,
+        specific_power_powertrain=[3900, 10000],  # [thermal, electric motor] W/kg (~2030 motor)
         specific_power_pmad=10000,               # power-management / inverter [W/kg]
         # --- fuel-cell stack ---
         fc_model='PEMFC_GoodPerformance',  # see PhlyGreen.Systems.FuelCell.FC_Database
         i_rated=2.5,                       # rated current density [A/cm^2]
         v_cell_design=v_cell_design,       # design cell voltage [V] (try sweeping this)
-        stack_power_density=3000,          # [W/kg]
+        stack_power_density=2000,          # [W/kg] (~2030 realistic stack+BoP ~2 kW/kg)
         bop_mass_ratio=0.40,               # balance-of-plant mass / stack mass
         h2_gravimetric_index=0.35,         # usable H2 / (H2 + tank) mass
     )
