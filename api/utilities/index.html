@@ -369,12 +369,7 @@
 
     <span class=k>return</span> <span class=n>out</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h2 id=PhlyGreen.postprocess.compute_tank_history class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code> <span class="doc doc-object-name doc-function-name">compute_tank_history</span> <a href=#PhlyGreen.postprocess.compute_tank_history class=headerlink title="Permanent link">&para;</a></h2> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>compute_tank_history</span><span class=p>(</span><span class=n>aircraft</span><span class=p>)</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Advance the LH2 tank thermodynamic state along the converged mission, filling <code>aircraft.tank.history</code>.</p> <p>Works for any hydrogen architecture (<code>Hydrogen</code> and <code>FuelCellBattery</code>): it walks the flown mission solution and drives the tank with the hydrogen mass flow recovered from the cumulative hydrogen chemical energy (ODE state <code>y[0]</code>). Unlike setting <code>mission.track_tank</code> and re-flying, this is a cheap post-processing pass and needs no re-integration. Requires a physics LH2 tank (a <code>TankConfig</code> + CoolProp) and a flown mission.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/postprocess.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>585</span>
-<span class=normal>586</span>
-<span class=normal>587</span>
-<span class=normal>588</span>
-<span class=normal>589</span>
-<span class=normal>590</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Advance the LH2 tank thermodynamic state along the converged mission, filling <code>aircraft.tank.history</code>.</p> <p>Works for any hydrogen architecture (<code>Hydrogen</code> and <code>FuelCellBattery</code>): it walks the flown mission solution and drives the tank with the hydrogen mass flow recovered from the cumulative hydrogen chemical energy (ODE state <code>y[0]</code>). Unlike setting <code>mission.track_tank</code> and re-flying, this is a cheap post-processing pass and needs no re-integration. Requires a physics LH2 tank (a <code>TankConfig</code> + CoolProp) and a flown mission.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/postprocess.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>590</span>
 <span class=normal>591</span>
 <span class=normal>592</span>
 <span class=normal>593</span>
@@ -397,7 +392,12 @@
 <span class=normal>610</span>
 <span class=normal>611</span>
 <span class=normal>612</span>
-<span class=normal>613</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>compute_tank_history</span><span class=p>(</span><span class=n>aircraft</span><span class=p>):</span>
+<span class=normal>613</span>
+<span class=normal>614</span>
+<span class=normal>615</span>
+<span class=normal>616</span>
+<span class=normal>617</span>
+<span class=normal>618</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>compute_tank_history</span><span class=p>(</span><span class=n>aircraft</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;Advance the LH2 tank thermodynamic state along the converged mission, filling</span>
 <span class=sd>    ``aircraft.tank.history``.</span>
 
@@ -427,12 +427,7 @@
             <span class=n>tank</span><span class=o>.</span><span class=n>time_step</span><span class=p>(</span><span class=n>dt</span><span class=p>,</span> <span class=n>m_dot</span><span class=p>,</span> <span class=nb>float</span><span class=p>(</span><span class=n>m</span><span class=o>.</span><span class=n>profile</span><span class=o>.</span><span class=n>Altitude</span><span class=p>(</span><span class=n>t_mid</span><span class=p>)))</span>
     <span class=k>return</span> <span class=n>tank</span><span class=o>.</span><span class=n>history</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h2 id=PhlyGreen.postprocess.mass_breakdown class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code> <span class="doc doc-object-name doc-function-name">mass_breakdown</span> <a href=#PhlyGreen.postprocess.mass_breakdown class=headerlink title="Permanent link">&para;</a></h2> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>mass_breakdown</span><span class=p>(</span><span class=n>aircraft</span><span class=p>)</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Return an ordered <code>{component: mass_kg}</code> dict (omitting absent/zero items).</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/postprocess.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>553</span>
-<span class=normal>554</span>
-<span class=normal>555</span>
-<span class=normal>556</span>
-<span class=normal>557</span>
-<span class=normal>558</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Return an ordered <code>{component: mass_kg}</code> dict (omitting absent/zero items).</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/postprocess.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>558</span>
 <span class=normal>559</span>
 <span class=normal>560</span>
 <span class=normal>561</span>
@@ -441,7 +436,12 @@
 <span class=normal>564</span>
 <span class=normal>565</span>
 <span class=normal>566</span>
-<span class=normal>567</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>mass_breakdown</span><span class=p>(</span><span class=n>aircraft</span><span class=p>):</span>
+<span class=normal>567</span>
+<span class=normal>568</span>
+<span class=normal>569</span>
+<span class=normal>570</span>
+<span class=normal>571</span>
+<span class=normal>572</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>mass_breakdown</span><span class=p>(</span><span class=n>aircraft</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;Return an ordered ``{component: mass_kg}`` dict (omitting absent/zero items).&quot;&quot;&quot;</span>
     <span class=n>w</span> <span class=o>=</span> <span class=n>aircraft</span><span class=o>.</span><span class=n>weight</span>
     <span class=n>items</span> <span class=o>=</span> <span class=p>[</span>
@@ -623,12 +623,12 @@
                        <span class=p>(</span><span class=s2>&quot;eta_propeller&quot;</span><span class=p>,</span> <span class=s2>&quot;propeller&quot;</span><span class=p>)):</span>
         <span class=k>if</span> <span class=n>key</span> <span class=ow>in</span> <span class=n>cs</span><span class=p>:</span>
             <span class=n>axes</span><span class=p>[</span><span class=mi>0</span><span class=p>]</span><span class=o>.</span><span class=n>plot</span><span class=p>(</span><span class=n>t</span><span class=p>,</span> <span class=n>cs</span><span class=p>[</span><span class=n>key</span><span class=p>],</span> <span class=n>label</span><span class=o>=</span><span class=n>label</span><span class=p>)</span>
-    <span class=n>axes</span><span class=p>[</span><span class=mi>0</span><span class=p>]</span><span class=o>.</span><span class=n>set_ylabel</span><span class=p>(</span><span class=s2>&quot;efficiency [-]&quot;</span><span class=p>);</span> <span class=n>axes</span><span class=p>[</span><span class=mi>0</span><span class=p>]</span><span class=o>.</span><span class=n>legend</span><span class=p>(</span><span class=n>fontsize</span><span class=o>=</span><span class=mi>8</span><span class=p>)</span>
+    <span class=n>axes</span><span class=p>[</span><span class=mi>0</span><span class=p>]</span><span class=o>.</span><span class=n>set_ylabel</span><span class=p>(</span><span class=s2>&quot;efficiency [-]&quot;</span><span class=p>);</span> <span class=n>axes</span><span class=p>[</span><span class=mi>0</span><span class=p>]</span><span class=o>.</span><span class=n>legend</span><span class=p>(</span><span class=n>fontsize</span><span class=o>=</span><span class=mi>12</span><span class=p>)</span>
     <span class=k>if</span> <span class=s2>&quot;gt_throttle&quot;</span> <span class=ow>in</span> <span class=n>cs</span><span class=p>:</span>
         <span class=n>axes</span><span class=p>[</span><span class=mi>1</span><span class=p>]</span><span class=o>.</span><span class=n>plot</span><span class=p>(</span><span class=n>t</span><span class=p>,</span> <span class=n>cs</span><span class=p>[</span><span class=s2>&quot;gt_throttle&quot;</span><span class=p>],</span> <span class=n>color</span><span class=o>=</span><span class=s2>&quot;tab:red&quot;</span><span class=p>,</span> <span class=n>label</span><span class=o>=</span><span class=s2>&quot;gas turbine&quot;</span><span class=p>)</span>
     <span class=k>if</span> <span class=s2>&quot;em_throttle&quot;</span> <span class=ow>in</span> <span class=n>cs</span><span class=p>:</span>
         <span class=n>axes</span><span class=p>[</span><span class=mi>1</span><span class=p>]</span><span class=o>.</span><span class=n>plot</span><span class=p>(</span><span class=n>t</span><span class=p>,</span> <span class=n>cs</span><span class=p>[</span><span class=s2>&quot;em_throttle&quot;</span><span class=p>],</span> <span class=n>color</span><span class=o>=</span><span class=s2>&quot;tab:blue&quot;</span><span class=p>,</span> <span class=n>label</span><span class=o>=</span><span class=s2>&quot;electric motor&quot;</span><span class=p>)</span>
-    <span class=n>axes</span><span class=p>[</span><span class=mi>1</span><span class=p>]</span><span class=o>.</span><span class=n>set_ylabel</span><span class=p>(</span><span class=s2>&quot;throttle [-]&quot;</span><span class=p>);</span> <span class=n>axes</span><span class=p>[</span><span class=mi>1</span><span class=p>]</span><span class=o>.</span><span class=n>set_ylim</span><span class=p>(</span><span class=mi>0</span><span class=p>,</span> <span class=mf>1.05</span><span class=p>);</span> <span class=n>axes</span><span class=p>[</span><span class=mi>1</span><span class=p>]</span><span class=o>.</span><span class=n>legend</span><span class=p>(</span><span class=n>fontsize</span><span class=o>=</span><span class=mi>8</span><span class=p>)</span>
+    <span class=n>axes</span><span class=p>[</span><span class=mi>1</span><span class=p>]</span><span class=o>.</span><span class=n>set_ylabel</span><span class=p>(</span><span class=s2>&quot;throttle [-]&quot;</span><span class=p>);</span> <span class=n>axes</span><span class=p>[</span><span class=mi>1</span><span class=p>]</span><span class=o>.</span><span class=n>set_ylim</span><span class=p>(</span><span class=mi>0</span><span class=p>,</span> <span class=mf>1.05</span><span class=p>);</span> <span class=n>axes</span><span class=p>[</span><span class=mi>1</span><span class=p>]</span><span class=o>.</span><span class=n>legend</span><span class=p>(</span><span class=n>fontsize</span><span class=o>=</span><span class=mi>12</span><span class=p>)</span>
     <span class=k>if</span> <span class=s2>&quot;propeller_pitch&quot;</span> <span class=ow>in</span> <span class=n>cs</span><span class=p>:</span>
         <span class=n>axes</span><span class=p>[</span><span class=mi>2</span><span class=p>]</span><span class=o>.</span><span class=n>plot</span><span class=p>(</span><span class=n>t</span><span class=p>,</span> <span class=n>cs</span><span class=p>[</span><span class=s2>&quot;propeller_pitch&quot;</span><span class=p>],</span> <span class=n>color</span><span class=o>=</span><span class=s2>&quot;tab:purple&quot;</span><span class=p>)</span>
         <span class=n>axes</span><span class=p>[</span><span class=mi>2</span><span class=p>]</span><span class=o>.</span><span class=n>set_ylabel</span><span class=p>(</span><span class=s2>&quot;propeller pitch [deg]&quot;</span><span class=p>)</span>
@@ -639,7 +639,7 @@
         <span class=n>ax</span><span class=o>.</span><span class=n>grid</span><span class=p>(</span><span class=n>alpha</span><span class=o>=</span><span class=mf>0.3</span><span class=p>)</span>
     <span class=k>return</span> <span class=n>axes</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h2 id=PhlyGreen.postprocess.plot_constraint_diagram class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code> <span class="doc doc-object-name doc-function-name">plot_constraint_diagram</span> <a href=#PhlyGreen.postprocess.plot_constraint_diagram class=headerlink title="Permanent link">&para;</a></h2> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>plot_constraint_diagram</span><span class=p>(</span><span class=n>aircraft</span><span class=p>,</span> <span class=n>ax</span><span class=o>=</span><span class=kc>None</span><span class=p>)</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Plot the constraint diagram (P/W vs W/S) with the design point.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/postprocess.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>518</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Plot the constraint diagram (power loading P/m_TO vs wing loading m_TO/S_wing) with the design point. The wing-loading axis is in mass terms [kg/m^2]: the stored W/S is a weight loading [N/m^2], so it is divided by g for display. The power-loading axis is already a specific power [W/kg], i.e. P/m_TO, and is only relabelled.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/postprocess.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>518</span>
 <span class=normal>519</span>
 <span class=normal>520</span>
 <span class=normal>521</span>
@@ -671,9 +671,18 @@
 <span class=normal>547</span>
 <span class=normal>548</span>
 <span class=normal>549</span>
-<span class=normal>550</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>plot_constraint_diagram</span><span class=p>(</span><span class=n>aircraft</span><span class=p>,</span> <span class=n>ax</span><span class=o>=</span><span class=kc>None</span><span class=p>):</span>
-<span class=w>    </span><span class=sd>&quot;&quot;&quot;Plot the constraint diagram (P/W vs W/S) with the design point.&quot;&quot;&quot;</span>
+<span class=normal>550</span>
+<span class=normal>551</span>
+<span class=normal>552</span>
+<span class=normal>553</span>
+<span class=normal>554</span>
+<span class=normal>555</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>plot_constraint_diagram</span><span class=p>(</span><span class=n>aircraft</span><span class=p>,</span> <span class=n>ax</span><span class=o>=</span><span class=kc>None</span><span class=p>):</span>
+<span class=w>    </span><span class=sd>&quot;&quot;&quot;Plot the constraint diagram (power loading P/m_TO vs wing loading m_TO/S_wing) with the</span>
+<span class=sd>    design point. The wing-loading axis is in mass terms [kg/m^2]: the stored W/S is a weight</span>
+<span class=sd>    loading [N/m^2], so it is divided by g for display. The power-loading axis is already a</span>
+<span class=sd>    specific power [W/kg], i.e. P/m_TO, and is only relabelled.&quot;&quot;&quot;</span>
     <span class=kn>import</span><span class=w> </span><span class=nn>matplotlib.pyplot</span><span class=w> </span><span class=k>as</span><span class=w> </span><span class=nn>plt</span>
+    <span class=n>G</span> <span class=o>=</span> <span class=mf>9.80665</span>                                   <span class=c1># N/m^2 (weight loading) -&gt; kg/m^2 (mass loading)</span>
     <span class=n>c</span> <span class=o>=</span> <span class=n>aircraft</span><span class=o>.</span><span class=n>constraint</span>
     <span class=k>if</span> <span class=n>ax</span> <span class=ow>is</span> <span class=kc>None</span><span class=p>:</span>
         <span class=n>_</span><span class=p>,</span> <span class=n>ax</span> <span class=o>=</span> <span class=n>plt</span><span class=o>.</span><span class=n>subplots</span><span class=p>(</span><span class=n>figsize</span><span class=o>=</span><span class=p>(</span><span class=mi>7</span><span class=p>,</span> <span class=mi>5</span><span class=p>))</span>
@@ -685,24 +694,25 @@
     <span class=k>for</span> <span class=n>label</span><span class=p>,</span> <span class=n>attr</span> <span class=ow>in</span> <span class=n>curves</span><span class=p>:</span>
         <span class=n>y</span> <span class=o>=</span> <span class=nb>getattr</span><span class=p>(</span><span class=n>c</span><span class=p>,</span> <span class=n>attr</span><span class=p>,</span> <span class=kc>None</span><span class=p>)</span>
         <span class=k>if</span> <span class=n>y</span> <span class=ow>is</span> <span class=ow>not</span> <span class=kc>None</span><span class=p>:</span>
-            <span class=n>ax</span><span class=o>.</span><span class=n>plot</span><span class=p>(</span><span class=n>c</span><span class=o>.</span><span class=n>WTOoS</span><span class=p>,</span> <span class=n>y</span><span class=p>,</span> <span class=n>label</span><span class=o>=</span><span class=n>label</span><span class=p>)</span>
+            <span class=n>ax</span><span class=o>.</span><span class=n>plot</span><span class=p>(</span><span class=n>np</span><span class=o>.</span><span class=n>asarray</span><span class=p>(</span><span class=n>c</span><span class=o>.</span><span class=n>WTOoS</span><span class=p>)</span> <span class=o>/</span> <span class=n>G</span><span class=p>,</span> <span class=n>y</span><span class=p>,</span> <span class=n>label</span><span class=o>=</span><span class=n>label</span><span class=p>)</span>
     <span class=k>if</span> <span class=nb>getattr</span><span class=p>(</span><span class=n>c</span><span class=p>,</span> <span class=s2>&quot;PWLanding&quot;</span><span class=p>,</span> <span class=kc>None</span><span class=p>)</span> <span class=ow>is</span> <span class=ow>not</span> <span class=kc>None</span> <span class=ow>and</span> <span class=nb>getattr</span><span class=p>(</span><span class=n>c</span><span class=p>,</span> <span class=s2>&quot;WTOoSLanding&quot;</span><span class=p>,</span> <span class=kc>None</span><span class=p>)</span> <span class=ow>is</span> <span class=ow>not</span> <span class=kc>None</span><span class=p>:</span>
-        <span class=n>ax</span><span class=o>.</span><span class=n>plot</span><span class=p>(</span><span class=n>c</span><span class=o>.</span><span class=n>WTOoSLanding</span><span class=p>,</span> <span class=n>c</span><span class=o>.</span><span class=n>PWLanding</span><span class=p>,</span> <span class=n>label</span><span class=o>=</span><span class=s2>&quot;Landing&quot;</span><span class=p>)</span>
+        <span class=n>ax</span><span class=o>.</span><span class=n>plot</span><span class=p>(</span><span class=n>np</span><span class=o>.</span><span class=n>asarray</span><span class=p>(</span><span class=n>c</span><span class=o>.</span><span class=n>WTOoSLanding</span><span class=p>)</span> <span class=o>/</span> <span class=n>G</span><span class=p>,</span> <span class=n>c</span><span class=o>.</span><span class=n>PWLanding</span><span class=p>,</span> <span class=n>label</span><span class=o>=</span><span class=s2>&quot;Landing&quot;</span><span class=p>)</span>
     <span class=n>design_pw</span> <span class=o>=</span> <span class=kc>None</span>
     <span class=k>try</span><span class=p>:</span>
         <span class=n>design_pw</span> <span class=o>=</span> <span class=n>aircraft</span><span class=o>.</span><span class=n>DesignPW</span>
-        <span class=n>ax</span><span class=o>.</span><span class=n>plot</span><span class=p>(</span><span class=n>aircraft</span><span class=o>.</span><span class=n>DesignWTOoS</span><span class=p>,</span> <span class=n>design_pw</span><span class=p>,</span> <span class=s2>&quot;o&quot;</span><span class=p>,</span> <span class=n>ms</span><span class=o>=</span><span class=mi>10</span><span class=p>,</span>
+        <span class=n>ax</span><span class=o>.</span><span class=n>plot</span><span class=p>(</span><span class=n>aircraft</span><span class=o>.</span><span class=n>DesignWTOoS</span> <span class=o>/</span> <span class=n>G</span><span class=p>,</span> <span class=n>design_pw</span><span class=p>,</span> <span class=s2>&quot;o&quot;</span><span class=p>,</span> <span class=n>ms</span><span class=o>=</span><span class=mi>10</span><span class=p>,</span>
                 <span class=n>mfc</span><span class=o>=</span><span class=s2>&quot;red&quot;</span><span class=p>,</span> <span class=n>mec</span><span class=o>=</span><span class=s2>&quot;black&quot;</span><span class=p>,</span> <span class=n>label</span><span class=o>=</span><span class=s2>&quot;design point&quot;</span><span class=p>,</span> <span class=n>zorder</span><span class=o>=</span><span class=mi>5</span><span class=p>)</span>
     <span class=k>except</span> <span class=ne>Exception</span><span class=p>:</span>
         <span class=k>pass</span>
-    <span class=n>ax</span><span class=o>.</span><span class=n>set_xlabel</span><span class=p>(</span><span class=sa>r</span><span class=s2>&quot;$W_</span><span class=si>{TO}</span><span class=s2>/S$ [N/m$^2$]&quot;</span><span class=p>);</span> <span class=n>ax</span><span class=o>.</span><span class=n>set_ylabel</span><span class=p>(</span><span class=sa>r</span><span class=s2>&quot;$P/W_</span><span class=si>{TO}</span><span class=s2>$ [W/kg]&quot;</span><span class=p>)</span>
+    <span class=n>ax</span><span class=o>.</span><span class=n>set_xlabel</span><span class=p>(</span><span class=sa>r</span><span class=s2>&quot;wing loading $m_</span><span class=si>{TO}</span><span class=s2>/S_</span><span class=si>{wing}</span><span class=s2>$ [kg/m$^2$]&quot;</span><span class=p>)</span>
+    <span class=n>ax</span><span class=o>.</span><span class=n>set_ylabel</span><span class=p>(</span><span class=sa>r</span><span class=s2>&quot;power loading $P/m_</span><span class=si>{TO}</span><span class=s2>$ [W/kg]&quot;</span><span class=p>)</span>
     <span class=c1># Limit the y-range so the design point sits roughly mid-axis (P/W curves can shoot up</span>
     <span class=c1># towards the W/S extremes and otherwise squash the design region).</span>
     <span class=k>if</span> <span class=n>design_pw</span> <span class=ow>is</span> <span class=ow>not</span> <span class=kc>None</span> <span class=ow>and</span> <span class=n>design_pw</span> <span class=o>&gt;</span> <span class=mi>0</span><span class=p>:</span>
         <span class=n>ax</span><span class=o>.</span><span class=n>set_ylim</span><span class=p>(</span><span class=mi>0</span><span class=p>,</span> <span class=mf>2.0</span> <span class=o>*</span> <span class=n>design_pw</span><span class=p>)</span>
     <span class=k>else</span><span class=p>:</span>
         <span class=n>ax</span><span class=o>.</span><span class=n>set_ylim</span><span class=p>(</span><span class=n>bottom</span><span class=o>=</span><span class=mi>0</span><span class=p>)</span>
-    <span class=n>ax</span><span class=o>.</span><span class=n>grid</span><span class=p>(</span><span class=n>alpha</span><span class=o>=</span><span class=mf>0.3</span><span class=p>);</span> <span class=n>ax</span><span class=o>.</span><span class=n>legend</span><span class=p>(</span><span class=n>fontsize</span><span class=o>=</span><span class=mi>8</span><span class=p>)</span>
+    <span class=n>ax</span><span class=o>.</span><span class=n>grid</span><span class=p>(</span><span class=n>alpha</span><span class=o>=</span><span class=mf>0.3</span><span class=p>);</span> <span class=n>ax</span><span class=o>.</span><span class=n>legend</span><span class=p>(</span><span class=n>fontsize</span><span class=o>=</span><span class=mi>12</span><span class=p>)</span>
     <span class=k>return</span> <span class=n>ax</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h2 id=PhlyGreen.postprocess.plot_energy_timeseries class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code> <span class="doc doc-object-name doc-function-name">plot_energy_timeseries</span> <a href=#PhlyGreen.postprocess.plot_energy_timeseries class=headerlink title="Permanent link">&para;</a></h2> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>plot_energy_timeseries</span><span class=p>(</span><span class=n>aircraft</span><span class=p>,</span> <span class=n>ax</span><span class=o>=</span><span class=kc>None</span><span class=p>)</span>
 </code></pre></div> <div class="doc doc-contents "> <p>Plot cumulative fuel (and battery) energy, and SOC if available, versus time.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/postprocess.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>498</span>
@@ -741,19 +751,19 @@
     <span class=n>ax</span><span class=o>.</span><span class=n>legend</span><span class=p>(</span><span class=n>loc</span><span class=o>=</span><span class=s2>&quot;upper left&quot;</span><span class=p>)</span>
     <span class=k>return</span> <span class=n>ax</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h2 id=PhlyGreen.postprocess.plot_mass_breakdown class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code> <span class="doc doc-object-name doc-function-name">plot_mass_breakdown</span> <a href=#PhlyGreen.postprocess.plot_mass_breakdown class=headerlink title="Permanent link">&para;</a></h2> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>plot_mass_breakdown</span><span class=p>(</span><span class=n>aircraft</span><span class=p>,</span> <span class=n>ax</span><span class=o>=</span><span class=kc>None</span><span class=p>)</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Bar chart of the take-off mass breakdown.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/postprocess.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>570</span>
-<span class=normal>571</span>
-<span class=normal>572</span>
-<span class=normal>573</span>
-<span class=normal>574</span>
-<span class=normal>575</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Bar chart of the take-off mass breakdown.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/postprocess.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>575</span>
 <span class=normal>576</span>
 <span class=normal>577</span>
 <span class=normal>578</span>
 <span class=normal>579</span>
 <span class=normal>580</span>
 <span class=normal>581</span>
-<span class=normal>582</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>plot_mass_breakdown</span><span class=p>(</span><span class=n>aircraft</span><span class=p>,</span> <span class=n>ax</span><span class=o>=</span><span class=kc>None</span><span class=p>):</span>
+<span class=normal>582</span>
+<span class=normal>583</span>
+<span class=normal>584</span>
+<span class=normal>585</span>
+<span class=normal>586</span>
+<span class=normal>587</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>plot_mass_breakdown</span><span class=p>(</span><span class=n>aircraft</span><span class=p>,</span> <span class=n>ax</span><span class=o>=</span><span class=kc>None</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;Bar chart of the take-off mass breakdown.&quot;&quot;&quot;</span>
     <span class=kn>import</span><span class=w> </span><span class=nn>matplotlib.pyplot</span><span class=w> </span><span class=k>as</span><span class=w> </span><span class=nn>plt</span>
     <span class=n>masses</span> <span class=o>=</span> <span class=n>mass_breakdown</span><span class=p>(</span><span class=n>aircraft</span><span class=p>)</span>
@@ -763,7 +773,7 @@
     <span class=n>ax</span><span class=o>.</span><span class=n>set_ylabel</span><span class=p>(</span><span class=s2>&quot;mass [kg]&quot;</span><span class=p>)</span>
     <span class=n>ax</span><span class=o>.</span><span class=n>tick_params</span><span class=p>(</span><span class=n>axis</span><span class=o>=</span><span class=s2>&quot;x&quot;</span><span class=p>,</span> <span class=n>rotation</span><span class=o>=</span><span class=mi>30</span><span class=p>)</span>
     <span class=k>for</span> <span class=n>i</span><span class=p>,</span> <span class=n>v</span> <span class=ow>in</span> <span class=nb>enumerate</span><span class=p>(</span><span class=n>masses</span><span class=o>.</span><span class=n>values</span><span class=p>()):</span>
-        <span class=n>ax</span><span class=o>.</span><span class=n>text</span><span class=p>(</span><span class=n>i</span><span class=p>,</span> <span class=n>v</span><span class=p>,</span> <span class=sa>f</span><span class=s2>&quot;</span><span class=si>{</span><span class=n>v</span><span class=si>:</span><span class=s2>.0f</span><span class=si>}</span><span class=s2>&quot;</span><span class=p>,</span> <span class=n>ha</span><span class=o>=</span><span class=s2>&quot;center&quot;</span><span class=p>,</span> <span class=n>va</span><span class=o>=</span><span class=s2>&quot;bottom&quot;</span><span class=p>,</span> <span class=n>fontsize</span><span class=o>=</span><span class=mi>8</span><span class=p>)</span>
+        <span class=n>ax</span><span class=o>.</span><span class=n>text</span><span class=p>(</span><span class=n>i</span><span class=p>,</span> <span class=n>v</span><span class=p>,</span> <span class=sa>f</span><span class=s2>&quot;</span><span class=si>{</span><span class=n>v</span><span class=si>:</span><span class=s2>.0f</span><span class=si>}</span><span class=s2>&quot;</span><span class=p>,</span> <span class=n>ha</span><span class=o>=</span><span class=s2>&quot;center&quot;</span><span class=p>,</span> <span class=n>va</span><span class=o>=</span><span class=s2>&quot;bottom&quot;</span><span class=p>,</span> <span class=n>fontsize</span><span class=o>=</span><span class=mi>12</span><span class=p>)</span>
     <span class=n>ax</span><span class=o>.</span><span class=n>grid</span><span class=p>(</span><span class=n>axis</span><span class=o>=</span><span class=s2>&quot;y&quot;</span><span class=p>,</span> <span class=n>alpha</span><span class=o>=</span><span class=mf>0.3</span><span class=p>)</span>
     <span class=k>return</span> <span class=n>ax</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h2 id=PhlyGreen.postprocess.plot_mission_profile class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code> <span class="doc doc-object-name doc-function-name">plot_mission_profile</span> <a href=#PhlyGreen.postprocess.plot_mission_profile class=headerlink title="Permanent link">&para;</a></h2> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>plot_mission_profile</span><span class=p>(</span><span class=n>aircraft</span><span class=p>,</span> <span class=n>axes</span><span class=o>=</span><span class=kc>None</span><span class=p>,</span> <span class=n>include_loiter</span><span class=o>=</span><span class=kc>False</span><span class=p>)</span>
@@ -880,7 +890,7 @@
             <span class=n>ax2</span><span class=o>.</span><span class=n>set_ylabel</span><span class=p>(</span><span class=s2>&quot;H2 in tank [kg]&quot;</span><span class=p>)</span>
             <span class=n>h1</span><span class=p>,</span> <span class=n>l1</span> <span class=o>=</span> <span class=n>ax</span><span class=o>.</span><span class=n>get_legend_handles_labels</span><span class=p>()</span>
             <span class=n>h2</span><span class=p>,</span> <span class=n>l2</span> <span class=o>=</span> <span class=n>ax2</span><span class=o>.</span><span class=n>get_legend_handles_labels</span><span class=p>()</span>
-            <span class=n>ax</span><span class=o>.</span><span class=n>legend</span><span class=p>(</span><span class=n>h1</span> <span class=o>+</span> <span class=n>h2</span><span class=p>,</span> <span class=n>l1</span> <span class=o>+</span> <span class=n>l2</span><span class=p>,</span> <span class=n>fontsize</span><span class=o>=</span><span class=mi>8</span><span class=p>)</span>
+            <span class=n>ax</span><span class=o>.</span><span class=n>legend</span><span class=p>(</span><span class=n>h1</span> <span class=o>+</span> <span class=n>h2</span><span class=p>,</span> <span class=n>l1</span> <span class=o>+</span> <span class=n>l2</span><span class=p>,</span> <span class=n>fontsize</span><span class=o>=</span><span class=mi>12</span><span class=p>)</span>
         <span class=k>else</span><span class=p>:</span>
             <span class=n>ax</span><span class=o>.</span><span class=n>legend</span><span class=p>()</span>
         <span class=k>return</span> <span class=n>ax</span>
@@ -893,12 +903,7 @@
     <span class=n>ax</span><span class=o>.</span><span class=n>grid</span><span class=p>(</span><span class=n>alpha</span><span class=o>=</span><span class=mf>0.3</span><span class=p>);</span> <span class=n>ax</span><span class=o>.</span><span class=n>legend</span><span class=p>()</span>
     <span class=k>return</span> <span class=n>ax</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h2 id=PhlyGreen.postprocess.plot_tank_state class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code> <span class="doc doc-object-name doc-function-name">plot_tank_state</span> <a href=#PhlyGreen.postprocess.plot_tank_state class=headerlink title="Permanent link">&para;</a></h2> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>plot_tank_state</span><span class=p>(</span><span class=n>aircraft</span><span class=p>,</span> <span class=n>axes</span><span class=o>=</span><span class=kc>None</span><span class=p>)</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Plot LH2 tank pressure, stored mass, vent flow and heater power vs time.</p> <p>The vent flow and heater power are the two active thermal-management actions: the tank vents hydrogen when it reaches the maximum pressure, and the heater adds power when it falls to the minimum pressure. Requires the tank thermodynamics to have been tracked: either set <code>aircraft.mission.track_tank = True</code> and re-run <code>EvaluateMission</code>, or call :func:<code>compute_tank_history</code> (which works for the fuel-cell + battery configuration too).</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/postprocess.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>616</span>
-<span class=normal>617</span>
-<span class=normal>618</span>
-<span class=normal>619</span>
-<span class=normal>620</span>
-<span class=normal>621</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Plot LH2 tank pressure, stored mass, vent flow and heater power vs time.</p> <p>The vent flow and heater power are the two active thermal-management actions: the tank vents hydrogen when it reaches the maximum pressure, and the heater adds power when it falls to the minimum pressure. Requires the tank thermodynamics to have been tracked: either set <code>aircraft.mission.track_tank = True</code> and re-run <code>EvaluateMission</code>, or call :func:<code>compute_tank_history</code> (which works for the fuel-cell + battery configuration too).</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/postprocess.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>621</span>
 <span class=normal>622</span>
 <span class=normal>623</span>
 <span class=normal>624</span>
@@ -919,7 +924,12 @@
 <span class=normal>639</span>
 <span class=normal>640</span>
 <span class=normal>641</span>
-<span class=normal>642</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>plot_tank_state</span><span class=p>(</span><span class=n>aircraft</span><span class=p>,</span> <span class=n>axes</span><span class=o>=</span><span class=kc>None</span><span class=p>):</span>
+<span class=normal>642</span>
+<span class=normal>643</span>
+<span class=normal>644</span>
+<span class=normal>645</span>
+<span class=normal>646</span>
+<span class=normal>647</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>plot_tank_state</span><span class=p>(</span><span class=n>aircraft</span><span class=p>,</span> <span class=n>axes</span><span class=o>=</span><span class=kc>None</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>&quot;&quot;&quot;Plot LH2 tank pressure, stored mass, vent flow and heater power vs time.</span>
 
 <span class=sd>    The vent flow and heater power are the two active thermal-management actions: the tank vents</span>
