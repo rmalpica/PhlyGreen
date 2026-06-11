@@ -125,7 +125,11 @@ class FuelCell:
         self.EtaPM = inp['Eta PMAD']
         self.EtaEM = inp['Eta Electric Motor']
         self.EtaGB = inp['Eta Gearbox']
-        
+        # Propeller (propulsive) efficiency: shaft -> thrust. Used both to convert the required
+        # thrust power into electrical demand in ComputePRatio and to size the stack rating in
+        # _size_stack, so the rating and the flown mission use the same downstream efficiency.
+        self.EtaProp = inp.get('Eta Propulsive', 0.8)
+
         # 3. Fail-Fast for internal Database
         if self.model_name not in FC_Database: 
             raise FuelCellError(f"CRITICAL ERROR: FC Model '{self.model_name}' not found in FC_Database.")
@@ -276,7 +280,12 @@ class FuelCell:
         except ValueError:
             self.V_cell_design = self.PolarizationCurve(self.i_max_density, self.Target_Press)
 
-        eta_downstream = self.EtaEM * self.EtaPM * self.EtaGB
+        # Downstream efficiency from the net FC terminals to useful thrust power: electric drive
+        # (motor, PMAD, gearbox) AND the propeller. This matches the chain used per-point in
+        # ComputePRatio, so the rating is consistent with the power the mission actually demands and
+        # the BoP_Power_Sizing_Efficiency below is a pure air-system allowance, not a hidden cover
+        # for the propeller loss.
+        eta_downstream = self.EtaEM * self.EtaPM * self.EtaGB * self.EtaProp
         self.P_fc_rated = P_propulsive_design / eta_downstream   # net electrical rating [W]
 
         self.N_cells = max(int(1000.0 / self.V_cell_design), 100)
@@ -377,7 +386,7 @@ class FuelCell:
             eta_prop = self.aircraft.powertrain.Propeller.ComputePropEfficiency(alt, vel, P_req_net)
             eta_mech *= eta_prop
         else:
-            eta_mech *= 0.8
+            eta_mech *= self.EtaProp
 
         P_elec_target = P_req_net / max(eta_mech, 0.01)
         limit = self.j_lim if self.j_lim is not None else 2.5 

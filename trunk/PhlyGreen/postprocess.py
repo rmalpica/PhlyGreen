@@ -401,7 +401,7 @@ def plot_power_timeseries(aircraft, ax=None):
             ax2.set_ylabel("H2 in tank [kg]")
             h1, l1 = ax.get_legend_handles_labels()
             h2, l2 = ax2.get_legend_handles_labels()
-            ax.legend(h1 + h2, l1 + l2, fontsize=8)
+            ax.legend(h1 + h2, l1 + l2, fontsize=12)
         else:
             ax.legend()
         return ax
@@ -431,12 +431,12 @@ def plot_component_timeseries(aircraft, **kwargs):
                        ("eta_propeller", "propeller")):
         if key in cs:
             axes[0].plot(t, cs[key], label=label)
-    axes[0].set_ylabel("efficiency [-]"); axes[0].legend(fontsize=8)
+    axes[0].set_ylabel("efficiency [-]"); axes[0].legend(fontsize=12)
     if "gt_throttle" in cs:
         axes[1].plot(t, cs["gt_throttle"], color="tab:red", label="gas turbine")
     if "em_throttle" in cs:
         axes[1].plot(t, cs["em_throttle"], color="tab:blue", label="electric motor")
-    axes[1].set_ylabel("throttle [-]"); axes[1].set_ylim(0, 1.05); axes[1].legend(fontsize=8)
+    axes[1].set_ylabel("throttle [-]"); axes[1].set_ylim(0, 1.05); axes[1].legend(fontsize=12)
     if "propeller_pitch" in cs:
         axes[2].plot(t, cs["propeller_pitch"], color="tab:purple")
         axes[2].set_ylabel("propeller pitch [deg]")
@@ -516,8 +516,12 @@ def plot_energy_timeseries(aircraft, ax=None):
 
 
 def plot_constraint_diagram(aircraft, ax=None):
-    """Plot the constraint diagram (P/W vs W/S) with the design point."""
+    """Plot the constraint diagram (power loading P/m_TO vs wing loading m_TO/S_wing) with the
+    design point. The wing-loading axis is in mass terms [kg/m^2]: the stored W/S is a weight
+    loading [N/m^2], so it is divided by g for display. The power-loading axis is already a
+    specific power [W/kg], i.e. P/m_TO, and is only relabelled."""
     import matplotlib.pyplot as plt
+    G = 9.80665                                   # N/m^2 (weight loading) -> kg/m^2 (mass loading)
     c = aircraft.constraint
     if ax is None:
         _, ax = plt.subplots(figsize=(7, 5))
@@ -529,24 +533,25 @@ def plot_constraint_diagram(aircraft, ax=None):
     for label, attr in curves:
         y = getattr(c, attr, None)
         if y is not None:
-            ax.plot(c.WTOoS, y, label=label)
+            ax.plot(np.asarray(c.WTOoS) / G, y, label=label)
     if getattr(c, "PWLanding", None) is not None and getattr(c, "WTOoSLanding", None) is not None:
-        ax.plot(c.WTOoSLanding, c.PWLanding, label="Landing")
+        ax.plot(np.asarray(c.WTOoSLanding) / G, c.PWLanding, label="Landing")
     design_pw = None
     try:
         design_pw = aircraft.DesignPW
-        ax.plot(aircraft.DesignWTOoS, design_pw, "o", ms=10,
+        ax.plot(aircraft.DesignWTOoS / G, design_pw, "o", ms=10,
                 mfc="red", mec="black", label="design point", zorder=5)
     except Exception:
         pass
-    ax.set_xlabel(r"$W_{TO}/S$ [N/m$^2$]"); ax.set_ylabel(r"$P/W_{TO}$ [W/kg]")
+    ax.set_xlabel(r"wing loading $m_{TO}/S_{wing}$ [kg/m$^2$]")
+    ax.set_ylabel(r"power loading $P/m_{TO}$ [W/kg]")
     # Limit the y-range so the design point sits roughly mid-axis (P/W curves can shoot up
     # towards the W/S extremes and otherwise squash the design region).
     if design_pw is not None and design_pw > 0:
         ax.set_ylim(0, 2.0 * design_pw)
     else:
         ax.set_ylim(bottom=0)
-    ax.grid(alpha=0.3); ax.legend(fontsize=8)
+    ax.grid(alpha=0.3); ax.legend(fontsize=12)
     return ax
 
 
@@ -577,7 +582,7 @@ def plot_mass_breakdown(aircraft, ax=None):
     ax.set_ylabel("mass [kg]")
     ax.tick_params(axis="x", rotation=30)
     for i, v in enumerate(masses.values()):
-        ax.text(i, v, f"{v:.0f}", ha="center", va="bottom", fontsize=8)
+        ax.text(i, v, f"{v:.0f}", ha="center", va="bottom", fontsize=12)
     ax.grid(axis="y", alpha=0.3)
     return ax
 
