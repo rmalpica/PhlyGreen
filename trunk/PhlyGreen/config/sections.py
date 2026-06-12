@@ -85,6 +85,10 @@ class EnergyConfig(DictConfig):
     v_cell_design: Optional[float] = None       # design cell voltage [V]
     stack_power_density: Optional[float] = None  # [W/kg]
     bop_mass_ratio: Optional[float] = None       # balance-of-plant mass / stack mass
+    stack_design_voltage: Optional[float] = None  # nominal stack (bus) design voltage [V]; sets the
+    #                                               cell count N_cells = V_stack / V_cell_design.
+    #                                               Affects the stack voltage and per-cell area only,
+    #                                               not the masses. Defaults to 1000 V if unset.
     h2_gravimetric_index: Optional[float] = None  # usable H2 / (H2 + tank) mass
     # --- thermal-management (heat-exchanger) specific powers [W of heat / kg of HEX] ---
     # The cryogenic-H2-cooled fuel-cell HEX is far more mass-effective than the battery HEX
@@ -127,6 +131,7 @@ class EnergyConfig(DictConfig):
         "v_cell_design": "V Cell Design",
         "stack_power_density": "Stack Power Density",
         "bop_mass_ratio": "BoP Mass Ratio",
+        "stack_design_voltage": "Stack Design Voltage",
         "h2_gravimetric_index": "H2 Gravimetric Index",
         "hex_specific_power_h2": "HEX Specific Power H2",
         "hex_specific_power_battery": "HEX Specific Power Battery",

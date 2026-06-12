@@ -47,6 +47,7 @@ class FuelCell:
         self.i_max_density = None
         self.Stack_PD = None
         self.BoP_Mass_Ratio = None
+        self.V_stack = None          # nominal stack (bus) design voltage [V]
 
         # --- KULIKOVSKY MODEL PLACEHOLDERS ---
         self.Voc = None
@@ -129,6 +130,10 @@ class FuelCell:
         # thrust power into electrical demand in ComputePRatio and to size the stack rating in
         # _size_stack, so the rating and the flown mission use the same downstream efficiency.
         self.EtaProp = inp.get('Eta Propulsive', 0.8)
+        # Nominal stack (bus) design voltage [V]. The stack is divided into
+        # N_cells = V_stack / V_cell_design cells; this sets the stack voltage and the per-cell
+        # area, but not the stack mass (which is total-area x specific-power). Default 1000 V.
+        self.V_stack = inp.get('Stack Design Voltage', 1000.0)
 
         # 3. Fail-Fast for internal Database
         if self.model_name not in FC_Database: 
@@ -270,7 +275,7 @@ class FuelCell:
         and returns the mass. This single kernel is used by :meth:`SizeForPropulsivePower`
         and :meth:`SizeFromConstraint`.
         """
-        if self.i_max_density is None:
+        if self.i_max_density is None or self.V_stack is None:
             self.SetInput()
 
         # Design current density at the design cell voltage.
@@ -289,7 +294,7 @@ class FuelCell:
         eta_downstream = self.EtaEM * self.EtaPM * self.EtaGB * self.EtaProp
         self.P_fc_rated = P_propulsive_design / eta_downstream   # net electrical rating [W]
 
-        self.N_cells = max(int(1000.0 / self.V_cell_design), 100)
+        self.N_cells = max(int(self.V_stack / self.V_cell_design), 100)
 
         # Active area is sized so that at the *design* current density the stack delivers the net
         # rating after the air-system + fixed auxiliaries. Those parasitics are only ~4 % of gross
