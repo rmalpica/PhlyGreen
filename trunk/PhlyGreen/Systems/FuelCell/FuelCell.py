@@ -32,9 +32,12 @@ class FuelCell:
     # --- PHYSICAL CONSTANTS ---
     FARADAY_CONST = 96485.33     # [C/mol]
     CP_AIR = 1004.0              # [J/(kg*K)] Air specific heat
-    LHV_H2 = 119.96e6            # [J/kg] Lower Heating Value of Hydrogen
     MOLAR_MASS_H2 = 0.002016     # [kg/mol] Molar mass of Hydrogen
-    DELTA_H_REACT = 286000.0     # [J/mol] Enthalpy of reaction (HHV based)
+    DELTA_H_REACT = 286000.0     # [J/mol] Enthalpy of reaction, liquid-water product (HHV)
+    # Low-temperature PEM (T_op = 80 C) produces liquid water, so the cell efficiency and the fuel
+    # chemical energy are referenced to the higher heating value (HHV), consistent with the HHV
+    # thermoneutral voltage (DELTA_H_REACT / 2F = 1.482 V) used for the stack heat.
+    HHV_H2 = DELTA_H_REACT / MOLAR_MASS_H2   # [J/kg] = 141.87e6, Higher Heating Value of Hydrogen
 
     def __init__(self, aircraft):
         self.aircraft = aircraft
@@ -250,7 +253,7 @@ class FuelCell:
         P_net = P_gross - P_comp_net - P_fixed
         
         m_dot_h2 = (self.N_cells * I_tot) / (2 * self.FARADAY_CONST) * self.MOLAR_MASS_H2
-        P_chem = m_dot_h2 * self.LHV_H2
+        P_chem = m_dot_h2 * self.HHV_H2
         
         return P_net / P_chem if P_chem > 0 else 0.0
 
@@ -455,7 +458,7 @@ class FuelCell:
             self.P_comp_net_last, _, self.P_turb_last = self._compute_air_system_power(P_amb, T_amb, I_final)
 
             m_dot_h2 = (self.N_cells * I_final) / (2 * self.FARADAY_CONST) * self.MOLAR_MASS_H2
-            P_chem = m_dot_h2 * self.LHV_H2
+            P_chem = m_dot_h2 * self.HHV_H2
             
             Eta_FCS = P_elec_target / P_chem if P_chem > 0 else 0.01
             Eta_Total_Sys = np.clip(Eta_FCS * eta_mech, 0.01, 0.85)

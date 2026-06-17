@@ -129,7 +129,7 @@ def _energy_hydrogen(v_cell_design=0.5):
     described by a model in the FC database plus a few design knobs.
     """
     return EnergyConfig(
-        Ef=120e6,                          # hydrogen LHV [J/kg]
+        Ef=141.87e6,                       # hydrogen HHV [J/kg] (liquid-water product, LT-PEM)
         eta_gearbox=0.96, eta_pmad=0.99, eta_electric_motor=0.96,
         eta_gas_turbine_model='constant', eta_gas_turbine=0.22,
         eta_propulsive_model='constant', eta_propulsive=0.85,
