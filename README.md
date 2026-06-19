@@ -32,6 +32,8 @@ models:
   plots), ~20 documented **examples** (incl. a parallel pymoo NSGA-II multi-objective study),
   a pytest suite with golden-master regression tests, and a full MkDocs site.
 
+**Note**: This project was developed over several years through contributions, experiments, and iterative improvements. During a later maintenance phase, Claude Code was used to assist with code refactoring, simplification, and cleanup. The architecture, algorithms, and scientific implementation remain the work of the project contributors.
+
 ## Quick start
 
 ```bash
