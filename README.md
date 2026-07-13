@@ -50,6 +50,15 @@ See `trunk/examples/` (start at `examples/README.md`) and the
 Master's students — Breguet vs PhlyGreen, design constraints, a fair architecture comparison,
 why batteries are hard, hydrogen's hidden costs, and the fuel-vs-climate trade-off.
 
+**Virtual Aircraft Design Lab (Streamlit GUI)** A browser-based teaching front-end. 
+From the repository root:
+
+```bash
+streamlit run trunk/webapp/app.py
+```
+
+Streamlit opens the lab in your browser at `http://localhost:8501`.
+
 Authors:
 
 - Riccardo Malpica Galassi
