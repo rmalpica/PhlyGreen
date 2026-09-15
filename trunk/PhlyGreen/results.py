@@ -12,6 +12,33 @@ from typing import Optional, Dict, Any
 import numpy as np
 
 
+def _mean_tsfc(aircraft):
+    """Thrust-weighted mean TSFC [kg/(N s)] over the mission, or None if unavailable.
+
+    TSFC = mdot_f / F. Both come from quantities the mission already integrated, so this
+    reports rather than recomputes: fuel mass is the converged Wf, and the thrust impulse
+    is integrated from the propulsive-power history.
+    """
+    try:
+        import numpy as np
+        import scipy.integrate as integrate
+        m = aircraft.mission
+        times = np.concatenate([a.t for a in m.integral_solution])
+        beta = np.concatenate([a.y[1] for a in m.integral_solution])
+        thrust = np.array([
+            aircraft.weight.WTO * aircraft.performance.PoWTO(
+                aircraft.DesignWTOoS, b, m.profile.PowerExcess(t), 1,
+                m.profile.Altitude(t), m.DISA, m.profile.Velocity(t), 'TAS')
+            / m.profile.Velocity(t)
+            for t, b in zip(times, beta)])
+        impulse = integrate.trapezoid(thrust, times)      # [N s]
+        if impulse <= 0:
+            return None
+        return float(aircraft.weight.Wf / impulse)
+    except Exception:
+        return None
+
+
 @dataclass
 class AircraftResults:
     """Key sizing outputs of a converged aircraft design.
@@ -39,8 +66,23 @@ class AircraftResults:
     TO_PP: Optional[float] = None            # take-off propulsive peak power [W]
     Max_PEng: Optional[float] = None         # climb/cruise engine peak power [W]
     Max_PEng_alt: Optional[float] = None     # altitude of Max_PEng [m]
-    engineRating: Optional[float] = None     # thermal powertrain SLS shaft rating [W] — TOTAL
-    #                                          (all engines); divide by the engine count for per-engine
+    engineRating: Optional[float] = None     # thermal powertrain SLS rating — TOTAL (all
+    #                                          engines); divide by the engine count for per-engine.
+    #                                          UNITS DEPEND ON THE CONFIGURATION: shaft power [W]
+    #                                          for the power-rated ones, thrust [N] for Turbofan.
+    #                                          engineRating_units says which.
+    engineRating_units: Optional[str] = None  # 'W' (shaft power) | 'N' (thrust)
+
+    # --- turbofan only ------------------------------------------------------
+    DesignTW: Optional[float] = None         # design thrust-to-weight from the T/W diagram [-]
+    # For a Turbofan these describe the *sizing-critical* mission point: the one with the
+    # largest thrust referred back to sea level (thrust/lapse), which is usually top of
+    # climb rather than the largest raw thrust low down.
+    Max_Thrust: Optional[float] = None       # thrust there [N]
+    Max_Thrust_alt: Optional[float] = None   # altitude of that point [m]
+    Max_Thrust_mach: Optional[float] = None  # Mach at that point [-]
+    TO_Thrust: Optional[float] = None        # take-off / OEI thrust requirement [N]
+    mean_TSFC: Optional[float] = None        # mission-mean thrust-specific fuel consumption [kg/(N s)]
 
     # --- energy / climate ---------------------------------------------------
     SourceEnergy: Optional[float] = None     # well-to-wake source energy [J]
@@ -94,7 +136,11 @@ class AircraftResults:
         r.WPayload = _get(w, 'WPayload')
 
         if None not in (r.WPT, r.WStructure, r.WCrew):
-            r.empty_weight = r.WPT + r.WStructure + r.WCrew + (r.WBat or 0.0)
+            # Add the powertrain only when the structural model does not already contain it --
+            # the same rule the take-off-weight closure uses, so the reported empty weight and
+            # the weight the design actually converged on stay consistent.
+            wpt = w.powertrain_in_closure(r.WPT) if hasattr(w, 'powertrain_in_closure') else r.WPT
+            r.empty_weight = wpt + r.WStructure + r.WCrew + (r.WBat or 0.0)
             if r.WPayload is not None:
                 r.zero_fuel_weight = r.empty_weight + r.WPayload
 
@@ -103,6 +149,18 @@ class AircraftResults:
         r.Max_PEng = _get(aircraft.mission, 'Max_PEng')
         r.Max_PEng_alt = _get(aircraft.mission, 'Max_PEng_alt')
         r.engineRating = _get(aircraft.powertrain, 'engineRating')
+        r.engineRating_units = 'N' if r.configuration == 'Turbofan' else 'W'
+
+        if r.configuration == 'Turbofan':
+            m = aircraft.mission
+            r.DesignTW = _get(aircraft, 'DesignPW')       # the diagram is built in T/W [-]
+            r.Max_Thrust = _get(m, 'Max_Thrust')
+            r.Max_Thrust_alt = _get(m, 'Max_Thrust_alt')
+            r.Max_Thrust_mach = _get(m, 'Max_Thrust_mach')
+            r.TO_Thrust = _get(m, 'TO_Thrust')
+            # Mission-mean TSFC, reported so the design is comparable with published engine
+            # data. The mission integrates on eta_o; this is the same number re-expressed.
+            r.mean_TSFC = _mean_tsfc(aircraft)
 
         if getattr(aircraft, 'WellToTankInput', None) is not None:
             r.SourceEnergy = _get(aircraft.welltowake, 'SourceEnergy')

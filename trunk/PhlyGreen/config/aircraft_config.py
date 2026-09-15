@@ -21,10 +21,19 @@ class AircraftConfig:
     """Complete, validated specification of an aircraft design problem."""
 
     # configuration flags (formerly set directly on the Aircraft instance)
-    configuration: str = None          # 'Traditional' | 'Hybrid' | 'Hydrogen' | 'FuelCellBattery'
+    configuration: str = None          # 'Traditional' | 'Hybrid' | 'Hydrogen' | 'FuelCellBattery' | 'Turbofan'
     hybrid_type: Optional[str] = None  # 'Parallel' | 'Serial'
-    aircraft_type: str = None          # Class-I structural model: 'ATR' | 'DO228' | 'Jet' | 'TwinTP'
+    aircraft_type: str = None          # Class-I structural model: 'ATR' | 'DO228' | 'Jet'
+    #                                    | 'TwinTP' | 'NarrowBody'
     weight_class: str = "I"            # 'I' (regression) | 'II' (FLOPS)
+    # Class-I structural models are EMPTY-weight regressions, so they already contain the
+    # installed powertrain; adding the powertrain mass on top double-counts the engines. Set
+    # True to omit that second count. Default False preserves the historical take-off weights
+    # of every existing configuration -- turning it on deliberately changes results.
+    avoid_powertrain_double_count: bool = False
+    # Multiplier on the Class-I empty-weight regression. 1.0 is the textbook correlation; any
+    # other value is a calibration to a reference aircraft and must be reported as such.
+    structure_calibration: float = 1.0
     design_wing_loading: Optional[float] = None  # fix W/S [N/m^2] (else optimized)
 
     # required sections
@@ -43,15 +52,23 @@ class AircraftConfig:
     tank: Optional[TankConfig] = None    # liquid-hydrogen tank (Hydrogen configuration)
 
     def __post_init__(self):
-        if self.configuration not in ("Traditional", "Hybrid", "Hydrogen", "FuelCellBattery"):
+        if self.configuration not in ("Traditional", "Hybrid", "Hydrogen",
+                                      "FuelCellBattery", "Turbofan"):
             raise ConfigError(
-                f"configuration must be 'Traditional', 'Hybrid', 'Hydrogen' or "
-                f"'FuelCellBattery', got {self.configuration!r}")
+                f"configuration must be 'Traditional', 'Hybrid', 'Hydrogen', "
+                f"'FuelCellBattery' or 'Turbofan', got {self.configuration!r}")
         if self.configuration == "Hybrid" and self.hybrid_type not in ("Parallel", "Serial"):
             raise ConfigError(
                 f"hybrid_type must be 'Parallel' or 'Serial' for Hybrid, got {self.hybrid_type!r}")
         if self.weight_class not in ("I", "II"):
             raise ConfigError(f"weight_class must be 'I' or 'II', got {self.weight_class!r}")
+        if self.configuration == "Turbofan" and self.weight_class == "II":
+            # FLOPS here has no engine or pylon mass and applies the propeller component
+            # unconditionally (Weight/FLOPS_model.py) -- it cannot represent a turbofan.
+            raise ConfigError(
+                "weight_class 'II' (FLOPS) does not support the Turbofan configuration: the "
+                "component set has no engine or pylon mass and always adds a propeller. "
+                "Use weight_class 'I'.")
 
     def read_input_args(self):
         """Return ``(positional, kwargs)`` matching ``Aircraft.ReadInput``'s signature."""

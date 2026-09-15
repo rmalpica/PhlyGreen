@@ -370,6 +370,44 @@ See examples `05` (architecture at the power‑ratio level) and `23_fuelcell_bat
 
 ---
 
+### 5. Turbofan
+
+A turbofan reuses the **traditional** graph with the gearbox and fan nodes set to 1.0, because
+the whole fuel-to-thrust-power chain is carried by a single node:
+
+\[
+\eta_o = \frac{F V}{\dot m_f\, \mathrm{LHV}}
+\qquad\Longrightarrow\qquad
+\frac{P_f}{P_p} = \frac{1}{\eta_o}
+\]
+
+Splitting \(\eta_o\) into thermal \(\times\) propulsive efficiency would multiply back to the
+same number, so nothing is gained by carrying the two separately. And because the graph
+normalises on propulsive power, this *is* a TSFC closure:
+\(\mathrm{TSFC} = V/(\eta_o\,\mathrm{LHV})\) — the same information exactly, which is why the
+mission integration, the well-to-wake accounting and the CO₂ bookkeeping all work unchanged.
+
+\(\eta_o\) comes from the [turbofan response surface](surrogate-models.md#1b-turbofan-surrogate)
+at \((h, M, F/F_{\text{avail}})\). Select it with `eta_gas_turbine_model='Turbofan'` and a
+nominal SLS thrust:
+
+```python
+EnergyConfig(
+    Ef=43.0e6,
+    eta_gas_turbine_model='Turbofan',
+    turbofan_design_thrust=240e3,      # nominal SLS thrust, all engines [N]
+    engine_thrust_to_weight=5.5,       # installed engine T/W [N/N]
+)
+```
+
+The engine is sized on the worst of **mission peak thrust**, **take-off / OEI thrust** and the
+**constraint diagram**, each referred back to sea level through the thrust lapse;
+`powertrain.report_turbofan_sizing()` says which one bound and whether the nominal was adequate.
+Note `powertrain.engineRating` then carries SLS **thrust** [N] rather than shaft power [W]
+(`results.engineRating_units` records which).
+
+---
+
 ## Engine Power Lapse With Altitude 
 
 The constraint analysis requires a preliminary estimation of the engine power at different altitudes. Thermal engine maximum power decreases with altitude due to reduced air density.
@@ -390,6 +428,19 @@ def PowerLapse(self,altitude,DISA):
         lapse = (ISA.atmosphere.RHOstd(altitude,DISA)/ISA.atmosphere.RHOstd(0.0,DISA))**n
         return lapse
 ```
+
+### Thrust lapse (turbofan)
+
+A turbofan's available **thrust** falls with altitude *and* with Mach number, so the
+density-ratio law above cannot stand in for it. `Powertrain.ThrustLapse(h, M, DISA)` reads the
+lapse from the fitted engine map — the same pyCycle sweep that produces \(\eta_o\) also solves
+the full-throttle point at every condition, so the lapse is measured rather than assumed. When
+no map is attached it falls back to the Mattingly high-bypass form
+\(\alpha = \delta\,(1 - 0.49\sqrt{M})\).
+
+Which lapse the constraint diagram applies is decided in one place,
+`Powertrain.SizingDenominator`, which also converts the requirement from \(P/W\) to \(T/W\)
+for a thrust-rated aircraft — see [Constraints](constraints.md).
 
 
 ---

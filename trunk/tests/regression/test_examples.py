@@ -27,6 +27,21 @@ FAST_EXAMPLES = [
 ]
 
 
+# The turbofan example needs the fitted engine map, which is generated offline by
+# Systems/Powertrain/data/HBTF_turbofan.py (pyCycle). Run it only when that artifact exists.
+_TURBOFAN_MAP = os.path.join(TRUNK, "PhlyGreen", "Systems", "Powertrain", "data",
+                             "Turbofan_Engine_Model.pkl")
+
+
+@pytest.mark.slow
+@pytest.mark.skipif(not os.path.isfile(_TURBOFAN_MAP),
+                    reason="turbofan engine map not built (see HBTF_turbofan.py)")
+def test_turbofan_example_runs():
+    proc = subprocess.run([sys.executable, os.path.join("examples", "26_turbofan_design.py")],
+                          cwd=TRUNK, capture_output=True, text=True, timeout=300)
+    assert proc.returncode == 0, f"26_turbofan_design.py failed:\n{proc.stderr[-2000:]}"
+
+
 @pytest.mark.slow
 @pytest.mark.parametrize("script", FAST_EXAMPLES)
 def test_example_runs(script):

@@ -102,6 +102,22 @@ class Aircraft:
         self._DesignPW = value
 
     @property
+    def DesignTW(self):
+        """Design thrust-to-weight [-] — the Turbofan reading of the design point.
+
+        The constraint diagram stores one number in ``DesignPW``: the minimum installed
+        rating that satisfies every requirement. For a power-rated aircraft that is a
+        power-to-mass ratio [W/kg]; for a Turbofan the diagram is built in thrust instead
+        (see ``Powertrain.SizingDenominator``) and the same slot holds a dimensionless T/W.
+        This alias exists so calling code can say which one it means.
+        """
+        if self.Configuration != 'Turbofan':
+            raise ValueError(
+                "DesignTW is only defined for the Turbofan configuration; a power-rated "
+                "aircraft's design point is DesignPW [W/kg].")
+        return self.DesignPW
+
+    @property
     def DesignWTOoS(self):
         if self._DesignWTOoS == None:
             raise ValueError("Design W/S unset. Exiting")
@@ -237,7 +253,10 @@ class Aircraft:
         if PrintOutput:
             print('----------------------------------------------')
             print(f'Design wing loading W/S: {self.DesignWTOoS:.1f} [N/m^2]')
-            print(f'Design power-to-mass ratio P/W: {self.DesignPW:.2f} [W/kg]')
+            if self.Configuration == 'Turbofan':
+                print(f'Design thrust-to-weight T/W: {self.DesignPW:.4f} [-]')
+            else:
+                print(f'Design power-to-mass ratio P/W: {self.DesignPW:.2f} [W/kg]')
             print('----------------------------------------------')
 
         if PrintOutput: print("Evaluating Weights...")
@@ -259,6 +278,11 @@ class Aircraft:
         # gas-turbine check above; warns if undersized.
         if self.Configuration in ('Hydrogen', 'FuelCellBattery') and getattr(self, 'fuelcell', None) is not None:
             self.fuelcell.report_sizing()
+
+        # The turbofan map is read against a nominal SLS thrust chosen before the mission;
+        # check that choice was adequate, and say which requirement sized the engine.
+        if self.Configuration == 'Turbofan':
+            self.powertrain.report_turbofan_sizing()
 
         if PrintOutput: self.Print_Aircraft_Design_Summary()
 
@@ -292,6 +316,8 @@ class Aircraft:
         self.HybridType = config.hybrid_type
         self.AircraftType = config.aircraft_type
         self.weight.Class = config.weight_class
+        self.weight.avoid_powertrain_double_count = config.avoid_powertrain_double_count
+        self.structures.calibration = config.structure_calibration
 
         positional, kwargs = config.read_input_args()
         if design:
@@ -310,13 +336,13 @@ class Aircraft:
             print(f'Battery mass:                     {self.weight.WBat:.1f} [Kg]')
             print(f'Structure:                        {self.weight.WStructure:.1f} [Kg]')
             print(f'Powertrain mass:                  {self.weight.WPT:.1f} [Kg]')
-            print(f'Empty Weight:                     {self.weight.WPT + self.weight.WStructure + self.weight.WCrew + self.weight.WBat:.1f} [Kg]')
-            print(f'Zero Fuel Weight:                 {self.weight.WPT + self.weight.WStructure + self.weight.WCrew + self.weight.WBat + self.weight.WPayload:.1f} [Kg]')
+            print(f'Empty Weight:                     {self.weight.powertrain_in_closure(self.weight.WPT) + self.weight.WStructure + self.weight.WCrew + self.weight.WBat:.1f} [Kg]')
+            print(f'Zero Fuel Weight:                 {self.weight.powertrain_in_closure(self.weight.WPT) + self.weight.WStructure + self.weight.WCrew + self.weight.WBat + self.weight.WPayload:.1f} [Kg]')
         else:
             print(f'Structure:                        {self.weight.WStructure:.1f} [Kg]')
             print(f'Powertrain mass:                  {self.weight.WPT:.1f} [Kg]')
-            print(f'Empty Weight:                     {self.weight.WPT + self.weight.WStructure + self.weight.WCrew:.1f} [Kg]')
-            print(f'Zero Fuel Weight:                 {self.weight.WPT + self.weight.WStructure + self.weight.WCrew + self.weight.WPayload:.1f} [Kg]')
+            print(f'Empty Weight:                     {self.weight.powertrain_in_closure(self.weight.WPT) + self.weight.WStructure + self.weight.WCrew:.1f} [Kg]')
+            print(f'Zero Fuel Weight:                 {self.weight.powertrain_in_closure(self.weight.WPT) + self.weight.WStructure + self.weight.WCrew + self.weight.WPayload:.1f} [Kg]')
 
         print('----------------------------------------')
         print(f'Takeoff Weight:                   {self.weight.WTO:.1f} [Kg]')
@@ -331,8 +357,26 @@ class Aircraft:
         print(f'CLB/CRZ engine shaft peak power:  {self.mission.Max_PEng/1000.:.1f} [KW] @ {self.mission.Max_PEng_alt:.1f} [m]' )
         print(' ')
         
-        print(f'Sizing phase for thermal powertrain: ', 'Climb/Cruise peak power (adjusted with altitude power lapse)' if self.mission.Max_PEng > self.mission.TO_PP else 'Takeoff peak power'  )
-        print(f'Thermal powertrain rating shaft power SLS rating (total, all engines): {self.powertrain.engineRating/1000.:.1f} [kW]')
+        if self.Configuration == 'Turbofan':
+            m = self.mission
+            to_sls = m.TO_Thrust / self.powertrain.ThrustLapse(
+                self.constraint.TakeOffConstraints['Altitude'], m.TO_Thrust_mach, 0)
+            crz_sls = m.Max_Thrust / self.powertrain.ThrustLapse(
+                m.Max_Thrust_alt, m.Max_Thrust_mach, 0)
+            print(f'Design thrust-to-weight T/W:      {self.DesignTW:.4f} [-]')
+            print(f'Sizing-critical mission thrust:   {m.Max_Thrust/1000.:.1f} [kN] @ {m.Max_Thrust_alt:.0f} [m] / M {m.Max_Thrust_mach:.2f}')
+            print(f'Take-off/OEI thrust:              {m.TO_Thrust/1000.:.1f} [kN]')
+            rep = self.powertrain.report_turbofan_sizing(warn=False) or {}
+            cases = rep.get('cases', {})
+            if cases:
+                print('Turbofan sizing cases (SLS thrust, kN):')
+                for k, v in sorted(cases.items(), key=lambda kv: -kv[1]):
+                    mark = '  <-- sizing' if k == rep.get('sizing_case') else ''
+                    print(f'    {k:<22}{v/1000.:>8.1f}{mark}')
+            print(f'Turbofan SLS thrust rating (total, all engines): {self.powertrain.engineRating/1000.:.1f} [kN]')
+        else:
+            print(f'Sizing phase for thermal powertrain: ', 'Climb/Cruise peak power (adjusted with altitude power lapse)' if self.mission.Max_PEng > self.mission.TO_PP else 'Takeoff peak power'  )
+            print(f'Thermal powertrain rating shaft power SLS rating (total, all engines): {self.powertrain.engineRating/1000.:.1f} [kW]')
         print(' ')
 
         if self.Configuration == 'Hybrid':

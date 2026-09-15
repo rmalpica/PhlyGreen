@@ -14,10 +14,11 @@ to that combustor state. Fitting EI over either the combustor state or directly 
 format (a dict of ``StandardScaler`` + scipy ``Rbf`` / scikit-learn estimators per output)
 mirrors :mod:`.train_gas_turbine_surrogate`.
 
-**Status:** no model artifact ships with the package yet. The current calibrated CRN data is
-for the **CFM56** (turbofan, a scaffold); the production target is the **PW127** turboprop that
-backs the universal GT map. Until a PW127-calibrated artifact exists, construct this class with
-an explicit ``model_path`` (e.g. the CFM56 scaffold under ``WIP/phase1_emissions_surrogate/``).
+**Two artifacts ship.** ``Emission_Model_PW127.pkl`` is the turboprop map (certification-
+anchored NOx) that backs the universal turboshaft map; ``Emission_Model_Turbofan.pkl`` is the
+CFM56-class map built from the native CFM56 CRN calibration, keyed on **thrust** fraction rather
+than shaft-power fraction. Pick one with :func:`default_model_path` or an explicit
+``model_path``; a combustor calibration is engine-specific and the two are not interchangeable.
 """
 
 import os
@@ -25,8 +26,20 @@ import pickle
 
 import numpy as np
 
-# Intended home of the production (PW127) artifact, packaged once calibrated (Phase 3).
-_DEFAULT_PKL = os.path.join(os.path.dirname(__file__), "data", "Emission_Model_PW127.pkl")
+_DATA = os.path.join(os.path.dirname(__file__), "data")
+_DEFAULT_PKL = os.path.join(_DATA, "Emission_Model_PW127.pkl")       # turboprop (shaft-power fraction)
+_TURBOFAN_PKL = os.path.join(_DATA, "Emission_Model_Turbofan.pkl")   # CFM56-class (thrust fraction)
+
+
+def default_model_path(configuration=None):
+    """Artifact for an aircraft configuration.
+
+    A combustor calibration does not transfer between engine classes -- the turboprop map is a
+    lean, staged combustor keyed on shaft-power fraction; the turbofan map is a single-annular
+    CFM56-class combustor keyed on thrust fraction. Selecting by configuration keeps a caller
+    from silently getting the wrong one.
+    """
+    return _TURBOFAN_PKL if configuration == "Turbofan" else _DEFAULT_PKL
 
 
 class EmissionSurrogate:
@@ -46,9 +59,10 @@ class EmissionSurrogate:
         path = model_path or _DEFAULT_PKL
         if not os.path.isfile(path):
             raise FileNotFoundError(
-                f"No emission-index surrogate at {path!r}. A PW127-calibrated model is not "
-                f"packaged yet; pass model_path to a fitted artifact (e.g. the CFM56 scaffold "
-                f"in WIP/phase1_emissions_surrogate/emission_surrogate_CFM56_direct.pkl).")
+                f"No emission-index surrogate at {path!r}. Build it with "
+                f"emissions_pipeline/build_pw127_surrogate.py (turboprop) or "
+                f"build_turbofan_surrogate.py (CFM56-class turbofan), or pass model_path to an "
+                f"existing artifact.")
         with open(path, "rb") as f:
             pkg = pickle.load(f)
         self.inputs = list(pkg["inputs"])

@@ -260,7 +260,7 @@ class ClimateImpact:
                     beta = np.array([])
                     for array in self.aircraft.mission.integral_solution:
                         times = np.concatenate([times, array.t])
-                        if self.aircraft.Configuration == 'Traditional':
+                        if self.aircraft.Configuration in ('Traditional', 'Turbofan'):
                             beta = np.concatenate([beta, array.y[1]])
                         elif self.aircraft.Configuration == 'Hybrid':
                             beta = np.concatenate([beta, array.y[2]])
@@ -305,12 +305,17 @@ class ClimateImpact:
                     # coeff sono i coefficienti del metodo di Filippone per climbout, idle e approach
 
                     EI_NOx = np.zeros(len(times))  # [g/kg(fuel)]
-                    OPR = 15.77
+                    # Overall pressure ratio and engine count drive the Filippone correlation.
+                    # Both were hard-coded to a 2-engine PW127 turboprop; a turbofan runs at
+                    # OPR ~30, which roughly doubles the predicted EINOx. Defaults preserve
+                    # the previous numbers for every configuration that does not set them.
+                    OPR = self._opr()
+                    n_eng = self._n_engines()
                 
 
                     for t in range(len(times)):
                         power = (self.aircraft.weight.WTO) * self.aircraft.performance.PoWTO(self.aircraft.DesignWTOoS,beta[t],self.aircraft.mission.profile.PowerExcess(times[t]),1,alt[t],self.aircraft.mission.DISA,v0[t],'TAS')
-                        if self.aircraft.Configuration == 'Traditional':
+                        if self.aircraft.Configuration in ('Traditional', 'Turbofan'):
                             PRatio = self.aircraft.powertrain.Traditional(alt[t],v0[t],power) 
                         elif self.aircraft.Configuration == 'Hybrid':
                             PRatio = self.aircraft.powertrain.Hybrid(spr[t],alt[t],v0[t],power)
@@ -327,7 +332,7 @@ class ClimateImpact:
                         else:
                             c = coeff[2]
 
-                        mfuel = 0.5*portata[t]  # portata di combustibile del singolo motore
+                        mfuel = portata[t] / n_eng  # fuel flow of a single engine
                         
                     
 
@@ -384,12 +389,17 @@ class ClimateImpact:
                     # coeff sono i coefficienti del metodo di Filippone per climbout, idle e approach
 
                     EI_NOx = np.zeros(len(times))  # [g/kg(fuel)]
-                    OPR = 15.77
+                    # Overall pressure ratio and engine count drive the Filippone correlation.
+                    # Both were hard-coded to a 2-engine PW127 turboprop; a turbofan runs at
+                    # OPR ~30, which roughly doubles the predicted EINOx. Defaults preserve
+                    # the previous numbers for every configuration that does not set them.
+                    OPR = self._opr()
+                    n_eng = self._n_engines()
                 
 
                     for t in range(len(times)):
                         power = (self.aircraft.weight.WTO) * self.aircraft.performance.PoWTO(self.aircraft.DesignWTOoS,beta[t],self.aircraft.mission.profile.DiscretizedPowerExcess[t],1,alt[t],self.aircraft.mission.DISA,v0[t],'TAS')
-                        if self.aircraft.Configuration == 'Traditional':
+                        if self.aircraft.Configuration in ('Traditional', 'Turbofan'):
                             PRatio = self.aircraft.powertrain.Traditional(alt[t],v0[t],power) 
                         elif self.aircraft.Configuration == 'Hybrid':
                             PRatio = self.aircraft.powertrain.Hybrid(spr[t],alt[t],v0[t],power)
@@ -406,7 +416,7 @@ class ClimateImpact:
                         else:
                             c = coeff[2]
 
-                        mfuel = 0.5*portata[t]  # portata di combustibile del singolo motore
+                        mfuel = portata[t] / n_eng  # fuel flow of a single engine
                         
                         
 
@@ -447,11 +457,32 @@ class ClimateImpact:
         self.mission_emissions_calculated = True
 
 
+    def _opr(self):
+        """Overall pressure ratio for the Filippone NOx correlation.
+
+        Defaults to 15.77 (the PW127-class turboprop the correlation was set up with) so
+        existing designs are unchanged; a turbofan should set ``EnergyConfig.opr``.
+        """
+        energy = getattr(self.aircraft, 'EnergyInput', None) or {}
+        return float(energy.get('OPR') or 15.77)
+
+    def _n_engines(self):
+        """Number of engines the fuel flow is split over (the correlation is per engine)."""
+        prop = getattr(self.aircraft, 'PropellerInput', None) or {}
+        return max(int(prop.get('Number of Engines', 2)), 1)
+
     def _ensure_emission_surrogate(self):
-        """Attach the packaged EmissionSurrogate (PW127) if none was set."""
+        """Attach the packaged EmissionSurrogate matching this configuration, if none was set.
+
+        A combustor calibration is engine-specific: the turboprop artifact is keyed on a
+        shaft-power fraction and a lean combustor, the turbofan one on a thrust fraction and a
+        CFM56-class combustor. Selecting by configuration stops the wrong one being used silently.
+        """
         if self.emission_surrogate is None:
-            from PhlyGreen.Systems.Powertrain.emissions_surrogate import EmissionSurrogate
-            self.emission_surrogate = EmissionSurrogate()   # packaged default artifact
+            from PhlyGreen.Systems.Powertrain.emissions_surrogate import (
+                EmissionSurrogate, default_model_path)
+            self.emission_surrogate = EmissionSurrogate(
+                default_model_path(self.aircraft.Configuration))
         return self.emission_surrogate
 
     def _integrate_surrogate_emissions(self, power_fraction_basis='engineRating'):
@@ -462,11 +493,12 @@ class ClimateImpact:
         flow ``portata = power * PRatio[0] / ef`` — then queries the surrogate for
         ``EI(alt_ft, Mach, power_fraction)`` and integrates ``EI * portata`` over time. Does not
         touch CO2 (the caller handles it). ``power_fraction`` is ``power / engineRating`` clipped
-        to the surrogate's training domain. Thermal-engine configs (Traditional / Hybrid) only.
+        to the surrogate's training domain. For a Turbofan the third coordinate is a THRUST
+        fraction against the lapsed available thrust instead. Thermal-engine configs only.
         """
-        if self.aircraft.Configuration not in ('Traditional', 'Hybrid'):
+        if self.aircraft.Configuration not in ('Traditional', 'Hybrid', 'Turbofan'):
             raise ValueError("The EI surrogate path applies to thermal-engine configurations "
-                             "(Traditional / Hybrid) only.")
+                             "(Traditional / Hybrid / Turbofan) only.")
         if getattr(self.aircraft, 'MissionType', 'Continue') != 'Continue':
             raise ValueError("The EI surrogate path requires MissionType == 'Continue'.")
         self._ensure_emission_surrogate()
@@ -476,7 +508,7 @@ class ClimateImpact:
         beta = np.array([])
         for arr in self.aircraft.mission.integral_solution:
             times = np.concatenate([times, arr.t])
-            beta = np.concatenate([beta, arr.y[1] if self.aircraft.Configuration == 'Traditional'
+            beta = np.concatenate([beta, arr.y[1] if self.aircraft.Configuration in ('Traditional', 'Turbofan')
                                    else arr.y[2]])
         v0 = self.aircraft.mission.profile.Velocity(times)   # [m/s] TAS
         alt = self.aircraft.mission.profile.Altitude(times)  # [m]
@@ -490,7 +522,7 @@ class ClimateImpact:
             p = self.aircraft.weight.WTO * self.aircraft.performance.PoWTO(
                 self.aircraft.DesignWTOoS, beta[t],
                 self.aircraft.mission.profile.PowerExcess(times[t]), 1, alt[t], DISA, v0[t], 'TAS')
-            if self.aircraft.Configuration == 'Traditional':
+            if self.aircraft.Configuration in ('Traditional', 'Turbofan'):
                 PRatio = self.aircraft.powertrain.Traditional(alt[t], v0[t], p)
             else:
                 PRatio = self.aircraft.powertrain.Hybrid(spr[t], alt[t], v0[t], p)
@@ -503,9 +535,24 @@ class ClimateImpact:
         alt_ft = alt / 0.3048
         rating = getattr(self.aircraft.powertrain, 'engineRating', None) \
             if power_fraction_basis == 'engineRating' else None
-        if not rating or rating <= 0:
-            rating = float(np.max(power)) or 1.0     # fallback: peak required power
-        power_fraction = power / rating
+
+        if self.aircraft.Configuration == 'Turbofan':
+            # The turbofan map's third coordinate is a THRUST fraction F/F_available, and
+            # engineRating carries SLS thrust [N] here rather than shaft power. Available
+            # thrust lapses with altitude and Mach, so the fraction has to be taken against
+            # the lapsed value -- against the SLS rating it would understate the load
+            # everywhere above the ground and read the map at the wrong place.
+            thrust = power / np.maximum(v0, 1e-6)
+            if not rating or rating <= 0:
+                rating = float(np.max(thrust)) or 1.0
+            lapse = np.array([self.aircraft.powertrain.ThrustLapse(alt[i], mach[i], DISA)
+                              for i in range(len(times))])
+            load_fraction = thrust / np.maximum(rating * lapse, 1e-9)
+        else:
+            if not rating or rating <= 0:
+                rating = float(np.max(power)) or 1.0     # fallback: peak required power
+            load_fraction = power / rating
+        power_fraction = load_fraction
 
         # --- 3. EI(alt, Mach, power) along the mission, then integrate EI * fuel-flow ---
         X = np.column_stack([alt_ft, mach, power_fraction])

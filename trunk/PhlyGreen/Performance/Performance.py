@@ -46,7 +46,7 @@ class Performance:
 
     @property
     def Mach(self):
-        if self._Mach == None:
+        if self._Mach is None:
             raise ValueError("Mach unset. Exiting")
         return self._Mach
       
@@ -58,7 +58,7 @@ class Performance:
 
     @property
     def TAS(self):
-        if self._TAS == None:
+        if self._TAS is None:
             raise ValueError("True Air Speed unset. Exiting")
         return self._TAS
       
@@ -70,7 +70,7 @@ class Performance:
 
     @property
     def CAS(self):
-        if self._CAS == None:
+        if self._CAS is None:
             raise ValueError("Calibrated Air Speed unset. Exiting")
         return self._CAS
       
@@ -82,7 +82,7 @@ class Performance:
 
     @property
     def KTAS(self):
-        if self._KTAS == None:
+        if self._KTAS is None:
             raise ValueError("True Air Speed (knots) unset. Exiting")
         return self._KTAS
       
@@ -94,7 +94,7 @@ class Performance:
 
     @property
     def KCAS(self):
-        if self._KCAS == None:
+        if self._KCAS is None:
             raise ValueError("Calibrated Air Speed (knots) unset. Exiting")
         return self._KCAS
       
@@ -237,6 +237,11 @@ class Performance:
         and classical drag polar.
         """
         TASCeiling = np.sqrt((2*beta*WTOoS)/(ISA.atmosphere.RHOstd(altitude, DISA)* self.aircraft.aerodynamics.ClE(MachC)))
+        # Ceiling is the one requirement that does not go through set_speed, so publish the
+        # speed state it actually flies at. Note TASCeiling varies over the W/S grid, so this
+        # is an array where the other constraints leave a scalar.
+        self.TAS = TASCeiling
+        self.Mach = MachC
         q = 0.5 * ISA.atmosphere.gammaair * ISA.atmosphere.Pstd(altitude) * MachC**2
         Cl = n * beta * WTOoS / q
         Cd = self.aircraft.aerodynamics.Cd(Cl,MachC)

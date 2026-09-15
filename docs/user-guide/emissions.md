@@ -21,10 +21,30 @@ is not free). The combustion pollutants NOₓ (and, with the surrogate, CO and U
 with one of two models, selected by `EINOx_model`:
 
 - **`'Filippone'`** — a semi-empirical \(EI_{NO_x}\) correlation (default, no extra files);
-- **`'Surrogate'`** — the packaged **PW127 gas‑turbine emission‑index response surface**, which
-  integrates operating‑point‑dependent \(EI_{NO_x}\), \(EI_{CO}\) and \(EI_{UHC}\) over the mission.
+- **`'Surrogate'`** — a packaged **emission‑index response surface**, which integrates
+  operating‑point‑dependent \(EI_{NO_x}\), \(EI_{CO}\) and \(EI_{UHC}\) over the mission.
   See [Surrogate Models](surrogate-models.md#4-gasturbine-emissions-surrogate) for how it is built
-  (pyCycle deck → Cantera CRN → certification‑anchored EI map).
+  (pyCycle deck → Cantera CRN → EI map).
+
+!!! note "Two artifacts, selected by configuration"
+    A combustor calibration is engine‑specific and does **not** transfer between engine classes,
+    so two maps ship and `ClimateImpact` picks by `Configuration`
+    (`emissions_surrogate.default_model_path`):
+
+    | configuration | artifact | third coordinate | NOₓ |
+    |---|---|---|---|
+    | `Traditional`, `Hybrid` | `Emission_Model_PW127.pkl` | shaft‑power fraction | certification‑**anchored** |
+    | `Turbofan` | `Emission_Model_Turbofan.pkl` | **thrust** fraction | **unanchored** (predicted) |
+
+    The turboprop NOₓ is anchored because an equal‑split CRN cannot reproduce a *staged*
+    turboprop combustor. The Cantera CRN is natively a CFM56 single‑annular model, so for the
+    turbofan its raw NOₓ is reported: at the CRN's own four ICAO LTO states it gives +16 %
+    (take‑off), +29 % (climb), +19 % (approach). That is a prediction with a stated error, not a
+    level asserted from certification data.
+
+    For a turbofan the fraction is taken against the **lapsed** available thrust
+    \(F/(F_{00}\lambda_T(h,M))\), not against the sea‑level rating — otherwise the load would be
+    understated everywhere above the ground and the map read at the wrong place.
 
 ```python
 aircraft.configure(hybrid_config())            # carries a ClimateImpactInput

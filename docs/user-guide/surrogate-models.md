@@ -11,6 +11,7 @@ collects, in one place, what is behind the four that matter most:
 | **Electric motor** | efficiency vs operating point | d‑q machine physics | `EM.py` |
 | **Propeller** | efficiency + pitch governor | blade‑element data (RBF) | `propeller_surrogate.py` |
 | **Gas‑turbine emissions** | EI of NOₓ / CO / UHC vs operating point | pyCycle deck → Cantera CRN | `emissions_surrogate.py` |
+| **Turbofan** | overall efficiency, TSFC and thrust lapse vs operating point | pyCycle high‑bypass turbofan deck | `turbofan_surrogate.py` |
 
 The common design idea is the **offline / online split**: an expensive physics chain is run once on a
 grid (needing pycycle/openmdao, Cantera, pandas…), the result is fitted to a cheap response surface
@@ -65,6 +66,86 @@ Because the model works as a *percentage of a fixed nominal power*, that nominal
 oversized. See example `16_class_ii_propulsion_sizing.py`.
 
 > The size scaling moves the efficiency level but **not** the emission indices — see §4.
+
+---
+
+## 1b. Turbofan surrogate
+
+**Runtime:** `Systems/Powertrain/turbofan_surrogate.py` (`TurbofanResponseSurface`).
+**Trainer:** `train_turbofan_surrogate.py`, from the vendored pyCycle high‑bypass turbofan
+deck `Systems/Powertrain/data/HBTF_turbofan.py`.
+
+Three surfaces from one sweep:
+
+\[
+(\text{altitude [ft]},\ \text{Mach},\ \text{thrust fraction}) \longrightarrow
+(\eta_o,\ \mathrm{TSFC}), \qquad
+(\text{altitude [ft]},\ \text{Mach}) \longrightarrow \lambda_T
+\]
+
+where \(\eta_o = F V /(\dot m_f\,\mathrm{LHV})\) is the **overall** efficiency and
+\(\lambda_T\) the full‑throttle thrust lapse \(F_\max(h,M)/F_{00}\).
+
+**Why overall efficiency rather than TSFC.** The powertrain graph normalises everything to
+propulsive power, so the turbofan is a single node and \(P_f/P_p = 1/\eta_o\) drops straight
+into the existing fuel closure. That closure *is* a TSFC law: \(\mathrm{TSFC} = V/(\eta_o\,
+\mathrm{LHV})\) — the same information, exactly, not an approximation. TSFC is fitted
+alongside anyway so results can be read against published engine data.
+
+**The grid follows the flight envelope, not a rectangle.** The shipped map holds **72 points**
+over **18 flight conditions** (4 thrust fractions each), and each Mach number carries only the
+altitudes at which it is actually flown. Sweeping a rectangle instead is what makes a turbofan
+deck look unreliable: Mach 0.2 at 39,000 ft is not a condition any aircraft flies, the engine is
+effectively windmilling there, and the off‑design solve has no physical solution to find. The
+sweep also marches in **altitude at constant Mach**, warm‑starting each solve from the previous
+one — the continuation path is what gets the high‑altitude points to converge at all.
+
+**Validated to 35,000 ft.** Above that this deck's off‑design balance stops converging, and the
+generator *rejects* those points rather than recording them (see below). 35,000 ft covers the
+cruise regime of the engine class the deck describes. `TurbofanResponseSurface` clips its inputs
+to the training box, so a query above 35,000 ft returns the 35,000 ft answer — safe, but
+**optimistic on available thrust**, so keep ceiling requirements at or below it.
+
+**Every point is validated before it is recorded.** `prob.run_model()` does *not* raise when
+pyCycle's Newton solve stalls — it returns whatever state it reached. An early version of this
+sweep recorded those states silently and produced thrust lapses above 1.0 (more thrust at
+altitude than at sea level), an OPR of ~26,000, and an efficiency that did not respond to
+throttle. Each point is now checked against physics it must satisfy by construction, the
+sharpest test being that `percent_thrust` mode must deliver the thrust fraction it was asked
+for.
+
+**Thrust fraction is a native coordinate.** At each (altitude, Mach) the deck is solved twice:
+once at full throttle (`throttle_mode='T4'`) for \(F_\max\), and once in `percent_thrust`
+mode at each fraction `PC` of it, with `Fn_max` connected between the two points. So the map
+describes the *cycle* rather than one engine size — the same universality the turboshaft map
+gets from power fraction — and the thrust lapse comes out **fitted** rather than assumed.
+The lapse reference is full throttle at sea level and M 0.001; a true standstill is not run,
+because the deck does not converge there (the same reason the PW127 pipeline drops its Mach 0
+point).
+
+> **No size scaling.** The turboshaft map corrects small‑engine efficiency with an exponent
+> fitted to turboshaft SFC‑vs‑shaft‑power data. That dataset does not describe turbofans, so
+> applying it here would be quietly wrong; none is applied, and modern high‑bypass engines in
+> the 100–150 kN band vary far less than small turboshafts anyway.
+
+The deck also exports the combustor inlet state \((T_3, P_3, \mathrm{FAR}, \dot m_{air})\)
+in the schema `emissions_pipeline/` consumes — the groundwork for a turbofan emission‑index
+surrogate (see §4; the packaged EI artifact is still the PW127 turboprop map, and
+`ClimateImpact` refuses to apply it to a turbofan).
+
+Regenerating (needs `pycycle` + `openmdao`; ~30–60 min):
+
+```bash
+cd PhlyGreen/Systems/Powertrain
+python data/HBTF_turbofan.py        # -> data/Turbofan_Universal_Map.csv
+python train_turbofan_surrogate.py  # -> data/Turbofan_Engine_Model.pkl
+```
+
+The sweep writes each point as it converges and **resumes** from a partial CSV, so an
+interrupted run (or a later extension of the envelope) costs only the points still missing.
+The sea‑level‑static reference thrust is cached beside the map for the same reason.
+
+See example `26_turbofan_design.py`.
 
 ---
 

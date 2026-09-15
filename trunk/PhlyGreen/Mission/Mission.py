@@ -50,6 +50,13 @@ class Mission:
         self.Max_PEng_alt = 0
         self.TO_PBat = 0
         self.TO_PP = 0
+        # Sizing-critical mission thrust and the condition it occurs at (for a Turbofan,
+        # the largest thrust/lapse -- see TraditionalConfiguration).
+        self.Max_Thrust = -1.0
+        self.Max_Thrust_alt = 0.0
+        self.Max_Thrust_mach = 0.0
+        self.TO_Thrust = 0.0
+        self.TO_Thrust_mach = 0.0
         # peak in-flight battery waste heat [W] (Class-II battery), for TMS sizing
         self.Max_Bat_Thermal_Pwr = -1.0
         # hydrogen fuel-cell mission tracking
@@ -169,7 +176,11 @@ class Mission:
             Hybrid Class II: same, after battery sizing
         """
         
-        if self.aircraft.Configuration == 'Traditional':     
+        if self.aircraft.Configuration in ('Traditional', 'Turbofan'):
+            # A turbofan is traditional_graph with unit gearbox and fan nodes -- the whole
+            # fuel -> thrust-power chain sits in the single overall-efficiency node -- so it
+            # flies the same integration. What differs is the sizing quantity: thrust, not
+            # shaft power, which TraditionalConfiguration tracks alongside.
             return self.TraditionalConfiguration(WTO)
             
         elif self.aircraft.Configuration == 'Hybrid':
@@ -222,6 +233,28 @@ class Mission:
     def _worst_case_propulsive_power(self, WTO):
         """Worst-case off-mission propulsive power = max(take-off, OEI climb) [W]."""
         return max(self._takeoff_power(WTO), self._oei_climb_power(WTO))
+
+    def _worst_case_thrust(self, WTO):
+        """Worst-case off-mission thrust [N] and the Mach it occurs at.
+
+        The thrust-rated counterpart of :meth:`_worst_case_propulsive_power`. Each case is
+        converted from power to thrust at the speed that case is flown at, then compared --
+        take-off and OEI climb are separate flight conditions and a shared speed cannot be
+        assumed.
+        """
+        c = self.aircraft.constraint
+        cases = []
+        for power, spec in ((self._takeoff_power(WTO), c.TakeOffConstraints),
+                            (self._oei_climb_power(WTO), c.OEIClimbConstraints)):
+            if not spec:
+                continue
+            self.aircraft.performance.set_speed(
+                spec['Altitude'], spec['Speed'], spec['Speed Type'], c.DISA)
+            cases.append((power / self.aircraft.performance.TAS,
+                          self.aircraft.performance.Mach))
+        if not cases:
+            return 0.0, 0.0
+        return max(cases, key=lambda tm: tm[0])
 
 
     def HydrogenConfiguration(self, WTO):
@@ -673,6 +706,13 @@ class Mission:
             )
         self.TO_PP = Ppropulsive * PRatio[1] #shaft power 
 
+        # Off-mission thrust requirement. Each case is converted at *its own* speed: the
+        # take-off and OEI-climb conditions need not be flown at the same speed, and thrust
+        # is power/speed, so converting the worse power at the other case's speed would be
+        # wrong. Evaluated at flight speed, never at a standstill -- propulsive power is
+        # thrust x speed, so a static point carries no thrust information at all.
+        self.TO_Thrust, self.TO_Thrust_mach = self._worst_case_thrust(WTO)
+
         #set/reset max values
         self.Max_Peng = -1
    
@@ -719,6 +759,33 @@ class Mission:
         PRatio = np.array([self.aircraft.powertrain.Traditional(self.profile.Altitude(times[i]),self.profile.Velocity(times[i]),PP[i]) for i in range(len(times))] )
         self.Max_PEng = np.max(np.multiply(PP,PRatio[:,1])) #shaft power
         self.Max_PEng_alt = self.profile.Altitude(times[np.argmax(np.multiply(PP,PRatio[:,1]))]) #altitude at which peak power occurs 
+
+        # Peak THRUST over the mission. A thrust-rated engine cannot be sized from a peak
+        # shaft power, and the two peaks need not even coincide: thrust is PP/V, so a
+        # high-power point flown fast can demand less thrust than a slower one.
+        # Recorded for every configuration (it is cheap, and informative for a turboprop too).
+        velocities = np.array([self.profile.Velocity(t) for t in times])
+        altitudes = np.array([self.profile.Altitude(t) for t in times])
+        thrust = np.array(PP) / velocities
+
+        if self.aircraft.Configuration == 'Turbofan':
+            # Size on the worst demand *referred back to sea level*, not on the largest raw
+            # thrust. Available thrust lapses with altitude and Mach, so the point that
+            # stresses the engine hardest is the one with the largest thrust/lapse -- often
+            # top of climb rather than the peak-thrust point low down.
+            machs = velocities / np.array(
+                [Speed.soundspeed(a, self.DISA) for a in altitudes])
+            lapse = np.array([self.aircraft.powertrain.ThrustLapse(a, m, self.DISA)
+                              for a, m in zip(altitudes, machs)])
+            i_peak = int(np.argmax(thrust / lapse))
+            self.Max_Thrust_mach = float(machs[i_peak])
+        else:
+            i_peak = int(np.argmax(thrust))
+            self.Max_Thrust_mach = float(
+                velocities[i_peak] / Speed.soundspeed(float(altitudes[i_peak]), self.DISA))
+
+        self.Max_Thrust = float(thrust[i_peak])
+        self.Max_Thrust_alt = float(altitudes[i_peak])
 
         return self.Ef[-1]
     

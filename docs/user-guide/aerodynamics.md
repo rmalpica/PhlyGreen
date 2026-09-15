@@ -109,7 +109,8 @@ C_{D_0}, & M \le 0.8 \\[4pt]
 - `"Landing Cl"`  — maximum lift coefficient at landing (`landing_cl`), sets the landing W/S wall
 - `"Minimum Cl"`  — lift coefficient at the bottom of the drag bucket (`minimum_cl`)
 - `"Cd0"`         — zero‑lift drag coefficient (`cd0`)
-- `"AnalyticPolar"` — `{'type': 'Quadratic', 'input': {'AR': …, 'e_osw': …}}`, **or**
+- `"AnalyticPolar"` — `{'type': 'Quadratic', 'input': {'AR': …, 'e_osw': …}}` or
+  `{'type': 'compressible', 'input': {'AR': …, 'e_osw': …}}`, **or**
 - `"NumericalPolar"` — `{'type': 'ATR42' | 'DO228'}`
 
 Exactly one of `AnalyticPolar` / `NumericalPolar` must be present.
@@ -127,6 +128,50 @@ cle = aircraft.aerodynamics.ClE(Mach=0.45)        # best-L/D lift coefficient
 The drag polar feeds the propulsive‑power term \(C_D(C_L, M)\) in both the
 [Mission](mission.md#mission-power-calculation) integration and the
 [Constraints](constraints.md) diagram.
+
+---
+
+## The `compressible` polar (transonic aircraft)
+
+A transport cruising near Mach 0.8 spends its life close to drag divergence, and neither of the
+other polars can represent that: the quadratic polar has **no wave drag at all**, and the legacy
+`Cd0(Mach)` bump is flat below M 0.8 and then steps *down* (`0.035·0.8 − 0.011 = 0.017`, against
+a typical \(C_{D_0}\) of 0.021–0.029) before rising far too shallowly. Sizing a jet against
+either understates cruise drag exactly where the design lives — which is why the
+[Turbofan](powertrain.md) configuration uses this polar.
+
+\[
+C_D = C_{D_0} + k_1 C_L^2 + k_2 C_L + C_{D,\text{wave}}
+\]
+
+The wave term is Lock's fourth‑power law referenced to the **critical** Mach number, with the
+drag‑divergence Mach from the Korn equation:
+
+\[
+M_{dd} = \frac{\kappa}{\cos\Lambda} - \frac{t/c}{\cos^2\Lambda} - \frac{C_L}{10\cos^3\Lambda},
+\qquad
+C_{D,\text{wave}} = 20\,(M - M_{crit})^4 \ \ \text{for } M > M_{crit}
+\]
+
+\(M_{dd}\) is *defined* as the Mach number where \(\mathrm{d}C_D/\mathrm{d}M = 0.1\); with
+Lock's law that derivative is \(80(M - M_{crit})^3\), so
+\(M_{crit} = M_{dd} - (0.1/80)^{1/3} \approx M_{dd} - 0.108\). Referencing the rise to
+\(M_{crit}\) rather than to \(M_{dd}\) is what makes it non‑zero at a normal cruise Mach —
+the point of carrying the term at all.
+
+Three extra inputs, all optional with transport‑like defaults:
+
+| Field (`AerodynamicsConfig`) | Legacy key | Meaning |
+|---|---|---|
+| `wing_sweep` | `Wing Sweep` | quarter‑chord sweep [deg] (default 25) |
+| `thickness_to_chord` | `Thickness to Chord` | mean \(t/c\) (default 0.12) |
+| `korn_kappa` | `Korn Kappa` | airfoil technology factor: 0.87 conventional, 0.95 supercritical (default 0.95) |
+
+Sweeping the wing, thinning it or unloading it all push drag divergence to a higher Mach —
+the model reproduces each of those, and the unit tests pin the directions.
+
+> `ClE(Mach)` still returns the parabolic best‑L/D lift coefficient, which **ignores** the wave
+> term and is therefore optimistic above drag divergence.
 
 ---
 

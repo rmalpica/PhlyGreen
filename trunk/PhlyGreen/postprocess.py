@@ -10,6 +10,8 @@ matplotlib is imported lazily; only :func:`mission_timeseries` works without it.
 """
 
 import numpy as np
+import scipy.integrate as integrate
+import PhlyGreen.Utilities.Speed as Speed
 
 
 def mission_timeseries(aircraft):
@@ -102,15 +104,31 @@ def power_timeseries(aircraft):
         PR = np.array([pt.Hybrid(float(phi[i]), alt[i], vel[i], PP[i]) for i in range(len(t))])
         gt_power = PR[:, 1] * PP     # gas-turbine shaft power
         em_power = PR[:, 5] * PP     # battery / electric-motor power
-    elif config == "Traditional":
+    elif config in ("Traditional", "Turbofan"):
         PR = np.array([pt.Traditional(alt[i], vel[i], PP[i]) for i in range(len(t))])
-        gt_power = PR[:, 1] * PP     # all propulsion is thermal
+        # For a Turbofan the gearbox and fan nodes are unity (the whole chain is the single
+        # eta_o node), so PR[:, 1] * PP is the propulsive power itself rather than a shaft
+        # power. The thrust history below is the quantity that actually sizes the engine.
+        gt_power = PR[:, 1] * PP
         em_power = np.zeros_like(PP)
     else:                            # Hydrogen / FuelCellBattery: no gas turbine
         gt_power = np.full_like(PP, np.nan)
         em_power = np.full_like(PP, np.nan)
 
     result = {"time": t, "propulsive_power": PP, "gt_power": gt_power, "em_power": em_power}
+
+    if config == "Turbofan":
+        # A thrust-rated engine is read in thrust: F = P/V, and the available thrust lapses
+        # with altitude *and* Mach, so throttle is thrust/available rather than power/rating.
+        vel_arr = np.asarray(vel, dtype=float)
+        thrust = PP / vel_arr
+        mach = np.array([vel_arr[i] / Speed.soundspeed(alt[i], DISA) for i in range(len(t))])
+        lapse = np.array([pt.ThrustLapse(alt[i], mach[i], DISA) for i in range(len(t))])
+        rating = getattr(pt, "engineRating", None) or float(np.max(thrust / lapse))
+        result["thrust"] = thrust
+        result["thrust_available"] = rating * lapse
+        result["throttle"] = thrust / np.maximum(rating * lapse, 1e-9)
+        result["mach"] = mach
 
     # Fuel-cell / battery / tank outputs for the hydrogen architectures: the battery supplies a
     # share ``phi`` of the propulsive power and the fuel cell the rest; the tank empties as the
@@ -124,6 +142,76 @@ def power_timeseries(aircraft):
             result["h2_remaining"] = np.clip(WH2 - ts["fuel_energy"] / ef, 0.0, None)  # [kg]
 
     return result
+
+
+def turbofan_timeseries(aircraft, include_emissions=True):
+    """Engine-level time histories for a Turbofan design.
+
+    Returns aligned arrays over the mission: ``time`` [s], ``altitude`` [m], ``mach``,
+    ``thrust`` [N], ``thrust_available`` [N], ``throttle`` [-], ``fuel_flow`` [kg/s],
+    ``tsfc`` [kg/(N s)], ``inlet_air_flow`` and ``core_air_flow`` [kg/s], ``bypass_ratio`` and,
+    when the emission map is available,
+    ``EINOX`` / ``EICO`` / ``EIUHC`` [g/kg] plus the cumulative emitted masses [kg].
+
+    Everything here is recovered from the converged design rather than recomputed from a
+    separate model: the thrust comes from the same ``PoWTO`` the mission integrated, and the
+    fuel flow from the same ``PRatio[0]`` that closed the weight loop -- so these curves are
+    the design, not an interpretation of it.
+    """
+    if getattr(aircraft, "Configuration", None) != "Turbofan":
+        raise ValueError("turbofan_timeseries applies to the Turbofan configuration only.")
+
+    ps = power_timeseries(aircraft)
+    ms = mission_timeseries(aircraft)
+    t, alt, mach = ps["time"], ms["altitude"], ps["mach"]
+    thrust, vel = ps["thrust"], ms["velocity"]
+
+    pt, ef = aircraft.powertrain, aircraft.weight.ef
+    pp = ps["propulsive_power"]
+    pr0 = np.array([pt.Traditional(alt[i], vel[i], pp[i])[0] for i in range(len(t))])
+    fuel_flow = pp * pr0 / ef                       # [kg/s]
+    tsfc = fuel_flow / np.maximum(thrust, 1e-9)     # [kg/(N s)]
+
+    out = {"time": t, "altitude": alt, "mach": mach, "thrust": thrust,
+           "thrust_available": ps["thrust_available"], "throttle": ps["throttle"],
+           "fuel_flow": fuel_flow, "tsfc": tsfc}
+
+    alt_ft = alt / 0.3048
+    frac = np.clip(ps["throttle"], 0.0, 1.0)
+    rating = getattr(pt, "engineRating", None) or float(np.max(thrust))
+
+    surrogate = getattr(pt.efficiency.get("gas_turbine"), "surrogate", None)
+    if surrogate is not None:
+        # Total inlet flow comes from the cycle's own inlet station; it is NOT the core flow
+        # times a fixed (1 + BPR), because bypass ratio is an off-design balance variable.
+        for key, fn, args in (("core_air_flow", "core_air_flow", (rating,)),
+                              ("inlet_air_flow", "inlet_air_flow", (rating,)),
+                              ("bypass_ratio", "bypass_ratio", ())):
+            method = getattr(surrogate, fn, None)
+            if method is None:
+                continue
+            try:
+                out[key] = np.array([method(*args, alt_ft[i], mach[i], frac[i])
+                                     for i in range(len(t))])
+            except AttributeError:
+                pass          # artifact predates this surface
+
+    if include_emissions:
+        try:
+            from PhlyGreen.Systems.Powertrain.emissions_surrogate import (
+                EmissionSurrogate, default_model_path)
+            es = EmissionSurrogate(default_model_path("Turbofan"))
+            ei = es.predict(np.column_stack([alt_ft, mach, frac]))
+            seconds = t          # postprocess timelines are in seconds
+            for key in ("EINOX", "EICO", "EIUHC"):
+                if key in ei:
+                    out[key] = np.asarray(ei[key])
+                    # g/kg x kg/s -> g/s, integrated to kg
+                    out[key.replace("EI", "") + "_kg"] = 1e-3 * integrate.cumulative_trapezoid(
+                        out[key] * fuel_flow, seconds, initial=0.0)
+        except FileNotFoundError:
+            pass          # emission map not built; the rest of the table is still valid
+    return out
 
 
 def class_ii_components(aircraft):
@@ -544,7 +632,12 @@ def plot_constraint_diagram(aircraft, ax=None):
     except Exception:
         pass
     ax.set_xlabel(r"wing loading $m_{TO}/S_{wing}$ [kg/m$^2$]")
-    ax.set_ylabel(r"power loading $P/m_{TO}$ [W/kg]")
+    # The diagram is drawn against whichever rating sizes the aircraft: shaft power for a
+    # propeller aircraft, thrust for a turbofan (see Powertrain.SizingDenominator).
+    if getattr(aircraft, "Configuration", None) == "Turbofan":
+        ax.set_ylabel(r"thrust-to-weight $T/W$ [-]")
+    else:
+        ax.set_ylabel(r"power loading $P/m_{TO}$ [W/kg]")
     # Limit the y-range so the design point sits roughly mid-axis (P/W curves can shoot up
     # towards the W/S extremes and otherwise squash the design region).
     if design_pw is not None and design_pw > 0:

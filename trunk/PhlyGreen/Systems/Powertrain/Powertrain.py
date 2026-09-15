@@ -1,5 +1,6 @@
 import numpy as np
 import numbers
+import warnings
 import PhlyGreen.Utilities.Atmosphere as ISA
 import PhlyGreen.Utilities.Speed as Speed
 import PhlyGreen.Utilities.Units as Units
@@ -51,6 +52,11 @@ class Powertrain:
         # Class-II nominal (design) powers [W], fixed before the mission (None for Class-I).
         self.gt_design_power = None
         self.em_design_power = None
+        # Turbofan: nominal SLS thrust [N] (chosen before the mission, like gt_design_power)
+        # and the installed engine thrust-to-weight [N/N] used to turn it into a mass.
+        self.turbofan_design_thrust = None
+        self.engine_thrust_to_weight = None
+        self.turbofan_model_path = None
         self.n_engines = 1
 
 
@@ -62,7 +68,7 @@ class Powertrain:
       
     @EtaGTmodelType.setter
     def EtaGTmodelType(self,value):
-        if value in ('constant', 'ResponseSurface'):
+        if value in ('constant', 'ResponseSurface', 'Turbofan'):
             self._EtaGTmodelType = value
         else:
             raise ValueError("Error: %s Eta GT model not implemented. Exiting" %value)
@@ -302,10 +308,16 @@ class Powertrain:
 
     def SetInput(self):
 
+        # A turbofan carries its whole chain in one overall-efficiency node read from the
+        # engine map, so the constant gas-turbine and propulsive efficiencies are genuinely
+        # not part of its input set -- warning about them would just be noise.
+        _turbofan = self.aircraft.Configuration == 'Turbofan'
+
         try:
             self.aircraft.EnergyInput['Eta Gas Turbine']
         except:
-            print('Warning: Eta Gas Turbine value unset. Using Eta Gas Turbine Model.')
+            if not _turbofan:
+                print('Warning: Eta Gas Turbine value unset. Using Eta Gas Turbine Model.')
         else:
             self.EtaGT = self.aircraft.EnergyInput['Eta Gas Turbine']
 
@@ -319,14 +331,16 @@ class Powertrain:
         try:
             self.aircraft.EnergyInput['Eta Propulsive']
         except:
-            print('Warning: Eta Propulsive value unset. Using Eta Eta Propulsive Model.')
+            if not _turbofan:
+                print('Warning: Eta Propulsive value unset. Using Eta Eta Propulsive Model.')
         else:
             self.EtaPP = self.aircraft.EnergyInput['Eta Propulsive']
 
         try:
             self.aircraft.EnergyInput['Eta Propulsive Model'] 
         except:
-            print('Warning: Eta Propulsive model unset. Using constant model')
+            if not _turbofan:
+                print('Warning: Eta Propulsive model unset. Using constant model')
         else: 
             self.EtaPPmodelType = self.aircraft.EnergyInput['Eta Propulsive Model'] 
 
@@ -334,8 +348,15 @@ class Powertrain:
             self.Propeller = Propeller(self.aircraft)
             self.Propeller.SetInput()
 
-        self.EtaGB = self.aircraft.EnergyInput['Eta Gearbox']
-        self.SPowerPT = self.aircraft.EnergyInput['Specific Power Powertrain']
+        # A turbofan has no gearbox and no shaft-power specific power; both default so a
+        # turbofan configuration need not carry meaningless entries. Every other
+        # configuration still gets a KeyError if it omits them.
+        if self.aircraft.Configuration == 'Turbofan':
+            self.EtaGB = self.aircraft.EnergyInput.get('Eta Gearbox', 1.0)
+            self.SPowerPT = self.aircraft.EnergyInput.get('Specific Power Powertrain', [0.0, 0.0])
+        else:
+            self.EtaGB = self.aircraft.EnergyInput['Eta Gearbox']
+            self.SPowerPT = self.aircraft.EnergyInput['Specific Power Powertrain']
         # Power-management / inverter specific power [W/kg] — read for every configuration so the
         # electric drive (motor + PMAD) is sized the same way in the hybrid powertrain and in the
         # fuel-cell system. Defaulted in pmad_specific_power() when absent.
@@ -391,6 +412,9 @@ class Powertrain:
         # before the mission and used by the over/under-size check after sizing.
         self.gt_design_power = e.get('GT Design Power')
         self.em_design_power = e.get('EM Design Power')
+        self.turbofan_design_thrust = e.get('Turbofan Design Thrust')
+        self.engine_thrust_to_weight = e.get('Engine Thrust to Weight', 5.5)
+        self.turbofan_model_path = e.get('Turbofan Model Path')
 
         eff = {}
         eff['gearbox'] = ConstantEfficiency(const('EtaGB', 1.0))
@@ -406,6 +430,24 @@ class Powertrain:
                     "in EnergyInput as 'GT Design Power'.")
             eff['gas_turbine'] = GasTurbineEfficiencyModel(
                 design_power=self.gt_design_power, n_engines=n_eng)
+        elif self.EtaGTmodelType == 'Turbofan':
+            # A turbofan is a single overall-efficiency node: eta_o = F*V/(mdot_f*LHV), so the
+            # fuel closure Pf = Pp/eta_o is exactly a TSFC closure (TSFC = V/(eta_o*LHV)).
+            # The thermal/propulsive split would multiply back to the same eta_o, so there is
+            # nothing to gain by carrying it separately -- gearbox and fan nodes are unity.
+            from .efficiency import TurbofanEfficiencyModel
+            if not self.turbofan_design_thrust:
+                raise ValueError(
+                    "Turbofan efficiency model selected but 'Turbofan Design Thrust' [N] is "
+                    "not set. Size the engine before the mission and pass the nominal SLS "
+                    "thrust (all engines) in EnergyInput as 'Turbofan Design Thrust'.")
+            surrogate = None
+            if self.turbofan_model_path:
+                from .turbofan_surrogate import TurbofanResponseSurface
+                surrogate = TurbofanResponseSurface(self.turbofan_model_path)
+            eff['gas_turbine'] = TurbofanEfficiencyModel(
+                design_thrust=self.turbofan_design_thrust, surrogate=surrogate,
+                n_engines=n_eng)
         else:
             eff['gas_turbine'] = ConstantEfficiency(const('EtaGT', 0.30))
 
@@ -419,6 +461,12 @@ class Powertrain:
                 rpm=e.get('Propeller RPM', 1200.0), n_engines=n_eng)
         else:
             eff['propeller'] = ConstantEfficiency(const('EtaPP', 0.85))
+
+        if self.EtaGTmodelType == 'Turbofan':
+            # eta_o already covers the whole fuel -> thrust-power chain, so the remaining
+            # nodes of traditional_graph must not remove anything a second time.
+            eff['gearbox'] = ConstantEfficiency(1.0)
+            eff['propeller'] = ConstantEfficiency(1.0)
 
         # Electric motor: Class-I constant or Class-II d-q model (needs a nominal power).
         if e.get('Eta Electric Motor Model') == 'Smart':
@@ -539,6 +587,42 @@ class Powertrain:
                     f"nominal {self.em_design_power/1e3:.1f} kW. Increase 'EM Design Power'.")
         return report
 
+    def report_turbofan_sizing(self, warn=True):
+        """Report which requirement sized the turbofan, and whether the nominal was adequate.
+
+        The turbofan map is read at a thrust *fraction* of a nominal SLS thrust that has to
+        be picked before the mission (an engine cannot resize itself instant by instant), so
+        that choice needs checking afterwards -- the same check
+        :meth:`report_class_ii_sizing` performs for the Class-II gas turbine.
+        """
+        cases = getattr(self, '_thrust_sizing_cases', None)
+        if not cases:
+            return None
+        driver = max(cases, key=cases.get)
+        required = cases[driver]
+        report = {'sizing_case': driver, 'required_SLS_thrust': required,
+                  'cases': dict(cases), 'nominal': self.turbofan_design_thrust}
+        nominal = self.turbofan_design_thrust
+        if nominal:
+            ratio = required / nominal
+            report['nominal_ratio'] = ratio
+            if not warn:
+                return report
+            if ratio > 1.0:
+                warnings.warn(
+                    f"turbofan nominal thrust is undersized: the design needs "
+                    f"{required/1e3:.1f} kN SLS ({driver}) but the map was read against a "
+                    f"nominal {nominal/1e3:.1f} kN. Raise 'Turbofan Design Thrust' and "
+                    f"re-run so the engine is read at the right thrust fractions.",
+                    RuntimeWarning)
+            elif ratio < 0.5:
+                warnings.warn(
+                    f"turbofan nominal thrust is oversized: the design needs only "
+                    f"{required/1e3:.1f} kN SLS against a nominal {nominal/1e3:.1f} kN, so "
+                    f"the map is being read at unrealistically low thrust fractions.",
+                    RuntimeWarning)
+        return report
+
     def eta(self, component, alt=0.0, vel=0.0, pwr=0.0, rpm=None):
         """Efficiency of ``component`` at the operating point (altitude, velocity, power).
 
@@ -558,6 +642,63 @@ class Powertrain:
         n = 0.75
         lapse = (ISA.atmosphere.RHOstd(altitude,DISA)/ISA.atmosphere.RHOstd(0.0,DISA))**n
         return lapse
+
+    def ThrustLapse(self, altitude, mach, DISA=0.0):
+        """Full-throttle thrust lapse F_avail(h, M) / F_SLS for a turbofan.
+
+        Taken from the fitted turbofan map when one is attached (the same pyCycle sweep that
+        produces the efficiency map also produces the available thrust at every condition),
+        otherwise from the Mattingly high-bypass form
+
+            alpha = delta * (1 - 0.49 sqrt(M))
+
+        with ``delta`` the ISA pressure ratio. Unlike :meth:`PowerLapse` this depends on Mach
+        as well as altitude, which is exactly why a turboshaft power lapse cannot stand in
+        for it.
+        """
+        eff = getattr(self, 'efficiency', None)   # only built by SetInput
+        model = eff.get('gas_turbine') if eff else None
+        surrogate = getattr(model, 'surrogate', None)
+        if surrogate is not None and hasattr(surrogate, 'thrust_lapse'):
+            return surrogate.thrust_lapse(Units.mToft(altitude), mach)
+
+        delta = ISA.atmosphere.Pstd(altitude) / ISA.atmosphere.Pstd(0.0)
+        return delta * (1.0 - 0.49 * np.sqrt(max(float(mach), 0.0)))
+
+    def SizingDenominator(self, altitude, DISA, altitude_lapse=True):
+        """Divisor turning a required P/W [W/kg] into the units the design point is rated in.
+
+        The constraint diagram compares every flight requirement against one installed
+        rating. For a power-rated aircraft that rating is shaft power, and the divisor is
+        the altitude power lapse -- exactly what the constraint curves have always used.
+
+        A turbofan is rated on **thrust**, so the diagram must be drawn in T/W instead:
+        ``Performance.PoWTO`` already returns ``T*V/m`` (there is no propulsive efficiency in
+        it), hence
+
+            T/W_SLS = (P/W) / (g * V * ThrustLapse(h, M))
+
+        which is **dimensionless**: P/W is W/kg = m^2/s^3 and g*V is (m/s^2)(m/s) = m^2/s^3.
+        So the Turbofan design point is a plain thrust-to-weight ratio, the form T/W is
+        always quoted in, not a force per unit mass.
+
+        This matters beyond a change of units. ``FindDesignPoint`` minimises the maximum
+        requirement over W/S, and each requirement is evaluated at its own speed, so the
+        minimum-installed-power point and the minimum-installed-thrust point are different
+        points and can even be set by different constraints.
+
+        V and M are read from ``aircraft.performance``, which the ``performance.*`` call
+        immediately preceding this one has just set through ``set_speed``. For every
+        configuration other than Turbofan the returned value is identical to the previous
+        ``PowerLapse`` prefactor, so existing designs are unchanged.
+        """
+        if self.aircraft.Configuration != 'Turbofan':
+            return self.PowerLapse(altitude, DISA) if altitude_lapse else 1.0
+
+        perf = self.aircraft.performance
+        velocity = perf.TAS          # may be an array (Ceiling evaluates V over the W/S grid)
+        mach = perf.Mach
+        return 9.81 * np.asarray(velocity) * self.ThrustLapse(altitude, mach, DISA)
     
     def Traditional(self, alt, vel, pwr):
         """Power ratios for the traditional gas-turbine chain.
@@ -866,6 +1007,43 @@ class Powertrain:
                 self.WElectric = self.WMotor + self.WPMAD
 
                 WPT = self.WThermal + self.WElectric
+
+        elif self.aircraft.Configuration == 'Turbofan':
+
+                # A turbofan is rated on thrust, so it is sized on the worst thrust demand
+                # referred back to sea level through the *thrust* lapse -- the turboshaft
+                # power lapse would be the wrong law and the wrong quantity.
+                m = self.aircraft.mission
+
+                # The constraint diagram is the third sizing case, and for a jet it is often
+                # the binding one: the manoeuvre and acceleration requirements are evaluated
+                # at conditions the mission profile never flies, so a mission-only rating
+                # would silently fail them. DesignPW holds the dimensionless T/W here, which
+                # is already referred to sea level by SizingDenominator's thrust lapse.
+                # (Same principle as FuelCell.SizeFromConstraint on the hydrogen path.)
+                constraint_thrust = self.aircraft.DesignPW * WTO * 9.81
+
+                PeakThrust = np.max(
+                    [m.Max_Thrust / self.ThrustLapse(m.Max_Thrust_alt, m.Max_Thrust_mach, 0),
+                     m.TO_Thrust / self.ThrustLapse(
+                         self.aircraft.constraint.TakeOffConstraints['Altitude'],
+                         m.TO_Thrust_mach, 0),
+                     constraint_thrust]
+                     )
+                self._thrust_sizing_cases = {
+                    'mission peak': m.Max_Thrust / self.ThrustLapse(
+                        m.Max_Thrust_alt, m.Max_Thrust_mach, 0),
+                    'take-off / OEI': m.TO_Thrust / self.ThrustLapse(
+                        self.aircraft.constraint.TakeOffConstraints['Altitude'],
+                        m.TO_Thrust_mach, 0),
+                    'constraint diagram': constraint_thrust,
+                }
+
+                # NOTE: engineRating carries SLS *thrust* [N] here, where the power-rated
+                # configurations above put shaft power [W] in it. results.py records which.
+                self.engineRating = PeakThrust
+                self.WThermal = PeakThrust / (9.81 * self.engine_thrust_to_weight)
+                WPT = self.WThermal
 
         else:
              raise Exception("Unknown aircraft configuration: %s" %self.aircraft.Configuration)

@@ -111,6 +111,15 @@ class EnergyConfig(DictConfig):
     # (recharging) when propulsive demand is lower and covers the deficit when it is higher.
     gt_rated_power: Optional[float] = None            # constant serial GT shaft power [W]
     battery_charge_efficiency: Optional[float] = None  # in-flight recharge efficiency [-] (default 1.0)
+    # --- turbofan (Configuration 'Turbofan') ---
+    # The turbofan is a single overall-efficiency node in the powertrain graph:
+    # eta_o = F*V/(mdot_f*LHV), which is exactly equivalent to a TSFC map since
+    # TSFC = V/(eta_o*LHV). The nominal (SLS) thrust must be chosen before the mission,
+    # for the same reason the Class-II gas turbine needs a nominal power.
+    turbofan_design_thrust: Optional[float] = None    # nominal SLS thrust, all engines [N]
+    engine_thrust_to_weight: Optional[float] = None   # installed engine T/W [N/N], ~5.5 for a CFM56 class
+    opr: Optional[float] = None                       # overall pressure ratio [-], used by the Filippone NOx model
+    turbofan_model_path: Optional[str] = None         # alternative fitted engine map (.pkl); packaged artifact if unset
 
     _KEY_MAP = {
         "Ef": "Ef",
@@ -145,6 +154,10 @@ class EnergyConfig(DictConfig):
         "em_design_rpm": "EM Design RPM",
         "gt_rated_power": "GT Rated Power",
         "battery_charge_efficiency": "Battery Charge Efficiency",
+        "turbofan_design_thrust": "Turbofan Design Thrust",
+        "engine_thrust_to_weight": "Engine Thrust to Weight",
+        "opr": "OPR",
+        "turbofan_model_path": "Turbofan Model Path",
     }
 
     def __post_init__(self):
@@ -279,6 +292,12 @@ class AerodynamicsConfig(DictConfig):
     cd0: float = None
     analytic_polar: Optional[Dict[str, Any]] = None
     numerical_polar: Optional[Dict[str, Any]] = None
+    # --- transonic ('compressible') polar: Korn/Lock wave-drag geometry ---
+    # Only read when analytic_polar selects the 'compressible' polar; ignored otherwise,
+    # so existing configurations are unaffected.
+    wing_sweep: Optional[float] = None          # quarter-chord sweep [deg]
+    thickness_to_chord: Optional[float] = None  # mean t/c [-]
+    korn_kappa: Optional[float] = None          # airfoil technology factor: 0.87 conventional, 0.95 supercritical
 
     _KEY_MAP = {
         "take_off_cl": "Take Off Cl",
@@ -287,6 +306,9 @@ class AerodynamicsConfig(DictConfig):
         "cd0": "Cd0",
         "analytic_polar": "AnalyticPolar",
         "numerical_polar": "NumericalPolar",
+        "wing_sweep": "Wing Sweep",
+        "thickness_to_chord": "Thickness to Chord",
+        "korn_kappa": "Korn Kappa",
     }
 
     def __post_init__(self):

@@ -48,6 +48,10 @@ class Weight:
         self.tol = 0.1
         self.final_reserve = None  
         self.Class = 'I'
+        # When True, the powertrain mass is not added on top of a structural model that already
+        # contains it (see powertrain_in_closure). Off by default: switching it on changes the
+        # converged take-off weight, so it is a deliberate choice per configuration.
+        self.avoid_powertrain_double_count = False
         
             
         
@@ -129,9 +133,10 @@ class Weight:
             Converged take-off weight WTO, or a string if configuration is invalid."""
         
 
-        if self.aircraft.Configuration == 'Traditional':     
-             
-              
+        if self.aircraft.Configuration in ('Traditional', 'Turbofan'):
+                 # The take-off weight equation is the same for a turbofan -- fuel, reserve,
+                 # powertrain, structure, payload, crew. Only the powertrain mass differs,
+                 # and that is Powertrain.WeightPowertrain's business, not this loop's.
                  return self.Traditional()
              
              
@@ -151,6 +156,25 @@ class Weight:
         else:
                  return "Try a different configuration..."
 
+
+    def powertrain_in_closure(self, WPT):
+        """Powertrain mass to ADD to the take-off-weight closure [kg].
+
+        Returns 0 when the structural model already contains the powertrain, so that the
+        engines are not counted twice. ``self.WPT`` still holds the computed powertrain mass
+        for reporting either way -- what changes is only whether it is added again.
+
+        Class-I regressions are empty-weight fractions and so *do* include the powertrain
+        (``Structures.includes_powertrain``); Class-II FLOPS sums airframe components only and
+        does not. The behaviour is opt-in through ``Weight.avoid_powertrain_double_count`` so
+        that enabling it is a deliberate act: it changes the take-off weight of every design
+        that turns it on.
+        """
+        if not self.avoid_powertrain_double_count:
+            return WPT
+        if self.Class == 'I' and self.aircraft.structures.includes_powertrain():
+            return 0.0
+        return WPT
 
     def _structural_weight(self, WTO):
         """Airframe structural mass [kg] for the current weight class.
@@ -218,7 +242,7 @@ class Weight:
 
                 self.final_reserve = self._contingency if self._contingency else 0.05 * self.Wf
 
-                return (self.Wf + self.final_reserve + self.WPT + self.WStructure + self.WPayload + self.WCrew - WTO)
+                return (self.Wf + self.final_reserve + self.powertrain_in_closure(self.WPT) + self.WStructure + self.WPayload + self.WCrew - WTO)
 
         self.WTO = self._solve_wto(func, 1000, 300000, xtol=0.1)
 
@@ -466,7 +490,7 @@ class Weight:
 
                 self.final_reserve = self._contingency if self._contingency else 0.05 * self.Wf
 
-                return (self.Wf + self.final_reserve + self.WBat + self.WPT + self.WStructure
+                return (self.Wf + self.final_reserve + self.WBat + self.powertrain_in_closure(self.WPT) + self.WStructure
                         + self.WHeat_Exchanger + self.WPayload + self.WCrew - WTO)
         # iterate the weight estimator with Brent's method until WTO converges (robust bracketing)
         self.WTO = self._solve_wto(func, 10000, 60000, xtol=0.1)

@@ -250,3 +250,63 @@ def make_efficiency_model(spec) -> EfficiencyModel:
             return ResponseSurfaceEfficiency(spec["predictor"], features, clip=clip)
         raise ValueError(f"Unknown efficiency model type: {kind!r}")
     raise TypeError(f"Cannot build an EfficiencyModel from {spec!r}")
+
+
+class TurbofanEfficiencyModel(EfficiencyModel):
+    """Overall efficiency of a turbofan from the fitted response surface.
+
+    The powertrain graph normalises everything to propulsive power ``Pp = F*V``, so a
+    turbofan is one node: ``eta_o = F*V / (mdot_f * LHV)``. That makes the graph's fuel
+    ratio ``Pf/Pp = 1/eta_o`` exactly a TSFC closure, since ``TSFC = V/(eta_o * LHV)`` --
+    the two carry the same information, and splitting eta_o into thermal x propulsive would
+    multiply back to the same number.
+
+    Like :class:`GasTurbineEfficiencyModel`, the engine has a **fixed nominal rating** chosen
+    before the mission -- here the sea-level-static thrust, since a turbofan is thrust-rated.
+    ``eta`` converts the operating point's propulsive power back to a thrust, ``F = P/V``,
+    and reads the map at the resulting thrust fraction.
+
+    Args:
+        design_thrust: nominal SLS thrust of the whole installation [N]. Required.
+        surrogate: a :class:`TurbofanResponseSurface` (loaded by default).
+        n_engines: number of engines the installation is split over.
+    """
+
+    def __init__(self, design_thrust, surrogate=None, n_engines=1):
+        if design_thrust is None or design_thrust <= 0:
+            raise ValueError(
+                "TurbofanEfficiencyModel needs a positive nominal 'design_thrust' [N] "
+                "(size the engine before the mission, e.g. DesignTW * WTO).")
+        if surrogate is None:
+            from .turbofan_surrogate import TurbofanResponseSurface
+            surrogate = TurbofanResponseSurface()
+        self.surrogate = surrogate
+        self.design_thrust = design_thrust
+        self.n_engines = max(int(n_engines), 1)
+
+    def eta(self, op: OperatingPoint) -> float:
+        import PhlyGreen.Utilities.Units as Units
+        import PhlyGreen.Utilities.Speed as Speed
+        if op.velocity is None or op.velocity <= 0.0:
+            # F = P/V is singular at rest, and so is the whole propulsive-power formulation:
+            # a static engine produces thrust at zero propulsive power. Every PhlyGreen call
+            # site evaluates at a positive flight speed (Performance rejects Mach <= 0), so
+            # reaching here means the caller asked for something the model cannot represent.
+            raise ValueError(
+                "TurbofanEfficiencyModel needs a positive velocity: overall efficiency is "
+                "F*V/(mdot_f*LHV), which is identically zero at rest. Evaluate the turbofan "
+                "at a flight condition (take-off is evaluated at V2, not at V=0).")
+        a = Speed.soundspeed(op.altitude, 0.0)
+        mach = op.velocity / a if a > 0 else 0.0
+        thrust = op.power / op.velocity                      # total, all engines [N]
+        efficiency, _, _, _ = self.surrogate.predict(
+            self.design_thrust, Units.mToft(op.altitude), mach, thrust)
+        return efficiency
+
+    def tsfc(self, op: OperatingPoint, lhv):
+        """Thrust-specific fuel consumption [kg/(N s)] at the operating point.
+
+        Reported rather than solved with: the mission integrates on eta_o. Provided so
+        results are comparable with published engine data.
+        """
+        return op.velocity / (self.eta(op) * lhv)

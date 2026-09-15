@@ -399,3 +399,135 @@ def design_dashboard(aircraft, name, title=None):
     path = savefig(fig, name)
     plt.close(fig)
     return path
+
+
+# ===========================================================================
+# Turbofan: an A320/737-800-class short-haul jet
+# ===========================================================================
+# Everything above describes a regional turboprop. A turbofan differs in three ways that
+# matter to the sizing loop, and only in those three:
+#   1. it is rated on THRUST, so the constraint diagram is built in T/W rather than P/W
+#      (Powertrain.SizingDenominator makes that switch);
+#   2. it cruises near drag divergence, so it needs the 'compressible' polar -- the plain
+#      quadratic polar has no wave drag at all and would understate cruise drag exactly
+#      where the design lives;
+#   3. its efficiency comes from the pyCycle turbofan map as a single overall efficiency
+#      eta_o = F*V/(mdot_f*LHV), which is the same thing as a TSFC map.
+
+def _constraints_turbofan():
+    # A320-class requirements. Speeds are the usual certification points: 250 KCAS below
+    # 10,000 ft, M 0.78 cruise, V2 ~ 150 kt for the OEI and take-off cases.
+    # Cruise is FL330 and the ceiling FL350, both inside the engine map's validated box
+    # (it stops at 35,000 ft -- see HBTF_turbofan.ENVELOPE). A real A320 ceiling is FL390;
+    # evaluating it there would read a clipped, optimistic thrust lapse.
+    return ConstraintsConfig(disa=0.0, phases={
+        'Cruise':       {'Speed': 0.78, 'Speed Type': 'Mach', 'Beta': 0.95, 'Altitude': 10058.},
+        'AEO Climb':    {'Speed': 250, 'Speed Type': 'KCAS', 'Beta': 0.97, 'Altitude': 3000., 'ROC': 12.7},
+        'OEI Climb':    {'Speed': 77., 'Speed Type': 'TAS', 'Beta': 1., 'Altitude': 0., 'Climb Gradient': 0.024},
+        'Take Off':     {'Speed': 77., 'Speed Type': 'TAS', 'Beta': 1., 'Altitude': 0., 'kTO': 1.2, 'sTO': 2100},
+        'Landing':      {'Speed': 71., 'Speed Type': 'TAS', 'Altitude': 0.},
+        'Turn':         {'Speed': 0.78, 'Speed Type': 'Mach', 'Beta': 0.9, 'Altitude': 10058, 'Load Factor': 1.3},
+        'Ceiling':      {'Speed': 0.78, 'Beta': 0.85, 'Altitude': 10668, 'HT': 0.5},
+        'Acceleration': {'Mach 1': 0.70, 'Mach 2': 0.78, 'DT': 120, 'Altitude': 10058, 'Beta': 0.92},
+    })
+
+
+def _aerodynamics_turbofan():
+    # Compressible polar: quadratic + a Korn/Lock wave-drag rise. The geometry is what sets
+    # the drag-divergence Mach number, so sweep / t/c / kappa are real design inputs here,
+    # not decoration.
+    return AerodynamicsConfig(
+        take_off_cl=2.0, landing_cl=2.8, minimum_cl=0.20, cd0=0.0180,
+        analytic_polar={'type': 'compressible', 'input': {'AR': 9.5, 'e_osw': 0.80}},
+        wing_sweep=25.0,            # quarter-chord sweep [deg]
+        thickness_to_chord=0.11,    # mean t/c
+        korn_kappa=0.95,            # supercritical section
+    )
+
+
+def _mission_turbofan():
+    # The A320-200 design mission (see validation/a320_reference.md for provenance):
+    # 150 passengers two-class at the Airbus 95 kg/pax including baggage, over 3000 nm --
+    # the round number just below the 3078 nm typical-load range -- with a 200 nm alternate
+    # and a 30 min hold. This is the mission the published masses correspond to, which is
+    # what makes MTOW and OEW meaningful validation targets.
+    return MissionConfig(
+        range_mission=3000,    # design range [nautical miles]
+        range_diversion=200,   # alternate [nautical miles]
+        time_loiter=30,        # hold [minutes]
+        beta_start=0.98,
+        payload_weight=14250,  # [kg] 150 pax x 95 kg incl. baggage
+        crew_weight=600,       # [kg] 2 flight + 4 cabin
+    )
+
+
+def _loiter_stages_turbofan():
+    # 30 min hold at 1500 ft, the usual reserve rule. Profile.DefineMission reads the Mach
+    # and altitude from the 'Cruise' stage and takes the duration from MissionInput.
+    return StagesConfig(segments=[
+        Segment('Cruise', 'ConstantMachCruise', {'Mach': 0.38, 'Altitude': 457}, phi=0.0),
+    ])
+
+
+def _mission_stages_turbofan():
+    # Climb tapers with altitude for the same reason as the turboprop profile: available
+    # thrust lapses, so a single fixed rate would drive the engine into its limit near the
+    # top of climb. Speeds are TAS, rising through the climb as a real CAS/Mach schedule does.
+    return StagesConfig(segments=[
+        Segment('Takeoff', phi=0.0),
+        Segment('Climb1', 'ConstantRateClimb', {'CB': 0.115, 'Speed': 133, 'StartAltitude': 0,     'EndAltitude': 3000},  phi_start=0, phi_end=0),
+        Segment('Climb2', 'ConstantRateClimb', {'CB': 0.080, 'Speed': 160, 'StartAltitude': 3000,  'EndAltitude': 6000},  phi_start=0, phi_end=0),
+        Segment('Climb3', 'ConstantRateClimb', {'CB': 0.050, 'Speed': 190, 'StartAltitude': 6000,  'EndAltitude': 8500},  phi_start=0, phi_end=0),
+        Segment('Climb4', 'ConstantRateClimb', {'CB': 0.028, 'Speed': 220, 'StartAltitude': 8500,  'EndAltitude': 10058}, phi_start=0, phi_end=0),
+        Segment('Cruise', 'ConstantMachCruise', {'Mach': 0.78, 'Altitude': 10058}, phi_start=0, phi_end=0),
+        Segment('Descent1', 'ConstantRateDescent', {'CB': -0.045, 'Speed': 180, 'StartAltitude': 10058, 'EndAltitude': 300}, phi_start=0, phi_end=0),
+    ])
+
+
+def _diversion_stages_turbofan():
+    return StagesConfig(segments=[
+        Segment('Climb1', 'ConstantRateClimb', {'CB': 0.100, 'Speed': 140, 'StartAltitude': 300,  'EndAltitude': 3000}, phi_start=0, phi_end=0),
+        Segment('Climb2', 'ConstantRateClimb', {'CB': 0.060, 'Speed': 170, 'StartAltitude': 3000, 'EndAltitude': 5500}, phi_start=0, phi_end=0),
+        Segment('Cruise', 'ConstantMachCruise', {'Mach': 0.62, 'Altitude': 5500}, phi_start=0, phi_end=0),
+        Segment('Descent1', 'ConstantRateDescent', {'CB': -0.045, 'Speed': 160, 'StartAltitude': 5500, 'EndAltitude': 300}, phi_start=0, phi_end=0),
+    ])
+
+
+def _energy_turbofan(design_thrust=240.2e3):
+    # The turbofan is one overall-efficiency node, so there is no gearbox and no propeller
+    # efficiency to set: eta_o covers fuel -> thrust power in one step.
+    return EnergyConfig(
+        Ef=43.0e6,                 # Jet-A LHV [J/kg], matching the value the map was built with
+        contingency_fuel=1500,     # final reserve fuel [kg]
+        eta_gas_turbine_model='Turbofan',
+        turbofan_design_thrust=design_thrust,  # nominal SLS thrust, all engines [N]
+        engine_thrust_to_weight=5.5,           # installed engine T/W [N/N], CFM56 class
+        opr=30.0,                              # used by the Filippone NOx correlation
+    )
+
+
+def turbofan_config(design_thrust=240.2e3):
+    """An A320/737-800-class turbofan short-haul jet.
+
+    ``design_thrust`` is the nominal SLS thrust of the whole installation [N]. The default
+    240.2 kN is two CFM56-5B4 at the certified 12 010 daN take-off rating (EASA TCDS A.064
+    §Powerplant); see validation/a320_reference.md. Like the Class-II gas turbine, it must be chosen *before* the
+    mission -- an engine cannot resize itself instant by instant -- and the design then
+    reports whether that choice was adequate.
+
+    Requires ``weight_class='I'``: the FLOPS component set has no engine or pylon mass and
+    always adds a propeller, so it cannot represent a turbofan (AircraftConfig rejects it).
+    """
+    return AircraftConfig(
+        configuration='Turbofan', aircraft_type='NarrowBody', weight_class='I',
+        # 'NarrowBody' is an EMPTY-weight regression fitted to six in-service narrow-bodies,
+        # so it already includes the installed engines. Adding the turbofan mass on top would
+        # count them twice -- a ~4 % bias on a jet, where the engines are heavy. (The textbook
+        # 'Jet' fraction under-predicts a modern narrow-body's empty weight by ~10 %.)
+        avoid_powertrain_double_count=True,
+        aerodynamics=_aerodynamics_turbofan(), constraints=_constraints_turbofan(),
+        mission=_mission_turbofan(), energy=_energy_turbofan(design_thrust),
+        mission_stages=_mission_stages_turbofan(),
+        diversion_stages=_diversion_stages_turbofan(),
+        loiter_stages=_loiter_stages_turbofan(),
+    )

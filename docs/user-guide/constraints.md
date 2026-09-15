@@ -74,10 +74,22 @@ aircraft.constraint.FindDesignPoint(wing_loading=3300.0)   # W/S fixed [N/m^2]
     energy/mass trade with the battery may favour a different point — so treat the constraint
     design point as a *feasible starting point*, not the optimum.
 
-!!! warning "Power‑based, not thrust‑based"
-    The whole diagram is in \(W/S\) vs \(P/W\) and minimises installed **power** — correct for
-    propeller aircraft. A turbofan is sized on \(T/W\) and minimum installed **thrust**; the
-    take‑off/OEI curves here are not thrust‑credible for a jet.
+!!! note "Power‑rated or thrust‑rated"
+    The diagram compares every requirement against *one installed rating*, and which rating
+    that is depends on the powertrain. For a propeller aircraft it is shaft power, so the
+    diagram is \(W/S\) vs \(P/W\) and the design point minimises installed **power**. For the
+    `Turbofan` configuration it is thrust, so the same curves are drawn in \(T/W\).
+
+    The switch is one method, `Powertrain.SizingDenominator`, which divides each requirement
+    by the power lapse (power‑rated) or by \(g\,V\,\lambda_T(h,M)\) (thrust‑rated). The
+    underlying physics does not change: `Performance.PoWTO` returns
+    \(g[qVC_D/(W/S) + \beta P_s]\), which is \((DV + W\,\mathrm{ROC})/m\) — thrust power, with
+    no propulsive efficiency in it — so \(T/W = (P/W)/(gV)\) exactly.
+
+    This is more than a change of units. `FindDesignPoint` minimises the *largest* requirement
+    over wing loading, and each requirement is evaluated at its own speed, so the
+    minimum‑installed‑power point and the minimum‑installed‑thrust point are genuinely
+    different points, and can be set by different constraints.
 
 ---
 

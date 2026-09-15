@@ -113,10 +113,7 @@ class Constraint:
         # 1. CRUISE CONSTRAINT (level flight)
         # =============================================================
         if len(self.CruiseConstraints) > 0:
-            self.PWCruise = (
-                1.0/self.aircraft.powertrain.PowerLapse(
-                    self.CruiseConstraints['Altitude'],DISA)
-                ) * self.aircraft.performance.PoWTO(
+            self.PWCruise = self.aircraft.performance.PoWTO(
                     self.WTOoS, 
                     self.CruiseConstraints['Beta'], 
                     0, 
@@ -125,7 +122,8 @@ class Constraint:
                     DISA, 
                     self.CruiseConstraints['Speed'], 
                     self.CruiseConstraints['Speed Type']
-                    )
+                    ) / self.aircraft.powertrain.SizingDenominator(
+                    self.CruiseConstraints['Altitude'], DISA)
         else:
             self.PWCruise = np.zeros(len(self.WTOoS))
 
@@ -143,7 +141,8 @@ class Constraint:
                 DISA, 
                 self.TakeOffConstraints['Speed'], 
                 self.TakeOffConstraints['Speed Type']
-                )
+                ) / self.aircraft.powertrain.SizingDenominator(
+                    self.TakeOffConstraints['Altitude'], DISA, altitude_lapse=False)
         else:
             self.PWTakeOff = np.zeros(len(self.WTOoS)) 
 
@@ -151,11 +150,8 @@ class Constraint:
         # 3. AEO (ALL ENGINES OPERATING) CLIMB
         # =============================================================
         if len(self.AEOClimbConstraints) > 0:
-            # self.PWAEOClimb = (1.0/self.aircraft.powertrain.PowerLapse(self.AEOClimbConstraints['Altitude'],DISA)) * self.aircraft.performance.ClimbFinger(self.WTOoS, self.AEOClimbConstraints['Beta'], self.AEOClimbConstraints['ROC'], 1., self.AEOClimbConstraints['Altitude'], DISA, self.AEOClimbConstraints['Speed'], self.AEOClimbConstraints['Speed Type'])
-            self.PWAEOClimb = (1.0/self.aircraft.powertrain.PowerLapse(
-                self.AEOClimbConstraints['Altitude'],
-                DISA)
-                               ) * self.aircraft.performance.PoWTO(
+            # self.PWAEOClimb = self.aircraft.performance.ClimbFinger(self.WTOoS, self.AEOClimbConstraints['Beta'], self.AEOClimbConstraints['ROC'], 1., self.AEOClimbConstraints['Altitude'], DISA, self.AEOClimbConstraints['Speed'], self.AEOClimbConstraints['Speed Type']) / self.aircraft.powertrain.SizingDenominator( self.AEOClimbConstraints['Altitude'], DISA)
+            self.PWAEOClimb = self.aircraft.performance.PoWTO(
                                    self.WTOoS, 
                                    self.AEOClimbConstraints['Beta'], 
                                    self.AEOClimbConstraints['ROC'], 
@@ -164,19 +160,17 @@ class Constraint:
                                    DISA, 
                                    self.AEOClimbConstraints['Speed'], 
                                    self.AEOClimbConstraints['Speed Type']
-                                   )
+                                   ) / self.aircraft.powertrain.SizingDenominator(
+                    self.AEOClimbConstraints['Altitude'], DISA)
         else:
-            self.PWClimb = np.zeros(len(self.WTOoS))
+            self.PWAEOClimb = np.zeros(len(self.WTOoS))
         
         # =============================================================
         # 4. ONE-ENGINE-INOPERATIVE (OEI) CLIMB
         # =============================================================
         if len(self.OEIClimbConstraints) > 0:
-            # self.PWOEIClimb = (1.0/self.aircraft.powertrain.PowerLapse(self.OEIClimbConstraints['Altitude'],DISA)) * self.aircraft.performance.OEIClimbFinger(self.WTOoS, self.OEIClimbConstraints['Beta'], self.OEIClimbConstraints['Speed'] * self.OEIClimbConstraints['Climb Gradient'], 1., self.OEIClimbConstraints['Altitude'], DISA, self.OEIClimbConstraints['Speed'], self.OEIClimbConstraints['Speed Type'])
-            self.PWOEIClimb = (1.0/self.aircraft.powertrain.PowerLapse(
-                self.OEIClimbConstraints['Altitude'],
-                DISA)
-                ) * self.aircraft.performance.OEIClimb(
+            # self.PWOEIClimb = self.aircraft.performance.OEIClimbFinger(self.WTOoS, self.OEIClimbConstraints['Beta'], self.OEIClimbConstraints['Speed'] * self.OEIClimbConstraints['Climb Gradient'], 1., self.OEIClimbConstraints['Altitude'], DISA, self.OEIClimbConstraints['Speed'], self.OEIClimbConstraints['Speed Type']) / self.aircraft.powertrain.SizingDenominator( self.OEIClimbConstraints['Altitude'], DISA)
+            self.PWOEIClimb = self.aircraft.performance.OEIClimb(
                     self.WTOoS, 
                     self.OEIClimbConstraints['Beta'], 
                     self.OEIClimbConstraints['Speed'] * self.OEIClimbConstraints['Climb Gradient'],
@@ -185,7 +179,8 @@ class Constraint:
                     DISA, 
                     self.OEIClimbConstraints['Speed'], 
                     self.OEIClimbConstraints['Speed Type']
-                    )
+                    ) / self.aircraft.powertrain.SizingDenominator(
+                    self.OEIClimbConstraints['Altitude'], DISA)
         else:
             self.PWOEIClimb = np.zeros(len(self.WTOoS)) 
         
@@ -196,10 +191,7 @@ class Constraint:
             Mavg = (self.AccelerationConstraints['Mach 1'] + self.AccelerationConstraints['Mach 2'])/2.0
             PsAcceleration = Speed.Mach2TAS(Mavg, self.AccelerationConstraints['Altitude'],self.DISA) * (Speed.Mach2TAS(self.AccelerationConstraints['Mach 2'], self.AccelerationConstraints['Altitude'],self.DISA) - Speed.Mach2TAS(self.AccelerationConstraints['Mach 1'], self.AccelerationConstraints['Altitude'],self.DISA))/(self.AccelerationConstraints['DT'] * 9.81)  
 
-            self.PWAcceleration = (1.0/self.aircraft.powertrain.PowerLapse(
-                self.AccelerationConstraints['Altitude'],
-                DISA)
-                ) * self.aircraft.performance.PoWTO(
+            self.PWAcceleration = self.aircraft.performance.PoWTO(
                     self.WTOoS,
                     self.AccelerationConstraints['Beta'], 
                     PsAcceleration, 
@@ -208,7 +200,8 @@ class Constraint:
                     DISA, 
                     Mavg, 
                     'Mach'
-                    )
+                    ) / self.aircraft.powertrain.SizingDenominator(
+                    self.AccelerationConstraints['Altitude'], DISA)
         else:
             self.PWAcceleration = np.zeros(len(self.WTOoS))
 
@@ -216,10 +209,7 @@ class Constraint:
         # 6. TURN CONSTRAINT (load-factor turn)
         # =============================================================
         if len(self.TurnConstraints) > 0:
-            self.PWTurn = (1.0/self.aircraft.powertrain.PowerLapse(
-                self.TurnConstraints['Altitude'],
-                DISA)
-                ) * self.aircraft.performance.PoWTO(
+            self.PWTurn = self.aircraft.performance.PoWTO(
                     self.WTOoS, 
                     self.TurnConstraints['Beta'], 
                     0, 
@@ -228,7 +218,8 @@ class Constraint:
                     DISA, 
                     self.TurnConstraints['Speed'], 
                     self.TurnConstraints['Speed Type']
-                    )
+                    ) / self.aircraft.powertrain.SizingDenominator(
+                    self.TurnConstraints['Altitude'], DISA)
         else:
             self.PWTurn = np.zeros(len(self.WTOoS))
 
@@ -236,10 +227,7 @@ class Constraint:
         # 7. SERVICE CEILING CONSTRAINT
         # =============================================================
         if len(self.CeilingConstraints) > 0:
-            self.PWCeiling = (1.0/self.aircraft.powertrain.PowerLapse(
-                self.CeilingConstraints['Altitude'],
-                DISA)
-                ) * self.aircraft.performance.Ceiling(
+            self.PWCeiling = self.aircraft.performance.Ceiling(
                     WTOoS, 
                     self.CeilingConstraints['Beta'], 
                     self.CeilingConstraints['HT'], 
@@ -247,7 +235,8 @@ class Constraint:
                     self.CeilingConstraints['Altitude'], 
                     DISA, 
                     self.CeilingConstraints['Speed']
-                    )
+                    ) / self.aircraft.powertrain.SizingDenominator(
+                    self.CeilingConstraints['Altitude'], DISA)
         else:
             self.PWCeiling = np.zeros(len(self.WTOoS))
 
