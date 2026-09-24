@@ -63,9 +63,15 @@ The ``HBTF`` / ``viewer`` definitions below are taken from pyCycle's
 unchanged, as ``Single_spool_GT.py`` vendors the turboshaft cycle. The design point is
 CFM56-class: separate-flow 2-spool, BPR 5.105, fan PR 1.685, OPR ~30.
 
+Toolchain: the shipped map was generated with **om-pycycle 4.4.0** (imports as ``pycycle``;
+``pip install pycycle`` is a different, unrelated project) on openmdao 3.44.0, Python 3.12.
+pyCycle is not part of OpenMDAO -- it is a separate library built on it, and it tracks
+OpenMDAO's API closely, so both are pinned in ``requirements-dev.txt``. See ``README.md`` in
+this folder for the full provenance and for what to re-check after regenerating.
+
 Run with::
 
-    python HBTF_turbofan.py          # ~tens of minutes
+    python HBTF_turbofan.py          # ~45 min, resumable
 """
 
 import os

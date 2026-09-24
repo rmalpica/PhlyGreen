@@ -6,8 +6,15 @@ Reproducible offline generation of the **PW127 emission-index surrogate** that t
 (`../data/Single_spool_GT.py` → `../train_gas_turbine_surrogate.py`).
 
 **Optional heavy dependencies** (only needed to *regenerate* — the shipped `.pkl`/`.csv` do not
-need them): `pycycle` + `openmdao` (engine cycle) and `cantera` (the chemical reactor network).
-Install e.g. `pip install pycycle openmdao cantera`.
+need them): pyCycle + OpenMDAO (engine cycle) and Cantera (the chemical reactor network).
+
+Mind the name: the deck does `import pycycle`, but the package is **`om-pycycle`** —
+`pip install pycycle` fetches an unrelated project.
+
+    pip install om-pycycle==4.4.0 openmdao==3.44.0 cantera==3.2.0
+
+Those are the versions the shipped artifacts were generated with; see
+`../data/README.md` for the full provenance.
 
 ## What it does (two-stage, certification-anchored)
 

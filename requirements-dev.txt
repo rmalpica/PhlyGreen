@@ -8,3 +8,14 @@ CoolProp
 pandas
 # Optional: multi-objective optimization example (11b) uses pymoo (NSGA-II).
 pymoo
+
+# --- offline map/surrogate regeneration only -------------------------------------------
+# NOT needed to run PhlyGreen: the fitted artifacts ship with the package and load with
+# numpy/scipy/scikit-learn alone. These are only required to REGENERATE them.
+#
+# Note the import name and the package name differ: you `import pycycle`, but you install
+# `om-pycycle`. `pip install pycycle` gets an unrelated project, and `conda list pycycle`
+# will not show it under that name.
+om-pycycle==4.4.0     # turboshaft + turbofan engine decks (imports as `pycycle`)
+openmdao==3.44.0      # pyCycle's solver framework; pinned because pyCycle tracks it closely
+cantera==3.2.0        # chemical-reactor network behind the emission-index maps
