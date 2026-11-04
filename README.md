@@ -7,6 +7,49 @@ Given a mission profile and design constraints, PhlyGreen sizes each aircraft su
 vehicle can fly the mission within all constraints. It supports **conventional**,
 **hybrid-electric**, **hydrogen fuel-cell** and **fuel-cell + battery** configurations.
 
+## What's new in v1.1.0
+
+- **Turbofan configuration.** Jets are sized on thrust instead of shaft power
+  (`Configuration='Turbofan'`). It uses a thrust-lapse engine map fitted to a pyCycle
+  high-bypass turbofan deck, a compressible drag polar (Korn drag divergence and Lock wave
+  drag) and a CFM56-class emission-index surrogate. An **A320-200 validation**
+  (`trunk/validation/`) compares MTOW, OEW, wing area and thrust with Airbus and EASA data.
+- **Class-II thermal management for fuel cells.** `TMSConfig(tms_class='II')` sizes the
+  cooling system from geometry: a coolant-to-LH2 exchanger plus ram-air exchangers (tube
+  banks or plate-fin, ε-NTU), the coolant pump and the ram-air duct drag. The design point is
+  chosen over the whole mission. The pump power is fed back to the fuel cell as an electrical
+  load and the duct drag to the polar. Class I (specific power) remains the default and now
+  includes the take-off heat. See the new *Thermal management* page and example 27.
+- **Fuel-cell heat basis.** The heat sent to the coolant accounts for the product water that
+  leaves as vapour. By default the vapour fraction is computed from the cathode-exhaust
+  saturation (`EnergyConfig.fc_product_water_vapour_fraction`, `fc_cathode_inlet_rh`).
+- **Ground segments.** Taxi-out, take-off run and taxi-in are now flown with each
+  configuration's own powertrain (ICAO LTO times and power settings, `MissionConfig.taxi_*`,
+  `takeoff_time`). The start-of-climb mass fraction follows from them, so `Beta start` is
+  deprecated and ignored.
+- **Hydrogen mass bookkeeping.** The LH2 tank now holds the reserve as well as the mission
+  load. The load carries an explicit margin, `EnergyConfig.h2_fuel_margin` (default 0.05).
+- **Reference aircraft.** The example requirements are calibrated on the ATR 42-600
+  factsheet: take-off field 1,107 m, climb at 160 KCAS, 1,851 ft/min. The kerosene baseline
+  lands within about 4 % of the real aircraft. A new *Reference aircraft* docs page, with
+  examples 28 (ATR 42-600) and 29 (A320-200), lists every input with its source.
+- **Fuel cell + battery.** Example 23 shows when a take-off battery makes a fuel-cell aircraft
+  lighter: on a short (800 m) field, at the share predicted by the power balance. On the
+  baseline field it never does.
+- **Other additions:**
+  - a serial (range-extender) hybrid;
+  - Class-II gas-turbine emission surrogates (PW127);
+  - a constant-throttle climb segment;
+  - fixes to the landing constraint, the FLOPS masses, the PMAD and electric-motor masses, and
+    the fuel-cell sizing and propeller chain.
+- **Learning material:**
+  - learning tutorials 00–08, including a fuel-cell deep dive (07) and thermal management (08);
+  - an interactive Streamlit webapp, with TMS selection and an A320 template;
+  - new documentation figures (HEX geometries, TMS rating, reference-aircraft comparisons).
+- **Results change.** Because of the ground segments and the calibrated requirements, design
+  results differ from v1.0.0. The golden-master tests were regenerated (traditional baseline
+  MTOW 18,327 → 18,742 kg).
+
 ## What's new in v1.0.0
 
 This is the first stable release, consolidating a large restructuring and several new physics

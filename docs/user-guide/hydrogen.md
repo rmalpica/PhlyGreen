@@ -121,18 +121,67 @@ With \(x_v\) the fraction of the product water that leaves as vapour:
 Q_{\text{thermal}} = N_{\text{cells}}\,I\,\Big(\frac{\Delta H_{HHV} - x_v\,(\Delta H_{HHV} - \Delta H_{LHV})}{2F} - V_{\text{cell}}\Big)
 \]
 
-By default \(x_v\) is computed from the cathode-exhaust saturation
-(`FuelCell.product_water_vapour_fraction`). Per mole of H2, the exhaust carries
-\(0.5\,\lambda/0.21 - 0.5\) mol of dry gas. Saturated at the stack temperature and cathode
-pressure, it can hold \(p_{sat}/(P - p_{sat})\) mol of vapour per mole of dry gas, minus the
-water the inlet air already brings (`EnergyConfig.fc_cathode_inlet_rh`, default 0). The
-vapour fraction is that capacity relative to the 1 mol of product water, limited to [0, 1].
+### Why product water at 80 °C can leave as vapour
 
-For the low-temperature PEM stacks of the database (80 °C, 1.5 bar, λ = 2), the exhaust can
-carry about twice the product water, so \(x_v = 1\) unless the inlet air is humidified above
-≈ 70 % RH. Above the boiling point (high-temperature PEM) all product water is vapour. Set
-`EnergyConfig.fc_product_water_vapour_fraction` to a number (0 = liquid) to override. The
-hydrogen consumption does not depend on \(x_v\); only the heat sent to the TMS does.
+The 100 °C "boiling point" is the temperature at which the saturation pressure of water equals
+1 atm, so that *pure* water boils. Water evaporates at any temperature into a gas mixture,
+provided the partial pressure of the vapour stays below the saturation pressure at that
+temperature (Dalton's law). This is why laundry dries at room temperature. The cathode channel
+of a fuel cell is exactly such a mixture: air flowing past the electrodes, into which the
+product water can evaporate.
+
+At the stack temperature \(T_{op}\) the gas can hold vapour up to the saturation partial
+pressure \(p_{sat}(T_{op})\). At a total cathode pressure \(P\), the largest vapour mole
+fraction is therefore \(y_{sat} = p_{sat}(T_{op})/P\). For the database stacks
+(\(T_{op}\) = 80 °C, \(P\) = 1.5 bar): \(p_{sat}\) = 47.3 kPa and \(y_{sat}\) = 0.315. That is,
+up to 31.5 % of the exhaust molecules can be water vapour.
+
+Whether that is enough depends on how much air flows through the cathode. This is set by the
+**air stoichiometric ratio** \(\lambda\) (`FuelCell.stoich`, default 2): the oxygen supplied
+divided by the oxygen the reaction consumes. \(\lambda\) = 1 would supply exactly the oxygen of
+the reaction; \(\lambda\) = 2 supplies twice that, and the excess leaves with the exhaust.
+
+Per mole of hydrogen reacted, \(\mathrm{H_2 + \tfrac12 O_2 \rightarrow H_2O}\):
+
+| Quantity | Expression | λ = 2 |
+|---|---|---|
+| oxygen consumed | \(0.5\) mol | 0.5 mol |
+| air supplied (21 % O₂ by mole) | \(n_{air} = 0.5\,\lambda / 0.21\) | 4.76 mol |
+| dry gas leaving the cathode | \(n_{dry} = n_{air} - 0.5\) | 4.26 mol |
+| product water | 1 mol | 1 mol |
+| vapour the exhaust can carry | \(n_{v,max} = \dfrac{y_{sat}}{1 - y_{sat}}\, n_{dry}\) | 1.96 mol |
+
+The exhaust can carry about twice the product water. If all of it evaporates, the exhaust
+leaves with a vapour mole fraction of 1/(1 + 4.26) = 0.19, a partial pressure of 28.5 kPa, i.e.
+60 % relative humidity at 80 °C. That is below saturation, so nothing forces the water to
+condense. The energy to evaporate it, the latent heat \(\Delta H_{HHV} - \Delta H_{LHV}\)
+= 44.2 kJ/mol, is taken from the stack. It leaves with the exhaust instead of reaching the
+coolant.
+
+If the inlet air is humidified to a relative humidity \(\phi_{in}\) (at \(T_{op}\)), it already
+brings \(n_{w,in} = \dfrac{\phi_{in}\,p_{sat}}{P - \phi_{in}\,p_{sat}}\,n_{air}\) mol of vapour, and
+the capacity left for the product water shrinks. The vapour fraction of the product water is
+
+\[
+x_v = \min\!\Big(1,\; \max\big(0,\; n_{v,max} - n_{w,in}\big)\Big) ,
+\]
+
+computed by `FuelCell.product_water_vapour_fraction` with
+`EnergyConfig.fc_cathode_inlet_rh` (default 0, dry inlet). For the database stacks \(x_v\) = 1
+up to \(\phi_{in}\) ≈ 0.5. It then falls quickly: 0.61 at 0.7, 0.36 at 0.8 and 0.08 at 0.9. A
+higher cathode pressure lowers \(y_{sat}\) and a lower \(\lambda\) lowers \(n_{dry}\); both
+reduce \(x_v\) (at λ = 1.5 the capacity is 1.41 mol). Above the boiling point at the cathode
+pressure (≈ 112 °C at 1.5 bar, e.g. a high-temperature PEM at 170 °C) the exhaust cannot
+saturate, and all product water is vapour.
+
+Two caveats. First, this is an equilibrium capacity at the stack exit. Locally, liquid water
+can still form (electrode flooding, cold spots), and the exhaust may leave sub-saturated, so
+\(x_v\) is an upper bound on the vaporised fraction. Second, what matters for the
+thermal-management system is the water state at the **system** exit, after any humidifier
+(which recovers water and heat from the exhaust) and the expander. That system-level water
+balance is not modelled yet. Set `EnergyConfig.fc_product_water_vapour_fraction` to a number
+(0 = all liquid, the HHV basis) to override the computed value. The hydrogen consumption does
+not depend on \(x_v\); only the heat sent to the TMS does.
 
 ![Fuel-cell heat basis](../images/hydrogen/fc_heat_basis.png){ width="760px" }
 
@@ -231,16 +280,34 @@ efficiency above; the battery is sized from its energy and power needs. The fuel
 below the `(1−φ)` share of the take-off/OEI floor. Because the battery stores little energy per
 kg, hybridization helps short power-limited segments more than sustained cruise. A φ = 0
 `FuelCellBattery` design reproduces a pure `Hydrogen` design exactly.
-See example `23_fuelcell_battery_hybrid.py`.
+
+**When does a battery pay?** A battery makes the aircraft lighter only if it lowers the power
+that sizes the fuel cell by more than its own mass (plus the snowball) costs. Example
+`23_fuelcell_battery_hybrid.py` shows the two conditions on the ATR 42-600 reference:
+
+- **The take-off must size the fuel cell.** On the baseline 1,107 m field the climb needs more
+  power than the take-off (3.0 vs 2.8 MW), so a take-off battery removes no stack mass and every
+  battery share makes the aircraft heavier. On an 800 m field (the ATR 42-600S short-field
+  version) the take-off needs 3.9 MW against 3.4 MW for the climb.
+- **The battery must be a power battery.** A battery on the take-off only (under a minute) is
+  sized by its specific power and stays small. A battery that also covers the ~27-minute climb
+  is sized by energy and never pays, on either field.
+
+On the 800 m field the optimum take-off share follows from the power balance,
+\(\varphi^* = 1 - P_{\text{climb}}/P_{\text{take-off}} = 0.15\), where the battery brings the fuel
+cell's take-off load down to its climb load. The sweep finds the lightest design at exactly
+φ = 0.15: 758 kg (3 %) lighter than pure hydrogen, with a stack 545 kg lighter and a 382 kg
+battery. Beyond φ* the climb sizes the fuel cell again and the battery only adds mass.
 
 ---
 
-## 8. Thermal management (scaffold)
+## 8. Thermal management
 
-`Systems/Thermal/` provides the interfaces for a future heat-exchanger-network module
-(`HeatSource`, `HeatSink`, `HeatExchangerNetwork`). The fuel cell's heat load and the tank's
-heat leak can register as sources today; a detailed coolant-loop sizing model will plug into
-the same interfaces.
+The fuel-cell heat is rejected by the thermal-management system, `aircraft.tms`: Class I
+(specific power) or Class II (geometric coolant → LH₂ and coolant → ram-air heat exchangers,
+pump and ram-air drag, sized over the mission). See [Thermal Management](thermal-management.md)
+and tutorial 08. `Systems/Thermal/network.py` also keeps a generic heat-source / heat-sink
+balance scaffold (`HeatSource`, `HeatSink`, `HeatExchangerNetwork`) for studies.
 
 ---
 

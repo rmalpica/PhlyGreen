@@ -42,7 +42,7 @@ needs pandas — each degrades gracefully if the dependency is missing.
 | `20_hydrogen_fuel_cell.py` | Size a hydrogen fuel-cell aircraft and fly the full mission | polarization + dashboard |
 | `21_hydrogen_design_voltage_sweep.py` | Sweep the fuel-cell design voltage; find the take-off-weight optimum | sweep panels |
 | `22_hydrogen_tank.py` | Size the cryogenic LH2 tank and track its pressure/mass/venting/heat over the mission (needs CoolProp) | tank state + dashboard |
-| `23_fuelcell_battery_hybrid.py` | Hybridize a fuel cell with a battery; sweep the battery power share | sweep panels |
+| `23_fuelcell_battery_hybrid.py` | When does a battery pay on a fuel-cell aircraft? Take-off-only vs take-off+climb vs cruise battery, on the baseline 1,107 m field and an 800 m short field (ATR 42-600S); predicted vs swept optimum share | sweep panels |
 | `24_gt_emissions_surrogate.py` | State-dependent GT pollutant emissions (NOx/CO/UHC) from the PW127 EI response surface; `einox_model='Surrogate'` vs Filippone | EI vs power & altitude |
 | `25_fuelcell_battery_class_ii_models.py` | Fuel-cell + battery sized with the Class-II battery (P-number + thermal), the d-q ("Smart") electric motor and the Hamilton propeller; plots SOC/temperature, power split and component efficiencies (compute-heavy) | profile, power split, SOC/T, efficiencies |
 | `26_turbofan_design.py` | Size an A320-class **turbofan** jet: the constraint diagram in T/W, the pyCycle overall-efficiency / TSFC map, and the compressible (wave-drag) polar | engine map table + design summary |

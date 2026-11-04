@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="PhlyGreen",
-    version="1.0.0",
+    version="1.1.0",
     author="Riccardo Malpica Galassi",
     author_email="riccardo.malpicagalassi@uniroma1.it",
     description="A collection of tools for the preliminary design of novel aircraft concepts for a more sustainable air mobility",
