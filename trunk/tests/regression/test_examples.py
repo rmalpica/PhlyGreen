@@ -63,6 +63,14 @@ def test_tms_class_ii_example_runs():
 
 
 @pytest.mark.slow
+def test_off_design_example_runs():
+    # two designs and ~80 off-design missions (~3.5 min)
+    proc = subprocess.run([sys.executable, os.path.join("examples", "30_off_design_mission.py")],
+                          cwd=TRUNK, capture_output=True, text=True, timeout=600)
+    assert proc.returncode == 0, f"30_off_design_mission.py failed:\n{proc.stderr[-2000:]}"
+
+
+@pytest.mark.slow
 @pytest.mark.parametrize("script", FAST_EXAMPLES)
 def test_example_runs(script):
     path = os.path.join("examples", script)
