@@ -87,6 +87,12 @@ It supports the following segments:
 
 Each segment **appends time‑resolved states** to the global mission arrays.
 
+The cruise is not given a length: it fills whatever range the climbs and descents of its phase
+leave. A phase therefore holds a single cruise, with a linear φ from `phi_start` to `phi_end`.
+If the climbs and descents alone are longer than the phase range, the cruise would get a
+negative length. In that case building the profile raises a `ValueError` naming the phase. The
+example profile (cruise at 8,000 m) needs about 215 nm of climb and descent.
+
 !!! tip "Constant-throttle climb"
     A single fixed-rate climb runs the engine from light part-load near the ground to a
     power-limited 100 % near cruise, because the available power lapses with altitude. The

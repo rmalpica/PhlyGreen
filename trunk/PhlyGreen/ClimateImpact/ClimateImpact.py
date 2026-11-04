@@ -218,39 +218,96 @@ class ClimateImpact:
 
     # EMISSIONI ANNUALI
 
+    # Emission indices [kg / kg fuel]. Hydrocarbon (Jet-A) values are the ones the model was
+    # set up with. Hydrogen: no carbon or sulphur, so no CO2, SO4 or soot; the water is the
+    # stoichiometric product of H2 + 1/2 O2 -> H2O, M(H2O)/M(H2) = 18.015/2.016 = 8.94.
+    EI_HYDROCARBON = {'co2': 3.16, 'h2o': 1.26, 'so4': 2e-4, 'soot': 4e-5}
+    EI_HYDROGEN = {'co2': 0.0, 'h2o': 8.94, 'so4': 0.0, 'soot': 0.0}
+
+    def _burns_hydrogen(self):
+        """True for the configurations whose fuel is hydrogen (fuel cell, with or without battery)."""
+        return self.aircraft.Configuration in ('Hydrogen', 'FuelCellBattery')
+
+    def _fuel_mass_burnt(self):
+        """Fuel burnt over the mission (incl. diversion and ground segments) [kg].
+
+        Hydrocarbon paths: ``weight.Wf``, which is exactly the burnt fuel. Hydrogen paths:
+        ``weight.Wf`` also carries the H2 sizing margin (``h2_fuel_margin``), which is loaded
+        but not burnt, so the burnt mass is taken from the mission energy instead.
+        """
+        if self._burns_hydrogen():
+            return self.aircraft.weight.TotalEnergies[0] / self.aircraft.weight.ef
+        return self.aircraft.weight.Wf
+
+    def _upstream_fuel_co2(self, fuel_mass):
+        """Well-to-tank CO2 of the fuel [kg]: ``WTW_CO2`` [kg CO2 / MJ] times the fuel energy.
+
+        The fuel energy is ``fuel_mass * Ef``, with ``Ef`` the specific energy set in
+        ``EnergyInput`` (43.5 MJ/kg Jet-A in the turboprop examples, the HHV for the fuel-cell
+        configurations), so ``WTW_CO2`` must be expressed per MJ of that same basis.
+        """
+        if self.WTW_CO2 is None:
+            raise ValueError("ClimateImpactInput needs 'WTW_CO2' (upstream CO2 of the fuel, "
+                             "kg CO2 per MJ of EnergyInput['Ef']).")
+        return self.WTW_CO2 * fuel_mass * self.aircraft.weight.ef * 1e-6
+
+    def _grid_battery_co2(self):
+        """CO2 of the grid electricity that charged the battery [kg] (0 without a battery).
+
+        Counted for every configuration that draws battery energy (Hybrid and
+        FuelCellBattery). The charger and grid efficiencies come from the well-to-wake module
+        when ``WellToTankInput`` is given; otherwise the pathway is lossless (1.0), as in
+        :class:`~PhlyGreen.WellToWake.WellToWake`.
+        """
+        energies = np.atleast_1d(getattr(self.aircraft.weight, 'TotalEnergies', 0.0))
+        if energies.size < 2 or not energies[1]:
+            return 0.0
+        if self.Grid_CO2 is None:
+            raise ValueError("ClimateImpactInput needs 'Grid_CO2' (kg CO2 per MJ of grid "
+                             "electricity) because this design draws battery energy.")
+        eta_source_to_battery = getattr(self.aircraft.welltowake, 'EtaSourceToBattery', 1.0)
+        source_battery_MJ = energies[1] * 1e-6 / eta_source_to_battery
+        return self.Grid_CO2 * source_battery_MJ
+
     def calculate_mission_emissions(self):
         """
         Compute single-mission emitted mass of:
             CO₂, H₂O, SO₄, soot, and NOx.
 
         CO₂ includes:
-            • Tank-to-wake emissions
-            • Upstream WTW fuel CO₂
-            • Upstream grid CO₂ for battery energy (hybrid only)
+            • Tank-to-wake emissions (zero for hydrogen)
+            • Upstream WTW fuel CO₂ (``WTW_CO2`` per MJ of ``EnergyInput['Ef']``)
+            • Upstream grid CO₂ for battery energy (Hybrid and FuelCellBattery)
 
-        NOx is computed using the Filippone empirical model.
+        NOx is computed using the Filippone empirical model (or the EI surrogate) for the
+        gas-turbine configurations. A fuel cell emits no NOx. The contrail term (``rf_AIC``)
+        keeps its kerosene-derived parametrisation for every configuration; for a fuel cell,
+        whose exhaust is cool and water-rich, it is a placeholder, not a model.
         """
-        Wf = self.aircraft.weight.Wf  # [kg]
-        
-        # CO2
-        EI_co2 = 3.16 # [kg/kg]
-        self.mission_emissions['co2'] = EI_co2*Wf + self.WTW_CO2*43.5*Wf
-        if self.aircraft.Configuration == 'Hybrid':
-            SourceBattery = self.aircraft.weight.TotalEnergies[1] * 1e-6 / self.aircraft.welltowake.EtaSourceToBattery
-            self.mission_emissions['co2'] += self.Grid_CO2*SourceBattery
+        Wf = self._fuel_mass_burnt()  # [kg]
+        EI = self.EI_HYDROGEN if self._burns_hydrogen() else self.EI_HYDROCARBON
 
+        # CO2
+        self.mission_emissions['co2'] = (EI['co2'] * Wf + self._upstream_fuel_co2(Wf)
+                                         + self._grid_battery_co2())
 
         # H2O
-        EI_h2o = 1.26 # [kg/kg]
-        self.mission_emissions['h2o'] = EI_h2o*Wf
+        self.mission_emissions['h2o'] = EI['h2o'] * Wf
 
         # SO4
-        EI_so4 = 2e-4 # [kg/kg]
-        self.mission_emissions['so4'] = EI_so4*Wf
+        self.mission_emissions['so4'] = EI['so4'] * Wf
 
         # SOOT
-        EI_soot = 4e-5 # [kg/kg]
-        self.mission_emissions['soot'] = EI_soot*Wf
+        self.mission_emissions['soot'] = EI['soot'] * Wf
+
+        # NOX: a fuel cell has no combustion, hence no thermal NOx.
+        if self._burns_hydrogen():
+            if self.EINOx_model == 'Surrogate':
+                raise ValueError("The NOx emission-index surrogate is for gas turbines; a fuel "
+                                 "cell emits no NOx (use EINOx_model 'Filippone' or 'unset').")
+            self.mission_emissions['nox'] = 0.0
+            self.mission_emissions_calculated = True
+            return
 
         # NOX
         def E_nox_1m():  # emissione di NOx in kg della singola missione
@@ -575,9 +632,10 @@ class ClimateImpact:
         :meth:`calculate_mission_emissions` (which keeps CO2/H2O/SO4/soot consistent). Attaches the
         packaged PW127 surrogate automatically if ``self.emission_surrogate`` is unset.
         """
-        self._integrate_surrogate_emissions(power_fraction_basis)
-        self.mission_emissions['co2'] = 3.16 * self.aircraft.weight.Wf + \
-            self.WTW_CO2 * 43.5 * self.aircraft.weight.Wf
+        self._integrate_surrogate_emissions(power_fraction_basis)   # thermal engines only
+        Wf = self._fuel_mass_burnt()
+        self.mission_emissions['co2'] = (self.EI_HYDROCARBON['co2'] * Wf
+                                         + self._upstream_fuel_co2(Wf) + self._grid_battery_co2())
         self.mission_emissions_calculated = True
         return self.mission_emissions
 

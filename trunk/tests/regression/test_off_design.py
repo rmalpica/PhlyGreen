@@ -47,5 +47,5 @@ def test_shorter_mission_and_limits(ex30, gt_hybrid):
     # all-electric cruise at the design range empties the pack beyond its capacity
     over = ex30.fly_off_design(gt_hybrid, 750.0, phi={"Cruise": 1.0})
     assert not over.feasible and any("battery energy" in v for v in over.violations)
-    with pytest.raises(ValueError, match="shorter than the climb"):
+    with pytest.raises(ValueError, match="shorter than its climbs and descents"):
         ex30.fly_off_design(gt_hybrid, 150.0)

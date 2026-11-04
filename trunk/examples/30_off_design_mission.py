@@ -123,13 +123,7 @@ def fly_off_design(sized, range_nm, payload_kg=None, phi=None, tol_kg=1.0, max_i
     a.MissionInput["Payload Weight"] = payload
     _set_phi(a.MissionStages, phi)
     a.mission.size_battery_pack = False                     # Class II: fly the frozen pack
-    a.mission.InitializeProfile()
-    short = [s.name for s in a.mission.profile._segments
-             if s.phase == "Mission" and s.end_time - s.start_time < 0.0]
-    if short:                                               # Profile does not catch this itself
-        raise ValueError(f"{range_nm} nm is shorter than the climb + descent of the profile "
-                         f"(negative duration: {', '.join(short)}); lower the cruise altitude "
-                         f"in the mission stages or fly a longer mission")
+    a.mission.InitializeProfile()        # raises ValueError if the range is shorter than climb + descent
 
     wto, n, violations = w.WTO, 0, []
     for n in range(1, max_iter + 1):

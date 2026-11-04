@@ -1,6 +1,10 @@
 def NMtoM(distance):
     return distance * 1825
 
+def MtoNM(distance):
+    """Inverse of :func:`NMtoM` (same 1825 m/nm factor, so ranges round-trip)."""
+    return distance / 1825
+
 def MtoKN(velocity):
     return velocity * 1.94384 
 

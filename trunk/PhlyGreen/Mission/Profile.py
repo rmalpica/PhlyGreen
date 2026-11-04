@@ -212,6 +212,14 @@ class Profile:
                 noncruise.append((name, stage, seg.compute(phase_range, 0.0)))
 
         distance_so_far = sum(r.distance for _, _, r in noncruise)
+        if cruise and distance_so_far > phase_range:
+            # The cruise fills the remaining range, so it would get a negative length and the
+            # timeline would run backwards (silently wrong fuel and phi(t)). Stop here instead.
+            raise ValueError(
+                f"{phase} range {Units.MtoNM(phase_range):.0f} nm is shorter than its climbs and "
+                f"descents ({Units.MtoNM(distance_so_far):.0f} nm): the cruise would have a "
+                f"negative length. Lengthen the {phase.lower()} range or lower its cruise "
+                f"altitude / steepen the climb and descent segments.")
         built = [(name, stage, r) for name, stage, r in noncruise]
         for name, stage, seg in cruise:
             built.append((name, stage, seg.compute(phase_range, distance_so_far)))

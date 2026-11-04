@@ -53,9 +53,28 @@ aircraft.climateimpact.calculate_mission_emissions()
 print(aircraft.climateimpact.mission_emissions) # {'co2','h2o','so4','soot','nox'} in kg
 ```
 
-The CO₂ intensities are user inputs: `WTW_CO2` (well-to-wake CO₂ of the fuel, kg CO₂/MJ) and
-`Grid_CO2` (CO₂ of the electricity, kg CO₂/MJ) — so the emissions accounting is consistent with
-the [Well-To-Wake](well-to-wake.md) *energy* accounting.
+The CO₂ intensities are user inputs: `WTW_CO2` (upstream CO₂ of the fuel, kg CO₂ per MJ of
+`EnergyInput['Ef']`) and `Grid_CO2` (CO₂ of the electricity, kg CO₂/MJ). This keeps the
+emissions accounting consistent with the [Well-To-Wake](well-to-wake.md) *energy* accounting.
+
+The emission indices depend on the fuel:
+
+| Species | Jet-A [kg/kg fuel] | Hydrogen fuel cell [kg/kg H₂] |
+|---|---|---|
+| CO₂ (tank-to-wake) | 3.16 | 0 |
+| H₂O | 1.26 | 8.94 (stoichiometric, \(M_{H_2O}/M_{H_2}\)) |
+| SO₄ | 2·10⁻⁴ | 0 |
+| soot | 4·10⁻⁵ | 0 |
+| NOₓ | Filippone correlation or EI surrogate | 0 (no combustion) |
+
+- **Fuel mass.** For hydrogen the burnt mass comes from the mission energy. The loaded mass
+  `weight.Wf` also carries the sizing margin `h2_fuel_margin`, which is not burnt.
+- **Upstream CO₂.** It is `WTW_CO2 × m_fuel × Ef`. With `Ef` set to the hydrogen HHV,
+  `WTW_CO2` must be given per MJ of HHV.
+- **Grid CO₂.** It is counted for every configuration that draws battery energy (`Hybrid` and
+  `FuelCellBattery`).
+- **Contrail term.** The contrail term (AIC, §2) keeps its kerosene-derived parametrisation.
+  For a fuel cell it is a placeholder, not a model.
 
 ---
 

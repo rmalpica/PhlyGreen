@@ -36,7 +36,15 @@ vehicle can fly the mission within all constraints. It supports **conventional**
 - **Fuel cell + battery.** Example 23 shows when a take-off battery makes a fuel-cell aircraft
   lighter: on a short (800 m) field, at the share predicted by the power balance. On the
   baseline field it never does.
+- **Off-design missions.** Example 30 (`fly_off_design`) flies a sized aircraft, frozen, on
+  another range, payload or φ schedule. It closes the take-off mass and checks the tank, MTOW,
+  battery and engine limits. It is the inner loop of multi-point studies.
+- **Climate accounting for hydrogen.** `ClimateImpact` now treats fuel-cell designs correctly:
+  no tank-to-wake CO₂, SO₄, soot or NOₓ, and 8.94 kg of water per kg of H₂. It also counts the
+  grid CO₂ of the battery energy for every battery configuration.
 - **Other additions:**
+  - a clear error when a mission range is shorter than its climbs and descents (previously a
+    negative-length cruise was flown silently);
   - a serial (range-extender) hybrid;
   - Class-II gas-turbine emission surrogates (PW127);
   - a constant-throttle climb segment;
