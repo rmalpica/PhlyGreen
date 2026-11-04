@@ -32,6 +32,14 @@ def _serial_range_extender():
     return cfg
 
 
+def _with_tms(cfg, tms_class="I"):
+    """Attach a thermal-management config to a fuel-cell design (Class I by default; the
+    sidebar can switch it to the geometric Class II)."""
+    from PhlyGreen.config import TMSConfig
+    cfg.tms = TMSConfig(tms_class=tms_class)
+    return cfg
+
+
 def _power_hybridization(cfg, phi=0.2):
     """Apply the tutorial-03 *power* hybridization to a battery config: the battery covers ``phi``
     of the take-off and climb power and nothing in cruise (the primary source is sized for cruise).
@@ -68,18 +76,29 @@ TEMPLATES = {
                  "climb. The cruise battery-share φ is ignored in this mode.",
     },
     "Hydrogen fuel cell": {
-        "factory": lambda: common.hydrogen_config(tank=True),
+        "factory": lambda: _with_tms(common.hydrogen_config(tank=True)),
         "blurb": "Fuel-cell electric on liquid hydrogen with a physics-sized cryogenic LH2 tank.",
     },
     "Hybrid fuel cell + battery": {
-        "factory": lambda: _power_hybridization(common.fuelcell_battery_config(cruise_phi=0.0, tank=True)),
+        "factory": lambda: _with_tms(_power_hybridization(
+            common.fuelcell_battery_config(cruise_phi=0.0, tank=True))),
         "blurb": "Hydrogen fuel cell hybridised with a battery. Power hybridization: the battery "
                  "covers part of the take-off/climb peak so the fuel cell is sized for cruise. "
                  "Physics-sized cryogenic LH2 tank.",
     },
+    "Turbofan jet (A320-class)": {
+        "factory": lambda: common.turbofan_config(),
+        "blurb": "Thrust-rated short-haul jet (150 pax, 3000 nm) with the turbofan map and the "
+                 "compressible (wave-drag) polar. A different mission from the regional designs, "
+                 "so it is available in Design and Sweep but not in Compare.",
+        "compare": False,
+    },
 }
 
 TEMPLATE_LABELS = list(TEMPLATES)
+# Architectures that share the regional mission and can be compared side by side.
+COMPARE_LABELS = [k for k, v in TEMPLATES.items() if v.get("compare", True)]
+H2_LABELS = ["Hydrogen fuel cell", "Hybrid fuel cell + battery"]
 
 
 def make_config(label):
@@ -109,7 +128,7 @@ def template_blurb(label):
 # --- config (de)serialization -----------------------------------------------------------------
 _SECTIONS = ("aerodynamics", "constraints", "mission", "energy", "mission_stages",
              "diversion_stages", "loiter_stages", "well_to_tank", "cell",
-             "climate_impact", "tank")
+             "climate_impact", "tank", "tms")
 
 
 def config_to_dict(config):

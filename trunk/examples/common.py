@@ -25,12 +25,17 @@ from PhlyGreen.config import (
 # Each entry is one point the aircraft must satisfy: a speed, the altitude, the weight
 # fraction (Beta) at which it applies, and any phase-specific extras (takeoff distance,
 # climb gradient, ...). DISA is the temperature offset from the standard atmosphere.
+# The take-off field length, the AEO-climb speed and the climb schedule below reproduce the
+# published ATR 42-600 figures (ATR factsheet: take-off distance 1,107 m at MTOW/ISA/SL,
+# optimum climb speed 160 KCAS, rate of climb 1,851 ft/min at ISA/SL/MTOW, 12.7 min to FL170).
+# With them the kerosene baseline lands within ~4 % of the real aircraft (3.11 vs 3.22 MW
+# installed take-off power, OEW 11.2 vs 11.55 t).
 def _constraints():
     return ConstraintsConfig(disa=0.0, phases={
         'Cruise':       {'Speed': 0.5, 'Speed Type': 'Mach', 'Beta': 0.95, 'Altitude': 8000.},
-        'AEO Climb':    {'Speed': 210, 'Speed Type': 'KCAS', 'Beta': 0.97, 'Altitude': 6000., 'ROC': 5},
+        'AEO Climb':    {'Speed': 160, 'Speed Type': 'KCAS', 'Beta': 0.97, 'Altitude': 6000., 'ROC': 5},
         'OEI Climb':    {'Speed': 1.2 * 34.5, 'Speed Type': 'TAS', 'Beta': 1., 'Altitude': 0., 'Climb Gradient': 0.021},
-        'Take Off':     {'Speed': 90, 'Speed Type': 'TAS', 'Beta': 1., 'Altitude': 100., 'kTO': 1.2, 'sTO': 950},
+        'Take Off':     {'Speed': 90, 'Speed Type': 'TAS', 'Beta': 1., 'Altitude': 100., 'kTO': 1.2, 'sTO': 1107},
         'Landing':      {'Speed': 59., 'Speed Type': 'TAS', 'Altitude': 500.},
         'Turn':         {'Speed': 210, 'Speed Type': 'KCAS', 'Beta': 0.9, 'Altitude': 5000, 'Load Factor': 1.1},
         'Ceiling':      {'Speed': 0.5, 'Beta': 0.8, 'Altitude': 9500, 'HT': 0.5},
@@ -53,7 +58,6 @@ def _mission():
     return MissionConfig(
         range_mission=750,     # design range [nautical miles]
         range_diversion=220,   # diversion range [nautical miles]
-        beta_start=0.97,       # mass fraction at start of climb (taxi/takeoff already burnt)
         payload_weight=4560,   # [kg]
         crew_weight=500,       # [kg]
     )
@@ -69,17 +73,17 @@ def _mission():
 # with altitude, so a single fixed-rate climb would run the engine from light part-load near the
 # ground up to a power-limited 100% near cruise (see the throttle plot in example 16). Tapering
 # the climb rate keeps the gas-turbine throttle roughly constant (~0.65-0.87 on the Class-II GT,
-# never power-limited). The rates run ~2400 ft/min near the ground down to ~600 ft/min approaching
-# cruise; the *initial* rate matches a normal climb, so the peak power (and the sizing of
-# power-limited fuel cells / batteries) is unchanged.
+# never power-limited). The rates run from 1,851 ft/min near the ground (the published ATR 42-600
+# sea-level rate of climb) down to ~550 ft/min approaching cruise, reaching FL170 in ~12.6 min
+# (published: 12.7 min).
 def _mission_stages():
     return StagesConfig(segments=[
         Segment('Takeoff', phi=0.0),
-        Segment('Climb1', 'ConstantRateClimb', {'CB': 0.152, 'Speed': 80,  'StartAltitude': 100,  'EndAltitude': 1200}, phi_start=0, phi_end=0),
-        Segment('Climb2', 'ConstantRateClimb', {'CB': 0.097, 'Speed': 100, 'StartAltitude': 1200, 'EndAltitude': 2600}, phi_start=0, phi_end=0),
-        Segment('Climb3', 'ConstantRateClimb', {'CB': 0.062, 'Speed': 115, 'StartAltitude': 2600, 'EndAltitude': 4200}, phi_start=0, phi_end=0),
-        Segment('Climb4', 'ConstantRateClimb', {'CB': 0.039, 'Speed': 125, 'StartAltitude': 4200, 'EndAltitude': 6000}, phi_start=0, phi_end=0),
-        Segment('Climb5', 'ConstantRateClimb', {'CB': 0.024, 'Speed': 130, 'StartAltitude': 6000, 'EndAltitude': 8000}, phi_start=0, phi_end=0),
+        Segment('Climb1', 'ConstantRateClimb', {'CB': 0.1175, 'Speed': 80,  'StartAltitude': 100,  'EndAltitude': 1200}, phi_start=0, phi_end=0),
+        Segment('Climb2', 'ConstantRateClimb', {'CB': 0.087, 'Speed': 100, 'StartAltitude': 1200, 'EndAltitude': 2600}, phi_start=0, phi_end=0),
+        Segment('Climb3', 'ConstantRateClimb', {'CB': 0.056, 'Speed': 115, 'StartAltitude': 2600, 'EndAltitude': 4200}, phi_start=0, phi_end=0),
+        Segment('Climb4', 'ConstantRateClimb', {'CB': 0.035, 'Speed': 125, 'StartAltitude': 4200, 'EndAltitude': 6000}, phi_start=0, phi_end=0),
+        Segment('Climb5', 'ConstantRateClimb', {'CB': 0.022, 'Speed': 130, 'StartAltitude': 6000, 'EndAltitude': 8000}, phi_start=0, phi_end=0),
         Segment('Cruise', 'ConstantMachCruise', {'Mach': 0.4, 'Altitude': 8000}, phi_start=0, phi_end=0.5),
         Segment('Descent1', 'ConstantRateDescent', {'CB': -0.04, 'Speed': 90, 'StartAltitude': 8000, 'EndAltitude': 200}, phi_start=0, phi_end=0),
     ])
@@ -89,9 +93,9 @@ def _diversion_stages():
     # Same constant-throttle idea for the diversion climb (200 -> 3100 m): the climb gradient
     # tapers with altitude so the turbine throttle stays roughly constant instead of ramping up.
     return StagesConfig(segments=[
-        Segment('Climb1', 'ConstantRateClimb', {'CB': 0.152, 'Speed': 80,  'StartAltitude': 200,  'EndAltitude': 1200}, phi_start=0, phi_end=0),
-        Segment('Climb2', 'ConstantRateClimb', {'CB': 0.097, 'Speed': 100, 'StartAltitude': 1200, 'EndAltitude': 2600}, phi_start=0, phi_end=0),
-        Segment('Climb3', 'ConstantRateClimb', {'CB': 0.062, 'Speed': 115, 'StartAltitude': 2600, 'EndAltitude': 3100}, phi_start=0, phi_end=0),
+        Segment('Climb1', 'ConstantRateClimb', {'CB': 0.1175, 'Speed': 80,  'StartAltitude': 200,  'EndAltitude': 1200}, phi_start=0, phi_end=0),
+        Segment('Climb2', 'ConstantRateClimb', {'CB': 0.087, 'Speed': 100, 'StartAltitude': 1200, 'EndAltitude': 2600}, phi_start=0, phi_end=0),
+        Segment('Climb3', 'ConstantRateClimb', {'CB': 0.056, 'Speed': 115, 'StartAltitude': 2600, 'EndAltitude': 3100}, phi_start=0, phi_end=0),
         Segment('Cruise', 'ConstantMachCruise', {'Mach': 0.35, 'Altitude': 3100}, phi_start=0, phi_end=0),
         Segment('Descent1', 'ConstantRateDescent', {'CB': -0.04, 'Speed': 90, 'StartAltitude': 3100, 'EndAltitude': 200}, phi_start=0, phi_end=0),
     ])
@@ -455,7 +459,6 @@ def _mission_turbofan():
         range_mission=3000,    # design range [nautical miles]
         range_diversion=200,   # alternate [nautical miles]
         time_loiter=30,        # hold [minutes]
-        beta_start=0.98,
         payload_weight=14250,  # [kg] 150 pax x 95 kg incl. baggage
         crew_weight=600,       # [kg] 2 flight + 4 cabin
     )

@@ -9,6 +9,7 @@ from ._base import ConfigError, DictConfig
 from .sections import (
     MissionConfig, EnergyConfig, CellConfig, WellToTankConfig,
     ClimateImpactConfig, AerodynamicsConfig, ConstraintsConfig, TankConfig,
+    TMSConfig,
 )
 from .profile import Segment, StagesConfig
 from .aircraft_config import AircraftConfig
@@ -17,5 +18,6 @@ __all__ = [
     "ConfigError", "DictConfig",
     "MissionConfig", "EnergyConfig", "CellConfig", "WellToTankConfig",
     "ClimateImpactConfig", "AerodynamicsConfig", "ConstraintsConfig", "TankConfig",
+    "TMSConfig",
     "Segment", "StagesConfig", "AircraftConfig",
 ]

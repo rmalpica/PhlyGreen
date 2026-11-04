@@ -110,21 +110,44 @@ mission integrates hydrogen energy consistently.
 
 ## 4. Heat management
 
-A fuel cell is roughly half-efficient, so it rejects a large heat load. The waste heat is the
-difference between the thermo-neutral voltage (~1.48 V) and the operating cell voltage:
+A fuel cell is roughly half-efficient, so it rejects a large heat load. The heat the coolant
+must reject is the difference between the thermo-neutral voltage and the operating cell
+voltage. The thermo-neutral voltage depends on the phase in which the product water leaves
+the stack: 1.48 V if it leaves as liquid (HHV), 1.25 V if it leaves as vapour (LHV). Vapour
+carries its latent heat away with the cathode exhaust, so that heat never reaches the coolant.
+With \(x_v\) the fraction of the product water that leaves as vapour:
 
 \[
-Q_{\text{thermal}} = N_{\text{cells}}\,I\,(1.48 - V_{\text{cell}}) .
+Q_{\text{thermal}} = N_{\text{cells}}\,I\,\Big(\frac{\Delta H_{HHV} - x_v\,(\Delta H_{HHV} - \Delta H_{LHV})}{2F} - V_{\text{cell}}\Big)
 \]
 
+By default \(x_v\) is computed from the cathode-exhaust saturation
+(`FuelCell.product_water_vapour_fraction`). Per mole of H2, the exhaust carries
+\(0.5\,\lambda/0.21 - 0.5\) mol of dry gas. Saturated at the stack temperature and cathode
+pressure, it can hold \(p_{sat}/(P - p_{sat})\) mol of vapour per mole of dry gas, minus the
+water the inlet air already brings (`EnergyConfig.fc_cathode_inlet_rh`, default 0). The
+vapour fraction is that capacity relative to the 1 mol of product water, limited to [0, 1].
+
+For the low-temperature PEM stacks of the database (80 °C, 1.5 bar, λ = 2), the exhaust can
+carry about twice the product water, so \(x_v = 1\) unless the inlet air is humidified above
+≈ 70 % RH. Above the boiling point (high-temperature PEM) all product water is vapour. Set
+`EnergyConfig.fc_product_water_vapour_fraction` to a number (0 = liquid) to override. The
+hydrogen consumption does not depend on \(x_v\); only the heat sent to the TMS does.
+
 Because \(V_{\text{cell}}\) falls with load and altitude, the heat load peaks where the system
-works hardest. The weight loop sizes the **cooling-system mass** (`WHeat_Exchanger`) from the
-peak mission heat and a **specific power** (heat per kg of HEX),
-\(W_{\text{cool}} = Q_{\text{peak}} / \text{HEX specific power}\). Because the cryogenic H2 is a
-very effective heat sink, the fuel-cell HEX is light per kW: `EnergyConfig.hex_specific_power_h2`
-defaults to **5000 W/kg** (vs ~1500 W/kg for a battery HEX rejecting to ambient — see
-[Battery](battery.md)). Even so, a multi-MW fuel cell rejects a large heat load, so the TMS is a
-significant mass. The heat also registers as a source for the thermal-management scaffold (below).
+works hardest. The weight loop sizes the **thermal-management mass** (`WHeat_Exchanger`) with one
+of two models, selected by `TMSConfig(tms_class=...)`:
+
+- **Class I** (default): the peak heat over the mission *and* the take-off/OEI point, divided by a
+  **specific power** (heat per kg of HEX),
+  \(W_{\text{cool}} = Q_{\text{peak}} / \text{HEX specific power}\), with
+  `EnergyConfig.hex_specific_power_h2` defaulting to **5000 W/kg** (vs ~1500 W/kg for a battery
+  HEX rejecting to ambient — see [Battery](battery.md)).
+- **Class II**: geometric coolant → LH2 and coolant → ram-air heat exchangers, a coolant pump
+  (an electrical load on the fuel cell) and the ram-air duct drag (added to the polar), sized
+  over the mission. See [Thermal Management](thermal-management.md).
+
+A multi-MW fuel cell rejects a large heat load, so the TMS is a significant mass.
 
 ---
 
@@ -137,6 +160,12 @@ the weight loop `Weight.Hydrogen` closes the take-off weight over
 W_{TO} = W_{\text{struct}} + W_{\text{FC system}} + W_{\text{H}_2} + W_{\text{tank}}
          + W_{\text{cooling}} + W_{\text{payload}} + W_{\text{crew}} + W_{\text{reserve}} .
 \]
+
+The hydrogen load is the hydrogen energy of the flown profile and of the ground segments
+(taxi, take-off; see [Mission](mission.md)) divided by `Ef`, increased by
+`EnergyConfig.h2_fuel_margin` (default 0.05: unusable/residual hydrogen and feed system). The
+final reserve (`contingency_fuel`, else 5 % of the load) is carried in the tank too: the tank is
+sized for **load + reserve**.
 
 **Fuel-cell sizing is self-consistent and constraint-aware.** Inside each weight iteration the
 stack is *not* sized to the mission peak alone: it is sized to the worst case of the **mission

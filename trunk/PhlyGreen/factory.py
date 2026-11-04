@@ -36,16 +36,17 @@ def build_aircraft():
     battery = Systems.Battery.Battery(None)
     climateimpact = ClimateImpact.ClimateImpact(None)
     fuelcell = Systems.FuelCell.FuelCell(None)   # hydrogen configuration
+    tms = Systems.Thermal.ThermalManagementSystem(None)   # thermal management (Class I/II)
 
     aircraft = Aircraft(
         powertrain, structures, aerodynamics, performance, mission,
-        weight, constraint, welltowake, battery, climateimpact, fuelcell,
+        weight, constraint, welltowake, battery, climateimpact, fuelcell, tms=tms,
     )
 
     # Wire each subsystem back to the mediator.
     for subsystem in (
         powertrain, structures, aerodynamics, performance, mission,
-        weight, constraint, welltowake, battery, climateimpact, fuelcell,
+        weight, constraint, welltowake, battery, climateimpact, fuelcell, tms,
     ):
         subsystem.aircraft = aircraft
 

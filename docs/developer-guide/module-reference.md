@@ -24,7 +24,7 @@ Typed, validated input dataclasses (the preferred API; legacy dicts still accept
 | File | Role |
 |------|------|
 | `aircraft_config.py` | `AircraftConfig` — bundles the flags + all sections. |
-| `sections.py` | `MissionConfig`, `EnergyConfig`, `AerodynamicsConfig`, `ConstraintsConfig`, `CellConfig`, `WellToTankConfig`, `ClimateImpactConfig`, `TankConfig`. |
+| `sections.py` | `MissionConfig`, `EnergyConfig`, `AerodynamicsConfig`, `ConstraintsConfig`, `CellConfig`, `WellToTankConfig`, `ClimateImpactConfig`, `TankConfig`, `TMSConfig`. |
 | `profile.py` | `StagesConfig` / segment configs (the flight profile). |
 | `_base.py` | `DictConfig` base (`to_dict`/`from_dict`, validation helpers). |
 
@@ -49,7 +49,7 @@ Typed, validated input dataclasses (the preferred API; legacy dicts still accept
 | `Battery/` | `Battery`, `Cell_Models.py` (Class‑II), `degradation.py` (ageing/TMS). | [Battery](../user-guide/battery.md) |
 | `FuelCell/` | `FuelCell` — Kulikovsky polarization, stack sizing. | [Hydrogen](../user-guide/hydrogen.md) |
 | `Tank/` | cryogenic LH2 tank (structural + MLI + transient state). | [Hydrogen](../user-guide/hydrogen.md) |
-| `Thermal/` | `HeatSource`/`HeatSink`/`HeatExchangerNetwork` scaffold. | — |
+| `Thermal/` | `TMS.py` — fuel-cell thermal-management subsystem (`aircraft.tms`, Class I/II); `hex.py` — geometric heat-exchanger sizing (ε-NTU, tube banks, plate-fin); `ram_air.py` — ram-air duct drag; `network.py` — `HeatSource`/`HeatSink`/`HeatExchangerNetwork` scaffold. | [Thermal Management](../user-guide/thermal-management.md) |
 
 ## Utilities (`Utilities/`)
 

@@ -43,6 +43,15 @@ class Mission:
         self.aircraft = aircraft
 
         self.beta0 = None 
+        # Ground segments (not in the flown profile): taxi-out + take-off before the climb,
+        # taxi-in after landing. Defaults: ICAO Annex 16 LTO reference times (take-off 0.7 min
+        # at 100 % power; 26 min of taxi/ground idle at 7 %, split equally out/in).
+        self.taxi_out_time = 13.0          # [min]
+        self.taxi_in_time = 13.0           # [min]
+        self.taxi_power_fraction = 0.07    # [-] of the take-off propulsive power
+        self.takeoff_time = 0.7            # [min]
+        self.E_ground = 0.0                # fuel chemical energy of the ground segments [J]
+        self.E_taxi_out_takeoff = 0.0      # ... of which before the climb [J]
         self.DISA = 0
         self.WTO = None
         self.Max_PBat = -1
@@ -62,7 +71,15 @@ class Mission:
         # hydrogen fuel-cell mission tracking
         self.Max_FC_Thermal_Pwr = 0.0
         self.Max_FC_Thermal_Pwr_alt = 0.0
+        self.Max_FC_Thermal_Pwr_V = 0.0
         self.TO_P_H2_Thermal = 0.0
+        # fuel-cell heat [W] at the worst-case take-off/OEI power (not flown by the profile)
+        self.TO_FC_Thermal_Pwr = 0.0
+        # Fuel-cell heat-load points for the thermal-management system: the take-off point
+        # plus the peak of every flown segment, each a dict {name, Q_fc [W], altitude [m],
+        # V_inf [m/s TAS], mdot_h2 [kg/s]}. Filled by the fuel-cell configurations.
+        self.thermal_profile = []
+        self._phase_peak = None
         # when True (and aircraft.tank is set) the LH2 tank thermodynamic state is
         # advanced through the mission; off by default so the weight loop stays fast.
         self.track_tank = False
@@ -142,7 +159,16 @@ class Mission:
         Must be called before mission evaluation.
         """
 
-        self.beta0 = self.aircraft.MissionInput['Beta start']
+        mi = self.aircraft.MissionInput
+        if 'Beta start' in mi:
+            warnings.warn("MissionInput 'Beta start' is ignored: the mass at the start of the "
+                          "climb now follows from the computed taxi-out + take-off fuel "
+                          "('Taxi Out Time', 'Taxi In Time', 'Taxi Power Fraction', "
+                          "'Takeoff Time').", DeprecationWarning, stacklevel=2)
+        self.taxi_out_time = mi.get('Taxi Out Time', 13.0)
+        self.taxi_in_time = mi.get('Taxi In Time', 13.0)
+        self.taxi_power_fraction = mi.get('Taxi Power Fraction', 0.07)
+        self.takeoff_time = mi.get('Takeoff Time', 0.7)
         self.ef = self.aircraft.EnergyInput['Ef']
 
     def InitializeProfile(self):
@@ -174,8 +200,17 @@ class Mission:
             Traditional: (cumulative fuel energy [J])
             Hybrid Class I: (cumulative fuel energy [J], cumulative battery energy [J])
             Hybrid Class II: same, after battery sizing
+            The fuel energy includes the ground segments (taxi-out, take-off, taxi-in), see
+            :meth:`_ground_segments`.
         """
         
+        # Ground segments first: they set the mass fraction at the start of the climb.
+        self._ground_segments(WTO)
+        result = self._fly_configuration(WTO)
+        return self._add_ground_fuel(result)
+
+    def _fly_configuration(self, WTO):
+        """Fly the profile with the configuration's mission method."""
         if self.aircraft.Configuration in ('Traditional', 'Turbofan'):
             # A turbofan is traditional_graph with unit gearbox and fan nodes -- the whole
             # fuel -> thrust-power chain sits in the single overall-efficiency node -- so it
@@ -205,6 +240,56 @@ class Mission:
 
         else:
             raise Exception("Unknown aircraft configuration: %s" %self.aircraft.Configuration)
+
+    # --- ground segments: taxi-out, take-off, taxi-in ------------------------------------
+
+    def _ground_fuel_power(self, P):
+        """Fuel (chemical) power [W] to deliver propulsive power ``P`` at the take-off
+        condition, through the configuration's own powertrain (so the part-load efficiency
+        applies). Battery shares of hybrid configurations follow the take-off split and are
+        not counted (the ground segments are short and at low power)."""
+        to = self.aircraft.constraint.TakeOffConstraints
+        perf = self.aircraft.performance
+        perf.set_speed(to['Altitude'], to['Speed'], to['Speed Type'], self.aircraft.constraint.DISA)
+        alt, vel = to['Altitude'], float(perf.TAS)
+        cfg = self.aircraft.Configuration
+        phi_TO = float(self.profile.SPW[0][0]) if getattr(self.profile, 'SPW', None) is not None else 0.0
+        if cfg in ('Traditional', 'Turbofan'):
+            return P * self.aircraft.powertrain.Traditional(alt, vel, P)[0]
+        if cfg == 'Hybrid':
+            return P * self.aircraft.powertrain.Hybrid(phi_TO, alt, vel, P)[0]
+        if cfg in ('Hydrogen', 'FuelCellBattery'):
+            P_fc = (1.0 - phi_TO) * P if cfg == 'FuelCellBattery' else P
+            return P_fc * self.aircraft.fuelcell.ComputePRatio(alt, vel, P_fc)[0] if P_fc > 0 else 0.0
+        raise Exception("Unknown aircraft configuration: %s" % cfg)
+
+    def _ground_segments(self, WTO):
+        """Fuel of the ground segments, which the flown profile does not include.
+
+        Take-off at the take-off-field propulsive power for ``takeoff_time``; taxi-out and
+        taxi-in at ``taxi_power_fraction`` of it (defaults: ICAO LTO cycle). The taxi-out and
+        take-off fuel is burnt before the climb, so the mission starts at
+        ``beta0 = 1 - m_(taxi-out + take-off) / WTO``; the whole ground fuel is added to the
+        mission fuel energy (see :meth:`_add_ground_fuel`).
+        """
+        P_TO = self._takeoff_power(WTO)
+        Pf_TO = self._ground_fuel_power(P_TO)
+        Pf_taxi = self._ground_fuel_power(self.taxi_power_fraction * P_TO)
+        E_out = 60.0 * (self.takeoff_time * Pf_TO + self.taxi_out_time * Pf_taxi)
+        E_in = 60.0 * self.taxi_in_time * Pf_taxi
+        self.E_taxi_out_takeoff = E_out
+        self.E_ground = E_out + E_in
+        self.beta0 = 1.0 - E_out / (self.ef * WTO)
+
+    def _add_ground_fuel(self, result):
+        """Add the ground-segment fuel energy to the fuel energy a mission method returns
+        (a float, or a tuple whose first entry is the fuel energy; ``(0, code)`` signals a
+        failed Class-II battery mission and is passed through)."""
+        if isinstance(result, tuple):
+            if result[0] == 0:
+                return result
+            return (result[0] + self.E_ground,) + tuple(result[1:])
+        return result + self.E_ground
 
 
     # --- shared off-mission power requirements ------------------------------------------
@@ -257,6 +342,63 @@ class Mission:
         return max(cases, key=lambda tm: tm[0])
 
 
+    # --- fuel-cell heat tracking (thermal-management sizing) ----------------------------
+
+    def _takeoff_fc_heat(self, P_fc_TO):
+        """Fly the fuel cell at the take-off/OEI propulsive power ``P_fc_TO`` (at the take-off
+        constraint conditions) and start the thermal profile with that point.
+
+        Returns the fuel-cell power ratios at take-off. Resets the mission heat peak.
+        """
+        c = self.aircraft.constraint
+        to = c.TakeOffConstraints
+        perf = self.aircraft.performance
+        perf.set_speed(to['Altitude'], to['Speed'], to['Speed Type'], c.DISA)
+        V_TO = float(perf.TAS)
+        fc = self.aircraft.fuelcell
+        self.Max_FC_Thermal_Pwr = -1.0
+        if P_fc_TO <= 0:                    # battery-only take-off: no fuel-cell heat there
+            self.TO_FC_Thermal_Pwr = 0.0
+            self.thermal_profile = []
+            return np.array([1.0, 1.0])
+        PRatio_TO = fc.ComputePRatio(to['Altitude'], V_TO, P_fc_TO)
+        self.TO_FC_Thermal_Pwr = fc.Q_thermal
+        self.thermal_profile = [{'name': 'Takeoff', 'Q_fc': fc.Q_thermal,
+                                 'altitude': to['Altitude'], 'V_inf': V_TO,
+                                 'mdot_h2': fc.mdot_h2, 'takeoff': True}]
+        self.Max_FC_Thermal_Pwr_alt = 0.0
+        self.Max_FC_Thermal_Pwr_V = 0.0
+        return PRatio_TO
+
+    def _begin_thermal_phase(self, i):
+        """Start tracking the fuel-cell heat peak of segment ``i`` of the profile."""
+        seg = self.profile._segments[i]
+        self._phase_peak = {'name': f"{seg.phase}/{seg.name}", 'Q_fc': -1.0, 'altitude': 0.0,
+                            'V_inf': 0.0, 'mdot_h2': 0.0,
+                            't_start': seg.start_time, 't_end': seg.end_time}
+
+    def _end_thermal_phase(self):
+        """Append the peak of the segment just flown to ``thermal_profile``."""
+        ph = self._phase_peak
+        if ph is not None and ph['Q_fc'] > 0:
+            self.thermal_profile.append({k: ph[k] for k in
+                                         ('name', 'Q_fc', 'altitude', 'V_inf', 'mdot_h2')})
+        self._phase_peak = None
+
+    def _track_fc_heat(self, t, alt, vel):
+        """Record the fuel-cell heat of the last ``ComputePRatio`` call at time ``t``: the
+        mission peak and the peak of the current segment (the segment's end instant is left
+        to the next segment, which starts there)."""
+        fc = self.aircraft.fuelcell
+        q = fc.Q_thermal
+        if q > self.Max_FC_Thermal_Pwr:
+            self.Max_FC_Thermal_Pwr = q
+            self.Max_FC_Thermal_Pwr_alt = alt
+            self.Max_FC_Thermal_Pwr_V = vel
+        ph = self._phase_peak
+        if ph is not None and ph['t_start'] <= t < ph['t_end'] and q > ph['Q_fc']:
+            ph.update(Q_fc=q, altitude=float(alt), V_inf=float(vel), mdot_h2=fc.mdot_h2)
+
     def HydrogenConfiguration(self, WTO):
         """Evaluate the full mission for a hydrogen fuel-cell (electric) propulsion system.
 
@@ -285,10 +427,7 @@ class Mission:
                 self.profile.Altitude(t), self.profile.Velocity(t), PP)
             dEdt_chem = PP * PRatio[0]                 # hydrogen chemical power [W]
             dbetadt = - dEdt_chem / (self.ef * self.WTO)
-            q = self.aircraft.fuelcell.Q_thermal
-            if q > self.Max_FC_Thermal_Pwr:
-                self.Max_FC_Thermal_Pwr = q
-                self.Max_FC_Thermal_Pwr_alt = self.profile.Altitude(t)
+            self._track_fc_heat(t, self.profile.Altitude(t), self.profile.Velocity(t))
             return [dEdt_chem, dbetadt]
 
         # Worst-case off-mission propulsive power for fuel-cell sizing: the take-off field
@@ -296,11 +435,8 @@ class Mission:
         # (these scenarios are not flown by the mission profile, but the fuel cell must supply
         # their power). Taken as the worst case.
         self.TO_PP = self._worst_case_propulsive_power(WTO)
-        PRatio_TO = self.aircraft.fuelcell.ComputePRatio(
-            self.aircraft.constraint.TakeOffConstraints['Altitude'],
-            self.aircraft.constraint.TakeOffConstraints['Speed'], self.TO_PP)
+        PRatio_TO = self._takeoff_fc_heat(self.TO_PP)
         self.TO_P_H2_Thermal = self.TO_PP * PRatio_TO[0]
-        self.Max_FC_Thermal_Pwr = -1.0
 
         # Optionally advance the LH2 tank thermodynamic state through the mission.
         track = self.track_tank and getattr(self.aircraft, 'tank', None) is not None
@@ -316,8 +452,10 @@ class Mission:
         self.integral_solution = []
         times = np.append(self.profile.Breaks, self.profile.MissionTime2)
         for i in range(len(times) - 1):
+            self._begin_thermal_phase(i)
             sol = integrate.solve_ivp(model, [times[i], times[i + 1]], y0,
                                       method='BDF', rtol=1e-5, max_step=60.0)
+            self._end_thermal_phase()
             self.integral_solution.append(sol)
             if track:
                 # Drive the tank with the hydrogen mass flow over each solver micro-step.
@@ -389,12 +527,11 @@ class Mission:
             self.check_PP(PP)
             P_fc = fuel_cell_share(t, PP)
             alt, vel = self.profile.Altitude(t), self.profile.Velocity(t)
-            dEh2 = P_fc * fc.ComputePRatio(alt, vel, P_fc)[0] if P_fc > 0 else 0.0
+            dEh2 = 0.0
+            if P_fc > 0:
+                dEh2 = P_fc * fc.ComputePRatio(alt, vel, P_fc)[0]
+                self._track_fc_heat(t, alt, vel)
             dbetadt = - dEh2 / (self.ef * self.WTO)
-            q = fc.Q_thermal
-            if q > self.Max_FC_Thermal_Pwr:
-                self.Max_FC_Thermal_Pwr = q
-                self.Max_FC_Thermal_Pwr_alt = alt
             return [dEh2, dbetadt]
 
         # Worst-case off-mission propulsive power (take-off field length / OEI climb) at the
@@ -403,14 +540,16 @@ class Mission:
         phi_TO = float(self.profile.SPW[0][0]) if self.profile.SPW is not None else 0.0
         self.TO_PP = (1.0 - phi_TO) * P_total_TO    # fuel-cell propulsive share at take-off/OEI
         self.TO_PBat = phi_TO * P_total_TO          # battery propulsive share at take-off/OEI
-        self.Max_FC_Thermal_Pwr = -1.0
+        self._takeoff_fc_heat(self.TO_PP)
 
         y0 = [0.0, self.beta0]
         self.integral_solution = []
         times = np.append(self.profile.Breaks, self.profile.MissionTime2)
         for i in range(len(times) - 1):
+            self._begin_thermal_phase(i)
             sol = integrate.solve_ivp(model, [times[i], times[i + 1]], y0,
                                       method='BDF', rtol=1e-5, max_step=60.0)
+            self._end_thermal_phase()
             self.integral_solution.append(sol)
             y0 = [sol.y[0][-1], sol.y[1][-1]]
 
@@ -475,11 +614,10 @@ class Mission:
 
             # fuel-cell (hydrogen) branch — the fuel cell supplies (1 - phi) of the power
             P_fc = (1.0 - phi) * PP
-            dEh2 = P_fc * fc.ComputePRatio(alt, vel, P_fc)[0] if P_fc > 0 else 0.0
-            q = fc.Q_thermal
-            if q > self.Max_FC_Thermal_Pwr:
-                self.Max_FC_Thermal_Pwr = q
-                self.Max_FC_Thermal_Pwr_alt = alt
+            dEh2 = 0.0
+            if P_fc > 0:
+                dEh2 = P_fc * fc.ComputePRatio(alt, vel, P_fc)[0]
+                self._track_fc_heat(t, alt, vel)
             dbetadt = - dEh2 / (self.ef * self.WTO)             # only hydrogen burn changes mass
 
             # battery branch — Class-II cell model. The pack must deliver phi*PP of shaft power,
@@ -532,14 +670,17 @@ class Mission:
             np.seterr(over="raise")
             times = np.append(self.profile.Breaks, self.profile.MissionTime2)
             self.integral_solution = []
-            self.Max_FC_Thermal_Pwr = -1.0
+            self._takeoff_fc_heat(self.TO_PP)
             y0 = [0, 0, self.beta0, 0, self.startT + 273.15]
             for i in range(len(times) - 1):
                 try:
+                    self._begin_thermal_phase(i)
                     sol = integrate.solve_ivp(model, [times[i], times[i + 1]], y0,
                                               method="BDF", rtol=1e-6)
+                    self._end_thermal_phase()
                     self.integral_solution.append(sol)
                 except BatteryError as err:
+                    self._phase_peak = None
                     if not self.size_battery_pack:
                         print(err)
                     return False, err.code

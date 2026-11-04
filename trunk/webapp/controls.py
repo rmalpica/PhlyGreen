@@ -147,6 +147,10 @@ def _is_fuel(cfg):
     return cfg.configuration in ("Traditional", "Hybrid")
 
 
+def _not_turbofan(cfg):
+    return cfg.configuration != "Turbofan"
+
+
 def _is_h2(cfg):
     return cfg.configuration in ("Hydrogen", "FuelCellBattery")
 
@@ -183,7 +187,7 @@ KNOBS = [
     Knob("ar", "Wing aspect ratio [-]", _get_ar, _set_ar, 8.0, 14.0, 0.5),
     Knob("eta_prop", "Propulsive efficiency [-]", lambda c: c.energy.eta_propulsive,
          lambda c, v: setattr(c.energy, "eta_propulsive", float(v)),
-         0.75, 0.95, 0.01),
+         0.75, 0.95, 0.01, applies=_not_turbofan),
     # fuel-burning (gas-turbine) designs only
     Knob("eta_gt", "Gas-turbine efficiency [-]", lambda c: c.energy.eta_gas_turbine,
          lambda c, v: setattr(c.energy, "eta_gas_turbine", float(v)),

@@ -15,17 +15,21 @@ import dataclasses
 
 # Enum-like (model / class / type) fields -> their allowed values. Rendered as selectboxes.
 ENUMS = {
-    "eta_gas_turbine_model": ["constant", "ResponseSurface"],
+    "eta_gas_turbine_model": ["constant", "ResponseSurface", "Turbofan"],
     "eta_propulsive_model": ["constant", "Hamilton", "Surrogate"],
     "eta_electric_motor_model": ["constant", "Smart"],
     "einox_model": ["Filippone", "Surrogate", "unset"],
     "cell_class": ["I", "II"],
+    "tms_class": ["I", "II"],
 }
 
 # Fields already controlled by the main-input sliders (controls.KNOBS) — skip in the advanced
 # form so a value is never driven by two widgets at once.
 _EXCLUDE = {
-    "mission": {"range_mission", "payload_weight"},
+    # beta_start is deprecated (the start-of-climb mass follows from the ground segments)
+    "mission": {"range_mission", "payload_weight", "beta_start"},
+    # the TMS class is chosen with the dedicated sidebar selector
+    "tms": {"tms_class"},
     "aerodynamics": {"cd0", "analytic_polar", "numerical_polar"},
     "energy": {"eta_propulsive", "eta_gas_turbine", "v_cell_design",
                "stack_power_density", "battery_specific_energy"},
@@ -43,6 +47,7 @@ _SECTIONS = [
     ("Well-to-tank", "well_to_tank"),
     ("Climate impact", "climate_impact"),
     ("LH₂ tank", "tank"),
+    ("Thermal management (TMS)", "tms"),
 ]
 
 
@@ -98,11 +103,18 @@ def render_flags(c, cfg, prefix):
         key=f"{prefix}.weight_class",
         help="I = regression structural model. II = FLOPS component masses (needs a FLOPS input "
              "block, which the lab templates do not provide — leave on I unless you supply one).")
-    types = ["ATR", "DO228", "Jet", "TwinTP"]
+    types = ["ATR", "DO228", "Jet", "TwinTP", "NarrowBody"]
     cfg.aircraft_type = c.selectbox(
         "Aircraft type (Class-I structure)", types,
         index=types.index(cfg.aircraft_type) if cfg.aircraft_type in types else 0,
         key=f"{prefix}.aircraft_type")
+    cfg.avoid_powertrain_double_count = c.checkbox(
+        "Powertrain already in the Class-I structure (avoid double count)",
+        value=bool(cfg.avoid_powertrain_double_count), key=f"{prefix}.apdc",
+        help="Class-I regressions are empty-weight fractions that already contain the engines.")
+    cfg.structure_calibration = c.number_input(
+        "Class-I structure calibration factor [-]", value=float(cfg.structure_calibration or 1.0),
+        key=f"{prefix}.scal", help="1.0 = the textbook regression; other values are a calibration.")
     if cfg.configuration == "Hybrid":
         ht = ["Parallel", "Serial"]
         cfg.hybrid_type = c.selectbox(

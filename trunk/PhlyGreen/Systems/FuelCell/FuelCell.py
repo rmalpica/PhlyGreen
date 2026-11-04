@@ -38,6 +38,15 @@ class FuelCell:
     # chemical energy are referenced to the higher heating value (HHV), consistent with the HHV
     # thermoneutral voltage (DELTA_H_REACT / 2F = 1.482 V) used for the stack heat.
     HHV_H2 = DELTA_H_REACT / MOLAR_MASS_H2   # [J/kg] = 141.87e6, Higher Heating Value of Hydrogen
+    # Enthalpy of reaction with VAPOUR product water (LHV basis) [J/mol]; the difference is the
+    # latent heat of the product water.
+    DELTA_H_REACT_LHV = 241800.0
+    # The heat rejected to the COOLANT depends on the phase in which the product water leaves
+    # the stack: water that leaves as vapour with the cathode exhaust carries its latent heat
+    # away, so it is not rejected by the coolant. With x_v the vaporised fraction,
+    #   Q_coolant = I_cell * N_cells * [ (DH_HHV - x_v (DH_HHV - DH_LHV)) / 2F - V_cell ]
+    # x_v = 0 -> thermo-neutral voltage 1.48 V (all liquid); x_v = 1 -> 1.25 V (all vapour).
+    # The hydrogen consumption (and the chemical power on the HHV basis) does not depend on x_v.
 
     def __init__(self, aircraft):
         self.aircraft = aircraft
@@ -74,6 +83,18 @@ class FuelCell:
         self.comp_eta = 0.75
         self.turb_eta = 0.70
         self.stoich = 2.0
+        # Fraction of the product water leaving the stack as vapour (see the class note);
+        # computed from the cathode-exhaust saturation in SetInput unless given as input.
+        self.x_vapour = 0.0
+        self.inlet_rh = 0.0       # cathode inlet relative humidity at T_op [-]
+        # Constant electrical auxiliary load [W] of the Class-II thermal-management system
+        # (coolant pump). Added to the electrical demand at every operating point and to the
+        # stack rating, so the pump's hydrogen consumption is flown and the stack is sized for
+        # it. Set by the weight loop; 0 for the Class-I TMS (no effect).
+        self.P_aux_tms = 0.0
+        # Hydrogen and cathode-air mass flows [kg/s] at the last ComputePRatio call.
+        self.mdot_h2 = 0.0
+        self.mdot_air = 0.0
 
         # FUNDAMENTAL GEOMETRIC AND THERMAL OUTPUTS
         self.N_cells = 0  
@@ -172,6 +193,48 @@ class FuelCell:
         # Assigned from Database strictly
         self.T_op = params['T_op']
         self.Target_Press = params['Target_Press']
+
+        # Phase of the product water -> heat rejected to the coolant (see the class note).
+        # 'FC Product Water Vapour Fraction': 'auto' (default, from the cathode-exhaust
+        # saturation) or a number in [0, 1] (0 = all liquid / HHV, 1 = all vapour / LHV).
+        self.inlet_rh = inp.get('FC Cathode Inlet RH', 0.0)
+        spec = inp.get('FC Product Water Vapour Fraction', 'auto')
+        if spec == 'auto':
+            self.x_vapour = self.product_water_vapour_fraction()
+        else:
+            self.x_vapour = float(spec)
+            if not 0.0 <= self.x_vapour <= 1.0:
+                raise FuelCellError("'FC Product Water Vapour Fraction' must be 'auto' or in [0, 1]")
+
+    @staticmethod
+    def water_saturation_pressure(T):
+        """Saturation pressure of water [Pa] at T [K], Antoine equation with the commonly
+        tabulated constants for water (1-100 C and 99-374 C ranges, P in mmHg)."""
+        Tc = T - 273.15
+        A, B, C = (8.07131, 1730.63, 233.426) if Tc <= 100.0 else (8.14019, 1810.94, 244.485)
+        return 133.322 * 10.0 ** (A - B / (C + Tc))
+
+    def product_water_vapour_fraction(self):
+        """Fraction of the product water the cathode exhaust can carry away as vapour.
+
+        Per mole of H2 reacted: 0.5 mol O2 is consumed, the air entering is
+        ``0.5 * stoich / 0.21`` mol and the dry gas leaving is that minus 0.5 mol; 1 mol of water
+        is produced. The exhaust leaves saturated at most, at the stack temperature ``T_op`` and
+        cathode pressure ``Target_Press``, so it can hold ``p_sat / (P - p_sat)`` mol of vapour
+        per mole of dry gas; the inlet air already brings ``inlet_rh`` of saturation. The
+        fraction of the product water that can leave as vapour is the remaining capacity,
+        limited to [0, 1]. (The exhaust may be sub-saturated, so this is an upper bound.)
+        """
+        P = self.Target_Press
+        p_sat = self.water_saturation_pressure(self.T_op)
+        if p_sat >= P:                       # above the boiling point: all product water is vapour
+            return 1.0
+        n_air_in = 0.5 * self.stoich / 0.21
+        n_dry_out = n_air_in - 0.5
+        p_v_in = self.inlet_rh * p_sat
+        water_in = p_v_in / (P - p_v_in) * n_air_in
+        capacity = p_sat / (P - p_sat) * n_dry_out
+        return float(min(max(capacity - water_in, 0.0), 1.0))
 
 
     def PolarizationCurve(self, i_dens, P_internal_Pa, T_amb=None):
@@ -295,7 +358,9 @@ class FuelCell:
         # the BoP_Power_Sizing_Efficiency below is a pure air-system allowance, not a hidden cover
         # for the propeller loss.
         eta_downstream = self.EtaEM * self.EtaPM * self.EtaGB * self.EtaProp
-        self.P_fc_rated = P_propulsive_design / eta_downstream   # net electrical rating [W]
+        P_elec_propulsive = P_propulsive_design / eta_downstream
+        # net electrical rating [W]: propulsion + the TMS pump (0 unless Class-II TMS)
+        self.P_fc_rated = P_elec_propulsive + self.P_aux_tms
 
         self.N_cells = max(int(self.V_stack / self.V_cell_design), 100)
 
@@ -328,7 +393,7 @@ class FuelCell:
         sp_powertrain = getattr(pt, 'SPowerPT', None) if pt is not None else None
         sp_motor = sp_powertrain[1] if sp_powertrain else 5000.0
         sp_pmad = pt.pmad_specific_power() if (pt is not None and hasattr(pt, 'pmad_specific_power')) else 10000.0
-        M_EM = (self.P_fc_rated * self.EtaPM) / sp_motor
+        M_EM = (P_elec_propulsive * self.EtaPM) / sp_motor      # the motor carries propulsion only
         M_PM = self.P_fc_rated / sp_pmad
 
         self._Weight = M_Stack + M_BoP + M_EM + M_PM
@@ -397,7 +462,8 @@ class FuelCell:
         else:
             eta_mech *= self.EtaProp
 
-        P_elec_target = P_req_net / max(eta_mech, 0.01)
+        P_elec_propulsive = P_req_net / max(eta_mech, 0.01)
+        P_elec_target = P_elec_propulsive + self.P_aux_tms      # + TMS pump (Class II)
         limit = self.j_lim if self.j_lim is not None else 2.5 
 
         def residual(i_guess):
@@ -459,11 +525,16 @@ class FuelCell:
 
             m_dot_h2 = (self.N_cells * I_final) / (2 * self.FARADAY_CONST) * self.MOLAR_MASS_H2
             P_chem = m_dot_h2 * self.HHV_H2
-            
-            Eta_FCS = P_elec_target / P_chem if P_chem > 0 else 0.01
-            Eta_Total_Sys = np.clip(Eta_FCS * eta_mech, 0.01, 0.85)
+            self.mdot_h2 = m_dot_h2
+            self.mdot_air = 3.57e-7 * self.N_cells * I_final * self.stoich
 
-            p_th_cell = i_op * (self.DELTA_H_REACT / (2 * self.FARADAY_CONST) - v_cell)
+            Eta_FCS = P_elec_target / P_chem if P_chem > 0 else 0.01
+            # propulsive share of the electrical output (1.0 without a TMS pump load)
+            share = P_elec_propulsive / P_elec_target if P_elec_target > 0 else 1.0
+            Eta_Total_Sys = np.clip(Eta_FCS * eta_mech * share, 0.01, 0.85)
+
+            dh_coolant = self.DELTA_H_REACT - self.x_vapour * (self.DELTA_H_REACT - self.DELTA_H_REACT_LHV)
+            p_th_cell = i_op * (dh_coolant / (2 * self.FARADAY_CONST) - v_cell)
             self.Q_thermal = p_th_cell * self.N_cells * self.A_cell_reale
 
             # Expose the operating point for post-processing (tutorials / mission timelines).
@@ -475,7 +546,9 @@ class FuelCell:
         else:
             # Fallback to analytical scaling if physical limits are exceeded
             P_idle_chem = (self.P_fc_rated * self.Fixed_Aux_Load) / 0.40
-            P_chem_total = P_idle_chem + (P_req_net / 0.40) 
+            P_chem_total = P_idle_chem + (P_req_net / 0.40) + self.P_aux_tms / 0.40
+            self.mdot_h2 = P_chem_total / self.HHV_H2
+            self.mdot_air = float('nan')
             self.Q_thermal = P_chem_total * 0.60
             self.P_gross_last = P_chem_total * 0.40
             self.P_comp_net_last = P_chem_total * 0.10

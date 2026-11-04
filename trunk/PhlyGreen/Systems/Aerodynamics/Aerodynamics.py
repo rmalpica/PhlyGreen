@@ -27,6 +27,10 @@ class Aerodynamics:
         self.sweep = None        # quarter-chord sweep [deg]
         self.tc = None           # mean thickness-to-chord [-]
         self.kappa = None        # airfoil technology factor
+        # Extra drag-coefficient increment (referred to the wing area) added to every polar:
+        # the ram-air duct drag of the Class-II thermal-management system, set by the weight
+        # loop. 0 otherwise.
+        self.extra_Cd = 0.0
 
     """ Properties """
 
@@ -71,6 +75,7 @@ class Aerodynamics:
     """ Methods """
 
     def SetInput(self):
+        self.extra_Cd = 0.0
         if 'AnalyticPolar' in self.aircraft.AerodynamicsInput:
             polar = self.aircraft.AerodynamicsInput.get("AnalyticPolar")
             AR = polar['input'].get("AR")
@@ -115,18 +120,20 @@ class Aerodynamics:
         self.e_osw = e_osw
 
     def Cd(self,Cl,Mach):
+        """Drag coefficient of the selected polar, plus ``extra_Cd`` (TMS ram-air drag)."""
         if self.polar == 'quadratic':
             Cd = self.Cd0(Mach) + self.k1() * Cl**2 + self.k2() * Cl
-            return Cd
         elif self.polar == 'compressible':
             Cd = self.Cd0(Mach) + self.k1() * Cl**2 + self.k2() * Cl + self.Cd_wave(Cl, Mach)
-            return Cd
         elif self.polar == 'ATR42':
-            return 0.021476 + 0.03037383 * Cl**2
+            Cd = 0.021476 + 0.03037383 * Cl**2
         elif self.polar == 'DO228':
-            return 0.029 + self.k1() * Cl**2
+            Cd = 0.029 + self.k1() * Cl**2
         else:
             raise ValueError("Polar model unset")
+        if self.extra_Cd:
+            Cd = Cd + self.extra_Cd
+        return Cd
 
     def MachDD(self, Cl):
         """Drag-divergence Mach number from the Korn equation.

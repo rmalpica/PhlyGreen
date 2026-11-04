@@ -24,7 +24,7 @@ from PhlyGreen.config import (
 config = AircraftConfig(
     configuration='Traditional',   # 'Traditional' | 'Hybrid' | 'Hydrogen' | 'FuelCellBattery'
     aircraft_type='ATR', weight_class='I',
-    mission=MissionConfig(range_mission=750, range_diversion=220, beta_start=0.97,
+    mission=MissionConfig(range_mission=750, range_diversion=220,
                           payload_weight=4560, crew_weight=500),
     energy=EnergyConfig(Ef=43.5e6, contingency_fuel=130, eta_gearbox=0.96,
                         eta_gas_turbine=0.22, eta_propulsive=0.9,

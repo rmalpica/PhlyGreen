@@ -336,7 +336,8 @@ W_{\text{cool}} = \frac{Q_{\text{peak}}}{\text{HEX specific power [W/kg]}} .
 The battery HEX rejects to ambient through a liquid loop + ram-air, which is *less*
 mass-effective than the cryogenic-H2-cooled fuel-cell HEX, so the two use **separate** inputs:
 `EnergyConfig.hex_specific_power_battery` (default **1500 W/kg**) for the battery and
-`hex_specific_power_h2` (default **5000 W/kg**) for the fuel cell. The result appears as the
+`hex_specific_power_h2` (default **5000 W/kg**) for the fuel cell (its Class-I TMS; see
+[Thermal Management](thermal-management.md) for the geometric Class-II model). The result appears as the
 `cooling` item in the mass breakdown / `WHeat_Exchanger`. (The Class-I battery has no thermal
 model, so it carries no cooling mass.) The separate *ground fast-charge* cooling load from
 `thermal_degradation_analysis` is a post-design study and is **not** added to the WTO.

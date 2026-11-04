@@ -121,12 +121,26 @@ def build_inputs():
         if bm.startswith("Class II"):
             base.cell = templates.fcb_class_ii_cell()
 
+    # Fuel-cell designs: thermal-management model (Class I specific power, or the geometric
+    # Class II heat exchangers + pump + ram-air drag sized over the mission).
+    if arch in templates.H2_LABELS:
+        tm = st.sidebar.selectbox(
+            "Thermal management (TMS)",
+            ["Class I (specific power)", "Class II (geometric heat exchangers)"],
+            key=f"{prefix}.tms_class",
+            help="Class II sizes the coolant→LH₂ and coolant→ram-air heat exchangers, the pump "
+                 "and the ram-air drag over the mission; slower (~1 min).")
+        base.tms.tms_class = "II" if tm.startswith("Class II") else "I"
+
     # 1. curated "main" inputs
     st.sidebar.markdown("### Main inputs")
     overrides = {}
     for knob in controls.knobs_for(base):
+        v = float(knob.value(base))
+        # widen the slider to contain the template's value (e.g. the jet's range and Mach)
+        lo, hi = min(float(knob.lo), v), max(float(knob.hi), v)
         overrides[knob.key] = st.sidebar.slider(
-            knob.label, float(knob.lo), float(knob.hi), float(knob.value(base)),
+            knob.label, lo, hi, v,
             step=float(knob.step), help=knob.help or None, key=f"{prefix}.knob.{knob.key}")
     cfg = controls.apply_overrides(templates.clone(base), overrides)
 
@@ -191,6 +205,20 @@ def design_tab(arch, cfg, emissions):
         except Exception as exc:
             st.caption(f"(tank state unavailable: {type(exc).__name__})")
 
+    # Class-II thermal management: the sized heat exchangers and their rating over the mission.
+    if render.tms_result(aircraft) is not None:
+        st.markdown("#### Thermal management (Class II)")
+        r = render.tms_result(aircraft)
+        st.caption(f"Sized at **{r.design_point['name']}** (the lightest hardware that rejects the "
+                   f"heat at every mission point). Ram air {r.mdot_ram_air:.1f} kg/s, duct drag "
+                   f"{r.ram_drag:.0f} N, pump {r.pump_power / 1e3:.1f} kW (an electrical load on the "
+                   f"fuel cell).")
+        st.dataframe(render.tms_table(aircraft))
+        try:
+            _show_figure(render.tms_rating_figure(aircraft))
+        except Exception as exc:
+            st.caption(f"(rating unavailable: {type(exc).__name__})")
+
     # Well-to-wake emissions — switched on (and configured) in the sidebar, so the design was sized
     # with the climate model attached and these come from that same run (no re-size here).
     if emissions["on"]:
@@ -247,8 +275,8 @@ def compare_tab(overrides):
                "are applied to every architecture below. Architecture-specific inputs that don't "
                "apply to a given design are left at that template's default. Use **Run comparison** "
                "here — the **Run design** button on the Design tab sizes only the single current design.")
-    picks = st.multiselect("Architectures", templates.TEMPLATE_LABELS,
-                           default=templates.TEMPLATE_LABELS[:3])
+    picks = st.multiselect("Architectures", templates.COMPARE_LABELS,
+                           default=templates.COMPARE_LABELS[:3])
     if not picks:
         st.info("Pick at least one architecture.")
         return
@@ -329,7 +357,10 @@ def about_tab():
 
         - **Main inputs** (sidebar) — the handful of parameters you tune most.
         - **⚙️ Advanced inputs** — *every* parameter and **model choice** (gas-turbine / propeller /
-          motor efficiency models, battery & weight class, aircraft type, …).
+          motor efficiency models, battery & weight class, aircraft type, thermal management, the
+          ground segments (taxi/take-off), the fuel-cell product-water phase, …).
+        - **Thermal management** (fuel-cell designs) — Class I (specific power) or Class II
+          (geometric heat exchangers, pump and ram-air drag, sized over the mission).
         - **Emissions / well-to-wake** (sidebar) — switch it on to size the design *with* emissions in
           one pass (pick the NOₓ model and edit the well-to-tank lifecycle factors); leave it off for
           a faster design with no emissions output.
@@ -337,7 +368,8 @@ def about_tab():
           watch the design point move on the constraint diagram.
 
         Nothing is sized until you press **▶ Run design** — changing an input no longer re-runs the
-        design automatically. Each design solves the take-off-weight convergence loop (~1 s). Inputs
+        design automatically. Each design solves the take-off-weight convergence loop (a few seconds,
+        up to ~1 min with the Class-II battery or TMS). Inputs
         that push a design too hard simply report *"did not close"* — relax the range, payload, or
         battery/fuel-cell assumptions.
 

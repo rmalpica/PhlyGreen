@@ -17,7 +17,28 @@ The mission solver integrates the aircraft state along a sequence of **flight se
 - loiter  
 - diversion  
 
-Taxi and Take-off phases are presently **not** integrated in time, but accounted for with assigned fuel mass fractions.
+The **ground segments** (taxi-out, take-off run, taxi-in) are not part of the flown profile;
+their fuel is computed separately by `Mission._ground_segments`:
+
+- take-off at the take-off-field propulsive power for `Takeoff Time` (default 0.7 min);
+- taxi-out and taxi-in at `Taxi Power Fraction` (default 7 %) of that power for
+  `Taxi Out Time` / `Taxi In Time` (default 13 + 13 min).
+
+The defaults are the ICAO Annex 16 landing/take-off (LTO) reference values (taxi/ground idle:
+26 min at 7 %; take-off: 0.7 min at 100 %), with the taxi time split equally between taxi-out
+and taxi-in. Each configuration converts these powers to fuel through its own powertrain
+(fuel-cell, gas-turbine or turbofan efficiency at that load), on the primary fuel; the battery
+share of hybrids is not counted for these short, low-power segments. The taxi-out and take-off
+fuel is burnt before the climb, so the integration starts at
+
+\[
+\beta_0 = 1 - \frac{m_{\text{taxi-out}} + m_{\text{take-off}}}{W_{TO}} ,
+\]
+
+and the fuel of all ground segments is added to the mission fuel energy (and therefore to
+\(W_f\), the hydrogen tank and the well-to-wake energy). Set the inputs through
+`MissionConfig(taxi_out_time=..., taxi_in_time=..., taxi_power_fraction=..., takeoff_time=...)`.
+The former `Beta start` input is deprecated and ignored.
 
 Each segment prescribes:
 

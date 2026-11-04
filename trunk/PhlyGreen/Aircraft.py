@@ -18,7 +18,7 @@ class Aircraft:
 
     """
 
-    def __init__(self, powertrain, structures, aerodynamics, performance, mission, weight, constraint, welltowake, battery, climateimpact, fuelcell=None, tank=None):
+    def __init__(self, powertrain, structures, aerodynamics, performance, mission, weight, constraint, welltowake, battery, climateimpact, fuelcell=None, tank=None, tms=None):
         """Initialize a Aircraft instance.
 
         Args:
@@ -32,6 +32,10 @@ class Aircraft:
             welltowake: An instance of the welltowake class.
             battery: An instance of the battery class.
             climateimpact: An instance of the climateimpact class.
+            fuelcell: An instance of the fuel-cell class (optional, fuel-cell configurations).
+            tank: An instance of the LH2 tank class (optional).
+            tms: An instance of the thermal-management class (optional; Class I/II TMS of
+                the fuel-cell configurations, see ``Systems.Thermal.ThermalManagementSystem``).
 
         Attributes:
             AerodynamicsInput (dictionary): contains aerodynamics input keys and values
@@ -66,6 +70,7 @@ class Aircraft:
         self.climateimpact = climateimpact
         self.fuelcell = fuelcell      # hydrogen fuel-cell system (optional)
         self.tank = tank              # liquid-hydrogen tank (optional)
+        self.tms = tms                # thermal-management system (optional)
         #input dictionaries
         self.AerodynamicsInput = None 
         self.ConstraintsInput = None 
@@ -79,6 +84,7 @@ class Aircraft:
         self.FLOPSInput = None
         self.PropellerInput = None
         self.TankInput = None
+        self.TMSInput = None
         #aircraft configuration
         self.Configuration = None
         self.HybridType = None
@@ -130,7 +136,7 @@ class Aircraft:
 
     """ Methods """
 
-    def ReadInput(self,AerodynamicsInput,ConstraintsInput,MissionInput,EnergyInput,MissionStages,DiversionStages, LoiterStages=None, WellToTankInput=None, CellInput=None, ClimateImpactInput=None, PropellerInput=None, TankInput=None):
+    def ReadInput(self,AerodynamicsInput,ConstraintsInput,MissionInput,EnergyInput,MissionStages,DiversionStages, LoiterStages=None, WellToTankInput=None, CellInput=None, ClimateImpactInput=None, PropellerInput=None, TankInput=None, TMSInput=None):
         """Imports input dictionaries and assigns them to Aircraft class attributes. Then it also passes them over to the subsystems classes.
 
         Args:
@@ -145,6 +151,8 @@ class Aircraft:
             CellInput (dictionary, optional)
             ClimateImpactInput (dictionary, optional)
             PropellerInput (dictionary, optional)
+            TankInput (dictionary, optional)
+            TMSInput (dictionary, optional): thermal-management inputs; absent = Class-I TMS
 
         Note:
             Each argument may be either a legacy dict or a typed config object from
@@ -167,6 +175,9 @@ class Aircraft:
         TankInput = _as_dict(TankInput)
         if TankInput is not None:
             self.TankInput = TankInput
+        # Unlike the optional inputs above, the TMS input is not kept from a previous call:
+        # no TMSInput means the default Class-I TMS.
+        self.TMSInput = _as_dict(TMSInput)
 
         self.AerodynamicsInput = AerodynamicsInput
         self.ConstraintsInput = ConstraintsInput
@@ -202,6 +213,10 @@ class Aircraft:
         # Initialize Weight Estimator
         self.weight.SetInput()
 
+        # Initialize the thermal-management system (Class I unless TMSInput says otherwise)
+        if self.tms is not None:
+            self.tms.SetInput()
+
         if CellInput is not None:
             
             self.CellInput = CellInput
@@ -231,6 +246,8 @@ class Aircraft:
             CellInput (dictionary, optional)
             ClimateImpactInput (dictionary, optional)
             PropellerInput (dictionary, optional)  
+            TankInput (dictionary, optional)
+            TMSInput (dictionary, optional)
             PrintOutput (bool, default is False)     
         """
 
@@ -240,11 +257,12 @@ class Aircraft:
         ClimateImpactInput = kwargs.get('ClimateImpactInput', None)
         PropellerInput = kwargs.get('PropellerInput', None)
         TankInput = kwargs.get('TankInput', None)
+        TMSInput = kwargs.get('TMSInput', None)
         DesignWingLoading = kwargs.get('DesignWingLoading', None)
         PrintOutput = kwargs.get('PrintOutput', False)
 
         if PrintOutput: print("Reading input data...")
-        self.ReadInput(AerodynamicsInput,ConstraintsInput, MissionInput, EnergyInput, MissionStages, DiversionStages,LoiterStages, WellToTankInput,CellInput,ClimateImpactInput,PropellerInput,TankInput)
+        self.ReadInput(AerodynamicsInput,ConstraintsInput, MissionInput, EnergyInput, MissionStages, DiversionStages,LoiterStages, WellToTankInput,CellInput,ClimateImpactInput,PropellerInput,TankInput,TMSInput)
 
         if PrintOutput: print("Finding Design Point...")
         # If a design wing loading (W/S) is supplied, fix it; otherwise optimize it.
@@ -378,6 +396,13 @@ class Aircraft:
             print(f'Sizing phase for thermal powertrain: ', 'Climb/Cruise peak power (adjusted with altitude power lapse)' if self.mission.Max_PEng > self.mission.TO_PP else 'Takeoff peak power'  )
             print(f'Thermal powertrain rating shaft power SLS rating (total, all engines): {self.powertrain.engineRating/1000.:.1f} [kW]')
         print(' ')
+
+        if self.Configuration in ('Hydrogen', 'FuelCellBattery') and self.tms is not None:
+            print('-------------Thermal Management-------------')
+            print(f'TMS mass (Class {self.tms.Class}):             {self.weight.WHeat_Exchanger:.1f} [Kg]')
+            if self.tms.Class == 'II':
+                self.tms.report()
+            print(' ')
 
         if self.Configuration == 'Hybrid':
             print('-------------Battery Specs-------------')

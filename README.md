@@ -74,5 +74,6 @@ Students who contributed to the code development:
 - Francesco Campagna (Class II Battery model heat management and degradation)
 - Andrea Pietrosanto (GT Pollutant emissions model)
 - Fabrizio Bassis (GT Soot emissions model)
+- Diego Marconi (Class II Thermal Management System)
 
 [![Documentation Status](https://img.shields.io/badge/docs-online-success)](https://rmalpica.github.io/PhlyGreen/)

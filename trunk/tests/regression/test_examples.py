@@ -43,6 +43,16 @@ def test_turbofan_example_runs():
 
 
 @pytest.mark.slow
+@pytest.mark.skipif(not __import__("PhlyGreen").Systems.Thermal.coolprop_available(),
+                    reason="CoolProp not installed")
+def test_tms_class_ii_example_runs():
+    # two full designs, one with the geometric Class-II TMS (~1.5 min)
+    proc = subprocess.run([sys.executable, os.path.join("examples", "27_hydrogen_tms_class_ii.py")],
+                          cwd=TRUNK, capture_output=True, text=True, timeout=600)
+    assert proc.returncode == 0, f"27_hydrogen_tms_class_ii.py failed:\n{proc.stderr[-2000:]}"
+
+
+@pytest.mark.slow
 @pytest.mark.parametrize("script", FAST_EXAMPLES)
 def test_example_runs(script):
     path = os.path.join("examples", script)

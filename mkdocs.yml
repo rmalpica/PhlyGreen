@@ -112,6 +112,7 @@ nav:
       - Powertrain Module: user-guide/powertrain.md
       - Battery Module: user-guide/battery.md
       - Hydrogen (Fuel Cell & Tank): user-guide/hydrogen.md
+      - Thermal Management (TMS): user-guide/thermal-management.md
       - Aerodynamics Module: user-guide/aerodynamics.md
       - Structures Module: user-guide/structures.md
       - Surrogate Models: user-guide/surrogate-models.md
@@ -131,7 +132,7 @@ nav:
       - Battery: api/battery.md
       - Fuel Cell: api/fuelcell.md
       - LH2 Tank: api/tank.md
-      - Thermal Network: api/thermal.md
+      - Thermal Management: api/thermal.md
       - Weight: api/weight.md
       - Performance: api/performance.md
       - Constraints: api/constraints.md

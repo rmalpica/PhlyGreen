@@ -95,6 +95,14 @@ class AircraftResults:
     S_number: Optional[float] = None
     P_number: Optional[float] = None
 
+    # --- thermal management (fuel-cell configurations) ------------------------
+    tms_class: Optional[str] = None          # 'I' (specific power) | 'II' (geometric)
+    tms_mass: Optional[float] = None         # TMS mass [kg] (= weight.WHeat_Exchanger)
+    tms_pump_power: Optional[float] = None   # coolant-pump electrical power [W] (Class II)
+    tms_ram_drag: Optional[float] = None     # ram-air duct drag at the design point [N] (Class II)
+    tms_design_point: Optional[str] = None   # mission point the TMS was sized at (Class II)
+    fuelcell_rating: Optional[float] = None  # fuel-cell net electrical rating [W]
+
     # --- provenance ---------------------------------------------------------
     configuration: Optional[str] = None
     hybrid_type: Optional[str] = None
@@ -177,6 +185,20 @@ class AircraftResults:
                 r.S_number = _get(b, 'S_number')
                 r.P_number = _get(b, 'P_number')
 
+        # Thermal-management system of the fuel-cell configurations.
+        tms = getattr(aircraft, 'tms', None)
+        fc = getattr(aircraft, 'fuelcell', None)
+        if r.configuration in ('Hydrogen', 'FuelCellBattery') and fc is not None:
+            r.fuelcell_rating = _get(fc, 'P_fc_rated')
+        if r.configuration in ('Hydrogen', 'FuelCellBattery') and tms is not None:
+            r.tms_class = tms.Class
+            r.tms_mass = _get(w, 'WHeat_Exchanger')
+            res = getattr(w, 'tms_result', None)
+            if res is not None:
+                r.tms_pump_power = float(res.pump_power)
+                r.tms_ram_drag = float(res.ram_drag)
+                r.tms_design_point = res.design_point['name']
+
         # Opt-in battery thermal-management / degradation results, if the post-design
         # analysis (battery.thermal_degradation_analysis) was run before results().
         ageing = getattr(getattr(aircraft, 'battery', None), 'ageing', None)
@@ -252,7 +274,7 @@ def _get(obj, name):
 # Input blocks captured for the design snapshot, in display order.
 _INPUT_BLOCKS = [
     'MissionInput', 'AerodynamicsInput', 'ConstraintsInput', 'EnergyInput', 'CellInput',
-    'PropellerInput', 'WellToTankInput', 'ClimateImpactInput', 'FLOPSInput', 'TankInput',
+    'PropellerInput', 'WellToTankInput', 'ClimateImpactInput', 'FLOPSInput', 'TankInput', 'TMSInput',
     'MissionStages', 'DiversionStages', 'LoiterStages',
 ]
 

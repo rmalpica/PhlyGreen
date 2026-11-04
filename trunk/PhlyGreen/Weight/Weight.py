@@ -1,3 +1,4 @@
+import warnings
 import numpy as np
 import PhlyGreen.Utilities.Atmosphere as ISA
 import PhlyGreen.Utilities.Speed as Speed
@@ -9,6 +10,8 @@ from .FLOPS_model import FLOPS_model
 # Max inner passes of the fuel-cell "size -> fly -> resize -> re-fly" loop (the fuel-cell
 # rated power converges in 2-3 passes since efficiency depends only weakly on stack size).
 _FC_RESIZE_ITERS = 3
+# With the Class-II TMS the same loop also converges the TMS pump load and ram-air drag.
+_FC_TMS_RESIZE_ITERS = 6
 
 
 class Weight:
@@ -48,6 +51,7 @@ class Weight:
         self.tol = 0.1
         self.final_reserve = None  
         self.Class = 'I'
+        self.tms_result = None     # Class-II TMS result of the last fuel-cell weight closure
         # When True, the powertrain mass is not added on top of a structural model that already
         # contains it (see powertrain_in_closure). Off by default: switching it on changes the
         # converged take-off weight, so it is a deliberate choice per configuration.
@@ -255,13 +259,17 @@ class Weight:
 
         The fuel-cell system mass is sized by ``FuelCell.ComputeAndStoreWeights`` (which
         also sets ``aircraft.weight.WPT``); the mission returns the hydrogen chemical
-        energy, converted to usable H2 mass via the hydrogen LHV (``self.ef``) with a 5%
-        installation/feed margin. Hydrogen storage mass uses the cryogenic ``LH2_Tank`` if
-        available, otherwise a simple gravimetric-index model so the design always closes.
+        energy (flown profile + ground segments), converted to H2 mass with ``self.ef`` and
+        increased by ``EnergyInput['H2 Fuel Margin']`` (default 0.05: unusable/residual
+        hydrogen, feed system). The final reserve (``Contingency Fuel``, else 5 % of that
+        load) is weighed AND stored: the tank holds load + reserve. Hydrogen storage mass uses
+        the cryogenic ``LH2_Tank`` if available, otherwise a simple gravimetric-index model.
         """
         # Gravimetric index of the H2 storage system (usable H2 / total tank+H2 mass),
         # used as a fallback when the detailed cryogenic tank model is unavailable.
         grav_index = self.aircraft.EnergyInput.get('H2 Gravimetric Index', 0.35)
+        # Extra H2 loaded on top of the flown H2 (unusable/residual hydrogen, feed system).
+        h2_margin = self.aircraft.EnergyInput.get('H2 Fuel Margin', 0.05)
 
         # Use the physics-based LH2 tank model when a TankInput is given and CoolProp is
         # installed; otherwise fall back to the simple gravimetric-index model.
@@ -273,52 +281,28 @@ class Weight:
                 LH2_Tank = None
 
         def func(WTO):
-            # Size the fuel cell self-consistently: seed from the constraints, then
-            # fly -> resize to max(mission peak, take-off, OEI) -> re-fly until the required
-            # power converges, so the fuel cell that flies the mission is the one that is
-            # weighed (the take-off/OEI requirement is a hard floor on its power).
-            fc = self.aircraft.fuelcell
-            fc.SizeFromConstraint(WTO)
-            P_req, converged = None, False
-            for _ in range(_FC_RESIZE_ITERS):
-                E_h2_chem = self.aircraft.mission.EvaluateMission(WTO)
-                demand = max(self.aircraft.mission.TO_PP, self.aircraft.mission.Max_PEng)
-                if P_req is not None and abs(demand - P_req) <= 1e-3 * max(P_req, 1.0):
-                    converged = True
-                    break
-                P_req = demand
-                fc.SizeForPropulsivePower(P_req)
-            if not converged:                 # ensure the final stack size was actually flown
-                E_h2_chem = self.aircraft.mission.EvaluateMission(WTO)
-            self.WPT = fc.Weight
+            # Fuel cell (and Class-II TMS) sized self-consistently with the flown mission.
+            E_h2_chem = self._fuel_cell_and_tms_closure(WTO)
+            self.WPT = self.aircraft.fuelcell.Weight
 
-            self.WH2_Fuel = (E_h2_chem / self.ef) * 1.05
+            self.WH2_Fuel = (E_h2_chem / self.ef) * (1.0 + h2_margin)
             self.Wf = self.WH2_Fuel
             # Energies used over the mission [J] = [hydrogen, battery]; consumed by the
             # well-to-wake accounting (no battery in a pure fuel-cell aircraft).
             self.TotalEnergies = [E_h2_chem, 0.0]
 
-            # 3. Hydrogen tank (empty) mass.
-            if self.WH2_Fuel <= 0:
-                self.WTank = 0.0
-            elif LH2_Tank is not None:
-                self.aircraft.tank = LH2_Tank(capacity_kg=self.WH2_Fuel, aircraft=self.aircraft)
-                self.WTank = self.aircraft.tank.mass_system_empty
-            else:
-                self.WTank = self.WH2_Fuel * (1.0 / grav_index - 1.0)
+            # 3. Reserve hydrogen (fixed input mass, else 5% of the H2 load) and the tank
+            # (empty) mass. The tank holds ALL the hydrogen on board: load + reserve.
+            self.final_reserve = self._contingency if self._contingency else 0.05 * self.Wf
+            self.WTank = self._hydrogen_tank_mass(self.WH2_Fuel + self.final_reserve,
+                                                  LH2_Tank, grav_index)
 
-            # 4. Thermal-management (heat-exchanger) mass from the peak fuel-cell heat load.
-            # The cryogenic H2 is an effective heat sink, so the HEX is light per kW of heat
-            # rejected (high specific power [W/kg]; user input 'HEX Specific Power H2').
-            Q_max = self.aircraft.mission.Max_FC_Thermal_Pwr
-            hex_sp_h2 = self.aircraft.EnergyInput.get('HEX Specific Power H2', 5000.0)
-            self.WHeat_Exchanger = Q_max / hex_sp_h2 if Q_max > 0 else 0.0
+            # 4. Thermal-management mass (Class I: peak heat / specific power; Class II:
+            # geometric exchangers + pump, sized in the closure above).
+            self.WHeat_Exchanger = self._fuel_cell_tms_mass()
 
             # 5. Structure.
             self.WStructure = self._structural_weight(WTO)
-
-            # 6. Reserve (fixed input mass, else 5% of the usable H2) and sum.
-            self.final_reserve = self._contingency if self._contingency else 0.05 * self.Wf
 
             return (self.WStructure + self.WPT + self.WH2_Fuel + self.WTank
                     + self.WHeat_Exchanger + self.WPayload + self.WCrew
@@ -331,8 +315,109 @@ class Weight:
                 "Hydrogen weight loop did not converge: the design did not close within "
                 "1000-300000 kg (the fuel-cell system mass may be snowballing — try a lower "
                 "design cell voltage, a higher stack power density, or a shorter mission).")
+        self._warn_tms_shortfall()
         return self.WTO
 
+
+    def _hydrogen_tank_mass(self, m_h2, LH2_Tank, grav_index):
+        """Empty mass [kg] of the tank holding ``m_h2`` kg of hydrogen: the cryogenic
+        ``LH2_Tank`` model when available, else the gravimetric index
+        (usable H2 / (H2 + tank))."""
+        if m_h2 <= 0:
+            return 0.0
+        if LH2_Tank is not None:
+            self.aircraft.tank = LH2_Tank(capacity_kg=m_h2, aircraft=self.aircraft)
+            return self.aircraft.tank.mass_system_empty
+        return m_h2 * (1.0 / grav_index - 1.0)
+
+    def _fuel_cell_and_tms_closure(self, WTO):
+        """Size the fuel cell (and the Class-II TMS) self-consistently at one take-off weight
+        and fly the mission. Shared by :meth:`Hydrogen` and :meth:`FuelCellBattery`.
+
+        1. Reset the TMS couplings (ram-air drag increment, pump load) and seed the fuel cell
+           from the constraint diagram.
+        2. Fly -> resize the fuel cell to max(mission peak, take-off/OEI) -> re-fly until the
+           required power converges, so the fuel cell that flies the mission is the one that
+           is weighed (the take-off/OEI requirement is a hard floor on its power).
+        3. With the Class-II TMS, every pass also sizes the TMS over the mission thermal
+           profile: its pump becomes a constant electrical load on the fuel cell
+           (``fuelcell.P_aux_tms``) and its ram-air drag a drag-coefficient increment
+           (``aerodynamics.extra_Cd``, referred to the wing area S = WTO g / (W/S)); the loop
+           then also waits for these two to converge.
+
+        Returns what ``mission.EvaluateMission`` returns for the final pass.
+        """
+        fc = self.aircraft.fuelcell
+        tms = getattr(self.aircraft, 'tms', None)
+        class_ii = tms is not None and tms.Class == 'II'
+        aero = self.aircraft.aerodynamics
+        aero.extra_Cd = 0.0
+        fc.P_aux_tms = 0.0
+        self.tms_result = None
+        fc.SizeFromConstraint(WTO)
+
+        P_req, converged = None, False
+        for _ in range(_FC_TMS_RESIZE_ITERS if class_ii else _FC_RESIZE_ITERS):
+            energies = self.aircraft.mission.EvaluateMission(WTO)
+            demand = max(self.aircraft.mission.TO_PP, self.aircraft.mission.Max_PEng)
+            tms_settled = True
+            if class_ii:
+                res = tms.SizeForMission(self.aircraft.mission.thermal_profile)
+                wing_area = WTO * 9.81 / self.aircraft.DesignWTOoS
+                new_Cd = tms.RamDragCoefficient(res, wing_area)
+                tms_settled = (abs(res.pump_power - fc.P_aux_tms) <= 1e-3 * max(res.pump_power, 1.0)
+                               and abs(new_Cd - aero.extra_Cd) <= 1e-3 * max(new_Cd, 1e-6))
+                fc.P_aux_tms = res.pump_power
+                aero.extra_Cd = new_Cd
+                self.tms_result = res
+            if (P_req is not None and tms_settled
+                    and abs(demand - P_req) <= 1e-3 * max(P_req, 1.0)):
+                converged = True
+                break
+            P_req = demand
+            fc.SizeForPropulsivePower(P_req)
+        if not converged:                 # ensure the final stack size was actually flown
+            energies = self.aircraft.mission.EvaluateMission(WTO)
+        return energies
+
+    def _fuel_cell_tms_mass(self):
+        """Fuel-cell thermal-management mass [kg].
+
+        Class I: the peak fuel-cell heat over the mission AND the take-off/OEI point (the
+        fuel cell is sized there and rejects the most heat there) divided by the specific
+        power ``EnergyInput['HEX Specific Power H2']``. Class II: exchanger cores + pump +
+        pump motor of the TMS sized in :meth:`_fuel_cell_and_tms_closure`.
+        """
+        if self.tms_result is not None:
+            return self.tms_result.total_mass
+        m = self.aircraft.mission
+        Q_peak = max(m.Max_FC_Thermal_Pwr, m.TO_FC_Thermal_Pwr)
+        tms = getattr(self.aircraft, 'tms', None)
+        if tms is not None:
+            return tms.ClassI_Mass(Q_peak)
+        hex_sp_h2 = self.aircraft.EnergyInput.get('HEX Specific Power H2', 5000.0)
+        return Q_peak / hex_sp_h2 if Q_peak > 0 else 0.0
+
+    def _warn_tms_shortfall(self):
+        """Warn, once at the converged design, if the Class-II TMS could not reject all the
+        heat or needed exchangers beyond the per-unit caps."""
+        r = self.tms_result
+        if r is None:
+            return
+        Q = max(r.design_point['Q_fc'], 1.0)
+        if r.heat_shortfall > 1e-3 * Q:
+            warnings.warn(f"Class-II TMS: {r.heat_shortfall/1e3:.1f} kW of fuel-cell heat could "
+                          f"not be rejected at the design point '{r.design_point['name']}'.",
+                          RuntimeWarning)
+        if r.caps_exceeded:
+            warnings.warn("Class-II TMS: even 'TMS Max HEX Units' units in parallel exceed the "
+                          "per-unit mass/volume caps; the units were allowed to grow beyond them.",
+                          RuntimeWarning)
+        bad = [c for c in r.candidates if not c['feasible']]
+        if len(bad) == len(r.candidates):
+            warnings.warn("Class-II TMS: no candidate design point gives exchangers that reject "
+                          "the heat at every mission point; the least-short one was used.",
+                          RuntimeWarning)
 
     def FuelCellBattery(self):
         """Solve the take-off-weight equation for a fuel-cell + battery hybrid aircraft.
@@ -349,6 +434,7 @@ class Weight:
         spec_power = energy.get('Battery Specific Power', 1500.0)       # W/kg
         usable_soc = energy.get('Battery Usable SOC', 0.8)
         grav_index = energy.get('H2 Gravimetric Index', 0.35)
+        h2_margin = energy.get('H2 Fuel Margin', 0.05)
 
         LH2_Tank = None
         if getattr(self.aircraft, 'TankInput', None) is not None:
@@ -364,22 +450,10 @@ class Weight:
             # re-fly until converged. The battery offloads the fuel cell (its share is
             # 1 - phi), so a larger phi shrinks the stack — but never below the take-off/OEI
             # share, which is a hard floor.
-            fc = self.aircraft.fuelcell
-            fc.SizeFromConstraint(WTO)
-            P_req, converged = None, False
-            for _ in range(_FC_RESIZE_ITERS):
-                E_h2_chem, E_bat = self.aircraft.mission.EvaluateMission(WTO)
-                demand = max(self.aircraft.mission.TO_PP, self.aircraft.mission.Max_PEng)
-                if P_req is not None and abs(demand - P_req) <= 1e-3 * max(P_req, 1.0):
-                    converged = True
-                    break
-                P_req = demand
-                fc.SizeForPropulsivePower(P_req)
-            if not converged:
-                E_h2_chem, E_bat = self.aircraft.mission.EvaluateMission(WTO)
-            self.WPT = fc.Weight
+            E_h2_chem, E_bat = self._fuel_cell_and_tms_closure(WTO)
+            self.WPT = self.aircraft.fuelcell.Weight
 
-            self.WH2_Fuel = (E_h2_chem / self.ef) * 1.05
+            self.WH2_Fuel = (E_h2_chem / self.ef) * (1.0 + h2_margin)
             self.Wf = self.WH2_Fuel
             # Energies used over the mission [J] = [hydrogen, battery]; consumed by the
             # well-to-wake accounting.
@@ -395,20 +469,13 @@ class Weight:
                 WBat_power = self.aircraft.mission.Max_PBat / spec_power
                 self.WBat = max(WBat_energy, WBat_power)
 
-            # Hydrogen tank (empty) mass.
-            if self.WH2_Fuel <= 0:
-                self.WTank = 0.0
-            elif LH2_Tank is not None:
-                self.aircraft.tank = LH2_Tank(capacity_kg=self.WH2_Fuel, aircraft=self.aircraft)
-                self.WTank = self.aircraft.tank.mass_system_empty
-            else:
-                self.WTank = self.WH2_Fuel * (1.0 / grav_index - 1.0)
+            # Reserve hydrogen and the tank (empty) mass, sized for load + reserve.
+            self.final_reserve = self._contingency if self._contingency else 0.05 * self.Wf
+            self.WTank = self._hydrogen_tank_mass(self.WH2_Fuel + self.final_reserve,
+                                                  LH2_Tank, grav_index)
 
-            # Cooling (heat-exchanger) mass from peak fuel-cell heat — H2-cooled HEX specific
-            # power [W/kg] (user input 'HEX Specific Power H2').
-            Q_max = self.aircraft.mission.Max_FC_Thermal_Pwr
-            hex_sp_h2 = self.aircraft.EnergyInput.get('HEX Specific Power H2', 5000.0)
-            self.WHeat_Exchanger = Q_max / hex_sp_h2 if Q_max > 0 else 0.0
+            # Fuel-cell thermal-management mass (Class I or II, see Hydrogen()).
+            self.WHeat_Exchanger = self._fuel_cell_tms_mass()
             # Class-II battery: add its thermal-management (cooling) mass from the peak in-flight
             # pack waste heat (rejected to ambient — lower specific power than the cryo-H2 HEX).
             if self.aircraft.battery.BatteryClass == 'II':
@@ -418,8 +485,6 @@ class Weight:
 
             # Structure.
             self.WStructure = self._structural_weight(WTO)
-
-            self.final_reserve = self._contingency if self._contingency else 0.05 * self.Wf
 
             return (self.WStructure + self.WPT + self.WBat + self.WH2_Fuel + self.WTank
                     + self.WHeat_Exchanger + self.WPayload + self.WCrew
@@ -432,6 +497,7 @@ class Weight:
                 "Fuel-cell+battery weight loop did not converge within 1000-300000 kg "
                 "(try a lower fuel-cell design voltage, more battery hybridization, or a "
                 "shorter mission).")
+        self._warn_tms_shortfall()
         return self.WTO
 
 

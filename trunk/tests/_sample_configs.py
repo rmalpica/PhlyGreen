@@ -23,7 +23,6 @@ CONSTRAINTS_INPUT = {
 MISSION_INPUT = {
     'Range Mission': 750,    # nautical miles
     'Range Diversion': 220,  # nautical miles
-    'Beta start': 0.97,
     'Payload Weight': 4560,  # kg
     'Crew Weight': 500,      # kg
 }

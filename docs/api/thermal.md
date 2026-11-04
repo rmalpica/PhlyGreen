@@ -1,6 +1,21 @@
-# Thermal (heat-exchanger network) API
+# Thermal API
 
-Scaffold for a heat-exchanger / thermal-management network, used by the cryogenic LH2 tank and
-available for battery / fuel-cell cooling studies.
+The fuel-cell thermal-management system (Class I / Class II, see
+[Thermal Management](../user-guide/thermal-management.md)), the geometric heat-exchanger
+toolkit, the ram-air drag model, and the heat-source/sink network scaffold.
+
+## Thermal-management subsystem
+
+::: PhlyGreen.Systems.Thermal.TMS
+
+## Heat-exchanger sizing
+
+::: PhlyGreen.Systems.Thermal.hex
+
+## Ram-air duct drag
+
+::: PhlyGreen.Systems.Thermal.ram_air
+
+## Heat-source / sink network scaffold
 
 ::: PhlyGreen.Systems.Thermal.network

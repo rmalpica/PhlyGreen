@@ -40,9 +40,17 @@ def test_take_off_denominator_is_unity_for_power_rated_aircraft():
 
 
 def test_design_point_unchanged_for_a_power_rated_aircraft():
-    """Pinned from the pre-turbofan implementation of the constraint diagram."""
+    """Pinned from the pre-turbofan implementation of the constraint diagram.
+
+    The reference was computed with the constraint values the examples used at the time
+    (AEO climb at 210 KCAS, 950 m take-off field); they are set explicitly here so the pin
+    stays a test of the constraint code, not of the example inputs.
+    """
+    cfg = traditional_config()
+    cfg.constraints.phases['AEO Climb']['Speed'] = 210
+    cfg.constraints.phases['Take Off']['sTO'] = 950
     ac = pg.build_aircraft()
-    ac.configure(traditional_config(), design=False)
+    ac.configure(cfg, design=False)
     ac.constraint.FindDesignPoint(None)
     assert ac.DesignPW == pytest.approx(194.905679, rel=1e-9)
     assert ac.DesignWTOoS == pytest.approx(3293.822823, rel=1e-9)

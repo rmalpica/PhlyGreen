@@ -25,7 +25,7 @@ Inputs are typed, validated dataclasses in **`PhlyGreen/config/`** rather than l
 `AircraftConfig` bundles the flags (`configuration`, `hybrid_type`, `aircraft_type`,
 `weight_class`) with the sections `MissionConfig`, `EnergyConfig`, `AerodynamicsConfig`,
 `ConstraintsConfig`, `StagesConfig` (flight profile), and the optional `CellConfig`,
-`WellToTankConfig`, `ClimateImpactConfig`, `TankConfig`. Every section has
+`WellToTankConfig`, `ClimateImpactConfig`, `TankConfig`, `TMSConfig`. Every section has
 `to_dict`/`from_dict`, and `Aircraft.ReadInput` accepts either config objects or the legacy
 dicts, so old notebooks keep working.
 

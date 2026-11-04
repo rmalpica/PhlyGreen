@@ -16,13 +16,13 @@ from common import traditional_config, savefig
 def main():
     # 1. Validation catches mistakes early, with a clear message.
     try:
-        MissionConfig(range_mission=-10, range_diversion=220, beta_start=0.97,
+        MissionConfig(range_mission=-10, range_diversion=220,
                       payload_weight=4560, crew_weight=500)
     except ConfigError as e:
         print("Validation rejected a bad input:", e)
 
     # 2. Config <-> dict round-trip is lossless (the adapter the legacy API relies on).
-    mission = MissionConfig(range_mission=750, range_diversion=220, beta_start=0.97,
+    mission = MissionConfig(range_mission=750, range_diversion=220,
                             payload_weight=4560, crew_weight=500)
     as_dict = mission.to_dict()
     print("\nMissionConfig as a legacy dict:", as_dict)

@@ -46,6 +46,7 @@ needs pandas — each degrades gracefully if the dependency is missing.
 | `24_gt_emissions_surrogate.py` | State-dependent GT pollutant emissions (NOx/CO/UHC) from the PW127 EI response surface; `einox_model='Surrogate'` vs Filippone | EI vs power & altitude |
 | `25_fuelcell_battery_class_ii_models.py` | Fuel-cell + battery sized with the Class-II battery (P-number + thermal), the d-q ("Smart") electric motor and the Hamilton propeller; plots SOC/temperature, power split and component efficiencies (compute-heavy) | profile, power split, SOC/T, efficiencies |
 | `26_turbofan_design.py` | Size an A320-class **turbofan** jet: the constraint diagram in T/W, the pyCycle overall-efficiency / TSFC map, and the compressible (wave-drag) polar | engine map table + design summary |
+| `27_hydrogen_tms_class_ii.py` | Thermal management of the hydrogen aircraft: Class-I (specific power) vs Class-II (geometric coolant→LH2 and coolant→ram-air heat exchangers, pump, ram-air drag) TMS; design-point selection and rating over the mission (needs CoolProp, ~1.5 min) | rating bar chart |
 
 ## Outer-loop applications
 

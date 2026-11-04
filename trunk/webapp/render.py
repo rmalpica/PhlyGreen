@@ -33,8 +33,15 @@ def headline_metrics(results):
         (fuel_label, _fmt(results.get("block_fuel") or results.get("Wf"))),
         ("Empty weight [kg]", _fmt(results.get("empty_weight"))),
         ("Wing area [m²]", _fmt(results.get("WingSurface"), nd=1)),
-        ("Engine rating [kW]", _fmt(results.get("engineRating"), scale=1e-3)),
     ]
+    if cfg in ("Hydrogen", "FuelCellBattery"):
+        metrics.append(("Fuel-cell rating [kW]", _fmt(results.get("fuelcell_rating"), scale=1e-3)))
+        tms_label = f"TMS (Class {results.get('tms_class') or 'I'}) [kg]"
+        metrics.append((tms_label, _fmt(results.get("tms_mass"))))
+    elif results.get("engineRating_units") == "N":
+        metrics.append(("Engine SLS thrust [kN]", _fmt(results.get("engineRating"), scale=1e-3)))
+    else:
+        metrics.append(("Engine rating [kW]", _fmt(results.get("engineRating"), scale=1e-3)))
     if results.get("WBat"):
         metrics.append(("Battery [kg]", _fmt(results.get("WBat"))))
     # Class-II battery: show the cell pack configuration and its specific energy explicitly.
@@ -294,5 +301,55 @@ def sweep_figure(rows, knob_label, metric_label):
     if n_fail:
         ax.text(0.02, 0.95, f"{n_fail} point(s) did not close", transform=ax.transAxes,
                 fontsize=8, color="tab:gray", va="top")
+    fig.tight_layout()
+    return fig
+
+
+# --- Class-II thermal management --------------------------------------------------------------
+def tms_result(aircraft):
+    """The Class-II TMS result of a designed aircraft, or None (Class I / no fuel cell)."""
+    return getattr(getattr(aircraft, "weight", None), "tms_result", None)
+
+
+def tms_table(aircraft):
+    """One row per heat-exchanger role plus the pump: units, family, mass, volume, heat."""
+    r = tms_result(aircraft)
+    rows = {"item": [], "units": [], "family": [], "mass per unit [kg]": [],
+            "volume per unit [m³]": [], "heat [kW]": [], "total mass [kg]": []}
+    for u in r.units:
+        rows["item"].append(u.role.replace("_", " ") + (" (caps exceeded)" if u.caps_exceeded else ""))
+        rows["units"].append(u.n_parallel)
+        rows["family"].append(u.design.family.replace("_", " "))
+        rows["mass per unit [kg]"].append(round(u.design.weight, 1))
+        rows["volume per unit [m³]"].append(round(u.design.volume, 4))
+        rows["heat [kW]"].append(round(u.q / 1e3, 1))
+        rows["total mass [kg]"].append(round(u.mass, 1))
+    rows["item"].append(f"coolant pump ({r.pump_power / 1e3:.1f} kW)")
+    for k in ("units", "family", "mass per unit [kg]", "volume per unit [m³]", "heat [kW]"):
+        rows[k].append(None)
+    rows["total mass [kg]"].append(round(r.pump_mass, 1))
+    return rows
+
+
+def tms_rating_figure(aircraft):
+    """Heat to reject vs capacity of the chosen TMS hardware at every mission point."""
+    import numpy as np
+    r = tms_result(aircraft)
+    tms = aircraft.tms
+    pts = aircraft.mission.thermal_profile
+    req, cap = [], []
+    for p in pts:
+        q_cap, q_req = tms.RateAtPoint(r, p, capped=False)
+        req.append(q_req / 1e3)
+        cap.append(q_cap / 1e3)
+    x = np.arange(len(pts))
+    fig, ax = plt.subplots(figsize=(10, 4))
+    ax.bar(x - 0.2, req, 0.4, label="heat to reject")
+    ax.bar(x + 0.2, cap, 0.4, label="capacity of the chosen TMS")
+    ax.set_xticks(x)
+    ax.set_xticklabels([p["name"] for p in pts], rotation=45, ha="right")
+    ax.set_ylabel("heat [kW]")
+    ax.set_title(f"Class-II TMS sized at '{r.design_point['name']}', rated over the mission")
+    ax.legend()
     fig.tight_layout()
     return fig

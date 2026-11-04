@@ -89,7 +89,8 @@ W_f = \frac{E_f}{e_f}
 
 with \( e_f \) the fuel LHV [J/kg]. \( W_f \) is the fuel to fly the **full integrated
 profile — trip + diversion + loiter** (these are all integrated by the mission), so the
-alternate and holding fuel are already inside \( W_f \).
+alternate and holding fuel are already inside \( W_f \). It also includes the fuel of the
+**ground segments** (taxi-out, take-off, taxi-in), see [Mission](mission.md).
 
 On top of that, a **contingency / final reserve** is carried (added to the take-off weight but
 not burned): the fixed `Contingency Fuel` input if given, otherwise a fraction of the mission

@@ -36,11 +36,17 @@ class MissionConfig(DictConfig):
 
     range_mission: float = None       # nautical miles
     range_diversion: float = None     # nautical miles
-    beta_start: float = None          # initial mass fraction (taxi/takeoff burn)
+    beta_start: Optional[float] = None  # DEPRECATED, ignored: the mass at the start of the
+    #                                     climb follows from the computed ground segments
     payload_weight: float = None      # kg
     crew_weight: float = None         # kg
     range_loiter: Optional[float] = None   # nautical miles (optional)
     time_loiter: Optional[float] = None    # minutes (optional)
+    # ground segments (not in the flown profile); None = ICAO LTO defaults
+    taxi_out_time: Optional[float] = None        # [min] (default 13)
+    taxi_in_time: Optional[float] = None         # [min] (default 13)
+    taxi_power_fraction: Optional[float] = None  # of the take-off propulsive power (default 0.07)
+    takeoff_time: Optional[float] = None         # [min] at take-off power (default 0.7)
 
     _KEY_MAP = {
         "range_mission": "Range Mission",
@@ -50,10 +56,19 @@ class MissionConfig(DictConfig):
         "crew_weight": "Crew Weight",
         "range_loiter": "Range Loiter",
         "time_loiter": "Time Loiter",
+        "taxi_out_time": "Taxi Out Time",
+        "taxi_in_time": "Taxi In Time",
+        "taxi_power_fraction": "Taxi Power Fraction",
+        "takeoff_time": "Takeoff Time",
     }
 
     def __post_init__(self):
         _check_fraction("beta_start", self.beta_start)
+        _check_fraction("taxi_power_fraction", self.taxi_power_fraction)
+        for n in ("taxi_out_time", "taxi_in_time", "takeoff_time"):
+            v = getattr(self, n)
+            if v is not None and v < 0:
+                raise ConfigError(f"{n} must be >= 0, got {v!r}")
         for n in ("range_mission", "range_diversion", "payload_weight", "crew_weight"):
             _check_positive(n, getattr(self, n))
 
@@ -90,6 +105,13 @@ class EnergyConfig(DictConfig):
     #                                               Affects the stack voltage and per-cell area only,
     #                                               not the masses. Defaults to 1000 V if unset.
     h2_gravimetric_index: Optional[float] = None  # usable H2 / (H2 + tank) mass
+    # phase of the fuel-cell product water -> heat rejected to the coolant: 'auto' (default,
+    # from the cathode-exhaust saturation) or a fraction in [0, 1] (0 = liquid/HHV, 1 = vapour/LHV)
+    fc_product_water_vapour_fraction: Optional[Any] = None
+    fc_cathode_inlet_rh: Optional[float] = None   # cathode inlet relative humidity at T_op [-]
+    h2_fuel_margin: Optional[float] = None        # extra H2 loaded on top of the flown H2, as a
+    #                                               fraction of it (unusable/residual, feed);
+    #                                               default 0.05
     # --- thermal-management (heat-exchanger) specific powers [W of heat / kg of HEX] ---
     # The cryogenic-H2-cooled fuel-cell HEX is far more mass-effective than the battery HEX
     # (which must reject to ambient via a liquid loop + ram-air), so they are separate inputs.
@@ -142,6 +164,9 @@ class EnergyConfig(DictConfig):
         "bop_mass_ratio": "BoP Mass Ratio",
         "stack_design_voltage": "Stack Design Voltage",
         "h2_gravimetric_index": "H2 Gravimetric Index",
+        "fc_product_water_vapour_fraction": "FC Product Water Vapour Fraction",
+        "fc_cathode_inlet_rh": "FC Cathode Inlet RH",
+        "h2_fuel_margin": "H2 Fuel Margin",
         "hex_specific_power_h2": "HEX Specific Power H2",
         "hex_specific_power_battery": "HEX Specific Power Battery",
         "battery_specific_energy": "Battery Specific Energy",
@@ -348,6 +373,70 @@ class TankConfig(DictConfig):
         _check_positive("max_diameter", self.max_diameter)
         if self.number_of_tanks is not None and self.number_of_tanks < 1:
             raise ConfigError(f"number_of_tanks must be >= 1, got {self.number_of_tanks!r}")
+
+
+@dataclass
+class TMSConfig(DictConfig):
+    """Thermal-management system (``TMSInput``, fuel-cell configurations).
+
+    ``tms_class='I'`` (default): exchanger mass = peak fuel-cell heat / the EnergyConfig
+    ``hex_specific_power_h2``. ``tms_class='II'``: geometric FC_SPEC model (coolant -> LH2
+    exchanger, then coolant -> ram-air exchangers, pump, ram-air drag); needs CoolProp.
+    Every other field only applies to Class II; ``None`` keeps the model default.
+    """
+
+    tms_class: str = "I"
+    coolant: Optional[str] = None                 # CoolProp name, e.g. 'INCOMP::MEG-30%'
+    coolant_delta_t: Optional[float] = None       # coolant temperature drop over the loop [K]
+    max_volume_per_unit: Optional[float] = None   # [m^3] per exchanger unit
+    max_weight_per_unit: Optional[float] = None   # [kg] per exchanger unit
+    max_hex_units: Optional[int] = None           # max parallel units per role
+    ram_air_delta_t: Optional[float] = None       # design ram-air temperature rise [K]
+    ram_air_max_effectiveness: Optional[float] = None  # cap on the ram-air temperature rise
+    h2_approach_delta_t: Optional[float] = None   # H2 leaves its exchanger at T_op - this [K]
+    h2_supply_pressure: Optional[float] = None    # LH2 supply pressure [Pa]
+    loop_pressure_drop: Optional[float] = None    # coolant-loop pressure rise of the pump [Pa]
+    pump_efficiency: Optional[float] = None
+    pump_motor_efficiency: Optional[float] = None
+    pump_specific_power: Optional[float] = None        # [W/kg]
+    pump_motor_specific_power: Optional[float] = None  # [W/kg]
+    ram_recovery: Optional[float] = None          # fraction of dynamic pressure the intake recovers
+    takeoff_coolant_overtemperature: Optional[float] = None  # [K] coolant/stack allowed above T_op
+    #                                                          at the take-off point only (default 0)
+
+    _KEY_MAP = {
+        "tms_class": "TMS Class",
+        "coolant": "TMS Coolant",
+        "coolant_delta_t": "TMS Coolant DeltaT",
+        "max_volume_per_unit": "TMS Max Volume Per Unit",
+        "max_weight_per_unit": "TMS Max Weight Per Unit",
+        "max_hex_units": "TMS Max HEX Units",
+        "ram_air_delta_t": "TMS Ram Air DeltaT",
+        "ram_air_max_effectiveness": "TMS Ram Air Max Effectiveness",
+        "h2_approach_delta_t": "TMS H2 Approach DeltaT",
+        "h2_supply_pressure": "TMS H2 Supply Pressure",
+        "loop_pressure_drop": "TMS Loop Pressure Drop",
+        "pump_efficiency": "TMS Pump Efficiency",
+        "pump_motor_efficiency": "TMS Pump Motor Efficiency",
+        "pump_specific_power": "TMS Pump Specific Power",
+        "pump_motor_specific_power": "TMS Pump Motor Specific Power",
+        "ram_recovery": "TMS Ram Recovery",
+        "takeoff_coolant_overtemperature": "TMS Takeoff Coolant Overtemperature",
+    }
+
+    def __post_init__(self):
+        if self.tms_class not in ("I", "II"):
+            raise ConfigError(f"tms_class must be 'I' or 'II', got {self.tms_class!r}")
+        for name in ("coolant_delta_t", "max_volume_per_unit", "max_weight_per_unit",
+                     "max_hex_units", "ram_air_delta_t", "h2_approach_delta_t",
+                     "h2_supply_pressure", "loop_pressure_drop", "pump_specific_power",
+                     "pump_motor_specific_power"):
+            _check_positive(name, getattr(self, name))
+        if self.takeoff_coolant_overtemperature is not None and self.takeoff_coolant_overtemperature < 0:
+            raise ConfigError("takeoff_coolant_overtemperature must be >= 0")
+        for name in ("ram_air_max_effectiveness", "pump_efficiency", "pump_motor_efficiency",
+                     "ram_recovery"):
+            _check_efficiency(name, getattr(self, name))
 
 
 @dataclass

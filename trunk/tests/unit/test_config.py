@@ -94,3 +94,26 @@ def test_segment_with_type_requires_inputs():
 def test_takeoff_segment_serializes_to_phi_only():
     seg = Segment(name="Takeoff", phi=0.0)
     assert seg.to_stage_dict() == {"Supplied Power Ratio": {"phi": 0.0}}
+
+
+# --- thermal-management config ---------------------------------------------------------
+
+def test_tms_config_round_trip_and_forwarding():
+    from PhlyGreen.config import TMSConfig, AircraftConfig
+    cfg = TMSConfig(tms_class='II', coolant='INCOMP::MEG-30%', max_hex_units=80,
+                    ram_recovery=0.85)
+    d = cfg.to_dict()
+    assert d == {'TMS Class': 'II', 'TMS Coolant': 'INCOMP::MEG-30%',
+                 'TMS Max HEX Units': 80, 'TMS Ram Recovery': 0.85}
+    assert TMSConfig.from_dict(d).to_dict() == d
+    assert TMSConfig().to_dict() == {'TMS Class': 'I'}
+
+
+@pytest.mark.parametrize("kwargs", [
+    {'tms_class': 'III'}, {'coolant_delta_t': 0.0}, {'max_hex_units': -1},
+    {'ram_recovery': 1.2}, {'pump_efficiency': 0.0},
+])
+def test_tms_config_validation(kwargs):
+    from PhlyGreen.config import TMSConfig, ConfigError
+    with pytest.raises(ConfigError):
+        TMSConfig(**kwargs)
