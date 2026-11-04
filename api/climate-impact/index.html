@@ -168,58 +168,7 @@
     <span class=c1>#     U = 0</span>
     <span class=k>return</span> <span class=n>U</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.ClimateImpact.ClimateImpact.ClimateImpact.calculate_mission_emissions class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">calculate_mission_emissions</span> <a href=#PhlyGreen.ClimateImpact.ClimateImpact.ClimateImpact.calculate_mission_emissions class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>calculate_mission_emissions</span><span class=p>()</span>
-</code></pre></div> <div class="doc doc-contents "> <details class=compute-single-mission-emitted-mass-of open> <summary>Compute single-mission emitted mass of</summary> <p>CO₂, H₂O, SO₄, soot, and NOx.</p> </details> <details class=co₂-includes open> <summary>CO₂ includes</summary> <p>• Tank-to-wake emissions • Upstream WTW fuel CO₂ • Upstream grid CO₂ for battery energy (hybrid only)</p> </details> <p>NOx is computed using the Filippone empirical model.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/ClimateImpact/ClimateImpact.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>221</span>
-<span class=normal>222</span>
-<span class=normal>223</span>
-<span class=normal>224</span>
-<span class=normal>225</span>
-<span class=normal>226</span>
-<span class=normal>227</span>
-<span class=normal>228</span>
-<span class=normal>229</span>
-<span class=normal>230</span>
-<span class=normal>231</span>
-<span class=normal>232</span>
-<span class=normal>233</span>
-<span class=normal>234</span>
-<span class=normal>235</span>
-<span class=normal>236</span>
-<span class=normal>237</span>
-<span class=normal>238</span>
-<span class=normal>239</span>
-<span class=normal>240</span>
-<span class=normal>241</span>
-<span class=normal>242</span>
-<span class=normal>243</span>
-<span class=normal>244</span>
-<span class=normal>245</span>
-<span class=normal>246</span>
-<span class=normal>247</span>
-<span class=normal>248</span>
-<span class=normal>249</span>
-<span class=normal>250</span>
-<span class=normal>251</span>
-<span class=normal>252</span>
-<span class=normal>253</span>
-<span class=normal>254</span>
-<span class=normal>255</span>
-<span class=normal>256</span>
-<span class=normal>257</span>
-<span class=normal>258</span>
-<span class=normal>259</span>
-<span class=normal>260</span>
-<span class=normal>261</span>
-<span class=normal>262</span>
-<span class=normal>263</span>
-<span class=normal>264</span>
-<span class=normal>265</span>
-<span class=normal>266</span>
-<span class=normal>267</span>
-<span class=normal>268</span>
-<span class=normal>269</span>
-<span class=normal>270</span>
-<span class=normal>271</span>
-<span class=normal>272</span>
+</code></pre></div> <div class="doc doc-contents "> <details class=compute-single-mission-emitted-mass-of open> <summary>Compute single-mission emitted mass of</summary> <p>CO₂, H₂O, SO₄, soot, and NOx.</p> </details> <details class=co₂-includes open> <summary>CO₂ includes</summary> <p>• Tank-to-wake emissions (zero for hydrogen) • Upstream WTW fuel CO₂ (<code>WTW_CO2</code> per MJ of <code>EnergyInput['Ef']</code>) • Upstream grid CO₂ for battery energy (Hybrid and FuelCellBattery)</p> </details> <p>NOx is computed using the Filippone empirical model (or the EI surrogate) for the gas-turbine configurations. A fuel cell emits no NOx. The contrail term (<code>rf_AIC</code>) keeps its kerosene-derived parametrisation for every configuration; for a fuel cell, whose exhaust is cool and water-rich, it is a placeholder, not a model.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/ClimateImpact/ClimateImpact.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>272</span>
 <span class=normal>273</span>
 <span class=normal>274</span>
 <span class=normal>275</span>
@@ -404,39 +353,102 @@
 <span class=normal>454</span>
 <span class=normal>455</span>
 <span class=normal>456</span>
-<span class=normal>457</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>calculate_mission_emissions</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
+<span class=normal>457</span>
+<span class=normal>458</span>
+<span class=normal>459</span>
+<span class=normal>460</span>
+<span class=normal>461</span>
+<span class=normal>462</span>
+<span class=normal>463</span>
+<span class=normal>464</span>
+<span class=normal>465</span>
+<span class=normal>466</span>
+<span class=normal>467</span>
+<span class=normal>468</span>
+<span class=normal>469</span>
+<span class=normal>470</span>
+<span class=normal>471</span>
+<span class=normal>472</span>
+<span class=normal>473</span>
+<span class=normal>474</span>
+<span class=normal>475</span>
+<span class=normal>476</span>
+<span class=normal>477</span>
+<span class=normal>478</span>
+<span class=normal>479</span>
+<span class=normal>480</span>
+<span class=normal>481</span>
+<span class=normal>482</span>
+<span class=normal>483</span>
+<span class=normal>484</span>
+<span class=normal>485</span>
+<span class=normal>486</span>
+<span class=normal>487</span>
+<span class=normal>488</span>
+<span class=normal>489</span>
+<span class=normal>490</span>
+<span class=normal>491</span>
+<span class=normal>492</span>
+<span class=normal>493</span>
+<span class=normal>494</span>
+<span class=normal>495</span>
+<span class=normal>496</span>
+<span class=normal>497</span>
+<span class=normal>498</span>
+<span class=normal>499</span>
+<span class=normal>500</span>
+<span class=normal>501</span>
+<span class=normal>502</span>
+<span class=normal>503</span>
+<span class=normal>504</span>
+<span class=normal>505</span>
+<span class=normal>506</span>
+<span class=normal>507</span>
+<span class=normal>508</span>
+<span class=normal>509</span>
+<span class=normal>510</span>
+<span class=normal>511</span>
+<span class=normal>512</span>
+<span class=normal>513</span>
+<span class=normal>514</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>calculate_mission_emissions</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>"""</span>
 <span class=sd>    Compute single-mission emitted mass of:</span>
 <span class=sd>        CO₂, H₂O, SO₄, soot, and NOx.</span>
 
 <span class=sd>    CO₂ includes:</span>
-<span class=sd>        • Tank-to-wake emissions</span>
-<span class=sd>        • Upstream WTW fuel CO₂</span>
-<span class=sd>        • Upstream grid CO₂ for battery energy (hybrid only)</span>
+<span class=sd>        • Tank-to-wake emissions (zero for hydrogen)</span>
+<span class=sd>        • Upstream WTW fuel CO₂ (``WTW_CO2`` per MJ of ``EnergyInput['Ef']``)</span>
+<span class=sd>        • Upstream grid CO₂ for battery energy (Hybrid and FuelCellBattery)</span>
 
-<span class=sd>    NOx is computed using the Filippone empirical model.</span>
+<span class=sd>    NOx is computed using the Filippone empirical model (or the EI surrogate) for the</span>
+<span class=sd>    gas-turbine configurations. A fuel cell emits no NOx. The contrail term (``rf_AIC``)</span>
+<span class=sd>    keeps its kerosene-derived parametrisation for every configuration; for a fuel cell,</span>
+<span class=sd>    whose exhaust is cool and water-rich, it is a placeholder, not a model.</span>
 <span class=sd>    """</span>
-    <span class=n>Wf</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>weight</span><span class=o>.</span><span class=n>Wf</span>  <span class=c1># [kg]</span>
+    <span class=n>Wf</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>_fuel_mass_burnt</span><span class=p>()</span>  <span class=c1># [kg]</span>
+    <span class=n>EI</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>EI_HYDROGEN</span> <span class=k>if</span> <span class=bp>self</span><span class=o>.</span><span class=n>_burns_hydrogen</span><span class=p>()</span> <span class=k>else</span> <span class=bp>self</span><span class=o>.</span><span class=n>EI_HYDROCARBON</span>
 
     <span class=c1># CO2</span>
-    <span class=n>EI_co2</span> <span class=o>=</span> <span class=mf>3.16</span> <span class=c1># [kg/kg]</span>
-    <span class=bp>self</span><span class=o>.</span><span class=n>mission_emissions</span><span class=p>[</span><span class=s1>'co2'</span><span class=p>]</span> <span class=o>=</span> <span class=n>EI_co2</span><span class=o>*</span><span class=n>Wf</span> <span class=o>+</span> <span class=bp>self</span><span class=o>.</span><span class=n>WTW_CO2</span><span class=o>*</span><span class=mf>43.5</span><span class=o>*</span><span class=n>Wf</span>
-    <span class=k>if</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>Configuration</span> <span class=o>==</span> <span class=s1>'Hybrid'</span><span class=p>:</span>
-        <span class=n>SourceBattery</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>weight</span><span class=o>.</span><span class=n>TotalEnergies</span><span class=p>[</span><span class=mi>1</span><span class=p>]</span> <span class=o>*</span> <span class=mf>1e-6</span> <span class=o>/</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>welltowake</span><span class=o>.</span><span class=n>EtaSourceToBattery</span>
-        <span class=bp>self</span><span class=o>.</span><span class=n>mission_emissions</span><span class=p>[</span><span class=s1>'co2'</span><span class=p>]</span> <span class=o>+=</span> <span class=bp>self</span><span class=o>.</span><span class=n>Grid_CO2</span><span class=o>*</span><span class=n>SourceBattery</span>
-
+    <span class=bp>self</span><span class=o>.</span><span class=n>mission_emissions</span><span class=p>[</span><span class=s1>'co2'</span><span class=p>]</span> <span class=o>=</span> <span class=p>(</span><span class=n>EI</span><span class=p>[</span><span class=s1>'co2'</span><span class=p>]</span> <span class=o>*</span> <span class=n>Wf</span> <span class=o>+</span> <span class=bp>self</span><span class=o>.</span><span class=n>_upstream_fuel_co2</span><span class=p>(</span><span class=n>Wf</span><span class=p>)</span>
+                                     <span class=o>+</span> <span class=bp>self</span><span class=o>.</span><span class=n>_grid_battery_co2</span><span class=p>())</span>
 
     <span class=c1># H2O</span>
-    <span class=n>EI_h2o</span> <span class=o>=</span> <span class=mf>1.26</span> <span class=c1># [kg/kg]</span>
-    <span class=bp>self</span><span class=o>.</span><span class=n>mission_emissions</span><span class=p>[</span><span class=s1>'h2o'</span><span class=p>]</span> <span class=o>=</span> <span class=n>EI_h2o</span><span class=o>*</span><span class=n>Wf</span>
+    <span class=bp>self</span><span class=o>.</span><span class=n>mission_emissions</span><span class=p>[</span><span class=s1>'h2o'</span><span class=p>]</span> <span class=o>=</span> <span class=n>EI</span><span class=p>[</span><span class=s1>'h2o'</span><span class=p>]</span> <span class=o>*</span> <span class=n>Wf</span>
 
     <span class=c1># SO4</span>
-    <span class=n>EI_so4</span> <span class=o>=</span> <span class=mf>2e-4</span> <span class=c1># [kg/kg]</span>
-    <span class=bp>self</span><span class=o>.</span><span class=n>mission_emissions</span><span class=p>[</span><span class=s1>'so4'</span><span class=p>]</span> <span class=o>=</span> <span class=n>EI_so4</span><span class=o>*</span><span class=n>Wf</span>
+    <span class=bp>self</span><span class=o>.</span><span class=n>mission_emissions</span><span class=p>[</span><span class=s1>'so4'</span><span class=p>]</span> <span class=o>=</span> <span class=n>EI</span><span class=p>[</span><span class=s1>'so4'</span><span class=p>]</span> <span class=o>*</span> <span class=n>Wf</span>
 
     <span class=c1># SOOT</span>
-    <span class=n>EI_soot</span> <span class=o>=</span> <span class=mf>4e-5</span> <span class=c1># [kg/kg]</span>
-    <span class=bp>self</span><span class=o>.</span><span class=n>mission_emissions</span><span class=p>[</span><span class=s1>'soot'</span><span class=p>]</span> <span class=o>=</span> <span class=n>EI_soot</span><span class=o>*</span><span class=n>Wf</span>
+    <span class=bp>self</span><span class=o>.</span><span class=n>mission_emissions</span><span class=p>[</span><span class=s1>'soot'</span><span class=p>]</span> <span class=o>=</span> <span class=n>EI</span><span class=p>[</span><span class=s1>'soot'</span><span class=p>]</span> <span class=o>*</span> <span class=n>Wf</span>
+
+    <span class=c1># NOX: a fuel cell has no combustion, hence no thermal NOx.</span>
+    <span class=k>if</span> <span class=bp>self</span><span class=o>.</span><span class=n>_burns_hydrogen</span><span class=p>():</span>
+        <span class=k>if</span> <span class=bp>self</span><span class=o>.</span><span class=n>EINOx_model</span> <span class=o>==</span> <span class=s1>'Surrogate'</span><span class=p>:</span>
+            <span class=k>raise</span> <span class=ne>ValueError</span><span class=p>(</span><span class=s2>"The NOx emission-index surrogate is for gas turbines; a fuel "</span>
+                             <span class=s2>"cell emits no NOx (use EINOx_model 'Filippone' or 'unset')."</span><span class=p>)</span>
+        <span class=bp>self</span><span class=o>.</span><span class=n>mission_emissions</span><span class=p>[</span><span class=s1>'nox'</span><span class=p>]</span> <span class=o>=</span> <span class=mf>0.0</span>
+        <span class=bp>self</span><span class=o>.</span><span class=n>mission_emissions_calculated</span> <span class=o>=</span> <span class=kc>True</span>
+        <span class=k>return</span>
 
     <span class=c1># NOX</span>
     <span class=k>def</span><span class=w> </span><span class=nf>E_nox_1m</span><span class=p>():</span>  <span class=c1># emissione di NOx in kg della singola missione</span>
@@ -642,19 +654,20 @@
 
     <span class=bp>self</span><span class=o>.</span><span class=n>mission_emissions_calculated</span> <span class=o>=</span> <span class=kc>True</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.ClimateImpact.ClimateImpact.ClimateImpact.mission_emissions_from_surrogate class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">mission_emissions_from_surrogate</span> <a href=#PhlyGreen.ClimateImpact.ClimateImpact.ClimateImpact.mission_emissions_from_surrogate class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>mission_emissions_from_surrogate</span><span class=p>(</span><span class=n>power_fraction_basis</span><span class=o>=</span><span class=s1>'engineRating'</span><span class=p>)</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Single-mission NOx/CO/UHC (+ CO2) mass [kg] from the EI surrogate (standalone helper).</p> <p>Convenience that runs :meth:<code>_integrate_surrogate_emissions</code> and also fills CO2. For the integrated accounting, set <code>ClimateImpactInput['EINOx_model'] = 'Surrogate'</code> and call :meth:<code>calculate_mission_emissions</code> (which keeps CO2/H2O/SO4/soot consistent). Attaches the packaged PW127 surrogate automatically if <code>self.emission_surrogate</code> is unset.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/ClimateImpact/ClimateImpact.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>570</span>
-<span class=normal>571</span>
-<span class=normal>572</span>
-<span class=normal>573</span>
-<span class=normal>574</span>
-<span class=normal>575</span>
-<span class=normal>576</span>
-<span class=normal>577</span>
-<span class=normal>578</span>
-<span class=normal>579</span>
-<span class=normal>580</span>
-<span class=normal>581</span>
-<span class=normal>582</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>mission_emissions_from_surrogate</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>power_fraction_basis</span><span class=o>=</span><span class=s1>'engineRating'</span><span class=p>):</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Single-mission NOx/CO/UHC (+ CO2) mass [kg] from the EI surrogate (standalone helper).</p> <p>Convenience that runs :meth:<code>_integrate_surrogate_emissions</code> and also fills CO2. For the integrated accounting, set <code>ClimateImpactInput['EINOx_model'] = 'Surrogate'</code> and call :meth:<code>calculate_mission_emissions</code> (which keeps CO2/H2O/SO4/soot consistent). Attaches the packaged PW127 surrogate automatically if <code>self.emission_surrogate</code> is unset.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/ClimateImpact/ClimateImpact.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>627</span>
+<span class=normal>628</span>
+<span class=normal>629</span>
+<span class=normal>630</span>
+<span class=normal>631</span>
+<span class=normal>632</span>
+<span class=normal>633</span>
+<span class=normal>634</span>
+<span class=normal>635</span>
+<span class=normal>636</span>
+<span class=normal>637</span>
+<span class=normal>638</span>
+<span class=normal>639</span>
+<span class=normal>640</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>mission_emissions_from_surrogate</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>power_fraction_basis</span><span class=o>=</span><span class=s1>'engineRating'</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>"""Single-mission NOx/CO/UHC (+ CO2) mass [kg] from the EI surrogate (standalone helper).</span>
 
 <span class=sd>    Convenience that runs :meth:`_integrate_surrogate_emissions` and also fills CO2. For the</span>
@@ -662,9 +675,10 @@
 <span class=sd>    :meth:`calculate_mission_emissions` (which keeps CO2/H2O/SO4/soot consistent). Attaches the</span>
 <span class=sd>    packaged PW127 surrogate automatically if ``self.emission_surrogate`` is unset.</span>
 <span class=sd>    """</span>
-    <span class=bp>self</span><span class=o>.</span><span class=n>_integrate_surrogate_emissions</span><span class=p>(</span><span class=n>power_fraction_basis</span><span class=p>)</span>
-    <span class=bp>self</span><span class=o>.</span><span class=n>mission_emissions</span><span class=p>[</span><span class=s1>'co2'</span><span class=p>]</span> <span class=o>=</span> <span class=mf>3.16</span> <span class=o>*</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>weight</span><span class=o>.</span><span class=n>Wf</span> <span class=o>+</span> \
-        <span class=bp>self</span><span class=o>.</span><span class=n>WTW_CO2</span> <span class=o>*</span> <span class=mf>43.5</span> <span class=o>*</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>weight</span><span class=o>.</span><span class=n>Wf</span>
+    <span class=bp>self</span><span class=o>.</span><span class=n>_integrate_surrogate_emissions</span><span class=p>(</span><span class=n>power_fraction_basis</span><span class=p>)</span>   <span class=c1># thermal engines only</span>
+    <span class=n>Wf</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>_fuel_mass_burnt</span><span class=p>()</span>
+    <span class=bp>self</span><span class=o>.</span><span class=n>mission_emissions</span><span class=p>[</span><span class=s1>'co2'</span><span class=p>]</span> <span class=o>=</span> <span class=p>(</span><span class=bp>self</span><span class=o>.</span><span class=n>EI_HYDROCARBON</span><span class=p>[</span><span class=s1>'co2'</span><span class=p>]</span> <span class=o>*</span> <span class=n>Wf</span>
+                                     <span class=o>+</span> <span class=bp>self</span><span class=o>.</span><span class=n>_upstream_fuel_co2</span><span class=p>(</span><span class=n>Wf</span><span class=p>)</span> <span class=o>+</span> <span class=bp>self</span><span class=o>.</span><span class=n>_grid_battery_co2</span><span class=p>())</span>
     <span class=bp>self</span><span class=o>.</span><span class=n>mission_emissions_calculated</span> <span class=o>=</span> <span class=kc>True</span>
     <span class=k>return</span> <span class=bp>self</span><span class=o>.</span><span class=n>mission_emissions</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> </div> </div> </div> </div> </div> </div> </article> </div> <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script> <script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script> </div> <button type=button class="md-top md-icon" data-md-component=top hidden> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg> Back to top </button> </main> <footer class=md-footer> <nav class="md-footer__inner md-grid" aria-label=Footer> <a href=../welltowake/ class="md-footer__link md-footer__link--prev" aria-label="Previous: Well-to-Wake"> <div class="md-footer__button md-icon"> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg> </div> <div class=md-footer__title> <span class=md-footer__direction> Previous </span> <div class=md-ellipsis> Well-to-Wake </div> </div> </a> <a href=../utilities/ class="md-footer__link md-footer__link--next" aria-label="Next: Utilities & API"> <div class=md-footer__title> <span class=md-footer__direction> Next </span> <div class=md-ellipsis> Utilities & API </div> </div> <div class="md-footer__button md-icon"> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg> </div> </a> </nav> <div class="md-footer-meta md-typeset"> <div class="md-footer-meta__inner md-grid"> <div class=md-copyright> Made with <a href=https://squidfunk.github.io/mkdocs-material/ target=_blank rel=noopener> Material for MkDocs </a> </div> <div class=md-social> <a href=https://github.com/YOUR_REPOSITORY target=_blank rel=noopener title=github.com class=md-social__link> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 512 512"><!-- Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg> </a> </div> </div> </div> </footer> </div> <div class=md-dialog data-md-component=dialog> <div class="md-dialog__inner md-typeset"></div> </div> <script id=__config type=application/json>{"annotate": null, "base": "../..", "features": [{"navigation.instant": false}, "navigation.sections", "navigation.top", "navigation.expand", "content.code.copy", "content.code.annotate", "content.tabs.link", "header.autohide", "toc.integrate", "announce.dismiss", "content.action.edit", "navigation.footer"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script> <script src=../../assets/javascripts/bundle.c21346df.min.js></script> <script src=https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js></script> <script src=https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.js></script> <script src=https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/contrib/auto-render.min.js></script> <script src=../../js/katex-init.js></script> <script src=../../js/mathjax.js></script> <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script> <script src=https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js></script> <script data-mkdocs-jupyter-mathjax="{&quot;url&quot;: &quot;https://cdn.jsdelivr.net/npm/mathjax@4.1.3/tex-mml-chtml.js&quot;, &quot;version&quot;: 4}">
