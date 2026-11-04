@@ -24,6 +24,7 @@ FAST_EXAMPLES = [
     "15_class_i_vs_class_ii.py",
     "18_serial_range_extender_gt.py",
     "20_hydrogen_fuel_cell.py",
+    "28_reference_atr42.py",
 ]
 
 
@@ -40,6 +41,15 @@ def test_turbofan_example_runs():
     proc = subprocess.run([sys.executable, os.path.join("examples", "26_turbofan_design.py")],
                           cwd=TRUNK, capture_output=True, text=True, timeout=300)
     assert proc.returncode == 0, f"26_turbofan_design.py failed:\n{proc.stderr[-2000:]}"
+
+
+@pytest.mark.slow
+@pytest.mark.skipif(not os.path.isfile(_TURBOFAN_MAP),
+                    reason="turbofan engine map not built (see HBTF_turbofan.py)")
+def test_a320_reference_example_runs():
+    proc = subprocess.run([sys.executable, os.path.join("examples", "29_reference_a320.py")],
+                          cwd=TRUNK, capture_output=True, text=True, timeout=600)
+    assert proc.returncode == 0, f"29_reference_a320.py failed:\n{proc.stderr[-2000:]}"
 
 
 @pytest.mark.slow

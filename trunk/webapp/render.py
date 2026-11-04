@@ -333,23 +333,18 @@ def tms_table(aircraft):
 
 def tms_rating_figure(aircraft):
     """Heat to reject vs capacity of the chosen TMS hardware at every mission point."""
-    import numpy as np
-    r = tms_result(aircraft)
-    tms = aircraft.tms
-    pts = aircraft.mission.thermal_profile
-    req, cap = [], []
-    for p in pts:
-        q_cap, q_req = tms.RateAtPoint(r, p, capped=False)
-        req.append(q_req / 1e3)
-        cap.append(q_cap / 1e3)
-    x = np.arange(len(pts))
+    from PhlyGreen.Systems.Thermal.plotting import plot_tms_rating
     fig, ax = plt.subplots(figsize=(10, 4))
-    ax.bar(x - 0.2, req, 0.4, label="heat to reject")
-    ax.bar(x + 0.2, cap, 0.4, label="capacity of the chosen TMS")
-    ax.set_xticks(x)
-    ax.set_xticklabels([p["name"] for p in pts], rotation=45, ha="right")
-    ax.set_ylabel("heat [kW]")
-    ax.set_title(f"Class-II TMS sized at '{r.design_point['name']}', rated over the mission")
-    ax.legend()
+    plot_tms_rating(aircraft.tms, tms_result(aircraft), aircraft.mission.thermal_profile, ax=ax)
     fig.tight_layout()
     return fig
+
+
+def hex_figures(aircraft):
+    """To-scale drawing of one unit of each heat-exchanger role: ``[(role, figure), ...]``."""
+    from PhlyGreen.Systems.Thermal.plotting import draw_hex
+    out = []
+    for u in tms_result(aircraft).units:
+        title = f"{u.role.replace('_', ' ')}: one of {u.n_parallel} unit(s)"
+        out.append((u.role, draw_hex(u.design, n_parallel=u.n_parallel, title=title)))
+    return out

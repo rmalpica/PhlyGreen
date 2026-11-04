@@ -91,6 +91,13 @@ def main():
 
     _plot_rating(rows)
 
+    # to-scale drawing of one unit of each heat-exchanger role
+    from PhlyGreen.Systems.Thermal.plotting import draw_hex
+    for u in res.units:
+        fig = draw_hex(u.design, n_parallel=u.n_parallel,
+                       title=f"{u.role.replace('_', ' ')}: one of {u.n_parallel} unit(s)")
+        savefig(fig, f"27_hex_{u.role}.png")
+
 
 def _plot_rating(rows):
     try:

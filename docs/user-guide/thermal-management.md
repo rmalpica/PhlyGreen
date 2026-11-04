@@ -70,6 +70,8 @@ Mission/Cruise       required    1653 kW   capacity    5468 kW
 ...
 ```
 
+![TMS rating over the mission](../images/tms/tms_rating.png){ width="760px" }
+
 The design point is the first climb segment. It is not the point with the most heat (that is
 Climb2), but at 80 m/s it has the least ram air. The geometry sized there rejects the heat
 everywhere else with margin, while a geometry sized at Climb2 would fall short at Climb1.
@@ -139,9 +141,7 @@ point is included because the fuel cell is sized there and rejects the most heat
 
 ## 4. Class II: the FC_SPEC architecture
 
-```
-stack ──coolant (T_op)──▶ [HEX 1: coolant → liquid H2] ──▶ [HEX 2: coolant → ram air] ──▶ pump ──▶ stack
-```
+![FC_SPEC architecture](../images/tms/tms_architecture.png){ width="760px" }
 
 At a design point with stack heat \(Q_{fc}\):
 
@@ -200,6 +200,19 @@ caps is kept:
   pressure, \(\eta_{\text{ram}}\,q_\infty\). The H2 side is limited to 10 kPa and the liquid
   side to the loop pressure rise.
 
+The drawings below show one unit of each role of the hydrogen example (to scale; large cores
+are shown as a detail), generated with `PhlyGreen.Systems.Thermal.plotting.draw_hex`:
+
+![Ram-air heat exchanger](../images/tms/hex_coolant_to_ram_air.png)
+
+![Coolant to hydrogen heat exchanger](../images/tms/hex_coolant_to_h2.png)
+
+```python
+from PhlyGreen.Systems.Thermal.plotting import draw_hex, plot_tms_rating
+for unit in aircraft.weight.tms_result.units:
+    draw_hex(unit.design, n_parallel=unit.n_parallel).savefig(f"{unit.role}.png")
+```
+
 ### Design point
 
 The hardware must reject the heat at every mission point, and the point with the most heat is
@@ -211,6 +224,12 @@ not necessarily the one that needs the heaviest exchangers. `tms.SizeForMission(
    flap fully open), and U is recomputed at the new flows;
 3. keeps the lightest geometry whose worst shortfall is within 2 %. If none qualifies, it keeps
    the least-short one and issues a warning.
+
+![Design-point candidates](../images/tms/tms_candidates.png){ width="640px" }
+
+In the hydrogen example only the first climb segment gives hardware that rejects the heat
+everywhere. Lighter geometries sized at higher, faster points fall short at the slow early
+climb; heavier ones (take-off, Climb2) are not needed.
 
 ### Coupling to the aircraft
 
@@ -231,6 +250,13 @@ power and the drag increment all converge:
 
 The constraint diagram is computed before the weight loop, so the duct drag does not move the
 design point (W/S, P/W). It does act on the mission, the take-off and the OEI powers.
+
+![TMS trends](../images/tms/tms_trends.png){ width="760px" }
+
+Left: the TMS mass grows smoothly with the heat load (the per-unit caps change the number of
+units, not the trend). Right: the net duct drag at the design point against the intake ram
+recovery. With an ideal intake the heated air leaves faster than it entered (Meredith effect)
+and the duct gives a small thrust; a few percent of lost dynamic pressure turns it into drag.
 
 ## 5. Inputs (`TMSConfig` / `TMSInput`)
 

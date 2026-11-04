@@ -12,6 +12,10 @@ toolkit, the ram-air drag model, and the heat-source/sink network scaffold.
 
 ::: PhlyGreen.Systems.Thermal.hex
 
+## Figures (heat-exchanger drawings, mission rating)
+
+::: PhlyGreen.Systems.Thermal.plotting
+
 ## Ram-air duct drag
 
 ::: PhlyGreen.Systems.Thermal.ram_air

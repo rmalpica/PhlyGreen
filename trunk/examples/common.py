@@ -74,7 +74,7 @@ def _mission():
 # ground up to a power-limited 100% near cruise (see the throttle plot in example 16). Tapering
 # the climb rate keeps the gas-turbine throttle roughly constant (~0.65-0.87 on the Class-II GT,
 # never power-limited). The rates run from 1,851 ft/min near the ground (the published ATR 42-600
-# sea-level rate of climb) down to ~550 ft/min approaching cruise, reaching FL170 in ~12.6 min
+# sea-level rate of climb) down to ~550 ft/min approaching cruise, reaching FL170 in ~12.5 min
 # (published: 12.7 min).
 def _mission_stages():
     return StagesConfig(segments=[

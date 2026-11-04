@@ -53,6 +53,10 @@ markdown_extensions:
       alternate_style: true
   - pymdownx.tilde
 
+# the figure-generation script lives next to the docs but is not a page
+exclude_docs: |
+  scripts/
+
 plugins:
   - search
   - mkdocstrings:
@@ -113,6 +117,7 @@ nav:
       - Battery Module: user-guide/battery.md
       - Hydrogen (Fuel Cell & Tank): user-guide/hydrogen.md
       - Thermal Management (TMS): user-guide/thermal-management.md
+      - Reference Aircraft (ATR 42, A320): user-guide/reference-aircraft.md
       - Aerodynamics Module: user-guide/aerodynamics.md
       - Structures Module: user-guide/structures.md
       - Surrogate Models: user-guide/surrogate-models.md

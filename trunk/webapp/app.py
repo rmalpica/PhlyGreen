@@ -218,6 +218,9 @@ def design_tab(arch, cfg, emissions):
             _show_figure(render.tms_rating_figure(aircraft))
         except Exception as exc:
             st.caption(f"(rating unavailable: {type(exc).__name__})")
+        with st.expander("Heat-exchanger geometry (one unit of each role, to scale)"):
+            for _role, fig in render.hex_figures(aircraft):
+                _show_figure(fig)
 
     # Well-to-wake emissions — switched on (and configured) in the sidebar, so the design was sized
     # with the climate model attached and these come from that same run (no re-size here).

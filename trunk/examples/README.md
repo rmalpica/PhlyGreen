@@ -47,6 +47,8 @@ needs pandas — each degrades gracefully if the dependency is missing.
 | `25_fuelcell_battery_class_ii_models.py` | Fuel-cell + battery sized with the Class-II battery (P-number + thermal), the d-q ("Smart") electric motor and the Hamilton propeller; plots SOC/temperature, power split and component efficiencies (compute-heavy) | profile, power split, SOC/T, efficiencies |
 | `26_turbofan_design.py` | Size an A320-class **turbofan** jet: the constraint diagram in T/W, the pyCycle overall-efficiency / TSFC map, and the compressible (wave-drag) polar | engine map table + design summary |
 | `27_hydrogen_tms_class_ii.py` | Thermal management of the hydrogen aircraft: Class-I (specific power) vs Class-II (geometric coolant→LH2 and coolant→ram-air heat exchangers, pump, ram-air drag) TMS; design-point selection and rating over the mission (needs CoolProp, ~1.5 min) | rating bar chart |
+| `28_reference_atr42.py` | The ATR 42-600 reference aircraft: every input with its origin, sizing at the default and at the real wing loading, comparison with the ATR factsheet (MTOW, OEW, wing area, installed power) | constraint diagram, profile, mass breakdown, model vs factsheet |
+| `29_reference_a320.py` | The A320-200 reference (turbofan): inputs, minimum-thrust vs landing-limited design point, comparison with Airbus ACAP / EASA TCDS data (needs the turbofan map) | constraint diagram, profile |
 
 ## Outer-loop applications
 

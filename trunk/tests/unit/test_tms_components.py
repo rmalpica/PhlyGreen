@@ -272,3 +272,19 @@ def test_takeoff_coolant_overtemperature_lightens_the_takeoff_design():
     q = _point(Q=3e6, alt=100.0, V=80.0, name='Climb')
     assert _tms(**{'TMS Takeoff Coolant Overtemperature': 15.0}).SizeAtPoint(q).total_mass == \
         pytest.approx(_tms().SizeAtPoint(q).total_mass, rel=1e-12)
+
+
+@pytest.mark.parametrize("sizer_cls", [PlainTubeBankSizer, FinnedTubeBankSizer, PlateFinSizer])
+def test_draw_hex_renders_every_family(sizer_cls):
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from PhlyGreen.Systems.Thermal.plotting import draw_hex
+    if sizer_cls is PlateFinSizer:
+        hot, cold, q = _coolant(mdot=2.0), FluidStream("h2", 0.02, 14000.0, 7e-6, 0.12, 0.25, 22.0), 50e3
+    else:
+        hot, cold, q = _coolant(), _air(), 200e3
+    d = sizer_cls(DesignSpec(hot=hot, cold=cold, q_target=q)).best_candidate()
+    fig = draw_hex(d, n_parallel=3)
+    assert len(fig.axes) == 3
+    plt.close(fig)

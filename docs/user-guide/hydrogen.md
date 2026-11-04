@@ -134,6 +134,12 @@ carry about twice the product water, so \(x_v = 1\) unless the inlet air is humi
 `EnergyConfig.fc_product_water_vapour_fraction` to a number (0 = liquid) to override. The
 hydrogen consumption does not depend on \(x_v\); only the heat sent to the TMS does.
 
+![Fuel-cell heat basis](../images/hydrogen/fc_heat_basis.png){ width="760px" }
+
+Left: the vapour fraction at the stack exit against the cathode inlet humidity. Right: the
+coolant heat per unit of gross electric power against the cell voltage, for liquid,
+half-vaporised and vapour product water.
+
 Because \(V_{\text{cell}}\) falls with load and altitude, the heat load peaks where the system
 works hardest. The weight loop sizes the **thermal-management mass** (`WHeat_Exchanger`) with one
 of two models, selected by `TMSConfig(tms_class=...)`:
