@@ -50,8 +50,18 @@ class Mission:
         self.taxi_in_time = 13.0           # [min]
         self.taxi_power_fraction = 0.07    # [-] of the take-off propulsive power
         self.takeoff_time = 0.7            # [min]
+        self.takeoff_power_fraction = 1.0  # [-] of the take-off propulsive power, over takeoff_time
+        # Battery fraction of the propulsive power on the ground. The take-off split is the
+        # 'Takeoff' stage phi of the mission profile; the taxi split defaults to it.
+        self.taxi_phi = None               # [-] None = the take-off phi
         self.E_ground = 0.0                # fuel chemical energy of the ground segments [J]
         self.E_taxi_out_takeoff = 0.0      # ... of which before the climb [J]
+        self.EBat_ground = 0.0             # battery energy of the ground segments [J]
+        self.EBat_taxi_out_takeoff = 0.0   # ... of which before the climb [J]
+        self.Taxi_PBat = 0.0               # battery power while taxiing [W]
+        self.Takeoff_PBat = 0.0            # battery power over the take-off run [W]
+        self._ground_battery_legs_out = [] # Class-II pack legs before the climb
+        self._ground_battery_legs_in = []  # ... and after landing
         self.DISA = 0
         self.WTO = None
         self.Max_PBat = -1
@@ -169,6 +179,12 @@ class Mission:
         self.taxi_in_time = mi.get('Taxi In Time', 13.0)
         self.taxi_power_fraction = mi.get('Taxi Power Fraction', 0.07)
         self.takeoff_time = mi.get('Takeoff Time', 0.7)
+        self.takeoff_power_fraction = mi.get('Takeoff Power Fraction', 1.0)
+        self.taxi_phi = mi.get('Taxi Supplied Power Ratio', None)
+        if self.taxi_phi and not self._has_battery():
+            raise ValueError(
+                "'Taxi Supplied Power Ratio' is %g, but the %s configuration has no battery."
+                % (self.taxi_phi, self.aircraft.Configuration))
         self.ef = self.aircraft.EnergyInput['Ef']
 
     def InitializeProfile(self):
@@ -200,14 +216,16 @@ class Mission:
             Traditional: (cumulative fuel energy [J])
             Hybrid Class I: (cumulative fuel energy [J], cumulative battery energy [J])
             Hybrid Class II: same, after battery sizing
-            The fuel energy includes the ground segments (taxi-out, take-off, taxi-in), see
-            :meth:`_ground_segments`.
+            The fuel and battery energies include the ground segments (taxi-out, take-off,
+            taxi-in), see :meth:`_ground_segments`.
         """
         
         # Ground segments first: they set the mass fraction at the start of the climb.
         self._ground_segments(WTO)
         result = self._fly_configuration(WTO)
-        return self._add_ground_fuel(result)
+        if self._has_battery() and not (isinstance(result, tuple) and result[0] == 0):
+            self.Max_PBat = max(self.Max_PBat, self.Takeoff_PBat, self.Taxi_PBat)
+        return self._add_ground_energy(result)
 
     def _fly_configuration(self, WTO):
         """Fly the profile with the configuration's mission method."""
@@ -243,53 +261,217 @@ class Mission:
 
     # --- ground segments: taxi-out, take-off, taxi-in ------------------------------------
 
-    def _ground_fuel_power(self, P):
-        """Fuel (chemical) power [W] to deliver propulsive power ``P`` at the take-off
-        condition, through the configuration's own powertrain (so the part-load efficiency
-        applies). Battery shares of hybrid configurations follow the take-off split and are
-        not counted (the ground segments are short and at low power)."""
+    def _has_battery(self):
+        """True for the configurations that carry a battery."""
+        return self.aircraft.Configuration in ('Hybrid', 'FuelCellBattery')
+
+    def _is_range_extender(self):
+        """True for a Serial hybrid flown as a range extender (see
+        :meth:`SerialRangeExtenderConfiguration`)."""
+        return (self.aircraft.Configuration == 'Hybrid'
+                and self.aircraft.HybridType == 'Serial'
+                and bool(self.aircraft.EnergyInput.get('GT Rated Power')))
+
+    def _takeoff_phi(self):
+        """Battery fraction of the propulsive power at take-off: the phi of the profile's
+        'Takeoff' stage (0 without a battery)."""
+        if not self._has_battery() or getattr(self.profile, 'SPW', None) is None:
+            return 0.0
+        return float(self.profile.SPW[0][0])
+
+    def _taxi_phi(self):
+        """Battery fraction of the propulsive power while taxiing ('Taxi Supplied Power
+        Ratio'; defaults to the take-off phi)."""
+        if not self._has_battery():
+            return 0.0
+        return self._takeoff_phi() if self.taxi_phi is None else float(self.taxi_phi)
+
+    def _fc_battery_eta_elec(self, alt, vel, P):
+        """Battery terminal -> shaft efficiency of the fuel-cell + battery architecture.
+        Constant by default; the electric-motor term varies with the operating point when the
+        Class-II ('Smart') d-q motor model is selected."""
+        fc = self.aircraft.fuelcell
+        if self.aircraft.EnergyInput.get('Eta Electric Motor Model') == 'Smart':
+            em = self.aircraft.powertrain.eta('electric_motor', alt, vel, P)
+        else:
+            em = fc.EtaEM
+        return em * fc.EtaPM * fc.EtaGB
+
+    def _range_extender_gt_power(self, alt):
+        """Range-extender turbine shaft power at full throttle: the rated power, lapsed for
+        altitude (ISA)."""
+        import PhlyGreen.Utilities.Units as Units
+        from PhlyGreen.Systems.Powertrain.gas_turbine_surrogate import _isa_pressure_ratio
+        P_gt_rated = float(self.aircraft.EnergyInput['GT Rated Power'])
+        gt_design = self.aircraft.EnergyInput.get('GT Design Power') or P_gt_rated
+        return min(P_gt_rated, gt_design * _isa_pressure_ratio(Units.mToft(alt)))
+
+    def _range_extender_flows(self, P_prop, alt, vel):
+        """Fuel chemical power and battery terminal power of the range extender at one point.
+
+        Forward serial chain (turbine -> generator -> bus + battery -> motor -> gearbox ->
+        propeller); the turbine runs at full throttle and the battery makes up the difference
+        between the bus demand and the generator output. ``Pbat > 0`` discharging,
+        ``Pbat < 0`` recharging.
+        """
+        pt = self.aircraft.powertrain
+        P_gt = self._range_extender_gt_power(alt)
+        eta_pp = pt.eta('propeller', alt, vel, P_prop)
+        eta_gb = pt.eta('gearbox', alt, vel, P_prop)
+        eta_pm = pt.eta('pmad', alt, vel, P_prop)
+        eta_gt = pt.eta('gas_turbine', alt, vel, P_gt)
+        Pe1 = P_prop / (eta_pp * eta_gb * pt.EtaEM2)             # electrical bus -> motor
+        Ps1 = P_gt * pt.EtaEM1                                    # generator electrical output
+        return P_gt / eta_gt, Pe1 / eta_pm - Ps1
+
+    def _ground_condition(self):
+        """Altitude [m] and TAS [m/s] at which the ground segments are evaluated: the
+        take-off constraint condition."""
         to = self.aircraft.constraint.TakeOffConstraints
         perf = self.aircraft.performance
         perf.set_speed(to['Altitude'], to['Speed'], to['Speed Type'], self.aircraft.constraint.DISA)
-        alt, vel = to['Altitude'], float(perf.TAS)
+        return to['Altitude'], float(perf.TAS)
+
+    def _ground_power_split(self, P, phi, takeoff=False):
+        """Split the ground propulsive power ``P`` [W] between the energy sources, through
+        the configuration's own powertrain at the take-off condition (so part-load
+        efficiencies apply).
+
+        ``phi`` is the battery fraction of ``P``. The range extender ignores it at take-off:
+        its turbine runs at full throttle and the battery covers the rest, the rule that sizes
+        it for take-off (see :meth:`SerialRangeExtenderConfiguration`).
+
+        Returns ``(fuel chemical power, battery terminal power, battery sizing power)`` [W].
+        The sizing power is in the convention the configuration uses for ``Max_PBat``:
+        battery terminal power for 'Hybrid', battery propulsive share for 'FuelCellBattery'.
+        """
+        if P <= 0:
+            return 0.0, 0.0, 0.0
+        alt, vel = self._ground_condition()
         cfg = self.aircraft.Configuration
-        phi_TO = float(self.profile.SPW[0][0]) if getattr(self.profile, 'SPW', None) is not None else 0.0
         if cfg in ('Traditional', 'Turbofan'):
-            return P * self.aircraft.powertrain.Traditional(alt, vel, P)[0]
+            return P * self.aircraft.powertrain.Traditional(alt, vel, P)[0], 0.0, 0.0
         if cfg == 'Hybrid':
-            return P * self.aircraft.powertrain.Hybrid(phi_TO, alt, vel, P)[0]
+            if takeoff and self._is_range_extender():
+                Pf, Pbat = self._range_extender_flows(P, alt, vel)
+                return Pf, Pbat, max(Pbat, 0.0)
+            PRatio = self.aircraft.powertrain.Hybrid(phi, alt, vel, P)
+            return P * PRatio[0], P * PRatio[5], P * PRatio[5]
         if cfg in ('Hydrogen', 'FuelCellBattery'):
-            P_fc = (1.0 - phi_TO) * P if cfg == 'FuelCellBattery' else P
-            return P_fc * self.aircraft.fuelcell.ComputePRatio(alt, vel, P_fc)[0] if P_fc > 0 else 0.0
+            fc = self.aircraft.fuelcell
+            P_bat = phi * P if cfg == 'FuelCellBattery' else 0.0
+            P_fc = P - P_bat
+            Pf = P_fc * fc.ComputePRatio(alt, vel, P_fc)[0] if P_fc > 0 else 0.0
+            P_el = P_bat / self._fc_battery_eta_elec(alt, vel, P_bat) if P_bat > 0 else 0.0
+            return Pf, P_el, P_bat
         raise Exception("Unknown aircraft configuration: %s" % cfg)
 
     def _ground_segments(self, WTO):
-        """Fuel of the ground segments, which the flown profile does not include.
+        """Fuel and battery energy of the ground segments, which the flown profile does not
+        include.
 
-        Take-off at the take-off-field propulsive power for ``takeoff_time``; taxi-out and
-        taxi-in at ``taxi_power_fraction`` of it (defaults: ICAO LTO cycle). The taxi-out and
-        take-off fuel is burnt before the climb, so the mission starts at
-        ``beta0 = 1 - m_(taxi-out + take-off) / WTO``; the whole ground fuel is added to the
-        mission fuel energy (see :meth:`_add_ground_fuel`).
+        Take-off at ``takeoff_power_fraction`` of the take-off-field propulsive power for
+        ``takeoff_time``; taxi-out and taxi-in at ``taxi_power_fraction`` of it (defaults:
+        ICAO LTO cycle). The battery supplies the take-off phi (the profile's 'Takeoff' stage)
+        of the take-off power and ``taxi_phi`` of the taxi power; the rest comes from the
+        primary fuel.
+
+        The taxi-out and take-off fuel is burnt before the climb, so the mission starts at
+        ``beta0 = 1 - m_(taxi-out + take-off) / WTO``. The ground fuel and battery energy are
+        added to the mission energies (:meth:`_add_ground_energy`), and the taxi / take-off
+        battery powers to the battery peak power. A Class-II pack is flown through the same
+        legs, so the climb starts from the pack state after taxi-out and take-off, and taxi-in
+        must fit in what is left after landing.
         """
         P_TO = self._takeoff_power(WTO)
-        Pf_TO = self._ground_fuel_power(P_TO)
-        Pf_taxi = self._ground_fuel_power(self.taxi_power_fraction * P_TO)
-        E_out = 60.0 * (self.takeoff_time * Pf_TO + self.taxi_out_time * Pf_taxi)
-        E_in = 60.0 * self.taxi_in_time * Pf_taxi
+        P_takeoff = self.takeoff_power_fraction * P_TO
+        P_taxi = self.taxi_power_fraction * P_TO
+        phi_takeoff, phi_taxi = self._takeoff_phi(), self._taxi_phi()
+        Pf_to, Pel_to, Pbat_to = self._ground_power_split(P_takeoff, phi_takeoff, takeoff=True)
+        Pf_tx, Pel_tx, Pbat_tx = self._ground_power_split(P_taxi, phi_taxi)
+
+        t_to, t_out, t_in = (60.0 * self.takeoff_time, 60.0 * self.taxi_out_time,
+                             60.0 * self.taxi_in_time)
+        E_out = t_to * Pf_to + t_out * Pf_tx
+        E_in = t_in * Pf_tx
         self.E_taxi_out_takeoff = E_out
         self.E_ground = E_out + E_in
         self.beta0 = 1.0 - E_out / (self.ef * WTO)
 
-    def _add_ground_fuel(self, result):
-        """Add the ground-segment fuel energy to the fuel energy a mission method returns
-        (a float, or a tuple whose first entry is the fuel energy; ``(0, code)`` signals a
-        failed Class-II battery mission and is passed through)."""
+        self.EBat_taxi_out_takeoff = t_to * Pel_to + t_out * Pel_tx
+        self.EBat_ground = self.EBat_taxi_out_takeoff + t_in * Pel_tx
+        self.Takeoff_PBat = Pbat_to
+        self.Taxi_PBat = Pbat_tx
+        # (name, duration [s], battery terminal power [W], phi, speed [m/s TAS] for the
+        # ambient cooling of a Class-II pack)
+        _, vel = self._ground_condition()
+        self._ground_battery_legs_out = [('Taxi-out', t_out, Pel_tx, phi_taxi, 0.0),
+                                         ('Takeoff', t_to, Pel_to, phi_takeoff, vel)]
+        self._ground_battery_legs_in = [('Taxi-in', t_in, Pel_tx, phi_taxi, 0.0)]
+
+    def _add_ground_energy(self, result):
+        """Add the ground-segment energies to what a mission method returns: a float (fuel
+        energy) or a tuple ``(fuel energy, battery energy)``. ``(0, code)`` signals a failed
+        Class-II battery mission and is passed through. The range extender returns its
+        battery buffer swing, which already includes the ground legs."""
         if isinstance(result, tuple):
             if result[0] == 0:
                 return result
-            return (result[0] + self.E_ground,) + tuple(result[1:])
+            fuel = result[0] + self.E_ground
+            if len(result) > 1 and not self._is_range_extender():
+                return (fuel, result[1] + self.EBat_ground) + tuple(result[2:])
+            return (fuel,) + tuple(result[1:])
         return result + self.E_ground
+
+    def _pack_through_ground_legs(self, legs, it, T):
+        """Fly a Class-II pack through ground legs at constant terminal power.
+
+        ``it`` is the spent charge [A s] and ``T`` the pack temperature [K] at the start;
+        returns them at the end. Uses the in-flight thermal logic (heats up to the
+        temperature ceiling while discharging, cools otherwise) with the ambient air at the
+        take-off altitude. A leg without battery power leaves the pack state unchanged.
+        Raises ``BatteryError`` if the pack cannot supply a leg.
+        """
+        b = self.aircraft.battery
+        alt = self.aircraft.constraint.TakeOffConstraints['Altitude']
+        ceiling = 273.15 + self.T_battery_limit
+        for _name, dt, P_el, phi, vel in legs:
+            if dt <= 0 or P_el <= 0:
+                continue
+            Mach = Speed.TAS2Mach(vel, alt, DISA=self.DISA)
+            Tamb = ISA.atmosphere.T0std(alt, Mach)
+            rho = ISA.atmosphere.RHO0std(alt, Mach, self.DISA)
+
+            def rhs(t, y, P_el=P_el, phi=phi, Tamb=Tamb, rho=rho):
+                b.T = y[1]
+                b.phi = phi
+                b.it = y[0] / 3600
+                b.i = b.Power_2_current(P_el)
+                b.Vout                                   # validates the terminal voltage
+                dTdt, _ = b.heatLoss(Tamb, rho)
+                if phi > 0.:
+                    dTdt = max(dTdt, 0.) if y[1] < ceiling else 0.
+                else:
+                    dTdt = min(dTdt, 0.)
+                return [b.i, dTdt]
+
+            sol = integrate.solve_ivp(rhs, [0.0, dt], [it, T], method='BDF', rtol=1e-6)
+            it, T = float(sol.y[0][-1]), float(sol.y[1][-1])
+        return it, T
+
+    def _pack_before_climb(self, P_el_takeoff_check):
+        """Class-II pack state at the start of the climb: taxi-out, then a check that the pack
+        can deliver the worst-case take-off/OEI terminal power ``P_el_takeoff_check``, then
+        the take-off run. Starts full at ``startT``. Returns ``(it [A s], T [K])``; raises
+        ``BatteryError`` if the pack cannot do it."""
+        b = self.aircraft.battery
+        legs = self._ground_battery_legs_out
+        it, T = self._pack_through_ground_legs(legs[:1], 0.0, self.startT + 273.15)
+        b.T = T
+        b.it = it / 3600
+        b.i = b.Power_2_current(P_el_takeoff_check)
+        b.Vout                                           # validates the terminal voltage
+        return self._pack_through_ground_legs(legs[1:], it, T)
 
 
     # --- shared off-mission power requirements ------------------------------------------
@@ -499,14 +681,8 @@ class Mission:
         self.WTO = WTO
         fc = self.aircraft.fuelcell
 
-        # Battery electrical -> shaft efficiency. Constant by default; when the Class-II
-        # ('Smart') d-q motor model is selected, the electric-motor term varies with the
-        # operating point.
-        em_smart = self.aircraft.EnergyInput.get('Eta Electric Motor Model') == 'Smart'
-
-        def eta_elec_at(alt, vel, P):
-            em = self.aircraft.powertrain.eta('electric_motor', alt, vel, P) if em_smart else fc.EtaEM
-            return em * fc.EtaPM * fc.EtaGB
+        # Battery terminal -> shaft efficiency (see _fc_battery_eta_elec).
+        eta_elec_at = self._fc_battery_eta_elec
 
         def PowerPropulsive(Beta, t):
             PPoWTO = self.aircraft.performance.PoWTO(
@@ -537,7 +713,7 @@ class Mission:
         # Worst-case off-mission propulsive power (take-off field length / OEI climb) at the
         # constraint conditions, split between the fuel cell and the battery by the take-off phi.
         P_total_TO = self._worst_case_propulsive_power(WTO)
-        phi_TO = float(self.profile.SPW[0][0]) if self.profile.SPW is not None else 0.0
+        phi_TO = self._takeoff_phi()
         self.TO_PP = (1.0 - phi_TO) * P_total_TO    # fuel-cell propulsive share at take-off/OEI
         self.TO_PBat = phi_TO * P_total_TO          # battery propulsive share at take-off/OEI
         self._takeoff_fc_heat(self.TO_PP)
@@ -592,13 +768,8 @@ class Mission:
         self.WTO = WTO
         fc = self.aircraft.fuelcell
 
-        # Battery electrical -> shaft efficiency. Constant by default; the electric-motor term
-        # becomes operating-point dependent when the Class-II ('Smart') d-q model is selected.
-        em_smart = self.aircraft.EnergyInput.get('Eta Electric Motor Model') == 'Smart'
-
-        def eta_elec_at(alt, vel, P):
-            em = self.aircraft.powertrain.eta('electric_motor', alt, vel, P) if em_smart else fc.EtaEM
-            return em * fc.EtaPM * fc.EtaGB
+        # Battery terminal -> shaft efficiency (see _fc_battery_eta_elec).
+        eta_elec_at = self._fc_battery_eta_elec
 
         def PowerPropulsive(Beta, t):
             return WTO * self.aircraft.performance.PoWTO(
@@ -643,7 +814,7 @@ class Mission:
         # Worst-case off-mission propulsive power (take-off field length / OEI climb) and its
         # battery / fuel-cell shares, at the constraint conditions.
         P_total_TO = self._worst_case_propulsive_power(WTO)
-        phi_TO = float(self.profile.SPW[0][0]) if self.profile.SPW is not None else 0.0
+        phi_TO = self._takeoff_phi()
         self.TO_PP = (1.0 - phi_TO) * P_total_TO            # fuel-cell propulsive share at TO/OEI
         self.TO_PBat = phi_TO * P_total_TO                 # battery propulsive share at TO/OEI
 
@@ -653,15 +824,13 @@ class Mission:
             if P_number == 0:
                 return False, None
             self.aircraft.battery.Configure(P_number)
-            # Take-off battery feasibility (independent of the integration).
+            # Taxi-out, take-off/OEI power feasibility and take-off run: the pack state at the
+            # start of the climb.
             try:
-                self.aircraft.battery.T = self.startT + 273.15
-                self.aircraft.battery.it = 0
                 _to_alt = self.aircraft.constraint.TakeOffConstraints['Altitude']
                 _to_spd = self.aircraft.constraint.TakeOffConstraints['Speed']
-                self.aircraft.battery.i = self.aircraft.battery.Power_2_current(
+                it0, T0 = self._pack_before_climb(
                     self.TO_PBat / eta_elec_at(_to_alt, _to_spd, self.TO_PBat))
-                self.aircraft.battery.Vout
             except BatteryError as err:
                 if not self.size_battery_pack:
                     print(err)
@@ -671,7 +840,7 @@ class Mission:
             times = np.append(self.profile.Breaks, self.profile.MissionTime2)
             self.integral_solution = []
             self._takeoff_fc_heat(self.TO_PP)
-            y0 = [0, 0, self.beta0, 0, self.startT + 273.15]
+            y0 = [0, 0, self.beta0, it0, T0]
             for i in range(len(times) - 1):
                 try:
                     self._begin_thermal_phase(i)
@@ -688,6 +857,13 @@ class Mission:
                 self.EBat = sol.y[1]
                 self.Beta = sol.y[2]
                 y0 = [sol.y[0][-1], sol.y[1][-1], sol.y[2][-1], sol.y[3][-1], sol.y[4][-1]]
+            # taxi-in after landing must fit in what is left of the pack
+            try:
+                self._pack_through_ground_legs(self._ground_battery_legs_in, y0[3], y0[4])
+            except BatteryError as err:
+                if not self.size_battery_pack:
+                    print(err)
+                return False, err.code
             return True, None
 
         def find_P_nr(n_guess, wto_ratio):
@@ -1008,7 +1184,7 @@ class Mission:
             # Takeoff / OEI-climb worst case (see _worst_case_propulsive_power)
             Ppropulsive = self._worst_case_propulsive_power(self.WTO)
 
-            PRatio = self.aircraft.powertrain.Hybrid(self.aircraft.mission.profile.SPW[0][0],self.aircraft.constraint.TakeOffConstraints['Altitude'],self.aircraft.constraint.TakeOffConstraints['Speed'],Ppropulsive)
+            PRatio = self.aircraft.powertrain.Hybrid(self._takeoff_phi(),self.aircraft.constraint.TakeOffConstraints['Altitude'],self.aircraft.constraint.TakeOffConstraints['Speed'],Ppropulsive)
             self.TO_PBat = Ppropulsive * PRatio[5]
             self.TO_PP = Ppropulsive * PRatio[1]  
 
@@ -1079,20 +1255,8 @@ class Mission:
         ``(fuel chemical energy [J], battery buffer capacity [J])``.
         """
         self.WTO = WTO
-        pt = self.aircraft.powertrain
-        import PhlyGreen.Utilities.Units as Units
-        from PhlyGreen.Systems.Powertrain.gas_turbine_surrogate import _isa_pressure_ratio
         P_gt_rated = float(self.aircraft.EnergyInput['GT Rated Power'])   # sea-level rated shaft power [W]
-        # The turbine is sized (for its efficiency map) by 'GT Design Power'; default it to the
-        # rated power so the range-extender turbine runs at ~full load (its sweet spot).
-        gt_design = self.aircraft.EnergyInput.get('GT Design Power') or P_gt_rated
         eta_charge = self.aircraft.EnergyInput.get('Battery Charge Efficiency', 1.0) or 1.0
-
-        def gt_shaft_power(alt):
-            """Turbine shaft power at full throttle: the rated power lapsed for altitude (ISA),
-            i.e. only the altitude lapse reduces it (the turbine is otherwise always at full power)."""
-            available = gt_design * _isa_pressure_ratio(Units.mToft(alt))
-            return min(P_gt_rated, available)
 
         def PowerPropulsive(Beta, t):
             return WTO * self.aircraft.performance.PoWTO(
@@ -1100,25 +1264,12 @@ class Mission:
                 self.profile.Altitude(t), self.DISA, self.profile.Velocity(t), 'TAS')
 
         def flows(t, Beta):
-            """Fuel chemical power and battery terminal power at one instant.
-
-            Forward serial chain (turbine -> generator -> bus + battery -> motor -> gearbox ->
-            propeller); the battery makes up the difference between the bus demand and the
-            generator output. ``Pbat > 0`` discharging, ``Pbat < 0`` recharging.
-            """
-            alt, vel = self.profile.Altitude(t), self.profile.Velocity(t)
+            """Fuel chemical power and battery terminal power at one instant (see
+            :meth:`_range_extender_flows`)."""
             P_prop = PowerPropulsive(Beta, t)
             self.check_PP(P_prop)
-            P_gt = gt_shaft_power(alt)                                 # full throttle, lapsed
-            eta_pp = pt.eta('propeller', alt, vel, P_prop)
-            eta_gb = pt.eta('gearbox', alt, vel, P_prop)
-            eta_pm = pt.eta('pmad', alt, vel, P_prop)
-            eta_gt = pt.eta('gas_turbine', alt, vel, P_gt)            # at the delivered shaft load
-            Pe1 = P_prop / (eta_pp * eta_gb * pt.EtaEM2)              # electrical bus -> motor
-            Ps1 = P_gt * pt.EtaEM1                                     # generator electrical output
-            Pbat = Pe1 / eta_pm - Ps1                                 # battery into the bus combiner
-            Pf = P_gt / eta_gt                                        # fuel chemical power
-            return Pf, Pbat
+            return self._range_extender_flows(P_prop, self.profile.Altitude(t),
+                                              self.profile.Velocity(t))
 
         def model(t, y):
             Pf, Pbat = flows(t, y[2])
@@ -1129,12 +1280,8 @@ class Mission:
         P_total_TO = self._worst_case_propulsive_power(WTO)
         to = self.aircraft.constraint.TakeOffConstraints
         alt_TO, vel_TO = to['Altitude'], to['Speed']
-        eta_pp = pt.eta('propeller', alt_TO, vel_TO, P_total_TO)
-        eta_gb = pt.eta('gearbox', alt_TO, vel_TO, P_total_TO)
-        eta_pm = pt.eta('pmad', alt_TO, vel_TO, P_total_TO)
-        P_gt_TO = gt_shaft_power(alt_TO)
-        Pbat_TO = (P_total_TO / (eta_pp * eta_gb * pt.EtaEM2)) / eta_pm - P_gt_TO * pt.EtaEM1
-        self.TO_PP = P_gt_TO
+        Pbat_TO = self._range_extender_flows(P_total_TO, alt_TO, vel_TO)[1]
+        self.TO_PP = self._range_extender_gt_power(alt_TO)
         self.TO_PBat = max(Pbat_TO, 0.0)
 
         # Integrate sequentially over the profile breakpoints.
@@ -1162,7 +1309,17 @@ class Mission:
         beta_all = np.concatenate([a.y[2] for a in self.integral_solution])
         self.MissionTimes = t_all
         self.EBat = erem_all                                          # signed cumulative (for plots)
-        swing = float(erem_all.max() - erem_all.min())               # usable buffer energy [J]
+        # Battery energy removed along the ground legs: taxi-out and take-off before the
+        # climb, taxi-in after landing (constant power, so the extremes are the leg ends).
+        def removed(P_el, dt):
+            return P_el * dt if P_el > 0 else P_el * eta_charge * dt
+        (_, dt_out, P_out, _, _), (_, dt_to, P_to, _, _) = self._ground_battery_legs_out
+        (_, dt_in, P_in, _, _), = self._ground_battery_legs_in
+        e_out = removed(P_out, dt_out)
+        e_climb = e_out + removed(P_to, dt_to)                       # at the start of the climb
+        e_end = e_climb + float(erem_all[-1]) + removed(P_in, dt_in)
+        levels = np.concatenate([[0.0, e_out], e_climb + erem_all, [e_end]])
+        swing = float(levels.max() - levels.min())                   # usable buffer energy [J]
         pbat_all = np.array([flows(t_all[k], beta_all[k])[1] for k in range(len(t_all))])
         self.Max_PBat = max(float(pbat_all.max()) if len(pbat_all) else 0.0, self.TO_PBat)
         self.Max_PEng = P_gt_rated                                    # turbine sized for its rated power
@@ -1321,7 +1478,7 @@ class Mission:
 
             # hybrid power ratio for takeoff
             PRatio = self.aircraft.powertrain.Hybrid(
-                self.aircraft.mission.profile.SPW[0][0],
+                self._takeoff_phi(),
                 self.aircraft.constraint.TakeOffConstraints["Altitude"],
                 self.aircraft.constraint.TakeOffConstraints["Speed"],
                 Ppropulsive_TO,
@@ -1331,13 +1488,9 @@ class Mission:
             self.TO_PBat = Ppropulsive_TO * PRatio[5]  # electric motor power during takeoff
 
             try:
-                # print(f"P num during try: {P_number}")
-                self.aircraft.battery.T = self.startT + 273.15 # battery T TODO FIX THIS
-                self.aircraft.battery.it = 0
-                self.aircraft.battery.i = self.aircraft.battery.Power_2_current(
-                    self.TO_PBat
-                )  # convert output power to volts and amps
-                self.aircraft.battery.Vout  # necessary statement for the battery class to validate Vout
+                # Taxi-out, take-off/OEI power feasibility and take-off run: the pack state
+                # (spent charge, temperature) at the start of the climb.
+                it0, T0 = self._pack_before_climb(self.TO_PBat)
             except BatteryError as err:
                 # print(f"P num at error: {P_number}")
                 if not self.size_battery_pack: print(err)
@@ -1355,7 +1508,7 @@ class Mission:
             self.integral_solution = []
             self.plottingVars = []
             # initial fuel energy, battery energy, mass fraction, spent charge, and battery T
-            y0 = [0, 0, self.beta0, 0, self.startT + 273.15]
+            y0 = [0, 0, self.beta0, it0, T0]
             for i in range(len(times) - 1):
                 try:
                     sol = integrate.solve_ivp(
@@ -1410,7 +1563,12 @@ class Mission:
                 self.EBat = sol.y[1]
                 self.Beta = sol.y[2]
                 y0 = [sol.y[0][-1], sol.y[1][-1], sol.y[2][-1], sol.y[3][-1], sol.y[4][-1]]
-            # print(f"{P_number} is True")
+            # taxi-in after landing must fit in what is left of the pack
+            try:
+                self._pack_through_ground_legs(self._ground_battery_legs_in, y0[3], y0[4])
+            except BatteryError as err:
+                if not self.size_battery_pack: print(err)
+                return False, err.code
             return True, None
 
         def find_P_nr(n_guess, wto_ratio,bypass=True):

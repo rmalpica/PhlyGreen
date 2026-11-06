@@ -116,13 +116,13 @@ nav:
       - Powertrain Module: user-guide/powertrain.md
       - Battery Module: user-guide/battery.md
       - Hydrogen (Fuel Cell & Tank): user-guide/hydrogen.md
-      - Thermal Management (TMS): user-guide/thermal-management.md
-      - Reference Aircraft (ATR 42, A320): user-guide/reference-aircraft.md
+      - Thermal Management (TMS): user-guide/thermal-management.md      
       - Aerodynamics Module: user-guide/aerodynamics.md
       - Structures Module: user-guide/structures.md
       - Surrogate Models: user-guide/surrogate-models.md
       - Well-To-Wake Analysis: user-guide/well-to-wake.md
       - Emissions & Climate Impact: user-guide/emissions.md
+      - Reference Aircraft (ATR 42, A320): user-guide/reference-aircraft.md
   - Developer Guide:
       - Architecture Overview: developer-guide/architecture-overview.md
       - Flowcharts: developer-guide/flowcharts.md

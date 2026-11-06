@@ -100,3 +100,120 @@ def test_ground_segment_inputs_are_validated():
     d = MissionConfig(range_mission=750, range_diversion=220, payload_weight=1, crew_weight=1,
                       taxi_out_time=10.0, takeoff_time=1.0).to_dict()
     assert d['Taxi Out Time'] == 10.0 and d['Takeoff Time'] == 1.0
+
+
+# --- battery share of the ground segments (taxi split, take-off split, Class I and II) -------
+
+import os
+import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "examples"))
+from common import hybrid_config, fuelcell_battery_config      # noqa: E402
+
+
+def _with_ground_split(cfg, takeoff_phi=0.0, taxi_phi=None):
+    for seg in cfg.mission_stages.segments:
+        if seg.name == 'Takeoff':
+            seg.phi = takeoff_phi
+    cfg.mission.taxi_phi = taxi_phi
+    return cfg
+
+
+def _design(cfg):
+    a = pg.build_aircraft()
+    a.configure(cfg)
+    return a
+
+
+@pytest.fixture(scope="module")
+def hybrid_fuel_taxi():
+    return _design(_with_ground_split(hybrid_config('I')))
+
+
+@pytest.fixture(scope="module")
+def hybrid_electric_taxi():
+    return _design(_with_ground_split(hybrid_config('I'), taxi_phi=1.0))
+
+
+def test_ground_split_inputs_are_validated_and_serialized():
+    base = dict(range_mission=750, range_diversion=220, payload_weight=1, crew_weight=1)
+    with pytest.raises(ConfigError):
+        MissionConfig(**base, taxi_phi=1.5)
+    with pytest.raises(ConfigError):
+        MissionConfig(**base, takeoff_power_fraction=-0.1)
+    d = MissionConfig(**base, taxi_phi=1.0, takeoff_power_fraction=0.9).to_dict()
+    assert d['Taxi Supplied Power Ratio'] == 1.0 and d['Takeoff Power Fraction'] == 0.9
+
+
+def test_taxi_split_needs_a_battery():
+    mission = copy.deepcopy(sc.MISSION_INPUT)
+    mission['Taxi Supplied Power Ratio'] = 1.0
+    a = pg.build_aircraft()
+    a.Configuration, a.AircraftType = 'Traditional', 'ATR'
+    with pytest.raises(ValueError, match='no battery'):
+        a.ReadInput(sc.AERODYNAMICS_INPUT, sc.CONSTRAINTS_INPUT, mission,
+                    sc.ENERGY_INPUT, sc.MISSION_STAGES, sc.DIVERSION_STAGES)
+
+
+@pytest.mark.slow
+def test_fuel_taxi_draws_no_battery(hybrid_fuel_taxi):
+    m = hybrid_fuel_taxi.mission
+    assert m.EBat_ground == 0.0 and m.Taxi_PBat == 0.0
+
+
+@pytest.mark.slow
+def test_electric_taxi_moves_ground_energy_to_the_battery(hybrid_fuel_taxi, hybrid_electric_taxi):
+    m, w = hybrid_electric_taxi.mission, hybrid_electric_taxi.weight
+    # the battery covers the whole taxi: its energy is the taxi power over both taxi legs ...
+    (_, t_out, P_out, _, _), (_, t_to, P_to, _, _) = m._ground_battery_legs_out
+    (_, t_in, P_in, _, _), = m._ground_battery_legs_in
+    assert P_to == 0.0 and P_out == P_in > 0
+    assert m.EBat_ground == pytest.approx(P_out * (t_out + t_in), rel=1e-12)
+    # ... it is part of the battery energy the weight loop sizes on ...
+    assert w.TotalEnergies[1] == pytest.approx(m.EBat[-1] + m.EBat_ground, rel=1e-12)
+    # ... its power enters the battery peak power ...
+    assert m.Max_PBat >= m.Taxi_PBat > 0
+    # ... and the ground fuel drops to the take-off run alone
+    assert m.E_ground < hybrid_fuel_taxi.mission.E_ground
+    assert m.E_ground == pytest.approx(m.E_taxi_out_takeoff, rel=1e-12)    # no taxi-in fuel
+    assert w.WBat > hybrid_fuel_taxi.weight.WBat
+
+
+@pytest.mark.slow
+def test_taxi_split_defaults_to_the_takeoff_split():
+    a = _design(_with_ground_split(hybrid_config('I'), takeoff_phi=0.3))
+    m = a.mission
+    assert m.Taxi_PBat > 0 and m.Takeoff_PBat > 0
+    assert m.Takeoff_PBat <= m.TO_PBat                  # the take-off run is within the sizing case
+    b = _design(_with_ground_split(hybrid_config('I'), takeoff_phi=0.3, taxi_phi=0.3))
+    assert b.weight.WTO == pytest.approx(a.weight.WTO, rel=1e-12)
+
+
+@pytest.mark.slow
+def test_takeoff_power_fraction_scales_the_takeoff_run(hybrid_fuel_taxi):
+    derated = hybrid_config('I')
+    derated.mission.takeoff_power_fraction = 0.8
+    d = _design(_with_ground_split(derated))
+    assert d.mission.E_taxi_out_takeoff < hybrid_fuel_taxi.mission.E_taxi_out_takeoff
+
+
+@pytest.mark.slow
+def test_fuel_cell_battery_electric_taxi():
+    base = _design(_with_ground_split(fuelcell_battery_config()))
+    a = _design(_with_ground_split(fuelcell_battery_config(), taxi_phi=1.0))
+    m = a.mission
+    assert base.mission.EBat_ground == 0.0
+    assert m.EBat_ground > 0
+    assert a.weight.TotalEnergies[1] == pytest.approx(m.EBat + m.EBat_ground, rel=1e-12)
+    assert m.Max_PBat >= m.Taxi_PBat > 0
+
+
+@pytest.mark.slow
+def test_class_ii_pack_starts_the_climb_after_taxi_out():
+    fuel = _design(_with_ground_split(hybrid_config('II')))
+    elec = _design(_with_ground_split(hybrid_config('II'), taxi_phi=1.0))
+    # spent charge [A s] at the start of the climb
+    assert fuel.mission.integral_solution[0].y[3][0] == 0.0
+    assert elec.mission.integral_solution[0].y[3][0] > 0.0
+    assert elec.weight.TotalEnergies[1] > fuel.weight.TotalEnergies[1]
+    assert elec.battery.pack_weight >= fuel.battery.pack_weight

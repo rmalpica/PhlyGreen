@@ -47,6 +47,11 @@ class MissionConfig(DictConfig):
     taxi_in_time: Optional[float] = None         # [min] (default 13)
     taxi_power_fraction: Optional[float] = None  # of the take-off propulsive power (default 0.07)
     takeoff_time: Optional[float] = None         # [min] at take-off power (default 0.7)
+    takeoff_power_fraction: Optional[float] = None  # of the take-off propulsive power, averaged
+    #                                                 over takeoff_time (default 1.0)
+    # battery fraction of the taxi propulsive power (battery configurations only); default:
+    # the take-off phi, i.e. the phi of the profile's 'Takeoff' stage
+    taxi_phi: Optional[float] = None
 
     _KEY_MAP = {
         "range_mission": "Range Mission",
@@ -60,11 +65,15 @@ class MissionConfig(DictConfig):
         "taxi_in_time": "Taxi In Time",
         "taxi_power_fraction": "Taxi Power Fraction",
         "takeoff_time": "Takeoff Time",
+        "takeoff_power_fraction": "Takeoff Power Fraction",
+        "taxi_phi": "Taxi Supplied Power Ratio",
     }
 
     def __post_init__(self):
         _check_fraction("beta_start", self.beta_start)
         _check_fraction("taxi_power_fraction", self.taxi_power_fraction)
+        _check_fraction("takeoff_power_fraction", self.takeoff_power_fraction)
+        _check_fraction("taxi_phi", self.taxi_phi)
         for n in ("taxi_out_time", "taxi_in_time", "takeoff_time"):
             v = getattr(self, n)
             if v is not None and v < 0:

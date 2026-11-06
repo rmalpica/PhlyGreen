@@ -18,18 +18,45 @@ The mission solver integrates the aircraft state along a sequence of **flight se
 - diversion  
 
 The **ground segments** (taxi-out, take-off run, taxi-in) are not part of the flown profile;
-their fuel is computed separately by `Mission._ground_segments`:
+their energy is computed separately by `Mission._ground_segments`:
 
-- take-off at the take-off-field propulsive power for `Takeoff Time` (default 0.7 min);
+- take-off at `Takeoff Power Fraction` (default 1.0) of the take-off-field propulsive power for
+  `Takeoff Time` (default 0.7 min);
 - taxi-out and taxi-in at `Taxi Power Fraction` (default 7 %) of that power for
   `Taxi Out Time` / `Taxi In Time` (default 13 + 13 min).
 
 The defaults are the ICAO Annex 16 landing/take-off (LTO) reference values (taxi/ground idle:
 26 min at 7 %; take-off: 0.7 min at 100 %), with the taxi time split equally between taxi-out
-and taxi-in. Each configuration converts these powers to fuel through its own powertrain
-(fuel-cell, gas-turbine or turbofan efficiency at that load), on the primary fuel; the battery
-share of hybrids is not counted for these short, low-power segments. The taxi-out and take-off
-fuel is burnt before the climb, so the integration starts at
+and taxi-in. Each configuration converts these powers to fuel and battery energy through its
+own powertrain, at the take-off condition (fuel-cell, gas-turbine or turbofan efficiency at
+that load).
+
+In the battery configurations (`Hybrid`, `FuelCellBattery`) the battery supplies a fraction
+of the ground power:
+
+| Phase    | Battery fraction | Input | Default |
+|----------|------------------|-------|---------|
+| Take-off | \(\varphi_{TO}\) | `phi` of the profile's `Takeoff` stage | 0 |
+| Taxi     | \(\varphi_{taxi}\) | `Taxi Supplied Power Ratio` (`MissionConfig.taxi_phi`) | \(\varphi_{TO}\) |
+
+\(\varphi_{taxi} = 1\) is an all-electric taxi. The same \(\varphi_{TO}\) splits the take-off /
+one-engine-inoperative sizing power (`TO_PBat`). The serial range extender ignores
+\(\varphi_{TO}\): its turbine runs at full throttle and the battery covers the rest, as in flight.
+A configuration without a battery rejects a non-zero taxi split.
+
+The battery share of the ground segments counts like the flown one:
+
+- its energy is added to the mission battery energy, so it sizes a Class-I battery and enters
+  the well-to-wake and grid-CO2 accounting;
+- the taxi and take-off battery powers enter the battery peak power `Max_PBat`;
+- a Class-II pack is flown through taxi-out and the take-off run before the climb, using the
+  in-flight electro-thermal model with ambient air at the take-off altitude. The climb
+  therefore starts with the charge already spent and the pack temperature reached on the
+  ground. The pack is checked at the worst-case take-off power after taxi-out, and taxi-in must
+  fit in the charge left after landing. A ground leg without battery power leaves the pack
+  state unchanged.
+
+The taxi-out and take-off fuel is burnt before the climb, so the integration starts at
 
 \[
 \beta_0 = 1 - \frac{m_{\text{taxi-out}} + m_{\text{take-off}}}{W_{TO}} ,
@@ -37,7 +64,8 @@ fuel is burnt before the climb, so the integration starts at
 
 and the fuel of all ground segments is added to the mission fuel energy (and therefore to
 \(W_f\), the hydrogen tank and the well-to-wake energy). Set the inputs through
-`MissionConfig(taxi_out_time=..., taxi_in_time=..., taxi_power_fraction=..., takeoff_time=...)`.
+`MissionConfig(taxi_out_time=..., taxi_in_time=..., taxi_power_fraction=..., takeoff_time=...,
+takeoff_power_fraction=..., taxi_phi=...)`.
 The former `Beta start` input is deprecated and ignored.
 
 Each segment prescribes:

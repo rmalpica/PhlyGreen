@@ -49,6 +49,7 @@ vehicle can fly the mission within all constraints. It supports **conventional**
   - Class-II gas-turbine emission surrogates (PW127);
   - a constant-throttle climb segment;
   - fixes to the landing constraint, the FLOPS masses, the PMAD and electric-motor masses, and
+  - battery energy in hybrid/all-electric taxi-in/out and take-off is now accounted for
     the fuel-cell sizing and propeller chain.
 - **Learning material:**
   - learning tutorials 00–08, including a fuel-cell deep dive (07) and thermal management (08);
