@@ -35,7 +35,8 @@
 <span class=normal>57</span>
 <span class=normal>58</span>
 <span class=normal>59</span>
-<span class=normal>60</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=fm>__init__</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>aircraft</span><span class=p>):</span>
+<span class=normal>60</span>
+<span class=normal>61</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=fm>__init__</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>aircraft</span><span class=p>):</span>
     <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span> <span class=o>=</span> <span class=n>aircraft</span>
     <span class=c1>#thermal powerplant efficiencies</span>
     <span class=bp>self</span><span class=o>.</span><span class=n>EtaGTmodelType</span> <span class=o>=</span> <span class=s1>'constant'</span>
@@ -52,6 +53,7 @@
     <span class=c1>#specific powers</span>
     <span class=bp>self</span><span class=o>.</span><span class=n>SPowerPT</span> <span class=o>=</span> <span class=kc>None</span> 
     <span class=bp>self</span><span class=o>.</span><span class=n>SPowerPMAD</span> <span class=o>=</span> <span class=kc>None</span>  
+    <span class=bp>self</span><span class=o>.</span><span class=n>SPowerGenerator</span> <span class=o>=</span> <span class=kc>None</span>  <span class=c1># serial generator [W/kg]; None = the motor value SPowerPT[1]</span>
     <span class=c1>#components mass</span>
     <span class=bp>self</span><span class=o>.</span><span class=n>WThermal</span> <span class=o>=</span> <span class=kc>None</span>
     <span class=bp>self</span><span class=o>.</span><span class=n>WElectric</span> <span class=o>=</span> <span class=kc>None</span>
@@ -73,10 +75,7 @@
     <span class=bp>self</span><span class=o>.</span><span class=n>turbofan_model_path</span> <span class=o>=</span> <span class=kc>None</span>
     <span class=bp>self</span><span class=o>.</span><span class=n>n_engines</span> <span class=o>=</span> <span class=mi>1</span>
 </code></pre></div></td></tr></table></div> </details> <div class="doc doc-children"> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.Systems.Powertrain.Powertrain.Powertrain.Hybrid class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">Hybrid</span> <a href=#PhlyGreen.Systems.Powertrain.Powertrain.Powertrain.Hybrid class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>Hybrid</span><span class=p>(</span><span class=n>phi</span><span class=p>,</span> <span class=n>alt</span><span class=p>,</span> <span class=n>vel</span><span class=p>,</span> <span class=n>pwr</span><span class=p>)</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Power ratios for the hybrid-electric chain (parallel or serial).</p> <p>Delegates to the component-graph engine; see :meth:<code>_hybrid_legacy</code> for the original hand-coded systems this reproduces. <code>abs</code> is applied to avoid <code>-0</code> for the battery ratio when <code>phi == 0</code>. Output order: parallel <code>[Pf, Pgt, Pgb, Ps1, Pe1, Pbat, Pp1]</code> / serial <code>[Pf, Pgt, Pgb, Ps1, Pe1, Pbat, Pgen, Pp1]</code> (all /Pp).</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Systems/Powertrain/Powertrain.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>715</span>
-<span class=normal>716</span>
-<span class=normal>717</span>
-<span class=normal>718</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Power ratios for the hybrid-electric chain (parallel or serial).</p> <p>Delegates to the component-graph engine; see :meth:<code>_hybrid_legacy</code> for the original hand-coded systems this reproduces. <code>abs</code> is applied to avoid <code>-0</code> for the battery ratio when <code>phi == 0</code>. Output order: parallel <code>[Pf, Pgt, Pgb, Ps1, Pe1, Pbat, Pp1]</code> / serial <code>[Pf, Pgt, Pgb, Ps1, Pe1, Pbat, Pgen, Pp1]</code> (all /Pp).</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Systems/Powertrain/Powertrain.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>718</span>
 <span class=normal>719</span>
 <span class=normal>720</span>
 <span class=normal>721</span>
@@ -95,7 +94,10 @@
 <span class=normal>734</span>
 <span class=normal>735</span>
 <span class=normal>736</span>
-<span class=normal>737</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>Hybrid</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>phi</span><span class=p>,</span> <span class=n>alt</span><span class=p>,</span> <span class=n>vel</span><span class=p>,</span> <span class=n>pwr</span><span class=p>):</span>
+<span class=normal>737</span>
+<span class=normal>738</span>
+<span class=normal>739</span>
+<span class=normal>740</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>Hybrid</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>phi</span><span class=p>,</span> <span class=n>alt</span><span class=p>,</span> <span class=n>vel</span><span class=p>,</span> <span class=n>pwr</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>"""Power ratios for the hybrid-electric chain (parallel or serial).</span>
 
 <span class=sd>    Delegates to the component-graph engine; see :meth:`_hybrid_legacy` for the</span>
@@ -119,20 +121,17 @@
         <span class=k>raise</span> <span class=ne>Exception</span><span class=p>(</span><span class=s2>"Unknown hybrid type: </span><span class=si>%s</span><span class=s2>"</span> <span class=o>%</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>HybridType</span><span class=p>)</span>
     <span class=k>return</span> <span class=n>np</span><span class=o>.</span><span class=n>abs</span><span class=p>(</span><span class=n>g</span><span class=o>.</span><span class=n>solve</span><span class=p>())</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.Systems.Powertrain.Powertrain.Powertrain.PowerLapse class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">PowerLapse</span> <a href=#PhlyGreen.Systems.Powertrain.Powertrain.Powertrain.PowerLapse class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>PowerLapse</span><span class=p>(</span><span class=n>altitude</span><span class=p>,</span> <span class=n>DISA</span><span class=p>)</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Full throttle power lapse, to be used in constraint analysis. Source: Ruijgrok, Elements of airplane performance, Eq.(6.7-11)</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Systems/Powertrain/Powertrain.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>640</span>
-<span class=normal>641</span>
-<span class=normal>642</span>
-<span class=normal>643</span>
-<span class=normal>644</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>PowerLapse</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span><span class=n>altitude</span><span class=p>,</span><span class=n>DISA</span><span class=p>):</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Full throttle power lapse, to be used in constraint analysis. Source: Ruijgrok, Elements of airplane performance, Eq.(6.7-11)</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Systems/Powertrain/Powertrain.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>643</span>
+<span class=normal>644</span>
+<span class=normal>645</span>
+<span class=normal>646</span>
+<span class=normal>647</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>PowerLapse</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span><span class=n>altitude</span><span class=p>,</span><span class=n>DISA</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>""" Full throttle power lapse, to be used in constraint analysis. Source: Ruijgrok, Elements of airplane performance, Eq.(6.7-11)"""</span>
     <span class=n>n</span> <span class=o>=</span> <span class=mf>0.75</span>
     <span class=n>lapse</span> <span class=o>=</span> <span class=p>(</span><span class=n>ISA</span><span class=o>.</span><span class=n>atmosphere</span><span class=o>.</span><span class=n>RHOstd</span><span class=p>(</span><span class=n>altitude</span><span class=p>,</span><span class=n>DISA</span><span class=p>)</span><span class=o>/</span><span class=n>ISA</span><span class=o>.</span><span class=n>atmosphere</span><span class=o>.</span><span class=n>RHOstd</span><span class=p>(</span><span class=mf>0.0</span><span class=p>,</span><span class=n>DISA</span><span class=p>))</span><span class=o>**</span><span class=n>n</span>
     <span class=k>return</span> <span class=n>lapse</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.Systems.Powertrain.Powertrain.Powertrain.PowerRatioFuelCellBattery class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">PowerRatioFuelCellBattery</span> <a href=#PhlyGreen.Systems.Powertrain.Powertrain.Powertrain.PowerRatioFuelCellBattery class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>PowerRatioFuelCellBattery</span><span class=p>(</span><span class=n>phi</span><span class=p>,</span> <span class=n>alt</span><span class=p>,</span> <span class=n>vel</span><span class=p>,</span> <span class=n>pwr</span><span class=p>)</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Power ratios for a fuel-cell + battery (gas-turbine-free) hybrid.</p> <p>Demonstrates an arbitrary hybridization assembled on the powertrain graph: a fuel cell and a battery share an electrical bus feeding the motor/gearbox/propeller. Requires <code>EtaFC</code> (or a <code>fc_model</code>); <code>em_model</code> makes the motor efficiency operating-point dependent. Output order: <code>[PfH2, Pfc, Pbat, Pe1, Pem, Pgb, Pp1]</code> (all /Pp), so <code>[0]</code> is hydrogen power and <code>[2]</code> is battery power.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Systems/Powertrain/Powertrain.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>739</span>
-<span class=normal>740</span>
-<span class=normal>741</span>
-<span class=normal>742</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Power ratios for a fuel-cell + battery (gas-turbine-free) hybrid.</p> <p>Demonstrates an arbitrary hybridization assembled on the powertrain graph: a fuel cell and a battery share an electrical bus feeding the motor/gearbox/propeller. Requires <code>EtaFC</code> (or a <code>fc_model</code>); <code>em_model</code> makes the motor efficiency operating-point dependent. Output order: <code>[PfH2, Pfc, Pbat, Pe1, Pem, Pgb, Pp1]</code> (all /Pp), so <code>[0]</code> is hydrogen power and <code>[2]</code> is battery power.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Systems/Powertrain/Powertrain.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>742</span>
 <span class=normal>743</span>
 <span class=normal>744</span>
 <span class=normal>745</span>
@@ -144,7 +143,10 @@
 <span class=normal>751</span>
 <span class=normal>752</span>
 <span class=normal>753</span>
-<span class=normal>754</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>PowerRatioFuelCellBattery</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>phi</span><span class=p>,</span> <span class=n>alt</span><span class=p>,</span> <span class=n>vel</span><span class=p>,</span> <span class=n>pwr</span><span class=p>):</span>
+<span class=normal>754</span>
+<span class=normal>755</span>
+<span class=normal>756</span>
+<span class=normal>757</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>PowerRatioFuelCellBattery</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>phi</span><span class=p>,</span> <span class=n>alt</span><span class=p>,</span> <span class=n>vel</span><span class=p>,</span> <span class=n>pwr</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>"""Power ratios for a fuel-cell + battery (gas-turbine-free) hybrid.</span>
 
 <span class=sd>    Demonstrates an arbitrary hybridization assembled on the powertrain graph: a fuel</span>
@@ -162,10 +164,7 @@
     <span class=k>return</span> <span class=n>np</span><span class=o>.</span><span class=n>abs</span><span class=p>(</span><span class=n>g</span><span class=o>.</span><span class=n>solve</span><span class=p>())</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.Systems.Powertrain.Powertrain.Powertrain.SizingDenominator class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">SizingDenominator</span> <a href=#PhlyGreen.Systems.Powertrain.Powertrain.Powertrain.SizingDenominator class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>SizingDenominator</span><span class=p>(</span><span class=n>altitude</span><span class=p>,</span> <span class=n>DISA</span><span class=p>,</span> <span class=n>altitude_lapse</span><span class=o>=</span><span class=kc>True</span><span class=p>)</span>
 </code></pre></div> <div class="doc doc-contents "> <p>Divisor turning a required P/W [W/kg] into the units the design point is rated in.</p> <p>The constraint diagram compares every flight requirement against one installed rating. For a power-rated aircraft that rating is shaft power, and the divisor is the altitude power lapse -- exactly what the constraint curves have always used.</p> <p>A turbofan is rated on <strong>thrust</strong>, so the diagram must be drawn in T/W instead: <code>Performance.PoWTO</code> already returns <code>T*V/m</code> (there is no propulsive efficiency in it), hence</p> <pre><code>T/W_SLS = (P/W) / (g * V * ThrustLapse(h, M))
-</code></pre> <p>which is <strong>dimensionless</strong>: P/W is W/kg = m<sup>2/s</sup>3 and g*V is (m/s^2)(m/s) = m^2/s^3. So the Turbofan design point is a plain thrust-to-weight ratio, the form T/W is always quoted in, not a force per unit mass.</p> <p>This matters beyond a change of units. <code>FindDesignPoint</code> minimises the maximum requirement over W/S, and each requirement is evaluated at its own speed, so the minimum-installed-power point and the minimum-installed-thrust point are different points and can even be set by different constraints.</p> <p>V and M are read from <code>aircraft.performance</code>, which the <code>performance.*</code> call immediately preceding this one has just set through <code>set_speed</code>. For every configuration other than Turbofan the returned value is identical to the previous <code>PowerLapse</code> prefactor, so existing designs are unchanged.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Systems/Powertrain/Powertrain.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>668</span>
-<span class=normal>669</span>
-<span class=normal>670</span>
-<span class=normal>671</span>
+</code></pre> <p>which is <strong>dimensionless</strong>: P/W is W/kg = m<sup>2/s</sup>3 and g*V is (m/s^2)(m/s) = m^2/s^3. So the Turbofan design point is a plain thrust-to-weight ratio, the form T/W is always quoted in, not a force per unit mass.</p> <p>This matters beyond a change of units. <code>FindDesignPoint</code> minimises the maximum requirement over W/S, and each requirement is evaluated at its own speed, so the minimum-installed-power point and the minimum-installed-thrust point are different points and can even be set by different constraints.</p> <p>V and M are read from <code>aircraft.performance</code>, which the <code>performance.*</code> call immediately preceding this one has just set through <code>set_speed</code>. For every configuration other than Turbofan the returned value is identical to the previous <code>PowerLapse</code> prefactor, so existing designs are unchanged.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Systems/Powertrain/Powertrain.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>671</span>
 <span class=normal>672</span>
 <span class=normal>673</span>
 <span class=normal>674</span>
@@ -195,7 +194,10 @@
 <span class=normal>698</span>
 <span class=normal>699</span>
 <span class=normal>700</span>
-<span class=normal>701</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>SizingDenominator</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>altitude</span><span class=p>,</span> <span class=n>DISA</span><span class=p>,</span> <span class=n>altitude_lapse</span><span class=o>=</span><span class=kc>True</span><span class=p>):</span>
+<span class=normal>701</span>
+<span class=normal>702</span>
+<span class=normal>703</span>
+<span class=normal>704</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>SizingDenominator</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>altitude</span><span class=p>,</span> <span class=n>DISA</span><span class=p>,</span> <span class=n>altitude_lapse</span><span class=o>=</span><span class=kc>True</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>"""Divisor turning a required P/W [W/kg] into the units the design point is rated in.</span>
 
 <span class=sd>    The constraint diagram compares every flight requirement against one installed</span>
@@ -231,10 +233,7 @@
     <span class=k>return</span> <span class=mf>9.81</span> <span class=o>*</span> <span class=n>np</span><span class=o>.</span><span class=n>asarray</span><span class=p>(</span><span class=n>velocity</span><span class=p>)</span> <span class=o>*</span> <span class=bp>self</span><span class=o>.</span><span class=n>ThrustLapse</span><span class=p>(</span><span class=n>altitude</span><span class=p>,</span> <span class=n>mach</span><span class=p>,</span> <span class=n>DISA</span><span class=p>)</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.Systems.Powertrain.Powertrain.Powertrain.ThrustLapse class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">ThrustLapse</span> <a href=#PhlyGreen.Systems.Powertrain.Powertrain.Powertrain.ThrustLapse class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>ThrustLapse</span><span class=p>(</span><span class=n>altitude</span><span class=p>,</span> <span class=n>mach</span><span class=p>,</span> <span class=n>DISA</span><span class=o>=</span><span class=mf>0.0</span><span class=p>)</span>
 </code></pre></div> <div class="doc doc-contents "> <p>Full-throttle thrust lapse F_avail(h, M) / F_SLS for a turbofan.</p> <p>Taken from the fitted turbofan map when one is attached (the same pyCycle sweep that produces the efficiency map also produces the available thrust at every condition), otherwise from the Mattingly high-bypass form</p> <pre><code>alpha = delta * (1 - 0.49 sqrt(M))
-</code></pre> <p>with <code>delta</code> the ISA pressure ratio. Unlike :meth:<code>PowerLapse</code> this depends on Mach as well as altitude, which is exactly why a turboshaft power lapse cannot stand in for it.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Systems/Powertrain/Powertrain.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>646</span>
-<span class=normal>647</span>
-<span class=normal>648</span>
-<span class=normal>649</span>
+</code></pre> <p>with <code>delta</code> the ISA pressure ratio. Unlike :meth:<code>PowerLapse</code> this depends on Mach as well as altitude, which is exactly why a turboshaft power lapse cannot stand in for it.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Systems/Powertrain/Powertrain.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>649</span>
 <span class=normal>650</span>
 <span class=normal>651</span>
 <span class=normal>652</span>
@@ -251,7 +250,10 @@
 <span class=normal>663</span>
 <span class=normal>664</span>
 <span class=normal>665</span>
-<span class=normal>666</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>ThrustLapse</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>altitude</span><span class=p>,</span> <span class=n>mach</span><span class=p>,</span> <span class=n>DISA</span><span class=o>=</span><span class=mf>0.0</span><span class=p>):</span>
+<span class=normal>666</span>
+<span class=normal>667</span>
+<span class=normal>668</span>
+<span class=normal>669</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>ThrustLapse</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>altitude</span><span class=p>,</span> <span class=n>mach</span><span class=p>,</span> <span class=n>DISA</span><span class=o>=</span><span class=mf>0.0</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>"""Full-throttle thrust lapse F_avail(h, M) / F_SLS for a turbofan.</span>
 
 <span class=sd>    Taken from the fitted turbofan map when one is attached (the same pyCycle sweep that</span>
@@ -273,17 +275,17 @@
     <span class=n>delta</span> <span class=o>=</span> <span class=n>ISA</span><span class=o>.</span><span class=n>atmosphere</span><span class=o>.</span><span class=n>Pstd</span><span class=p>(</span><span class=n>altitude</span><span class=p>)</span> <span class=o>/</span> <span class=n>ISA</span><span class=o>.</span><span class=n>atmosphere</span><span class=o>.</span><span class=n>Pstd</span><span class=p>(</span><span class=mf>0.0</span><span class=p>)</span>
     <span class=k>return</span> <span class=n>delta</span> <span class=o>*</span> <span class=p>(</span><span class=mf>1.0</span> <span class=o>-</span> <span class=mf>0.49</span> <span class=o>*</span> <span class=n>np</span><span class=o>.</span><span class=n>sqrt</span><span class=p>(</span><span class=nb>max</span><span class=p>(</span><span class=nb>float</span><span class=p>(</span><span class=n>mach</span><span class=p>),</span> <span class=mf>0.0</span><span class=p>)))</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.Systems.Powertrain.Powertrain.Powertrain.Traditional class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">Traditional</span> <a href=#PhlyGreen.Systems.Powertrain.Powertrain.Powertrain.Traditional class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>Traditional</span><span class=p>(</span><span class=n>alt</span><span class=p>,</span> <span class=n>vel</span><span class=p>,</span> <span class=n>pwr</span><span class=p>)</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Power ratios for the traditional gas-turbine chain.</p> <p>Delegates to the component-graph engine (:func:<code>graph.traditional_graph</code>); see :meth:<code>_traditional_legacy</code> for the original hand-coded 4x4 system that this reproduces. Output order: <code>[Pf/Pp, Pgt/Pp, Pgb/Pp, Pp/Pp]</code>.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Systems/Powertrain/Powertrain.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>703</span>
-<span class=normal>704</span>
-<span class=normal>705</span>
-<span class=normal>706</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Power ratios for the traditional gas-turbine chain.</p> <p>Delegates to the component-graph engine (:func:<code>graph.traditional_graph</code>); see :meth:<code>_traditional_legacy</code> for the original hand-coded 4x4 system that this reproduces. Output order: <code>[Pf/Pp, Pgt/Pp, Pgb/Pp, Pp/Pp]</code>.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Systems/Powertrain/Powertrain.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>706</span>
 <span class=normal>707</span>
 <span class=normal>708</span>
 <span class=normal>709</span>
 <span class=normal>710</span>
 <span class=normal>711</span>
 <span class=normal>712</span>
-<span class=normal>713</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>Traditional</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>alt</span><span class=p>,</span> <span class=n>vel</span><span class=p>,</span> <span class=n>pwr</span><span class=p>):</span>
+<span class=normal>713</span>
+<span class=normal>714</span>
+<span class=normal>715</span>
+<span class=normal>716</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>Traditional</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>alt</span><span class=p>,</span> <span class=n>vel</span><span class=p>,</span> <span class=n>pwr</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>"""Power ratios for the traditional gas-turbine chain.</span>
 
 <span class=sd>    Delegates to the component-graph engine (:func:`graph.traditional_graph`); see</span>
@@ -295,10 +297,7 @@
                           <span class=bp>self</span><span class=o>.</span><span class=n>eta</span><span class=p>(</span><span class=s1>'propeller'</span><span class=p>,</span> <span class=n>alt</span><span class=p>,</span> <span class=n>vel</span><span class=p>,</span> <span class=n>pwr</span><span class=p>))</span>
     <span class=k>return</span> <span class=n>g</span><span class=o>.</span><span class=n>solve</span><span class=p>()</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.Systems.Powertrain.Powertrain.Powertrain.WeightPowertrain class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">WeightPowertrain</span> <a href=#PhlyGreen.Systems.Powertrain.Powertrain.Powertrain.WeightPowertrain class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>WeightPowertrain</span><span class=p>(</span><span class=n>WTO</span><span class=p>)</span>
-</code></pre></div> <div class="doc doc-contents "> <p>This function estimates the total weight of the propulsion powertrain based on the aircraft configuration (traditional or hybrid) and the maximum required power level.</p> <p>This function inherits from the mission class the installed power requirements for the propulsion system and converts them into component weights using specific power coefficients (shaft-power-to-weight ratios). The methodology differs for traditional and hybrid-electric architectures:</p> <ul> <li> <p><strong>Traditional configuration</strong> Only the thermal (gas-turbine) powertrain is present. The peak required shaft power is determined as the maximum between:</p> <ol> <li>Mission maximum engine power corrected by power lapse, and</li> <li>Take-Off (TO) required propulsive power. The thermal powertrain weight is obtained by dividing this peak shaft power by the thermal specific power ratio <code>SPowerPT[0]</code>.</li> </ol> </li> <li> <p><strong>Hybrid configuration</strong> Both thermal and electric subsystems are sized independently:</p> <ul> <li>Thermal subsystem: same criterion as in traditional case.</li> <li>Electric subsystem: peak battery power is the maximum between mission maximum electric power and TO electric power. The total powertrain weight is the sum of thermal and electric subsystem weights, computed using <code>SPowerPT[0]</code> and <code>SPowerPT[1]</code> respectively.</li> </ul> </li> </ul> <h5 id=PhlyGreen.Systems.Powertrain.Powertrain.Powertrain.WeightPowertrain--parameters>Parameters<a class=headerlink href=#PhlyGreen.Systems.Powertrain.Powertrain.Powertrain.WeightPowertrain--parameters title="Permanent link">&para;</a></h5> <p>WTO : float Take-off weight of the aircraft [kg].<br> (Currently unused inside the method but included for interface compatibility.)</p> <h5 id=PhlyGreen.Systems.Powertrain.Powertrain.Powertrain.WeightPowertrain--returns>Returns<a class=headerlink href=#PhlyGreen.Systems.Powertrain.Powertrain.Powertrain.WeightPowertrain--returns title="Permanent link">&para;</a></h5> <p>float Total estimated powertrain weight [kg]. Fuel and Battery weights are not included.</p> <h5 id=PhlyGreen.Systems.Powertrain.Powertrain.Powertrain.WeightPowertrain--attributes-updated>Attributes Updated<a class=headerlink href=#PhlyGreen.Systems.Powertrain.Powertrain.Powertrain.WeightPowertrain--attributes-updated title="Permanent link">&para;</a></h5> <p>engineRating : float Rated thermal shaft power required for the mission [W]. WThermal : float Weight of the thermal propulsion subsystem [kg]. WElectric : float, optional Weight of the electric power subsystem (only for hybrid configurations) [kg].</p> <h5 id=PhlyGreen.Systems.Powertrain.Powertrain.Powertrain.WeightPowertrain--notes>Notes<a class=headerlink href=#PhlyGreen.Systems.Powertrain.Powertrain.Powertrain.WeightPowertrain--notes title="Permanent link">&para;</a></h5> <ul> <li><code>SPowerPT</code> is assumed to contain the specific power (W/kg) for thermal and electric powertrain components. </li> <li><code>PowerLapse(alt, vel)</code> is used to compute the reduction in available GT power with altitude.</li> <li>Raises an exception if an unsupported aircraft configuration is provided.</li> </ul> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Systems/Powertrain/Powertrain.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal> 922</span>
-<span class=normal> 923</span>
-<span class=normal> 924</span>
-<span class=normal> 925</span>
+</code></pre></div> <div class="doc doc-contents "> <p>This function estimates the total weight of the propulsion powertrain based on the aircraft configuration (traditional or hybrid) and the maximum required power level.</p> <p>This function inherits from the mission class the installed power requirements for the propulsion system and converts them into component weights using specific power coefficients (shaft-power-to-weight ratios). The methodology differs for traditional and hybrid-electric architectures:</p> <ul> <li> <p><strong>Traditional configuration</strong> Only the thermal (gas-turbine) powertrain is present. The peak required shaft power is determined as the maximum between:</p> <ol> <li>Mission maximum engine power corrected by power lapse, and</li> <li>Take-Off (TO) required propulsive power. The thermal powertrain weight is obtained by dividing this peak shaft power by the thermal specific power ratio <code>SPowerPT[0]</code>.</li> </ol> </li> <li> <p><strong>Hybrid configuration</strong> Both thermal and electric subsystems are sized independently:</p> <ul> <li>Thermal subsystem: same criterion as in traditional case.</li> <li>Electric subsystem: peak battery power is the maximum between mission maximum electric power and TO electric power. The total powertrain weight is the sum of thermal and electric subsystem weights, computed using <code>SPowerPT[0]</code> and <code>SPowerPT[1]</code> respectively.</li> </ul> </li> </ul> <h5 id=PhlyGreen.Systems.Powertrain.Powertrain.Powertrain.WeightPowertrain--parameters>Parameters<a class=headerlink href=#PhlyGreen.Systems.Powertrain.Powertrain.Powertrain.WeightPowertrain--parameters title="Permanent link">&para;</a></h5> <p>WTO : float Take-off weight of the aircraft [kg].<br> (Currently unused inside the method but included for interface compatibility.)</p> <h5 id=PhlyGreen.Systems.Powertrain.Powertrain.Powertrain.WeightPowertrain--returns>Returns<a class=headerlink href=#PhlyGreen.Systems.Powertrain.Powertrain.Powertrain.WeightPowertrain--returns title="Permanent link">&para;</a></h5> <p>float Total estimated powertrain weight [kg]. Fuel and Battery weights are not included.</p> <h5 id=PhlyGreen.Systems.Powertrain.Powertrain.Powertrain.WeightPowertrain--attributes-updated>Attributes Updated<a class=headerlink href=#PhlyGreen.Systems.Powertrain.Powertrain.Powertrain.WeightPowertrain--attributes-updated title="Permanent link">&para;</a></h5> <p>engineRating : float Rated thermal shaft power required for the mission [W]. WThermal : float Weight of the thermal propulsion subsystem [kg]. WElectric : float, optional Weight of the electric power subsystem (only for hybrid configurations) [kg].</p> <h5 id=PhlyGreen.Systems.Powertrain.Powertrain.Powertrain.WeightPowertrain--notes>Notes<a class=headerlink href=#PhlyGreen.Systems.Powertrain.Powertrain.Powertrain.WeightPowertrain--notes title="Permanent link">&para;</a></h5> <ul> <li><code>SPowerPT</code> is assumed to contain the specific power (W/kg) for thermal and electric powertrain components. </li> <li><code>PowerLapse(alt, vel)</code> is used to compute the reduction in available GT power with altitude.</li> <li>Raises an exception if an unsupported aircraft configuration is provided.</li> </ul> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Systems/Powertrain/Powertrain.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal> 925</span>
 <span class=normal> 926</span>
 <span class=normal> 927</span>
 <span class=normal> 928</span>
@@ -424,7 +423,27 @@
 <span class=normal>1048</span>
 <span class=normal>1049</span>
 <span class=normal>1050</span>
-<span class=normal>1051</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>WeightPowertrain</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span><span class=n>WTO</span><span class=p>):</span>
+<span class=normal>1051</span>
+<span class=normal>1052</span>
+<span class=normal>1053</span>
+<span class=normal>1054</span>
+<span class=normal>1055</span>
+<span class=normal>1056</span>
+<span class=normal>1057</span>
+<span class=normal>1058</span>
+<span class=normal>1059</span>
+<span class=normal>1060</span>
+<span class=normal>1061</span>
+<span class=normal>1062</span>
+<span class=normal>1063</span>
+<span class=normal>1064</span>
+<span class=normal>1065</span>
+<span class=normal>1066</span>
+<span class=normal>1067</span>
+<span class=normal>1068</span>
+<span class=normal>1069</span>
+<span class=normal>1070</span>
+<span class=normal>1071</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>WeightPowertrain</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span><span class=n>WTO</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>"""</span>
 <span class=sd>    This function estimates the total weight of the propulsion powertrain based on the aircraft</span>
 <span class=sd>    configuration (traditional or hybrid) and the maximum required power level.</span>
@@ -504,11 +523,28 @@
             <span class=bp>self</span><span class=o>.</span><span class=n>engineRating</span> <span class=o>=</span> <span class=n>PeakPwrEng</span> <span class=c1>#shaft power</span>
 
             <span class=bp>self</span><span class=o>.</span><span class=n>WThermal</span> <span class=o>=</span> <span class=n>PeakPwrEng</span> <span class=o>/</span><span class=bp>self</span><span class=o>.</span><span class=n>SPowerPT</span><span class=p>[</span><span class=mi>0</span><span class=p>]</span>
-            <span class=c1># Electric drive = motor (SPowerPT[1]) + power-management/inverter (PMAD). The PMAD</span>
-            <span class=c1># mass was previously omitted here; it is now sized with the same specific power the</span>
-            <span class=c1># fuel-cell system uses, so the electric drive is consistent across configurations.</span>
-            <span class=bp>self</span><span class=o>.</span><span class=n>WMotor</span> <span class=o>=</span> <span class=n>PeakPwrBat</span> <span class=o>/</span> <span class=bp>self</span><span class=o>.</span><span class=n>SPowerPT</span><span class=p>[</span><span class=mi>1</span><span class=p>]</span>
-            <span class=bp>self</span><span class=o>.</span><span class=n>WPMAD</span> <span class=o>=</span> <span class=n>PeakPwrBat</span> <span class=o>/</span> <span class=bp>self</span><span class=o>.</span><span class=n>pmad_specific_power</span><span class=p>()</span>
+            <span class=c1># Electric drive = motor (SPowerPT[1]) + power-management/inverter (PMAD), the</span>
+            <span class=c1># PMAD sized with the same specific power the fuel-cell system uses.</span>
+            <span class=n>m</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>mission</span>
+            <span class=k>if</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>HybridType</span> <span class=o>==</span> <span class=s1>'Serial'</span><span class=p>:</span>
+                <span class=c1># Serial chain: the motor carries the whole shaft power to the propeller, the</span>
+                <span class=c1># generator the whole turbine power, and the PMAD the whole bus power, not</span>
+                <span class=c1># only the battery share.</span>
+                <span class=n>PeakPwrMotor</span> <span class=o>=</span> <span class=nb>max</span><span class=p>(</span><span class=n>m</span><span class=o>.</span><span class=n>Max_PMotor</span><span class=p>,</span> <span class=n>m</span><span class=o>.</span><span class=n>TO_PMotor</span><span class=p>)</span>
+                <span class=n>PeakPwrBus</span> <span class=o>=</span> <span class=nb>max</span><span class=p>(</span><span class=n>m</span><span class=o>.</span><span class=n>Max_PBus</span><span class=p>,</span> <span class=n>m</span><span class=o>.</span><span class=n>TO_PBus</span><span class=p>)</span>
+                <span class=c1># The generator carries the engine rating, with its own specific power</span>
+                <span class=c1># ('Specific Power Generator'; default: the motor value SPowerPT[1]).</span>
+                <span class=k>if</span> <span class=bp>self</span><span class=o>.</span><span class=n>SPowerGenerator</span> <span class=ow>is</span> <span class=kc>None</span><span class=p>:</span>
+                    <span class=n>sp_generator</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>SPowerPT</span><span class=p>[</span><span class=mi>1</span><span class=p>]</span>
+                <span class=k>else</span><span class=p>:</span>
+                    <span class=n>sp_generator</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>SPowerGenerator</span>
+                <span class=bp>self</span><span class=o>.</span><span class=n>WGenerator</span> <span class=o>=</span> <span class=n>PeakPwrEng</span> <span class=o>/</span> <span class=n>sp_generator</span>
+                <span class=bp>self</span><span class=o>.</span><span class=n>WMotor</span> <span class=o>=</span> <span class=n>PeakPwrMotor</span> <span class=o>/</span> <span class=bp>self</span><span class=o>.</span><span class=n>SPowerPT</span><span class=p>[</span><span class=mi>1</span><span class=p>]</span> <span class=o>+</span> <span class=bp>self</span><span class=o>.</span><span class=n>WGenerator</span>  <span class=c1># motor + generator</span>
+                <span class=bp>self</span><span class=o>.</span><span class=n>WPMAD</span> <span class=o>=</span> <span class=n>PeakPwrBus</span> <span class=o>/</span> <span class=bp>self</span><span class=o>.</span><span class=n>pmad_specific_power</span><span class=p>()</span>
+            <span class=k>else</span><span class=p>:</span>
+                <span class=c1># Parallel chain: the motor and the PMAD carry the battery power.</span>
+                <span class=bp>self</span><span class=o>.</span><span class=n>WMotor</span> <span class=o>=</span> <span class=n>PeakPwrBat</span> <span class=o>/</span> <span class=bp>self</span><span class=o>.</span><span class=n>SPowerPT</span><span class=p>[</span><span class=mi>1</span><span class=p>]</span>
+                <span class=bp>self</span><span class=o>.</span><span class=n>WPMAD</span> <span class=o>=</span> <span class=n>PeakPwrBat</span> <span class=o>/</span> <span class=bp>self</span><span class=o>.</span><span class=n>pmad_specific_power</span><span class=p>()</span>
             <span class=bp>self</span><span class=o>.</span><span class=n>WElectric</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>WMotor</span> <span class=o>+</span> <span class=bp>self</span><span class=o>.</span><span class=n>WPMAD</span>
 
             <span class=n>WPT</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>WThermal</span> <span class=o>+</span> <span class=bp>self</span><span class=o>.</span><span class=n>WElectric</span>
@@ -555,10 +591,7 @@
 
     <span class=k>return</span> <span class=n>WPT</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.Systems.Powertrain.Powertrain.Powertrain.eta class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">eta</span> <a href=#PhlyGreen.Systems.Powertrain.Powertrain.Powertrain.eta class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>eta</span><span class=p>(</span><span class=n>component</span><span class=p>,</span> <span class=n>alt</span><span class=o>=</span><span class=mf>0.0</span><span class=p>,</span> <span class=n>vel</span><span class=o>=</span><span class=mf>0.0</span><span class=p>,</span> <span class=n>pwr</span><span class=o>=</span><span class=mf>0.0</span><span class=p>,</span> <span class=n>rpm</span><span class=o>=</span><span class=kc>None</span><span class=p>)</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Efficiency of <code>component</code> at the operating point (altitude, velocity, power).</p> <p>Components: <code>'gas_turbine'</code>, <code>'propeller'</code>, <code>'gearbox'</code>, <code>'electric_motor'</code>, <code>'pmad'</code>, <code>'fuel_cell'</code>. An externally-set <code>em_model</code>/<code>fc_model</code> overrides the electric-motor/fuel-cell entry (back-compatible Class-II injection).</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Systems/Powertrain/Powertrain.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>626</span>
-<span class=normal>627</span>
-<span class=normal>628</span>
-<span class=normal>629</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Efficiency of <code>component</code> at the operating point (altitude, velocity, power).</p> <p>Components: <code>'gas_turbine'</code>, <code>'propeller'</code>, <code>'gearbox'</code>, <code>'electric_motor'</code>, <code>'pmad'</code>, <code>'fuel_cell'</code>. An externally-set <code>em_model</code>/<code>fc_model</code> overrides the electric-motor/fuel-cell entry (back-compatible Class-II injection).</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Systems/Powertrain/Powertrain.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>629</span>
 <span class=normal>630</span>
 <span class=normal>631</span>
 <span class=normal>632</span>
@@ -567,7 +600,10 @@
 <span class=normal>635</span>
 <span class=normal>636</span>
 <span class=normal>637</span>
-<span class=normal>638</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>eta</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>component</span><span class=p>,</span> <span class=n>alt</span><span class=o>=</span><span class=mf>0.0</span><span class=p>,</span> <span class=n>vel</span><span class=o>=</span><span class=mf>0.0</span><span class=p>,</span> <span class=n>pwr</span><span class=o>=</span><span class=mf>0.0</span><span class=p>,</span> <span class=n>rpm</span><span class=o>=</span><span class=kc>None</span><span class=p>):</span>
+<span class=normal>638</span>
+<span class=normal>639</span>
+<span class=normal>640</span>
+<span class=normal>641</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>eta</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>component</span><span class=p>,</span> <span class=n>alt</span><span class=o>=</span><span class=mf>0.0</span><span class=p>,</span> <span class=n>vel</span><span class=o>=</span><span class=mf>0.0</span><span class=p>,</span> <span class=n>pwr</span><span class=o>=</span><span class=mf>0.0</span><span class=p>,</span> <span class=n>rpm</span><span class=o>=</span><span class=kc>None</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>"""Efficiency of ``component`` at the operating point (altitude, velocity, power).</span>
 
 <span class=sd>    Components: ``'gas_turbine'``, ``'propeller'``, ``'gearbox'``, ``'electric_motor'``,</span>
@@ -581,10 +617,7 @@
         <span class=k>return</span> <span class=bp>self</span><span class=o>.</span><span class=n>fc_model</span><span class=o>.</span><span class=n>eta</span><span class=p>(</span><span class=n>op</span><span class=p>)</span>
     <span class=k>return</span> <span class=bp>self</span><span class=o>.</span><span class=n>efficiency</span><span class=p>[</span><span class=n>component</span><span class=p>]</span><span class=o>.</span><span class=n>eta</span><span class=p>(</span><span class=n>op</span><span class=p>)</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.Systems.Powertrain.Powertrain.Powertrain.pmad_specific_power class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">pmad_specific_power</span> <a href=#PhlyGreen.Systems.Powertrain.Powertrain.Powertrain.pmad_specific_power class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>pmad_specific_power</span><span class=p>()</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Power-management / inverter specific power [W/kg], used to size the PMAD mass.</p> <p>Reads <code>Specific Power PMAD</code> (<code>SPowerPMAD</code>). Older configs passed a list (one entry per rail); the first entry is taken. Defaults to 10000 W/kg (≈ current-to-near-term aviation power electronics) when unset. Shared by the hybrid powertrain and the fuel-cell system so every configuration sizes the inverter the same way.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Systems/Powertrain/Powertrain.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>909</span>
-<span class=normal>910</span>
-<span class=normal>911</span>
-<span class=normal>912</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Power-management / inverter specific power [W/kg], used to size the PMAD mass.</p> <p>Reads <code>Specific Power PMAD</code> (<code>SPowerPMAD</code>). Older configs passed a list (one entry per rail); the first entry is taken. Defaults to 10000 W/kg (≈ current-to-near-term aviation power electronics) when unset. Shared by the hybrid powertrain and the fuel-cell system so every configuration sizes the inverter the same way.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Systems/Powertrain/Powertrain.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>912</span>
 <span class=normal>913</span>
 <span class=normal>914</span>
 <span class=normal>915</span>
@@ -592,7 +625,10 @@
 <span class=normal>917</span>
 <span class=normal>918</span>
 <span class=normal>919</span>
-<span class=normal>920</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>pmad_specific_power</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
+<span class=normal>920</span>
+<span class=normal>921</span>
+<span class=normal>922</span>
+<span class=normal>923</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>pmad_specific_power</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>"""Power-management / inverter specific power [W/kg], used to size the PMAD mass.</span>
 
 <span class=sd>    Reads ``Specific Power PMAD`` (``SPowerPMAD``). Older configs passed a list (one entry per</span>
@@ -605,10 +641,7 @@
         <span class=n>sp</span> <span class=o>=</span> <span class=n>sp</span><span class=p>[</span><span class=mi>0</span><span class=p>]</span> <span class=k>if</span> <span class=n>sp</span> <span class=k>else</span> <span class=kc>None</span>
     <span class=k>return</span> <span class=nb>float</span><span class=p>(</span><span class=n>sp</span><span class=p>)</span> <span class=k>if</span> <span class=n>sp</span> <span class=k>else</span> <span class=mf>10000.0</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.Systems.Powertrain.Powertrain.Powertrain.report_class_ii_sizing class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">report_class_ii_sizing</span> <a href=#PhlyGreen.Systems.Powertrain.Powertrain.Powertrain.report_class_ii_sizing class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>report_class_ii_sizing</span><span class=p>(</span><span class=n>raise_on_undersize</span><span class=o>=</span><span class=kc>False</span><span class=p>)</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Check the Class-II GT/EM nominal power against what the mission demands.</p> <p>Run after the weight-sizing loop. For the <strong>gas turbine</strong> the check is altitude aware: the available shaft power lapses with altitude, so a turbine whose <em>peak demand</em> is below its nominal can still be <strong>power-limited</strong> at altitude (unable to deliver the required power — the aircraft cannot sustain that flight condition). We walk the mission and compare the required power to the power <em>available</em> from the response surface at each point. For the <strong>electric motor</strong> (no altitude lapse) we compare the peak electric power to the nominal.</p> <p>Returns <code>{component: {...}}</code> (including <code>power_limited</code> and <code>min_nominal</code> — the nominal power needed to avoid power-limiting — for the GT) and warns (or raises) when a component is undersized.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Systems/Powertrain/Powertrain.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>516</span>
-<span class=normal>517</span>
-<span class=normal>518</span>
-<span class=normal>519</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Check the Class-II GT/EM nominal power against what the mission demands.</p> <p>Run after the weight-sizing loop. For the <strong>gas turbine</strong> the check is altitude aware: the available shaft power lapses with altitude, so a turbine whose <em>peak demand</em> is below its nominal can still be <strong>power-limited</strong> at altitude (unable to deliver the required power — the aircraft cannot sustain that flight condition). We walk the mission and compare the required power to the power <em>available</em> from the response surface at each point. For the <strong>electric motor</strong> (no altitude lapse) we compare the peak electric power to the nominal.</p> <p>Returns <code>{component: {...}}</code> (including <code>power_limited</code> and <code>min_nominal</code> — the nominal power needed to avoid power-limiting — for the GT) and warns (or raises) when a component is undersized.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Systems/Powertrain/Powertrain.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>519</span>
 <span class=normal>520</span>
 <span class=normal>521</span>
 <span class=normal>522</span>
@@ -677,7 +710,10 @@
 <span class=normal>585</span>
 <span class=normal>586</span>
 <span class=normal>587</span>
-<span class=normal>588</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>report_class_ii_sizing</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>raise_on_undersize</span><span class=o>=</span><span class=kc>False</span><span class=p>):</span>
+<span class=normal>588</span>
+<span class=normal>589</span>
+<span class=normal>590</span>
+<span class=normal>591</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>report_class_ii_sizing</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>raise_on_undersize</span><span class=o>=</span><span class=kc>False</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>"""Check the Class-II GT/EM nominal power against what the mission demands.</span>
 
 <span class=sd>    Run after the weight-sizing loop. For the **gas turbine** the check is altitude</span>
@@ -751,10 +787,7 @@
                 <span class=sa>f</span><span class=s2>"nominal </span><span class=si>{</span><span class=bp>self</span><span class=o>.</span><span class=n>em_design_power</span><span class=o>/</span><span class=mf>1e3</span><span class=si>:</span><span class=s2>.1f</span><span class=si>}</span><span class=s2> kW. Increase 'EM Design Power'."</span><span class=p>)</span>
     <span class=k>return</span> <span class=n>report</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.Systems.Powertrain.Powertrain.Powertrain.report_turbofan_sizing class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">report_turbofan_sizing</span> <a href=#PhlyGreen.Systems.Powertrain.Powertrain.Powertrain.report_turbofan_sizing class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>report_turbofan_sizing</span><span class=p>(</span><span class=n>warn</span><span class=o>=</span><span class=kc>True</span><span class=p>)</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Report which requirement sized the turbofan, and whether the nominal was adequate.</p> <p>The turbofan map is read at a thrust <em>fraction</em> of a nominal SLS thrust that has to be picked before the mission (an engine cannot resize itself instant by instant), so that choice needs checking afterwards -- the same check :meth:<code>report_class_ii_sizing</code> performs for the Class-II gas turbine.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Systems/Powertrain/Powertrain.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>590</span>
-<span class=normal>591</span>
-<span class=normal>592</span>
-<span class=normal>593</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Report which requirement sized the turbofan, and whether the nominal was adequate.</p> <p>The turbofan map is read at a thrust <em>fraction</em> of a nominal SLS thrust that has to be picked before the mission (an engine cannot resize itself instant by instant), so that choice needs checking afterwards -- the same check :meth:<code>report_class_ii_sizing</code> performs for the Class-II gas turbine.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Systems/Powertrain/Powertrain.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>593</span>
 <span class=normal>594</span>
 <span class=normal>595</span>
 <span class=normal>596</span>
@@ -785,7 +818,10 @@
 <span class=normal>621</span>
 <span class=normal>622</span>
 <span class=normal>623</span>
-<span class=normal>624</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>report_turbofan_sizing</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>warn</span><span class=o>=</span><span class=kc>True</span><span class=p>):</span>
+<span class=normal>624</span>
+<span class=normal>625</span>
+<span class=normal>626</span>
+<span class=normal>627</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>report_turbofan_sizing</span><span class=p>(</span><span class=bp>self</span><span class=p>,</span> <span class=n>warn</span><span class=o>=</span><span class=kc>True</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>"""Report which requirement sized the turbofan, and whether the nominal was adequate.</span>
 
 <span class=sd>    The turbofan map is read at a thrust *fraction* of a nominal SLS thrust that has to</span>

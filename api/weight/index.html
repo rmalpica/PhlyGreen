@@ -22,27 +22,7 @@
 </code></pre></div></td></tr></table></div> </details> <div class="doc doc-children"> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.Weight.Weight.Weight.FuelCellBattery class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">FuelCellBattery</span> <a href=#PhlyGreen.Weight.Weight.Weight.FuelCellBattery class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>FuelCellBattery</span><span class=p>()</span>
 </code></pre></div> <div class="doc doc-contents "> <p>Solve the take-off-weight equation for a fuel-cell + battery hybrid aircraft.</p> <pre><code>f(WTO) = W_structure + W_fuelcell + W_battery + W_H2 + W_tank + W_HX
          + W_payload + W_crew + W_reserve - WTO
-</code></pre> <p>The fuel cell is sized by <code>FuelCell.ComputeAndStoreWeights</code>; the mission returns the hydrogen and battery energies. The battery is sized (Class I) by the larger of its energy and power requirements, using specific energy/power from EnergyInput.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Weight/Weight.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>422</span>
-<span class=normal>423</span>
-<span class=normal>424</span>
-<span class=normal>425</span>
-<span class=normal>426</span>
-<span class=normal>427</span>
-<span class=normal>428</span>
-<span class=normal>429</span>
-<span class=normal>430</span>
-<span class=normal>431</span>
-<span class=normal>432</span>
-<span class=normal>433</span>
-<span class=normal>434</span>
-<span class=normal>435</span>
-<span class=normal>436</span>
-<span class=normal>437</span>
-<span class=normal>438</span>
-<span class=normal>439</span>
-<span class=normal>440</span>
-<span class=normal>441</span>
-<span class=normal>442</span>
+</code></pre> <p>The fuel cell is sized by <code>FuelCell.ComputeAndStoreWeights</code>; the mission returns the hydrogen and battery energies. The battery is sized (Class I) by the larger of its energy and power requirements, using specific energy/power from EnergyInput.</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Weight/Weight.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>442</span>
 <span class=normal>443</span>
 <span class=normal>444</span>
 <span class=normal>445</span>
@@ -101,7 +81,30 @@
 <span class=normal>498</span>
 <span class=normal>499</span>
 <span class=normal>500</span>
-<span class=normal>501</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>FuelCellBattery</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
+<span class=normal>501</span>
+<span class=normal>502</span>
+<span class=normal>503</span>
+<span class=normal>504</span>
+<span class=normal>505</span>
+<span class=normal>506</span>
+<span class=normal>507</span>
+<span class=normal>508</span>
+<span class=normal>509</span>
+<span class=normal>510</span>
+<span class=normal>511</span>
+<span class=normal>512</span>
+<span class=normal>513</span>
+<span class=normal>514</span>
+<span class=normal>515</span>
+<span class=normal>516</span>
+<span class=normal>517</span>
+<span class=normal>518</span>
+<span class=normal>519</span>
+<span class=normal>520</span>
+<span class=normal>521</span>
+<span class=normal>522</span>
+<span class=normal>523</span>
+<span class=normal>524</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>FuelCellBattery</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>"""Solve the take-off-weight equation for a fuel-cell + battery hybrid aircraft.</span>
 
 <span class=sd>        f(WTO) = W_structure + W_fuelcell + W_battery + W_H2 + W_tank + W_HX</span>
@@ -147,8 +150,11 @@
         <span class=k>if</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>battery</span><span class=o>.</span><span class=n>BatteryClass</span> <span class=o>==</span> <span class=s1>'II'</span><span class=p>:</span>
             <span class=bp>self</span><span class=o>.</span><span class=n>WBat</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>battery</span><span class=o>.</span><span class=n>pack_weight</span>
         <span class=k>else</span><span class=p>:</span>
-            <span class=n>WBat_energy</span> <span class=o>=</span> <span class=p>(</span><span class=n>E_bat</span> <span class=o>/</span> <span class=mf>3600.0</span><span class=p>)</span> <span class=o>/</span> <span class=p>(</span><span class=n>spec_energy_Wh</span> <span class=o>*</span> <span class=n>usable_soc</span><span class=p>)</span>
-            <span class=n>WBat_power</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>mission</span><span class=o>.</span><span class=n>Max_PBat</span> <span class=o>/</span> <span class=n>spec_power</span>
+            <span class=c1># Aged pack (state of health, see Battery.set_state_of_health): the capacity</span>
+            <span class=c1># scales the energy per kg, the resistance growth divides the power per kg.</span>
+            <span class=n>b</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>battery</span>
+            <span class=n>WBat_energy</span> <span class=o>=</span> <span class=p>(</span><span class=n>E_bat</span> <span class=o>/</span> <span class=mf>3600.0</span><span class=p>)</span> <span class=o>/</span> <span class=p>(</span><span class=n>spec_energy_Wh</span> <span class=o>*</span> <span class=n>b</span><span class=o>.</span><span class=n>capacity_fraction</span> <span class=o>*</span> <span class=n>usable_soc</span><span class=p>)</span>
+            <span class=n>WBat_power</span> <span class=o>=</span> <span class=bp>self</span><span class=o>.</span><span class=n>aircraft</span><span class=o>.</span><span class=n>mission</span><span class=o>.</span><span class=n>Max_PBat</span> <span class=o>*</span> <span class=n>b</span><span class=o>.</span><span class=n>resistance_factor</span> <span class=o>/</span> <span class=n>spec_power</span>
             <span class=bp>self</span><span class=o>.</span><span class=n>WBat</span> <span class=o>=</span> <span class=nb>max</span><span class=p>(</span><span class=n>WBat_energy</span><span class=p>,</span> <span class=n>WBat_power</span><span class=p>)</span>
 
         <span class=c1># Reserve hydrogen and the tank (empty) mass, sized for load + reserve.</span>
@@ -182,30 +188,7 @@
     <span class=bp>self</span><span class=o>.</span><span class=n>_warn_tms_shortfall</span><span class=p>()</span>
     <span class=k>return</span> <span class=bp>self</span><span class=o>.</span><span class=n>WTO</span>
 </code></pre></div></td></tr></table></div> </details> </div> </div> <div class="doc doc-object doc-function"> <h3 id=PhlyGreen.Weight.Weight.Weight.Hybrid class="doc doc-heading"> <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code> <span class="doc doc-object-name doc-function-name">Hybrid</span> <a href=#PhlyGreen.Weight.Weight.Weight.Hybrid class=headerlink title="Permanent link">&para;</a></h3> <div class="doc-signature highlight"><pre><span></span><code><span class=nf>Hybrid</span><span class=p>()</span>
-</code></pre></div> <div class="doc doc-contents "> <p>Solve the weight equation for a hybrid-electric aircraft.</p> <p>Same logic as Traditional(), but includes battery sizing.</p> <p>Battery mass is computed differently depending on battery class:</p> <ul> <li>Class I : analytical battery mass formula</li> <li>Class II : battery pack weight determined by P-number sizing loop inside the mission model</li> </ul> <h5 id=PhlyGreen.Weight.Weight.Weight.Hybrid--returns>Returns<a class=headerlink href=#PhlyGreen.Weight.Weight.Weight.Hybrid--returns title="Permanent link">&para;</a></h5> <p>float Converged take-off weight WTO</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Weight/Weight.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>504</span>
-<span class=normal>505</span>
-<span class=normal>506</span>
-<span class=normal>507</span>
-<span class=normal>508</span>
-<span class=normal>509</span>
-<span class=normal>510</span>
-<span class=normal>511</span>
-<span class=normal>512</span>
-<span class=normal>513</span>
-<span class=normal>514</span>
-<span class=normal>515</span>
-<span class=normal>516</span>
-<span class=normal>517</span>
-<span class=normal>518</span>
-<span class=normal>519</span>
-<span class=normal>520</span>
-<span class=normal>521</span>
-<span class=normal>522</span>
-<span class=normal>523</span>
-<span class=normal>524</span>
-<span class=normal>525</span>
-<span class=normal>526</span>
-<span class=normal>527</span>
+</code></pre></div> <div class="doc doc-contents "> <p>Solve the weight equation for a hybrid-electric aircraft.</p> <p>Same logic as Traditional(), but includes battery sizing.</p> <p>Battery mass is computed differently depending on battery class:</p> <ul> <li>Class I : analytical battery mass formula</li> <li>Class II : battery pack weight determined by P-number sizing loop inside the mission model</li> </ul> <h5 id=PhlyGreen.Weight.Weight.Weight.Hybrid--returns>Returns<a class=headerlink href=#PhlyGreen.Weight.Weight.Weight.Hybrid--returns title="Permanent link">&para;</a></h5> <p>float Converged take-off weight WTO</p> <details class=mkdocstrings-source> <summary>Source code in <code>trunk/PhlyGreen/Weight/Weight.py</code></summary> <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal>527</span>
 <span class=normal>528</span>
 <span class=normal>529</span>
 <span class=normal>530</span>
@@ -240,7 +223,30 @@
 <span class=normal>559</span>
 <span class=normal>560</span>
 <span class=normal>561</span>
-<span class=normal>562</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>Hybrid</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
+<span class=normal>562</span>
+<span class=normal>563</span>
+<span class=normal>564</span>
+<span class=normal>565</span>
+<span class=normal>566</span>
+<span class=normal>567</span>
+<span class=normal>568</span>
+<span class=normal>569</span>
+<span class=normal>570</span>
+<span class=normal>571</span>
+<span class=normal>572</span>
+<span class=normal>573</span>
+<span class=normal>574</span>
+<span class=normal>575</span>
+<span class=normal>576</span>
+<span class=normal>577</span>
+<span class=normal>578</span>
+<span class=normal>579</span>
+<span class=normal>580</span>
+<span class=normal>581</span>
+<span class=normal>582</span>
+<span class=normal>583</span>
+<span class=normal>584</span>
+<span class=normal>585</span></pre></div></td><td class=code><div><pre><span></span><code><span class=k>def</span><span class=w> </span><span class=nf>Hybrid</span><span class=p>(</span><span class=bp>self</span><span class=p>):</span>
 <span class=w>    </span><span class=sd>"""</span>
 <span class=sd>    Solve the weight equation for a hybrid-electric aircraft.</span>
 
