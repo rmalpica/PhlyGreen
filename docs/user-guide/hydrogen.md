@@ -30,7 +30,9 @@ V_{\text{cell}}(j) = V_{oc} \;-\; \underbrace{R_{\Omega}\,j}_{\text{ohmic}}
   drop as the limiting current density \(j_{\text{lim}}\) is approached.
 
 The cell and chemistry constants come from `FC_Database` (`Systems/FuelCell/FC_Models.py`,
-selected via `fc_model`). Plot the curve as in example `20_hydrogen_fuel_cell.py`:
+selected via `fc_model`). A database model holds only these electrochemical and operating
+parameters. The design choices of a stack (design cell voltage, stack power density, BoP mass
+ratio) are inputs of the design: `v_cell_design`, `stack_power_density`, `bop_mass_ratio`. Plot the curve as in example `20_hydrogen_fuel_cell.py`:
 
 ```python
 for j in (0.1, 0.5, 1.0, 1.5, 2.0):
@@ -64,7 +66,7 @@ it.
 
 ```python
 energy = EnergyConfig(
-    Ef=120e6,                       # hydrogen lower heating value [J/kg]
+    Ef=141.87e6,                    # hydrogen higher heating value [J/kg] (HHV basis, see below)
     eta_gearbox=0.96, eta_pmad=0.99, eta_electric_motor=0.96,
     fc_model='PEMFC_GoodPerformance',
     i_rated=2.5,                    # rated current density [A/cm^2]
@@ -79,17 +81,30 @@ energy = EnergyConfig(
 ## 3. The air system (compressor) and net system efficiency
 
 PEM fuel cells run the cathode **pressurized**, which costs parasitic power. The air system
-(`_compute_air_system_power`) sizes a **compressor** to raise ambient air to the cathode
-pressure and a **turbine** that recovers part of the energy from the pressurized exhaust:
+(`_compute_air_system_power`) sizes a **compressor** to raise the ambient air to the cathode
+pressure and an **expander** that recovers part of the energy from the pressurized cathode
+exhaust:
 
 \[
 \dot m_{\text{air}} \propto N_{\text{cells}}\,I\,\lambda, \qquad
 P_{\text{comp}} = \frac{\dot m_{\text{air}}\,c_{p}\,T_{\text{amb}}\,(\Pi^{0.286}-1)}{\eta_{\text{comp}}},
-\qquad
+\]
+\[
+P_{\text{turb}} = \eta_{\text{turb}}\,\dot m_{\text{exh}}\,c_{p,\text{exh}}\,T_{op}\,
+\Big(1 - \Pi_t^{-R/\bar c_{p,\text{exh}}}\Big), \qquad
 P_{\text{comp,net}} = P_{\text{comp}} - P_{\text{turb}}
 \]
 
-with stoichiometry \(\lambda\), pressure ratio \(\Pi = p_{\text{cathode}}/p_{\text{amb}}\). The
+with stoichiometry \(\lambda\), pressure ratio \(\Pi = p_{\text{cathode}}/p_{\text{amb}}\) and
+expander ratio \(\Pi_t = 0.95\,p_{\text{cathode}}/p_{\text{amb}}\). The expander takes the
+**cathode exhaust**, not air (`FuelCell.cathode_exhaust`). Per mole of H₂ reacted it carries the
+nitrogen of the inlet air (\(0.5\lambda\cdot0.79/0.21\) mol), the oxygen left over
+(\(0.5(\lambda-1)\) mol), the water brought by the inlet humidity, and the product water that
+leaves as vapour (\(x_v\) mol; the liquid is separated before the expander). Its mass flow, heat
+capacity \(c_{p,\text{exh}}\) and isentropic exponent \(R/\bar c_{p,\text{exh}}\) (\(\bar c_p\)
+molar) are those of that mixture. At \(\lambda = 2\) and \(x_v = 1\) the exhaust carries slightly
+more mass than the inlet air and has a 13 % higher \(c_p\), so the expander recovers more power
+than an air expander would. The compressor takes the ambient air with its humidity. The
 compression demand grows with altitude (lower \(p_{\text{amb}}\)), so it is a real part of the
 operating-point dependence.
 
@@ -97,14 +112,25 @@ The **net system efficiency** is the gross stack power minus the air-system (and
 over the hydrogen chemical power:
 
 \[
-\eta_{\text{sys}} = \frac{P_{\text{gross}} - P_{\text{comp,net}}}{\dot m_{\text{H}_2}\,\text{LHV}},
+\eta_{\text{sys}} = \frac{P_{\text{gross}} - P_{\text{comp,net}} - P_{\text{fixed}}}{\dot m_{\text{H}_2}\,\text{HHV}},
 \qquad P_{\text{gross}} = N_{\text{cells}}\,V_{\text{cell}}\,I .
 \]
 
+**Heating value.** The low-temperature PEM stack is referenced to the *higher* heating value
+(HHV = 141.87 MJ/kg): the hydrogen chemical power is \(\dot m_{\text{H}_2}\,\text{HHV}\), with
+\(\dot m_{\text{H}_2}\) fixed by the stack current. The mission integrates this chemical power
+and the weight loop converts it to a mass as \(E / E_f\). Therefore **`Ef` must be the HHV,
+141.87e6 J/kg**, as in `examples/common.py`. A lower-heating-value `Ef` (≈120 MJ/kg) would
+overstate the hydrogen mass by 18 %. The phase of the product water (vapour fraction \(x_v\),
+section 4) changes only the heat rejected to the coolant, not the hydrogen consumption.
+
 For the mission, `ComputePRatio(alt, vel, P_net)` solves for the operating current density that
-delivers the required **net** shaft power at the current flight condition and returns the
-hydrogen *chemical* power required (i.e. \(1/\eta_{\text{sys}}\) of the net power), so the
-mission integrates hydrogen energy consistently.
+delivers the required **net** shaft power at the current flight condition and stores the
+stack hydrogen flow `mdot_h2`. The mission integrates the hydrogen *chemical* power
+\(\dot m_{H_2}\,\mathrm{HHV}\) of that flow, which also feeds the air system and the fixed
+auxiliaries. The take-off hydrogen power `mission.TO_P_H2_Thermal` is the same quantity at the
+take-off/OEI sizing point. The method also returns the ratio \(1/\eta_{\text{sys}}\), clipped
+to \(\eta_{\text{sys}} \in [0.01, 0.85]\); no result of the package is computed from it.
 
 ---
 
@@ -166,8 +192,25 @@ the capacity left for the product water shrinks. The vapour fraction of the prod
 x_v = \min\!\Big(1,\; \max\big(0,\; n_{v,max} - n_{w,in}\big)\Big) ,
 \]
 
-computed by `FuelCell.product_water_vapour_fraction` with
-`EnergyConfig.fc_cathode_inlet_rh` (default 0, dry inlet). For the database stacks \(x_v\) = 1
+computed by `FuelCell.product_water_vapour_fraction` at the cathode inlet humidity
+\(\phi_{in}\) of each operating point (`FuelCell.cathode_inlet_rh`). \(\phi_{in}\) is the larger
+of two sources:
+
+- a humidifier, `EnergyConfig.fc_cathode_inlet_rh` (relative humidity at the stack temperature;
+  default 0, no humidifier);
+- the weather, `EnergyConfig.fc_ambient_relative_humidity` (relative humidity of the ambient
+  air; default 0, dry ISA air). The compressor keeps the water mole fraction of the ambient
+  air, so its partial pressure at the cathode is \(y_{w,amb}\,p_{cathode}\).
+
+The ambient state follows the mission ISA deviation, the input `MissionConfig.disa`
+(`MissionInput['DISA']`, default 0 K, stored as `mission.DISA`). The constraint diagram has its
+own deviation, `ConstraintsConfig.disa`. The weather has a small
+effect: saturated ambient air reaches the cathode at only 5 % relative humidity at 80 °C on an
+ISA day and 17 % at ISA+20 K, so all product water still leaves as vapour. On the hydrogen
+reference (`examples/common.py`) a saturated ISA+20 day changes MTOW by +0.02 % against a dry
+one, while the hot day itself adds 0.4 %. A humidifier is a different matter: with
+`fc_cathode_inlet_rh` = 1 the product water stays liquid (\(x_v\) = 0), and the take-off heat grows
+by 40 %, the TMS mass by 37 % and MTOW by 4.7 %. For the database stacks \(x_v\) = 1
 up to \(\phi_{in}\) ≈ 0.5. It then falls quickly: 0.61 at 0.7, 0.36 at 0.8 and 0.08 at 0.9. A
 higher cathode pressure lowers \(y_{sat}\) and a lower \(\lambda\) lowers \(n_{dry}\); both
 reduce \(x_v\) (at λ = 1.5 the capacity is 1.41 mol). Above the boiling point at the cathode
@@ -293,11 +336,15 @@ that sizes the fuel cell by more than its own mass (plus the snowball) costs. Ex
   sized by its specific power and stays small. A battery that also covers the ~27-minute climb
   is sized by energy and never pays, on either field.
 
-On the 800 m field the optimum take-off share follows from the power balance,
-\(\varphi^* = 1 - P_{\text{climb}}/P_{\text{take-off}} = 0.15\), where the battery brings the fuel
-cell's take-off load down to its climb load. The sweep finds the lightest design at exactly
-φ = 0.15: 758 kg (3 %) lighter than pure hydrogen, with a stack 545 kg lighter and a 382 kg
-battery. Beyond φ* the climb sizes the fuel cell again and the battery only adds mass.
+On the 800 m field the power balance gives the take-off share at which the battery brings the
+fuel cell's take-off load down to its climb load,
+\(\varphi^* = 1 - P_{\text{climb}}/P_{\text{take-off}} = 0.145\). The sweep finds a flat optimum
+between φ = 0.10 and 0.15, about 320 kg (1.3 %) lighter than pure hydrogen. At φ = 0.10 the
+stack is 354 kg lighter and the battery weighs 333 kg; at φ = 0.15 the stack is 494 kg lighter
+and the battery weighs 500 kg. The battery is sized on its terminal power, so it pays back only
+part of the stack mass it removes. Beyond φ* the climb sizes the fuel cell again and the battery
+only adds mass. The take-off battery also adds hydrogen (497 vs 494 kg on the design mission),
+because the heavier aircraft needs more power in cruise.
 
 ---
 
@@ -311,9 +358,79 @@ balance scaffold (`HeatSource`, `HeatSink`, `HeatExchangerNetwork`) for studies.
 
 ---
 
+## 9. Degradation (state of health)
+
+The stack carries a **state of health** relative to beginning of life (BOL). The defaults are
+BOL. Two descriptions of PEM degradation are supported, and they can be combined:
+
+| Input (`EnergyConfig`) | Legacy key | Effect |
+|---|---|---|
+| `fc_voltage_loss` [V] | `FC Voltage Loss` | uniform cell-voltage loss \(\Delta V\) at every current density |
+| `fc_ohmic_resistance_factor` | `FC Ohmic Resistance Factor` | \(R_{ohm} = k_R\,R_{ohm,BOL}\) |
+| `fc_exchange_current_factor` | `FC Exchange Current Factor` | \(i_* = k_i\,i_{*,BOL}\) (catalyst-area loss: \(k_i<1\)) |
+
+The uniform loss is the output of the empirical "voltage-decay rate × time at load" models
+(Pessot et al. 2020). The parameter drift follows the degradation models reviewed by Vichard
+et al. (2021). The degraded cell voltage is
+
+\[
+V_{cell}(j) = V_{oc} - k_R R_{ohm,BOL}\,j - \eta_{act}(j;\,k_i\,i_{*,BOL}) - V_{conc}(j) - \Delta V .
+\]
+
+The state is used in two ways:
+
+- **End-of-life sizing.** Set the fields in the `EnergyConfig` of the design. The stack reaches
+  the design voltage on the degraded curve, so it gets a lower design current density and a
+  larger active area. The mass per area stays referenced to the BOL curve
+  (`PolarizationCurve(..., bol=True)`), because the stack specific power is a hardware figure:
+  the end-of-life stack is heavier, not lighter. The heat at a given power is larger, and so is
+  the TMS.
+- **Degraded flight of a sized aircraft.** `FuelCell.set_state_of_health(voltage_loss,
+  ohmic_resistance_factor, exchange_current_factor)` changes the state of a sized copy.
+  Example 30 does this with `fly_off_design(sized, range_nm, state_of_health={...})`, and
+  reports a violation when the stack is power-limited or the TMS cannot reject its heat (a
+  Class-I TMS: the peak heat exceeds the heat it was sized for; a Class-II TMS: the frozen
+  hardware falls short somewhere along the mission).
+
+**Power-limited stack.** When the demand exceeds the most the stack can deliver at a point,
+`ComputePRatio` runs the stack at its maximum-net-power point. The shortfall is supplied at that
+point's efficiency: the hydrogen and the heat are those of a proportionally larger stack
+running there. They stay physical and grow with the demand and with the degradation, and
+`fuelcell._power_limited` (see `report_sizing()`) marks the point as infeasible.
+
+**Order of magnitude.** The take-off-sized fuel-cell + battery design of example 30, sized at
+BOL, flies its nominal mission as follows with a degraded stack:
+
+| Stack state | Trip H₂ | Peak heat | Constraints violated |
+|---|---|---|---|
+| \(\Delta V\) = 25 mV | +5.2 % | +17 % | TMS heat |
+| \(\Delta V\) = 50 mV | +11.7 % | +62 % | TMS heat; tank; MTOW |
+| \(k_R\) = 1.5 | +4.4 % | +37 % | TMS heat |
+
+The heat grows much faster than the hydrogen. At a given electrical power the hydrogen is
+proportional to \(1/V\), while the heat is proportional to \((V_{tn}-V)/V\). The TMS, not the
+tank, is therefore the first constraint to bind. A loss of 50 mV is about 10 % of a 0.5 V design
+voltage, a common end-of-life criterion. At that loss the stack is at the edge of its power
+capability: the beginning-of-life stack has an 11 % power margin (load ratio 0.889), which
+shrinks to nothing (0.9999).
+
+**Degradation depends on the duty.** Degradation rates depend on how the stack is loaded: time at
+each current level, load changes, start-stop cycles, idle and high-power operation. On the
+design above (whole profile, diversion included), the stack spends 78 % of the flight between 5 and 30 % of its design current
+density (0.72–0.82 V per cell), about 50 minutes above 0.80 V, and the 26-minute taxi at 4 % of
+the design current. The duty is therefore set by the sizing: a take-off-sized stack runs at low
+load for most of its life. Ageing models that turn a mission duty into a state of health are not
+part of the package. They can be built on the operating point that `ComputePRatio` exposes
+(`i_op_last`, `v_cell_last`) along `mission.integral_solution` and the ground segments. The
+battery state of health is described in [Battery → State of health](battery.md#state-of-health-degradation).
+
+---
+
 ## References
 
 - Kulikovsky, A. A. *A physically–based analytical polarization curve of a PEM fuel cell.*
   Electrochemistry Communications, 6(10):1069–1077, 2004.
 - Massaro, M.C. et al. *Optimal design of a hydrogen-powered fuel cell system for aircraft applications.* Energy Conversion and Management, 306:118266, 2024.
 - Svensson, C. et al. *Modelling hydrogen fuel cell aircraft in SUAVE.* ICAS 2024.
+- Pessot, A. et al. *Development of an aging estimation tool for a PEM fuel cell submitted to a mission profile.* Fuel Cells, 20:253–262, 2020.
+- Vichard, L., Yousfi Steiner, N., Zerhouni, N., Hissel, D. *Hybrid fuel cell system degradation modeling methods: a comprehensive review.* Journal of Power Sources, 506:230071, 2021.

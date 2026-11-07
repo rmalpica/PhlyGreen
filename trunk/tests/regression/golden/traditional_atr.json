@@ -27,6 +27,7 @@
   "engineRating": 4227513.549629247,
   "engineRating_units": "W",
   "final_reserve": 130,
+  "fuelcell_rating": null,
   "hybrid_type": null,
   "mean_TSFC": null,
   "pack_energy": null,

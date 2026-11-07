@@ -38,6 +38,7 @@ class Powertrain:
         #specific powers
         self.SPowerPT = None 
         self.SPowerPMAD = None  
+        self.SPowerGenerator = None  # serial generator [W/kg]; None = the motor value SPowerPT[1]
         #components mass
         self.WThermal = None
         self.WElectric = None
@@ -361,6 +362,8 @@ class Powertrain:
         # electric drive (motor + PMAD) is sized the same way in the hybrid powertrain and in the
         # fuel-cell system. Defaulted in pmad_specific_power() when absent.
         self.SPowerPMAD = self.aircraft.EnergyInput.get('Specific Power PMAD', None)
+        # Serial-hybrid generator specific power [W/kg]; defaults to the motor value.
+        self.SPowerGenerator = self.aircraft.EnergyInput.get('Specific Power Generator', None)
 
 
         # Optional fuel-cell system efficiency (used by PowerRatioFuelCellBattery).
@@ -999,11 +1002,28 @@ class Powertrain:
                 self.engineRating = PeakPwrEng #shaft power
 
                 self.WThermal = PeakPwrEng /self.SPowerPT[0]
-                # Electric drive = motor (SPowerPT[1]) + power-management/inverter (PMAD). The PMAD
-                # mass was previously omitted here; it is now sized with the same specific power the
-                # fuel-cell system uses, so the electric drive is consistent across configurations.
-                self.WMotor = PeakPwrBat / self.SPowerPT[1]
-                self.WPMAD = PeakPwrBat / self.pmad_specific_power()
+                # Electric drive = motor (SPowerPT[1]) + power-management/inverter (PMAD), the
+                # PMAD sized with the same specific power the fuel-cell system uses.
+                m = self.aircraft.mission
+                if self.aircraft.HybridType == 'Serial':
+                    # Serial chain: the motor carries the whole shaft power to the propeller, the
+                    # generator the whole turbine power, and the PMAD the whole bus power, not
+                    # only the battery share.
+                    PeakPwrMotor = max(m.Max_PMotor, m.TO_PMotor)
+                    PeakPwrBus = max(m.Max_PBus, m.TO_PBus)
+                    # The generator carries the engine rating, with its own specific power
+                    # ('Specific Power Generator'; default: the motor value SPowerPT[1]).
+                    if self.SPowerGenerator is None:
+                        sp_generator = self.SPowerPT[1]
+                    else:
+                        sp_generator = self.SPowerGenerator
+                    self.WGenerator = PeakPwrEng / sp_generator
+                    self.WMotor = PeakPwrMotor / self.SPowerPT[1] + self.WGenerator  # motor + generator
+                    self.WPMAD = PeakPwrBus / self.pmad_specific_power()
+                else:
+                    # Parallel chain: the motor and the PMAD carry the battery power.
+                    self.WMotor = PeakPwrBat / self.SPowerPT[1]
+                    self.WPMAD = PeakPwrBat / self.pmad_specific_power()
                 self.WElectric = self.WMotor + self.WPMAD
 
                 WPT = self.WThermal + self.WElectric

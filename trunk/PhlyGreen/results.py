@@ -90,7 +90,7 @@ class AircraftResults:
 
     # --- battery (Hybrid only) ----------------------------------------------
     battery_class: Optional[str] = None
-    pack_energy: Optional[float] = None      # [J] (Class II)
+    pack_energy: Optional[float] = None      # [Wh] (Class II): cell nominal energy x cells
     pack_power_max: Optional[float] = None   # [W] (Class II)
     S_number: Optional[float] = None
     P_number: Optional[float] = None

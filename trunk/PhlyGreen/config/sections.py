@@ -5,6 +5,7 @@ defaults, IDE autocomplete, and validation. Each still serializes back to the ex
 legacy dict via :meth:`to_dict`, so the underlying subsystems are untouched.
 """
 
+import warnings
 from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Any
 
@@ -52,6 +53,10 @@ class MissionConfig(DictConfig):
     # battery fraction of the taxi propulsive power (battery configurations only); default:
     # the take-off phi, i.e. the phi of the profile's 'Takeoff' stage
     taxi_phi: Optional[float] = None
+    # ISA temperature deviation of the mission [K] (default 0): the flight performance, the
+    # fuel-cell ambient state and the TMS ram air. The constraint diagram has its own
+    # deviation, ConstraintsConfig.disa.
+    disa: Optional[float] = None
 
     _KEY_MAP = {
         "range_mission": "Range Mission",
@@ -67,6 +72,7 @@ class MissionConfig(DictConfig):
         "takeoff_time": "Takeoff Time",
         "takeoff_power_fraction": "Takeoff Power Fraction",
         "taxi_phi": "Taxi Supplied Power Ratio",
+        "disa": "DISA",
     }
 
     def __post_init__(self):
@@ -103,9 +109,12 @@ class EnergyConfig(DictConfig):
     eta_pmad: Optional[float] = None
     specific_power_powertrain: Optional[List[float]] = None  # [thermal, electric motor] W/kg
     specific_power_pmad: Optional[float] = None              # power-management / inverter [W/kg]
+    specific_power_generator: Optional[float] = None         # serial-hybrid generator [W/kg];
+    #                                                          default: the electric-motor value
     # --- hydrogen fuel-cell parameters (Hydrogen configuration only) ---
     fc_model: Optional[str] = None              # key into FC_Database
-    i_rated: Optional[float] = None             # rated current density [A/cm^2]
+    i_rated: Optional[float] = None             # [A/cm^2] initial / fallback design current density;
+    #                                             the design current density follows from v_cell_design
     v_cell_design: Optional[float] = None       # design cell voltage [V]
     stack_power_density: Optional[float] = None  # [W/kg]
     bop_mass_ratio: Optional[float] = None       # balance-of-plant mass / stack mass
@@ -117,7 +126,11 @@ class EnergyConfig(DictConfig):
     # phase of the fuel-cell product water -> heat rejected to the coolant: 'auto' (default,
     # from the cathode-exhaust saturation) or a fraction in [0, 1] (0 = liquid/HHV, 1 = vapour/LHV)
     fc_product_water_vapour_fraction: Optional[Any] = None
-    fc_cathode_inlet_rh: Optional[float] = None   # cathode inlet relative humidity at T_op [-]
+    fc_cathode_inlet_rh: Optional[float] = None   # cathode inlet relative humidity at T_op set by a
+    #                                               humidifier [-] (default 0: no humidifier)
+    fc_ambient_relative_humidity: Optional[float] = None  # relative humidity of the ambient air
+    #                                               (weather) [-]; its water reaches the cathode
+    #                                               through the compressor (default 0: dry ISA air)
     h2_fuel_margin: Optional[float] = None        # extra H2 loaded on top of the flown H2, as a
     #                                               fraction of it (unusable/residual, feed);
     #                                               default 0.05
@@ -130,6 +143,14 @@ class EnergyConfig(DictConfig):
     battery_specific_energy: Optional[float] = None  # [Wh/kg]
     battery_specific_power: Optional[float] = None   # [W/kg]
     battery_usable_soc: Optional[float] = None       # usable state-of-charge fraction
+    # --- state of health (degradation), relative to beginning of life; None = BOL ---
+    # Applied before the design, they size the aircraft at end of life. To fly a sized
+    # aircraft degraded, use FuelCell/Battery.set_state_of_health on a copy (example 30).
+    fc_voltage_loss: Optional[float] = None             # uniform cell-voltage loss [V]
+    fc_ohmic_resistance_factor: Optional[float] = None  # R_ohm / R_ohm,BOL [-]
+    fc_exchange_current_factor: Optional[float] = None  # i_star / i_star,BOL [-] (catalyst loss < 1)
+    battery_capacity_fraction: Optional[float] = None   # C / C_BOL [-] (every battery model)
+    battery_resistance_factor: Optional[float] = None   # R / R_BOL [-] (every battery model)
     # --- Class-II propulsion model selection + nominal (design) powers ---
     eta_electric_motor_model: Optional[str] = None   # 'constant' | 'Smart'
     gt_design_power: Optional[float] = None           # nominal gas-turbine power [W]
@@ -166,6 +187,7 @@ class EnergyConfig(DictConfig):
         "eta_pmad": "Eta PMAD",
         "specific_power_powertrain": "Specific Power Powertrain",
         "specific_power_pmad": "Specific Power PMAD",
+        "specific_power_generator": "Specific Power Generator",
         "fc_model": "Model",
         "i_rated": "i Rated",
         "v_cell_design": "V Cell Design",
@@ -175,12 +197,18 @@ class EnergyConfig(DictConfig):
         "h2_gravimetric_index": "H2 Gravimetric Index",
         "fc_product_water_vapour_fraction": "FC Product Water Vapour Fraction",
         "fc_cathode_inlet_rh": "FC Cathode Inlet RH",
+        "fc_ambient_relative_humidity": "FC Ambient Relative Humidity",
         "h2_fuel_margin": "H2 Fuel Margin",
         "hex_specific_power_h2": "HEX Specific Power H2",
         "hex_specific_power_battery": "HEX Specific Power Battery",
         "battery_specific_energy": "Battery Specific Energy",
         "battery_specific_power": "Battery Specific Power",
         "battery_usable_soc": "Battery Usable SOC",
+        "fc_voltage_loss": "FC Voltage Loss",
+        "fc_ohmic_resistance_factor": "FC Ohmic Resistance Factor",
+        "fc_exchange_current_factor": "FC Exchange Current Factor",
+        "battery_capacity_fraction": "Battery Capacity Fraction",
+        "battery_resistance_factor": "Battery Resistance Factor",
         "eta_electric_motor_model": "Eta Electric Motor Model",
         "gt_design_power": "GT Design Power",
         "em_design_power": "EM Design Power",
@@ -199,6 +227,15 @@ class EnergyConfig(DictConfig):
         for n in ("eta_gas_turbine", "eta_gearbox", "eta_propulsive", "eta_electric_motor",
                   "eta_electric_motor_1", "eta_electric_motor_2", "eta_pmad"):
             _check_efficiency(n, getattr(self, n))
+        if self.fc_voltage_loss is not None and self.fc_voltage_loss < 0:
+            raise ConfigError(f"fc_voltage_loss must be >= 0, got {self.fc_voltage_loss!r}")
+        for n in ("fc_ohmic_resistance_factor", "fc_exchange_current_factor",
+                  "battery_resistance_factor"):
+            _check_positive(n, getattr(self, n))
+        _check_efficiency("battery_capacity_fraction", self.battery_capacity_fraction)
+        _check_positive("specific_power_generator", self.specific_power_generator)
+        _check_fraction("fc_cathode_inlet_rh", self.fc_cathode_inlet_rh)
+        _check_fraction("fc_ambient_relative_humidity", self.fc_ambient_relative_humidity)
 
 
 # ---------------------------------------------------------------------------
@@ -217,8 +254,10 @@ class CellConfig(DictConfig):
     pack_voltage: Optional[float] = None       # V (Class II)
     initial_temperature: Optional[float] = None    # C (Class II)
     max_operative_temperature: Optional[float] = None  # C (Class II)
-    Ebat: Optional[float] = None           # J (Class I)
-    pbat: Optional[float] = None           # W/kg (Class I)
+    # Not read by the battery model (the Class-I pack uses specific_energy / specific_power);
+    # kept so that existing configurations still load. Setting them has no effect.
+    Ebat: Optional[float] = None
+    pbat: Optional[float] = None
 
     # --- optional Class-II thermal-management & degradation analysis (post-design only) ---
     # These never affect the baseline sizing; they parametrize
@@ -254,6 +293,10 @@ class CellConfig(DictConfig):
         if self.cell_class not in (None, "I", "II"):
             raise ConfigError(f"cell_class must be 'I' or 'II', got {self.cell_class!r}")
         _check_fraction("minimum_soc", self.minimum_soc)
+        if self.Ebat is not None or self.pbat is not None:
+            warnings.warn("CellConfig.Ebat / CellConfig.pbat are not used: set specific_energy "
+                          "[Wh/kg] and specific_power [W/kg] instead.", DeprecationWarning,
+                          stacklevel=3)
 
 
 # ---------------------------------------------------------------------------
@@ -405,6 +448,8 @@ class TMSConfig(DictConfig):
     h2_approach_delta_t: Optional[float] = None   # H2 leaves its exchanger at T_op - this [K]
     h2_supply_pressure: Optional[float] = None    # LH2 supply pressure [Pa]
     loop_pressure_drop: Optional[float] = None    # coolant-loop pressure rise of the pump [Pa]
+    stack_pressure_drop: Optional[float] = None   # [Pa] part of it taken by the stack channels
+    #                                               and the piping (default 0); the cores share the rest
     pump_efficiency: Optional[float] = None
     pump_motor_efficiency: Optional[float] = None
     pump_specific_power: Optional[float] = None        # [W/kg]
@@ -425,6 +470,7 @@ class TMSConfig(DictConfig):
         "h2_approach_delta_t": "TMS H2 Approach DeltaT",
         "h2_supply_pressure": "TMS H2 Supply Pressure",
         "loop_pressure_drop": "TMS Loop Pressure Drop",
+        "stack_pressure_drop": "TMS Stack And Piping Pressure Drop",
         "pump_efficiency": "TMS Pump Efficiency",
         "pump_motor_efficiency": "TMS Pump Motor Efficiency",
         "pump_specific_power": "TMS Pump Specific Power",
@@ -443,6 +489,14 @@ class TMSConfig(DictConfig):
             _check_positive(name, getattr(self, name))
         if self.takeoff_coolant_overtemperature is not None and self.takeoff_coolant_overtemperature < 0:
             raise ConfigError("takeoff_coolant_overtemperature must be >= 0")
+        if self.stack_pressure_drop is not None:
+            if self.stack_pressure_drop < 0:
+                raise ConfigError("stack_pressure_drop must be >= 0")
+            # (against the model's default loop rise, the TMS checks it when it reads its input)
+            if (self.loop_pressure_drop is not None
+                    and self.stack_pressure_drop >= self.loop_pressure_drop):
+                raise ConfigError("stack_pressure_drop must be below loop_pressure_drop: the "
+                                  "exchanger cores need part of the loop pressure rise")
         for name in ("ram_air_max_effectiveness", "pump_efficiency", "pump_motor_efficiency",
                      "ram_recovery"):
             _check_efficiency(name, getattr(self, name))

@@ -140,16 +140,24 @@ Where:
 ### Heat Generation
 
 \[
-Q_{\text{loss}} = (V_{\text{oc}} - V)i + \frac{dE_0}{dT} i T
+Q_{\text{loss}} = (V_{\text{oc}} - V)\,i - \frac{dE_0}{dT}\, i\, T
 \]
+
+The first term is the irreversible (overpotential) heat; the second is the reversible
+(entropic) heat, with the sign of Bernardi's balance for a discharge current \(i>0\).
 
 ### Convection Cooling Model
 
 \[
 h = \max\left[
-30\left(\frac{\dot{m}/(A_{\text{surf}}\rho)}{5}\right)^{0.8},\; 2
+30\left(\frac{\dot{m}/(A_{\text{sec}}\rho)}{5}\right)^{0.8},\; 2
 \right]
 \]
+
+where \(A_{\text{sec}}\) is the free cross-section of the cooling channel between cells
+(`module_area_section`, \((2r)^2-\pi r^2\)), so \(\dot m/(A_{\text{sec}}\rho)\) is the coolant
+velocity. The convective resistance then uses the cell lateral surface
+\(A_{\text{surf}} = 2\pi r h_{\text{cell}}\) (`cell_area_surface`).
 
 with airflow proportional to losses:
 
@@ -161,23 +169,84 @@ with airflow proportional to losses:
 
 ## Battery Sizing Loop
 
-Inside the aircraft’s WTO root‑finding solver:
+Inside the aircraft’s WTO root‑finding solver, for each WTO guess:
 
-1. Guess `WTO`  
-2. Guess `P_number`  
-3. Run full mission simulation  
-4. During each timestep, battery state is updated  
-5. If any violation occurs:  
-    - SOC too low  
-    - Voltage too low  
-    - Current > max  
-    - Temperature out of range  
-    → A `BatteryError` is thrown  
-6. Increase `P_number` and retry  
-7. Once feasible, compute pack weight  
-8. Continue WTO iteration  
+1. Start from a `P_number` guess: 128 on the first WTO, then the previous optimum scaled by
+   the WTO ratio.
+2. Fly the whole mission (ground legs included, see below) for a `P_number`. During each
+   time step the cell model validates the state; any violation raises a `BatteryError`:
+    - SOC below the minimum,
+    - terminal voltage below the cell minimum,
+    - current above the cell maximum,
+    - no real current for the requested power (pack underpowered).
+3. Bracket the smallest feasible `P_number`: halve the lower bound while it is still feasible,
+   double the upper bound while it is still infeasible. The upper bound stops at the pack
+   whose cell mass equals the take-off mass, \(P_{lim}=\lfloor W_{TO}/(S\,m_{cell})\rfloor\).
+   If that pack is infeasible too, the search raises a `BatteryError` with code
+   `"PACK_HEAVIER_THAN_AIRCRAFT"`.
+4. Bisect between the bounds to the smallest feasible `P_number`.
+5. Compute the pack mass from that `P_number` and return to the WTO iteration.
+
+The temperature is not a sizing criterion: the pack is held at the maximum operating
+temperature by the thermostat, and the heat rejected there sizes the battery cooling mass.
 
 This ensures size is based on **actual in‑mission behaviour**, not just averaged metrics.
+
+The ground segments are part of the same check. When the battery takes a share of the taxi or
+take-off power (see [Mission → ground segments](mission.md)), the pack is flown through
+taxi-out, a check at the worst-case take-off/OEI power and the take-off run before the climb.
+After landing it must also supply taxi-in. A `P_number` is feasible only if all of these legs
+respect the limits.
+
+---
+
+## State of health (degradation)
+
+The battery carries a **state of health** relative to beginning of life (BOL). It is given by
+the two outputs of the semi-empirical ageing models (for example Schmalstieg et al. 2014):
+
+- the capacity fraction \(C/C_{BOL}\) (`battery_capacity_fraction`);
+- the resistance factor \(R/R_{BOL}\) (`battery_resistance_factor`).
+
+Both are `EnergyConfig` fields and default to 1 (BOL). They apply to every battery model:
+
+| Model | Capacity fraction \(c\) | Resistance factor \(r\) |
+|---|---|---|
+| Class II (cell model) | cell capacity \(\times c\); the charge-proportional Shepherd terms (capacity thermal slope, exponential-zone constant) are rescaled as in `SetInput` | ohmic resistance and polarization constant \(\times r\) |
+| Class I (`CellInput`) | specific energy \(\times c\) | specific power \(/ r\) |
+| Class I of `FuelCellBattery` (`EnergyInput`) | `Battery Specific Energy` \(\times c\) in `Weight.FuelCellBattery` | `Battery Specific Power` \(/ r\) |
+
+Dividing the Class-I specific power by \(r\) is a first-order approximation: the power a cell
+can deliver is inversely proportional to its internal resistance. The Class-II model needs no
+such approximation, because the cell model itself enforces the SOC, voltage and current limits
+of the aged cell. The usable SOC window and the mass per cell do not change.
+
+The state of health is used in two ways:
+
+- **End-of-life sizing.** Set the fields in the `EnergyConfig` of the design. The pack is sized
+  with the aged cell, so it is larger.
+- **Aged flight of a sized aircraft.** Call `battery.set_state_of_health(capacity_fraction,
+  resistance_factor)` on a copy of the sized aircraft, or use example 30:
+
+```python
+from importlib import import_module
+ex30 = import_module("30_off_design_mission")            # run from trunk/examples
+sized = ex30.fc_battery_design()                          # sized at BOL
+r = ex30.fly_off_design(sized, 750.0, state_of_health={
+        "battery_capacity_fraction": 0.8, "battery_resistance_factor": 1.5})
+print(r.violations)
+```
+
+A pack sized for power (for example a take-off battery) is limited by the resistance growth
+rather than by the capacity loss. On the take-off-sized fuel-cell + battery design of
+example 30, \(c = 0.8\) and \(r = 1.5\) make the required take-off power (749 kW at the
+battery terminals) exceed the deliverable power of the aged Class-I pack (500 kW).
+
+The models that turn a mission into a state of health are not part of the package. The
+post-design `thermal_degradation_analysis` below estimates the cycle life of a Class-II pack,
+but it does not feed a state of health back into the design. A mission-driven ageing model
+can be built on the quantities available along the Class-II mission: the spent charge `it`,
+the cell temperature and the terminal voltage.
 
 ---
 
@@ -191,8 +260,22 @@ baseline design.
 ```python
 aircraft.configure(config)                              # size as usual (Class-II battery)
 ageing = aircraft.battery.thermal_degradation_analysis(charge_c_rate=2.0)
-#   -> {'recharge_time_min', 'T_final', 'peak_cooling_w', 'peak_heat_w', 'dod', 'n_cycles'}
+#   -> {'recharge_time_min', 'T_start', 'T_final', 'peak_cooling_w', 'peak_pulldown_w',
+#       'peak_heat_w', 'dod', 'soc_start', 'T_flight', 'n_cycles'}
 ```
+
+One cycle is the mission last flown by the sized pack, followed by a ground recharge. The
+analysis reads it from the mission (`Mission.integral_solution` and
+`Mission.battery_end_state`):
+
+- the depth of discharge is one minus the lowest SOC reached, taxi-in included, because the
+  pack starts the taxi-out full;
+- the flight temperature `T_flight` is the time average of the cell temperature from the start
+  of the climb to the landing;
+- the recharge starts from the SOC and the cell temperature at the end of the taxi-in.
+
+An explicit `soc_start=` sets the recharge start and the DoD `Maximum SOC - soc_start`; an
+explicit `flight_temp_k=` sets the flight temperature.
 
 The results are cached on `battery.ageing` and surfaced in
 `AircraftResults.extras['battery_ageing']`. See example
@@ -214,9 +297,12 @@ q_{\text{cool}} = h_{\text{ground}}\,A_{\text{cell}}\,(T - T_{\text{coolant}}), 
 \frac{dT}{dt} = \frac{q_{\text{gen}} - q_{\text{cool}}}{C_{\text{th}}}
 \]
 
-It returns the recharge time, the final cell temperature, and the **peak active‑cooling power**
-the thermal‑management system (TMS) must reject — a sizing driver for the ground/onboard
-cooling system. Faster charging shortens the turnaround but raises the temperature and the
+It returns the recharge time, the start and final cell temperatures, and two cooling peaks.
+The cold-plate heat \(q_{\text{cool}}\) carries the Joule heat of the charge, up to
+\(\min(q_{\text{cool}}, q_{\text{gen}})\), and the heat the pack brought from the flight, the
+rest. `peak_cooling_w` is the peak of the first part, the cooling load set by the charge rate.
+`peak_pulldown_w` is the peak of the second part, set by the temperature at which the pack
+arrives. Faster charging shortens the turnaround but raises the temperature and the charge
 cooling load.
 
 ### Cycle‑life degradation (Wang et al. + Miner)
@@ -251,6 +337,12 @@ Battery configuration comes from `CellInput` (typed: `CellConfig`):
 - `"Minimum SOC"`  
 - `"Initial temperature"`  
 - `"Max operative temperature"`
+
+The electric machines of a hybrid are sized from `EnergyInput` (typed: `EnergyConfig`).
+`"Specific Power Powertrain"` (`specific_power_powertrain`) gives [thermal, electric motor] in
+W/kg. A serial hybrid also carries a generator, sized on the engine rating with
+`"Specific Power Generator"` (`specific_power_generator`, W/kg). Its default is the electric
+motor value.
 
 Optional fields for the **thermal‑management / degradation** analysis (defaults applied when
 the analysis is invoked):
@@ -295,11 +387,13 @@ The battery throws structured exceptions:
 - `"SOC_OUTSIDE_LIMITS"`  
 - `"VOLTAGE_OUTSIDE_LIMITS"`  
 - `"CURR_OUTSIDE_LIMITS"`  
-- `"NEG_BATT_TEMP"`  
+- `"NEG_BATT_TEMP"` (a non-physical temperature, below 0 K)  
 - `"BATT_UNDERPOWERED"`  
-- `"TEMP_OUTSIDE_LIMITS"`  
 
-These allow the sizing algorithm to automatically increase P.
+These tell the `P_number` search that a pack is infeasible. The search itself raises
+`"PACK_HEAVIER_THAN_AIRCRAFT"` when no pack lighter than the aircraft flies the mission. The
+post-design ageing analysis raises `"REQUIRES_CLASS_II"` and `"NO_CHARGE_C_RATE"` for invalid
+calls.
 
 ---
 
@@ -345,9 +439,15 @@ model, so it carries no cooling mass.) The separate *ground fast-charge* cooling
 ## Limitations
 
 - Single‑node temperature model (no spatial gradients).  
-- Ageing and the ground recharge/cooling load are modelled only in the **opt‑in post‑design**
-  analysis (Wang/Miner cycle life, cold‑plate cooling); the in‑flight sizing loop itself
-  remains discharge‑only.  
+- The intrinsic thermal resistance of the cell, \(R_{i,th}=3.3\,(r/0.022)^2\) K/W, is uncited:
+  no file of the repository gives the source of the value or of the reference radius.  
+- The cycle life takes one temperature per part of the cycle. The time-averaged flight
+  temperature gives a fade rate no larger than the time average of the rate, because the
+  rate is convex in temperature, so the estimate is slightly optimistic.  
+- Ageing enters the design only as a prescribed state of health (capacity fraction,
+  resistance factor). The cycle-life estimate and the ground recharge/cooling load are an
+  **opt‑in post‑design** analysis (Wang/Miner cycle life, cold‑plate cooling) and do not feed
+  back into the sizing. The in‑flight sizing loop remains discharge‑only.  
 
 ---
 
@@ -361,6 +461,9 @@ model, so it carries no cooling mass.) The separate *ground fast-charge* cooling
 
 - Saw, L., Somasundaram, K., Ye, Y., & Tay, A. *Electro-thermal analysis of Lithium Iron Phosphate battery for electric vehicles.*  
    Journal of Power Sources, 249:231–238, 2014.
+
+- Schmalstieg, J., Käbitz, S., Ecker, M., & Sauer, D. U. *A holistic aging model for Li(NiMnCo)O2 based 18650 lithium-ion batteries.*  
+   Journal of Power Sources, 257:325–334, 2014. (capacity fraction and resistance factor as ageing outputs)
 
 - Wang, J. et al. *Cycle-life model for graphite-LiFePO4 cells.*  
    Journal of Power Sources, 196(8):3942–3948, 2011. (capacity-fade law used for cycle life)

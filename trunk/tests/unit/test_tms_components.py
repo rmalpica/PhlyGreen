@@ -288,3 +288,210 @@ def test_draw_hex_renders_every_family(sizer_cls):
     fig = draw_hex(d, n_parallel=3)
     assert len(fig.axes) == 3
     plt.close(fig)
+
+
+@needs_coolprop
+def test_empty_or_heatless_profile_gives_an_empty_tms():
+    # battery-only take-off and no fuel-cell heat in flight: nothing to size
+    for points in ([], [_point(Q=0.0)]):
+        r = _tms().SizeForMission(points)
+        assert r.total_mass == 0.0 and r.pump_power == 0.0 and r.ram_drag == 0.0
+
+
+@needs_coolprop
+def test_thermal_choking_makes_the_ram_air_core_infeasible(monkeypatch):
+    import PhlyGreen.Systems.Thermal.TMS as tms_module
+
+    def choke(*args, **kwargs):
+        raise ValueError("thermal choking: the heat load cannot be added in subsonic flow")
+    monkeypatch.setattr(tms_module, 'ram_air_drag', choke)
+    r = _tms().SizeAtPoint(_point(Q=2e6))
+    assert all(u.role != 'coolant_to_ram_air' for u in r.units)
+    assert r.heat_shortfall > 0 and r.ram_drag == 0.0 and r.mdot_ram_air == 0.0
+
+
+@needs_coolprop
+def test_cores_in_series_share_the_pump_pressure_rise():
+    t = _tms()
+    r = t.SizeAtPoint(_point(Q=2e6))
+    assert sum(u.design.dP_hot for u in r.units) <= t.loop_pressure_drop * (1 + 1e-9)
+
+
+# ---------------------------------------------------------------------------------------
+# Stack and piping share of the loop pressure rise
+# ---------------------------------------------------------------------------------------
+
+@needs_coolprop
+def test_stack_and_piping_pressure_drop_shrinks_the_core_budget_only():
+    base = _tms()
+    r0 = base.SizeAtPoint(_point(Q=2e6))
+    zero = _tms(**{'TMS Stack And Piping Pressure Drop': 0.0}).SizeAtPoint(_point(Q=2e6))
+    assert zero.total_mass == r0.total_mass and zero.pump_power == r0.pump_power
+    # 5 kPa left to the cores: the ram-air role needs more, shorter units
+    t = _tms(**{'TMS Stack And Piping Pressure Drop': 1.95e5})
+    r = t.SizeAtPoint(_point(Q=2e6))
+    assert r.heat_shortfall == 0.0
+    budget = t.loop_pressure_drop - t.stack_pressure_drop
+    assert sum(u.design.dP_hot for u in r.units) <= budget * (1 + 1e-9)
+    # the pump still delivers the whole loop rise at the same coolant flow
+    assert r.pump_power == pytest.approx(r0.pump_power, rel=1e-12)
+    assert r.hex_mass > r0.hex_mass
+
+
+@needs_coolprop
+def test_stack_and_piping_pressure_drop_must_leave_a_budget():
+    from PhlyGreen.config import TMSConfig, ConfigError
+    with pytest.raises(ValueError):
+        _tms(**{'TMS Stack And Piping Pressure Drop': 2.0e5})
+    with pytest.raises(ConfigError):
+        TMSConfig(tms_class='II', loop_pressure_drop=1e5, stack_pressure_drop=1e5)
+    with pytest.raises(ConfigError):
+        TMSConfig(tms_class='II', stack_pressure_drop=-1.0)
+    cfg = TMSConfig(tms_class='II', stack_pressure_drop=3e4)
+    assert cfg.to_dict()['TMS Stack And Piping Pressure Drop'] == 3e4
+
+
+# ---------------------------------------------------------------------------------------
+# Off-design check of the fixed hardware
+# ---------------------------------------------------------------------------------------
+
+def test_rate_unit_matches_rate_design_and_gives_the_hot_film_resistance():
+    from PhlyGreen.Systems.Thermal.hex import rate_unit
+    hot, cold = _coolant(), _air()
+    d = FinnedTubeBankSizer(DesignSpec(hot=hot, cold=cold, q_target=200e3)).best_candidate()
+    r = rate_unit(d, hot, cold)
+    assert r.in_range and r.q == rate_design(d, hot, cold)
+    assert r.dP_hot == pytest.approx(d.dP_hot, rel=1e-9)
+    assert r.dP_cold == pytest.approx(d.dP_cold, rel=1e-9)
+    assert 0.0 < r.U * r.R_hot < 1.0          # the hot film is part of 1/U
+
+
+@needs_coolprop
+def test_check_at_the_design_point_reproduces_the_sizing():
+    t = _tms(**{'TMS Ram Recovery': 0.8})
+    p = _point(Q=2e6)
+    r = t.SizeAtPoint(p)
+    c = t.CheckAtPoint(r, p)
+    assert c['q_rejected'] == pytest.approx(c['q_required'], rel=1e-6)
+    assert c['dP_coolant'] == pytest.approx(sum(u.design.dP_hot for u in r.units), rel=1e-6)
+    u2 = [u for u in r.units if u.role == 'coolant_to_ram_air'][0]
+    assert c['dP_air'] == pytest.approx(u2.design.dP_cold, rel=1e-6)
+    assert r.ram_drag > 0
+    assert c['ram_drag'] == pytest.approx(r.ram_drag, rel=1e-4)
+    assert c['ram_drag_accounted'] == pytest.approx(r.ram_drag, rel=1e-12)
+    assert not c['limits']
+    assert t.RateAtPoint(r, p) == (c['q_rejected'], c['q_required'])
+    assert c['mdot_ram_air'] == pytest.approx(r.mdot_ram_air, rel=1e-6)
+
+
+@needs_coolprop
+def test_check_flags_pressure_and_choking_but_not_drag():
+    import PhlyGreen.Systems.Thermal.TMS as tms_module
+    t = _tms(**{'TMS Ram Recovery': 0.8})
+    p = _point(Q=2e6)
+    r = t.SizeAtPoint(p)
+    # a worse intake than the one the hardware was sized for: less recovered pressure and
+    # more duct drag than the aircraft accounts for. The pressure is a limit; the local duct
+    # drag is not (the aircraft carries it as a constant increment)
+    t.ram_recovery = 0.02
+    c = t.CheckAtPoint(r, p)
+    assert 'air pressure' in c['limits']
+    assert c['ram_drag'] > c['ram_drag_accounted'] and 'drag' not in c['limits']
+    # a larger stack and piping share than at sizing leaves the cores short of pressure
+    t.ram_recovery, t.stack_pressure_drop = 0.8, 1.99e5
+    assert 'coolant pressure' in t.CheckAtPoint(r, p)['limits']
+    t.stack_pressure_drop = 0.0
+
+    def choke(*args, **kwargs):
+        raise ValueError("thermal choking")
+    original = tms_module.ram_air_drag
+    tms_module.ram_air_drag = choke
+    try:
+        c = t.CheckAtPoint(r, p)
+    finally:
+        tms_module.ram_air_drag = original
+    assert c['choked'] and 'choking' in c['limits']
+    messages = tms_module.limit_violations([c])
+    assert any('choked' in m for m in messages)
+
+
+@needs_coolprop
+def test_coolant_freezing_point_comes_from_coolprop_and_bounds_the_wall():
+    from CoolProp.CoolProp import PropsSI
+    from PhlyGreen.Systems.Thermal.TMS import limit_risks, limit_violations
+    t = _tms()
+    assert t.coolant_freezing_point == pytest.approx(
+        PropsSI('T_freeze', 'T', 300.0, 'P', 2.0e5, 'INCOMP::MEG-30%'))
+    p = _point(Q=2e6)
+    r = t.SizeAtPoint(p)
+    c = t.CheckAtPoint(r, p)
+    T_h2_in = t._conditions(p)['h2'].T_in
+    assert T_h2_in < c['T_wall_min'] < t.aircraft.fuelcell.T_op
+    # freezing is a risk, not a limit
+    assert ('freezing' in c['risks']) == (c['T_wall_min'] < t.coolant_freezing_point)
+    assert 'freezing' not in c['limits']
+    cold = dict(c, T_wall_min=t.coolant_freezing_point - 5.0, risks=['freezing'])
+    assert limit_risks([cold]) and not limit_violations([cold])
+    # a fluid without CoolProp freezing data is not checked
+    assert t._freezing_point('Water') is None
+
+
+@needs_coolprop
+def test_continuous_mission_point_short_of_cooling_becomes_a_candidate():
+    t = _tms()
+    profile = [_point(Q=3e6, alt=3000.0, V=130.0, name='Climb'),
+               _point(Q=1.5e6, alt=6000.0, V=140.0, name='Cruise')]
+    base = t.SizeForMission(profile)
+    # a point inside a segment with less heat but much less cooling (slow, hot, sea level)
+    slow = _point(Q=2.4e6, alt=0.0, V=45.0, name='Climb t=10s')
+    q_rej, q_req = t.RateAtPoint(base, slow)
+    assert q_rej < (1 - t.FEASIBILITY_TOLERANCE) * q_req
+    r = t.SizeForMission(profile, history=[slow])
+    assert 'Climb t=10s' in [c['point'] for c in r.candidates]
+    q_rej, q_req = t.RateAtPoint(r, slow)
+    assert q_rej >= (1 - t.FEASIBILITY_TOLERANCE) * q_req
+    checks = t.CheckMission(r, profile, [slow])
+    assert r.checks is checks and len(checks) == len(profile) + 1
+    assert 'heat' not in checks[-1]['limits']
+
+
+@needs_coolprop
+def test_continuous_check_without_shortfall_leaves_the_design_unchanged():
+    t = _tms()
+    profile = [_point(Q=3e6, alt=3000.0, V=130.0, name='Climb'),
+               _point(Q=1.5e6, alt=6000.0, V=140.0, name='Cruise')]
+    base = t.SizeForMission(profile)
+    easy = [_point(Q=1.0e6, alt=5000.0, V=135.0, name=f'Cruise t={i}s') for i in range(3)]
+    r = t.SizeForMission(profile, history=easy)
+    assert r.total_mass == base.total_mass and r.pump_power == base.pump_power
+    assert r.design_point['name'] == base.design_point['name']
+    assert [c['point'] for c in r.candidates] == [c['point'] for c in base.candidates]
+    checks = t.CheckMission(r, profile, easy)
+    assert len(checks) == len(profile) + len(easy)
+    assert all(c['shortfall'] <= t.FEASIBILITY_TOLERANCE for c in checks)
+    assert not any(t.CheckAtPoint(r, p)['shortfall'] for p in easy)
+
+
+@needs_coolprop
+def test_check_throttles_the_intake_to_the_required_heat():
+    t = _tms(**{'TMS Ram Recovery': 0.9})
+    p = _point(Q=2e6, alt=3000.0, V=110.0)
+    r = t.SizeAtPoint(p)
+    # same heat, faster and colder: the open intake could reject much more
+    fast = _point(Q=2e6, alt=6000.0, V=150.0)
+    c = t.CheckAtPoint(r, fast)
+    q_open, q_req = t.RateAtPoint(r, fast, capped=False)
+    assert q_open > 1.1 * q_req
+    assert c['q_rejected'] == pytest.approx(c['q_required'], rel=1e-9)
+    _, _, rho = t._ambient(6000.0)
+    assert 0.0 < c['mdot_ram_air'] < r.capture_area * rho * 150.0
+    # the throttled flow rejects the heat the hydrogen leaves to the ram air
+    from PhlyGreen.Systems.Thermal.hex import rate_unit
+    cond = t._conditions(fast)
+    coolant = t._coolant(cond['T_op'], r.mdot_coolant)
+    u1, u2 = r.units
+    q1 = min(rate_unit(u1.design, coolant.split(1), cond['h2'].split(1)).q, cond['q_h2_target'])
+    air = t._ram_air(cond, c['mdot_ram_air'])
+    q2 = u2.n_parallel * rate_unit(u2.design, coolant.with_inlet(cond['T_op'] - q1 / coolant.C)
+                                   .split(u2.n_parallel), air.split(u2.n_parallel)).q
+    assert q1 + q2 == pytest.approx(c['q_required'], rel=1e-6)

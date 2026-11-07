@@ -7,7 +7,7 @@ import PhlyGreen.Utilities.Speed as Speed
 import PhlyGreen.Utilities.Units as Units
 import scipy.integrate as integrate
 from .Profile import Profile
-from PhlyGreen.Systems.Battery.Battery import BatteryError
+from PhlyGreen.Systems.Battery.Battery import BatteryError, find_parallel_cells
 
 class Mission:
     """
@@ -69,6 +69,12 @@ class Mission:
         self.Max_PEng_alt = 0
         self.TO_PBat = 0
         self.TO_PP = 0
+        # Hybrid electric machines: peak motor shaft power and peak bus (motor input) power,
+        # over the mission and at take-off/OEI. They size the serial hybrid's motor and PMAD.
+        self.Max_PMotor = 0.0
+        self.TO_PMotor = 0.0
+        self.Max_PBus = 0.0
+        self.TO_PBus = 0.0
         # Sizing-critical mission thrust and the condition it occurs at (for a Turbofan,
         # the largest thrust/lapse -- see TraditionalConfiguration).
         self.Max_Thrust = -1.0
@@ -82,6 +88,7 @@ class Mission:
         self.Max_FC_Thermal_Pwr = 0.0
         self.Max_FC_Thermal_Pwr_alt = 0.0
         self.Max_FC_Thermal_Pwr_V = 0.0
+        # hydrogen chemical power [W] (HHV basis) of the stack at the take-off/OEI power
         self.TO_P_H2_Thermal = 0.0
         # fuel-cell heat [W] at the worst-case take-off/OEI power (not flown by the profile)
         self.TO_FC_Thermal_Pwr = 0.0
@@ -89,6 +96,10 @@ class Mission:
         # plus the peak of every flown segment, each a dict {name, Q_fc [W], altitude [m],
         # V_inf [m/s TAS], mdot_h2 [kg/s]}. Filled by the fuel-cell configurations.
         self.thermal_profile = []
+        # The same quantities at every accepted integration point of the flown mission
+        # (name '<phase>/<segment> t=<s>', plus the time 't' [s]), for the continuous check
+        # of the TMS hardware.
+        self.thermal_history = []
         self._phase_peak = None
         # when True (and aircraft.tank is set) the LH2 tank thermodynamic state is
         # advanced through the mission; off by default so the weight loop stays fast.
@@ -107,6 +118,9 @@ class Mission:
         self.P_n_arr =[]
         self.last_weight=None
         self.optimal_n=None
+        # Class-II pack state after the taxi-in of the last feasible flight: (spent charge
+        # [A s], cell temperature [K]). Read by Battery.thermal_degradation_analysis.
+        self.battery_end_state = None
 
         self.size_battery_pack = True
 
@@ -181,6 +195,9 @@ class Mission:
         self.takeoff_time = mi.get('Takeoff Time', 0.7)
         self.takeoff_power_fraction = mi.get('Takeoff Power Fraction', 1.0)
         self.taxi_phi = mi.get('Taxi Supplied Power Ratio', None)
+        # ISA temperature deviation [K] of the flown mission (flight performance, fuel-cell
+        # ambient state, TMS ram air). The constraint diagram uses ConstraintsInput['DISA'].
+        self.DISA = mi.get('DISA', 0.0)
         if self.taxi_phi and not self._has_battery():
             raise ValueError(
                 "'Taxi Supplied Power Ratio' is %g, but the %s configuration has no battery."
@@ -287,15 +304,49 @@ class Mission:
         return self._takeoff_phi() if self.taxi_phi is None else float(self.taxi_phi)
 
     def _fc_battery_eta_elec(self, alt, vel, P):
-        """Battery terminal -> shaft efficiency of the fuel-cell + battery architecture.
-        Constant by default; the electric-motor term varies with the operating point when the
-        Class-II ('Smart') d-q motor model is selected."""
+        """Battery terminal -> propulsive (thrust) power efficiency of the fuel-cell + battery
+        architecture: PMAD, electric motor, gearbox and propeller, the same chain the fuel-cell
+        branch uses in ``FuelCell.ComputePRatio``. ``P`` is the battery propulsive power. The
+        electric-motor term varies with the operating point when the Class-II ('Smart') d-q
+        motor model is selected; the propeller term when a propeller model is attached."""
         fc = self.aircraft.fuelcell
+        pt = self.aircraft.powertrain
         if self.aircraft.EnergyInput.get('Eta Electric Motor Model') == 'Smart':
-            em = self.aircraft.powertrain.eta('electric_motor', alt, vel, P)
+            em = pt.eta('electric_motor', alt, vel, P)
         else:
             em = fc.EtaEM
-        return em * fc.EtaPM * fc.EtaGB
+        if hasattr(pt, 'Propeller'):
+            eta_prop = pt.Propeller.ComputePropEfficiency(alt, vel, P)
+        else:
+            eta_prop = fc.EtaProp
+        return em * fc.EtaPM * fc.EtaGB * eta_prop
+
+    def _fc_battery_terminal_power(self, alt, vel, P_bat):
+        """Battery terminal power [W] for the battery propulsive power ``P_bat`` [W] of the
+        fuel-cell + battery architecture (0 when the battery is idle)."""
+        return P_bat / self._fc_battery_eta_elec(alt, vel, P_bat) if P_bat > 0 else 0.0
+
+    def _fuel_cell_chemical_power(self, alt, vel, P_fc):
+        """Hydrogen chemical power [W] (HHV basis) of the running fuel cell when it delivers
+        the propulsive power ``P_fc`` >= 0: the hydrogen flow of the stack, which also feeds
+        the air system, the fixed auxiliaries and the TMS pump, so it is not zero at zero
+        propulsive power."""
+        fc = self.aircraft.fuelcell
+        fc.ComputePRatio(alt, vel, P_fc)
+        return fc.mdot_h2 * fc.HHV_H2
+
+    def _track_fc_heat_on_solution(self, sol, beta_row, fc_power):
+        """Record the fuel-cell heat at the accepted points of one segment solution ``sol``
+        (not at the trial evaluations of the integrator). ``fc_power(t, Beta)`` returns the
+        fuel-cell propulsive power, or None when the fuel cell is off."""
+        fc = self.aircraft.fuelcell
+        for t, beta in zip(sol.t, sol.y[beta_row]):
+            P_fc = fc_power(t, beta)
+            if P_fc is None:
+                continue
+            alt, vel = self.profile.Altitude(t), self.profile.Velocity(t)
+            fc.ComputePRatio(alt, vel, P_fc)
+            self._track_fc_heat(t, alt, vel)
 
     def _range_extender_gt_power(self, alt):
         """Range-extender turbine shaft power at full throttle: the rated power, lapsed for
@@ -305,6 +356,12 @@ class Mission:
         P_gt_rated = float(self.aircraft.EnergyInput['GT Rated Power'])
         gt_design = self.aircraft.EnergyInput.get('GT Design Power') or P_gt_rated
         return min(P_gt_rated, gt_design * _isa_pressure_ratio(Units.mToft(alt)))
+
+    def _serial_motor_shaft_power(self, P_prop, alt, vel):
+        """Shaft power [W] of the serial hybrid's electric motor for the propulsive power
+        ``P_prop``: the motor drives the propeller through the gearbox."""
+        pt = self.aircraft.powertrain
+        return P_prop / (pt.eta('propeller', alt, vel, P_prop) * pt.eta('gearbox', alt, vel, P_prop))
 
     def _range_extender_flows(self, P_prop, alt, vel):
         """Fuel chemical power and battery terminal power of the range extender at one point.
@@ -342,8 +399,8 @@ class Mission:
         it for take-off (see :meth:`SerialRangeExtenderConfiguration`).
 
         Returns ``(fuel chemical power, battery terminal power, battery sizing power)`` [W].
-        The sizing power is in the convention the configuration uses for ``Max_PBat``:
-        battery terminal power for 'Hybrid', battery propulsive share for 'FuelCellBattery'.
+        The sizing power is in the convention of ``Max_PBat``: the battery terminal power
+        (the range extender counts only discharge).
         """
         if P <= 0:
             return 0.0, 0.0, 0.0
@@ -358,12 +415,11 @@ class Mission:
             PRatio = self.aircraft.powertrain.Hybrid(phi, alt, vel, P)
             return P * PRatio[0], P * PRatio[5], P * PRatio[5]
         if cfg in ('Hydrogen', 'FuelCellBattery'):
-            fc = self.aircraft.fuelcell
             P_bat = phi * P if cfg == 'FuelCellBattery' else 0.0
-            P_fc = P - P_bat
-            Pf = P_fc * fc.ComputePRatio(alt, vel, P_fc)[0] if P_fc > 0 else 0.0
-            P_el = P_bat / self._fc_battery_eta_elec(alt, vel, P_bat) if P_bat > 0 else 0.0
-            return Pf, P_el, P_bat
+            fuel_cell_on = cfg == 'Hydrogen' or phi < 1.0
+            Pf = self._fuel_cell_chemical_power(alt, vel, P - P_bat) if fuel_cell_on else 0.0
+            P_el = self._fc_battery_terminal_power(alt, vel, P_bat)
+            return Pf, P_el, P_el
         raise Exception("Unknown aircraft configuration: %s" % cfg)
 
     def _ground_segments(self, WTO):
@@ -530,7 +586,8 @@ class Mission:
         """Fly the fuel cell at the take-off/OEI propulsive power ``P_fc_TO`` (at the take-off
         constraint conditions) and start the thermal profile with that point.
 
-        Returns the fuel-cell power ratios at take-off. Resets the mission heat peak.
+        Stores the heat (``TO_FC_Thermal_Pwr``) and the hydrogen chemical power of the stack,
+        ``mdot_h2 * HHV`` (``TO_P_H2_Thermal``), at that point. Resets the mission heat peak.
         """
         c = self.aircraft.constraint
         to = c.TakeOffConstraints
@@ -539,18 +596,20 @@ class Mission:
         V_TO = float(perf.TAS)
         fc = self.aircraft.fuelcell
         self.Max_FC_Thermal_Pwr = -1.0
-        if P_fc_TO <= 0:                    # battery-only take-off: no fuel-cell heat there
+        self.thermal_history = []
+        if P_fc_TO <= 0:                  # battery-only take-off: no fuel-cell heat there
             self.TO_FC_Thermal_Pwr = 0.0
+            self.TO_P_H2_Thermal = 0.0
             self.thermal_profile = []
-            return np.array([1.0, 1.0])
-        PRatio_TO = fc.ComputePRatio(to['Altitude'], V_TO, P_fc_TO)
+            return
+        fc.ComputePRatio(to['Altitude'], V_TO, P_fc_TO)
         self.TO_FC_Thermal_Pwr = fc.Q_thermal
+        self.TO_P_H2_Thermal = fc.mdot_h2 * fc.HHV_H2
         self.thermal_profile = [{'name': 'Takeoff', 'Q_fc': fc.Q_thermal,
                                  'altitude': to['Altitude'], 'V_inf': V_TO,
                                  'mdot_h2': fc.mdot_h2, 'takeoff': True}]
         self.Max_FC_Thermal_Pwr_alt = 0.0
         self.Max_FC_Thermal_Pwr_V = 0.0
-        return PRatio_TO
 
     def _begin_thermal_phase(self, i):
         """Start tracking the fuel-cell heat peak of segment ``i`` of the profile."""
@@ -580,14 +639,18 @@ class Mission:
         ph = self._phase_peak
         if ph is not None and ph['t_start'] <= t < ph['t_end'] and q > ph['Q_fc']:
             ph.update(Q_fc=q, altitude=float(alt), V_inf=float(vel), mdot_h2=fc.mdot_h2)
+        segment = ph['name'] if ph is not None else 'mission'
+        self.thermal_history.append({'name': f"{segment} t={float(t):.0f}s", 'Q_fc': q,
+                                     'altitude': float(alt), 'V_inf': float(vel),
+                                     'mdot_h2': fc.mdot_h2, 't': float(t)})
 
     def HydrogenConfiguration(self, WTO):
         """Evaluate the full mission for a hydrogen fuel-cell (electric) propulsion system.
 
         Integrates two states over the mission: cumulative hydrogen *chemical* energy and
         the mass fraction Beta. At each instant the fuel cell converts the required
-        propulsive shaft power into a hydrogen chemical-power demand via
-        ``fuelcell.ComputePRatio`` (whose first entry is 1 / system efficiency). Tracks the
+        propulsive shaft power into a hydrogen chemical-power demand, the stack hydrogen flow
+        times the HHV (``_fuel_cell_chemical_power``). Tracks the
         peak fuel-cell thermal load for sizing the thermal-management system.
 
         Returns:
@@ -603,13 +666,10 @@ class Mission:
 
         def model(t, y):
             Beta = y[1]
-            PP = PowerPropulsive(Beta, t)
-            self.check_PP(PP)
-            PRatio = self.aircraft.fuelcell.ComputePRatio(
+            PP = self.check_PP(PowerPropulsive(Beta, t))
+            dEdt_chem = self._fuel_cell_chemical_power(           # hydrogen chemical power [W]
                 self.profile.Altitude(t), self.profile.Velocity(t), PP)
-            dEdt_chem = PP * PRatio[0]                 # hydrogen chemical power [W]
             dbetadt = - dEdt_chem / (self.ef * self.WTO)
-            self._track_fc_heat(t, self.profile.Altitude(t), self.profile.Velocity(t))
             return [dEdt_chem, dbetadt]
 
         # Worst-case off-mission propulsive power for fuel-cell sizing: the take-off field
@@ -617,8 +677,7 @@ class Mission:
         # (these scenarios are not flown by the mission profile, but the fuel cell must supply
         # their power). Taken as the worst case.
         self.TO_PP = self._worst_case_propulsive_power(WTO)
-        PRatio_TO = self._takeoff_fc_heat(self.TO_PP)
-        self.TO_P_H2_Thermal = self.TO_PP * PRatio_TO[0]
+        self._takeoff_fc_heat(self.TO_PP)
 
         # Optionally advance the LH2 tank thermodynamic state through the mission.
         track = self.track_tank and getattr(self.aircraft, 'tank', None) is not None
@@ -637,6 +696,8 @@ class Mission:
             self._begin_thermal_phase(i)
             sol = integrate.solve_ivp(model, [times[i], times[i + 1]], y0,
                                       method='BDF', rtol=1e-5, max_step=60.0)
+            self._track_fc_heat_on_solution(
+                sol, 1, lambda t, b: self.check_PP(PowerPropulsive(b, t)))
             self._end_thermal_phase()
             self.integral_solution.append(sol)
             if track:
@@ -681,8 +742,6 @@ class Mission:
         self.WTO = WTO
         fc = self.aircraft.fuelcell
 
-        # Battery terminal -> shaft efficiency (see _fc_battery_eta_elec).
-        eta_elec_at = self._fc_battery_eta_elec
 
         def PowerPropulsive(Beta, t):
             PPoWTO = self.aircraft.performance.PoWTO(
@@ -697,16 +756,20 @@ class Mission:
         # Two-state ODE (hydrogen chemical energy, mass fraction) — identical in form to the
         # pure-hydrogen mission, so a battery-free (phi=0) design reproduces it exactly. The
         # battery energy is a passive integral computed afterwards (it does not burn mass).
+        def fuel_cell_power(t, Beta):
+            """Fuel-cell propulsive power, or None when the battery supplies all of it (fuel
+            cell off)."""
+            phi = float(self.profile.SuppliedPowerRatio(t))
+            if phi >= 1.0:
+                return None
+            return fuel_cell_share(t, self.check_PP(PowerPropulsive(Beta, t)))
+
         def model(t, y):
-            Beta = y[1]
-            PP = PowerPropulsive(Beta, t)
-            self.check_PP(PP)
-            P_fc = fuel_cell_share(t, PP)
-            alt, vel = self.profile.Altitude(t), self.profile.Velocity(t)
+            P_fc = fuel_cell_power(t, y[1])
             dEh2 = 0.0
-            if P_fc > 0:
-                dEh2 = P_fc * fc.ComputePRatio(alt, vel, P_fc)[0]
-                self._track_fc_heat(t, alt, vel)
+            if P_fc is not None:
+                dEh2 = self._fuel_cell_chemical_power(
+                    self.profile.Altitude(t), self.profile.Velocity(t), P_fc)
             dbetadt = - dEh2 / (self.ef * self.WTO)
             return [dEh2, dbetadt]
 
@@ -714,8 +777,10 @@ class Mission:
         # constraint conditions, split between the fuel cell and the battery by the take-off phi.
         P_total_TO = self._worst_case_propulsive_power(WTO)
         phi_TO = self._takeoff_phi()
+        to_alt, to_vel = self._ground_condition()
         self.TO_PP = (1.0 - phi_TO) * P_total_TO    # fuel-cell propulsive share at take-off/OEI
-        self.TO_PBat = phi_TO * P_total_TO          # battery propulsive share at take-off/OEI
+        self.TO_PBat = self._fc_battery_terminal_power(   # battery terminal power at take-off/OEI
+            to_alt, to_vel, phi_TO * P_total_TO)
         self._takeoff_fc_heat(self.TO_PP)
 
         y0 = [0.0, self.beta0]
@@ -725,6 +790,7 @@ class Mission:
             self._begin_thermal_phase(i)
             sol = integrate.solve_ivp(model, [times[i], times[i + 1]], y0,
                                       method='BDF', rtol=1e-5, max_step=60.0)
+            self._track_fc_heat_on_solution(sol, 1, fuel_cell_power)
             self._end_thermal_phase()
             self.integral_solution.append(sol)
             y0 = [sol.y[0][-1], sol.y[1][-1]]
@@ -732,23 +798,24 @@ class Mission:
         self.Ef = sol.y[0]
         self.Beta = sol.y[1]
 
-        # Post-process the battery: electrical energy drawn and peak battery shaft power.
+        # Post-process the battery: electrical energy drawn and peak battery terminal power.
         E_bat = 0.0
-        pp_fc_peak, pp_bat_peak = 0.0, 0.0
+        pp_fc_peak, p_el_peak = 0.0, 0.0
         for arr in self.integral_solution:
-            p_bat = np.array([float(self.profile.SuppliedPowerRatio(t)) *
-                              PowerPropulsive(b, t) for t, b in zip(arr.t, arr.y[1])])
-            p_fc = np.array([PowerPropulsive(b, t) for t, b in zip(arr.t, arr.y[1])]) - p_bat
+            pp = np.array([self.check_PP(PowerPropulsive(b, t)) for t, b in zip(arr.t, arr.y[1])])
+            p_bat = np.array([float(self.profile.SuppliedPowerRatio(t)) for t in arr.t]) * pp
+            p_fc = pp - p_bat
+            p_el = np.array([self._fc_battery_terminal_power(
+                self.profile.Altitude(t), self.profile.Velocity(t), pb)
+                for t, pb in zip(arr.t, p_bat)])
             if len(arr.t) > 1:
-                eta_arr = np.array([eta_elec_at(self.profile.Altitude(t), self.profile.Velocity(t), pb)
-                                    for t, pb in zip(arr.t, p_bat)])
-                E_bat += float(np.trapezoid(p_bat / eta_arr, arr.t))
-            pp_bat_peak = max(pp_bat_peak, float(p_bat.max()) if len(p_bat) else 0.0)
+                E_bat += float(np.trapezoid(p_el, arr.t))
+            p_el_peak = max(p_el_peak, float(p_el.max()) if len(p_el) else 0.0)
             pp_fc_peak = max(pp_fc_peak, float(p_fc.max()) if len(p_fc) else 0.0)
         self.EBat = E_bat
         self.Max_PEng = pp_fc_peak           # fuel-cell propulsive peak (no hidden margin)
         self.Max_PEng_alt = 0.0
-        self.Max_PBat = max(pp_bat_peak, self.TO_PBat)
+        self.Max_PBat = max(p_el_peak, self.TO_PBat)
         return self.Ef[-1], self.EBat
 
 
@@ -768,8 +835,6 @@ class Mission:
         self.WTO = WTO
         fc = self.aircraft.fuelcell
 
-        # Battery terminal -> shaft efficiency (see _fc_battery_eta_elec).
-        eta_elec_at = self._fc_battery_eta_elec
 
         def PowerPropulsive(Beta, t):
             return WTO * self.aircraft.performance.PoWTO(
@@ -783,17 +848,16 @@ class Mission:
             phi = float(self.profile.SuppliedPowerRatio(t))     # battery fraction of PP
             alt, vel = self.profile.Altitude(t), self.profile.Velocity(t)
 
-            # fuel-cell (hydrogen) branch — the fuel cell supplies (1 - phi) of the power
-            P_fc = (1.0 - phi) * PP
+            # fuel-cell (hydrogen) branch — the fuel cell supplies (1 - phi) of the power and is
+            # off when the battery supplies all of it
             dEh2 = 0.0
-            if P_fc > 0:
-                dEh2 = P_fc * fc.ComputePRatio(alt, vel, P_fc)[0]
-                self._track_fc_heat(t, alt, vel)
+            if phi < 1.0:
+                dEh2 = self._fuel_cell_chemical_power(alt, vel, (1.0 - phi) * PP)
             dbetadt = - dEh2 / (self.ef * self.WTO)             # only hydrogen burn changes mass
 
             # battery branch — Class-II cell model. The pack must deliver phi*PP of shaft power,
             # i.e. phi*PP/eta_elec of electrical power at its terminals.
-            PElectric = (phi * PP) / eta_elec_at(alt, vel, phi * PP)
+            PElectric = self._fc_battery_terminal_power(alt, vel, phi * PP)
             b = self.aircraft.battery
             b.T = y[4]
             b.phi = phi
@@ -815,8 +879,17 @@ class Mission:
         # battery / fuel-cell shares, at the constraint conditions.
         P_total_TO = self._worst_case_propulsive_power(WTO)
         phi_TO = self._takeoff_phi()
+        to_alt, to_vel = self._ground_condition()
         self.TO_PP = (1.0 - phi_TO) * P_total_TO            # fuel-cell propulsive share at TO/OEI
-        self.TO_PBat = phi_TO * P_total_TO                 # battery propulsive share at TO/OEI
+        self.TO_PBat = self._fc_battery_terminal_power(     # battery terminal power at TO/OEI
+            to_alt, to_vel, phi_TO * P_total_TO)
+
+        def fuel_cell_power(t, Beta):
+            """Fuel-cell propulsive power, or None when the fuel cell is off (phi = 1)."""
+            phi = float(self.profile.SuppliedPowerRatio(t))
+            if phi >= 1.0:
+                return None
+            return (1.0 - phi) * self.check_PP(PowerPropulsive(Beta, t))
 
         def evaluate_mission_given_P(P_number):
             """Fly the whole mission for a given parallel-cell count; (feasible, error_code)."""
@@ -827,10 +900,7 @@ class Mission:
             # Taxi-out, take-off/OEI power feasibility and take-off run: the pack state at the
             # start of the climb.
             try:
-                _to_alt = self.aircraft.constraint.TakeOffConstraints['Altitude']
-                _to_spd = self.aircraft.constraint.TakeOffConstraints['Speed']
-                it0, T0 = self._pack_before_climb(
-                    self.TO_PBat / eta_elec_at(_to_alt, _to_spd, self.TO_PBat))
+                it0, T0 = self._pack_before_climb(self.TO_PBat)
             except BatteryError as err:
                 if not self.size_battery_pack:
                     print(err)
@@ -846,6 +916,7 @@ class Mission:
                     self._begin_thermal_phase(i)
                     sol = integrate.solve_ivp(model, [times[i], times[i + 1]], y0,
                                               method="BDF", rtol=1e-6)
+                    self._track_fc_heat_on_solution(sol, 2, fuel_cell_power)
                     self._end_thermal_phase()
                     self.integral_solution.append(sol)
                 except BatteryError as err:
@@ -859,7 +930,8 @@ class Mission:
                 y0 = [sol.y[0][-1], sol.y[1][-1], sol.y[2][-1], sol.y[3][-1], sol.y[4][-1]]
             # taxi-in after landing must fit in what is left of the pack
             try:
-                self._pack_through_ground_legs(self._ground_battery_legs_in, y0[3], y0[4])
+                self.battery_end_state = self._pack_through_ground_legs(
+                    self._ground_battery_legs_in, y0[3], y0[4])
             except BatteryError as err:
                 if not self.size_battery_pack:
                     print(err)
@@ -867,35 +939,11 @@ class Mission:
             return True, None
 
         def find_P_nr(n_guess, wto_ratio):
-            """Minimal feasible parallel-cell count via doubling/halving brackets + bisection."""
-            if wto_ratio is not None:
-                n_max = math.ceil(n_guess * wto_ratio)
-                n_min = n_max - 1
-            else:
-                n_max = n_guess
-                n_min = math.floor(n_max / 2)
-            nmax_is_bounded = False
-            while evaluate_mission_given_P(n_min)[0]:
-                n_max = n_min
-                n_min = math.floor(n_min / 2)
-                nmax_is_bounded = True
-            if not nmax_is_bounded:
-                while not evaluate_mission_given_P(n_max)[0]:
-                    n_min = n_max
-                    n_max = n_max * 2
-            n = math.ceil((n_max + n_min) / 2)
-            optimal = False
-            while not optimal:
-                valid = evaluate_mission_given_P(n)[0]
-                if valid and (n - n_min) == 1:
-                    optimal = True
-                elif valid:
-                    n_max = n
-                    n = math.floor((n_max + n_min) / 2)
-                else:
-                    n_min = n
-                    n = math.ceil((n_max + n_min) / 2)
-            return n
+            """Minimal feasible parallel-cell count (see Battery.find_parallel_cells); the
+            pack may not be heavier than the aircraft."""
+            b = self.aircraft.battery
+            n_limit = math.floor(self.WTO / (b.cell_mass * b.S_number))
+            return find_parallel_cells(evaluate_mission_given_P, n_guess, wto_ratio, n_limit)
 
         if self.size_battery_pack:
             ratio = None if self.last_weight is None else self.WTO / self.last_weight
@@ -909,7 +957,8 @@ class Mission:
             if not success:
                 return 0, code
 
-        # Peak fuel-cell / battery propulsive power and the battery TMS heat over the sized mission.
+        # Peak fuel-cell propulsive power, peak battery terminal power and the battery TMS heat
+        # over the sized mission.
         times, beta, it_arr, T_arr = [], [], [], []
         for arr in self.integral_solution:
             times = np.concatenate([times, arr.t])
@@ -921,11 +970,15 @@ class Mission:
             self.aircraft.DesignWTOoS, beta[i], self.profile.PowerExcess(times[i]), 1,
             self.profile.Altitude(times[i]), self.DISA, self.profile.Velocity(times[i]), 'TAS')
             for i in range(len(times))])
+        PP = np.maximum(PP, 0.0)
         phis = np.array([float(self.profile.SuppliedPowerRatio(times[i])) for i in range(len(times))])
         p_fc, p_bat = (1.0 - phis) * PP, phis * PP
+        p_el = np.array([self._fc_battery_terminal_power(
+            self.profile.Altitude(times[i]), self.profile.Velocity(times[i]), p_bat[i])
+            for i in range(len(times))])
         self.Max_PEng = float(np.max(p_fc)) if len(p_fc) else 0.0
         self.Max_PEng_alt = self.profile.Altitude(times[int(np.argmax(p_fc))]) if len(p_fc) else 0.0
-        self.Max_PBat = max(float(np.max(p_bat)) if len(p_bat) else 0.0, self.TO_PBat)
+        self.Max_PBat = max(float(np.max(p_el)) if len(p_el) else 0.0, self.TO_PBat)
 
         ceiling = 273.15 + self.T_battery_limit
         b = self.aircraft.battery
@@ -938,7 +991,7 @@ class Mission:
                 b.it = it_arr[i] / 3600
                 alt = self.profile.Altitude(times[i])
                 vel = self.profile.Velocity(times[i])
-                b.i = b.Power_2_current(p_bat[i] / eta_elec_at(alt, vel, p_bat[i]))
+                b.i = b.Power_2_current(p_el[i])
                 Mach = Speed.TAS2Mach(vel, alt, DISA=self.DISA)
                 Tamb = ISA.atmosphere.T0std(alt, Mach)
                 rho = ISA.atmosphere.RHO0std(alt, Mach, self.DISA)
@@ -1001,8 +1054,7 @@ class Mission:
             dy/dt = [dE/dt, dbeta/dt]
             """
             Beta = y[1]
-            PP = PowerPropulsive(Beta,t)
-            self.check_PP(PP)
+            PP = self.check_PP(PowerPropulsive(Beta,t))
             PRatio = self.aircraft.powertrain.Traditional(
                 self.profile.Altitude(t),
                 self.profile.Velocity(t),
@@ -1016,11 +1068,8 @@ class Mission:
         # Takeoff / OEI-climb worst case (see _worst_case_propulsive_power)
         Ppropulsive = self._worst_case_propulsive_power(self.WTO)
 
-        PRatio = self.aircraft.powertrain.Traditional(
-            self.aircraft.constraint.TakeOffConstraints['Altitude'],
-            self.aircraft.constraint.TakeOffConstraints['Speed'],
-            Ppropulsive
-            )
+        to_alt, to_vel = self._ground_condition()      # take-off altitude and TAS
+        PRatio = self.aircraft.powertrain.Traditional(to_alt, to_vel, Ppropulsive)
         self.TO_PP = Ppropulsive * PRatio[1] #shaft power 
 
         # Off-mission thrust requirement. Each case is converted at *its own* speed: the
@@ -1162,8 +1211,7 @@ class Mission:
                 """
                 
                 Beta = y[2]
-                Ppropulsive = PowerPropulsive(Beta,t)
-                self.check_PP(Ppropulsive)
+                Ppropulsive = self.check_PP(PowerPropulsive(Beta,t))
                 PRatio = self.aircraft.powertrain.Hybrid(
                     self.aircraft.mission.profile.SuppliedPowerRatio(t),
                     self.profile.Altitude(t),
@@ -1184,8 +1232,11 @@ class Mission:
             # Takeoff / OEI-climb worst case (see _worst_case_propulsive_power)
             Ppropulsive = self._worst_case_propulsive_power(self.WTO)
 
-            PRatio = self.aircraft.powertrain.Hybrid(self._takeoff_phi(),self.aircraft.constraint.TakeOffConstraints['Altitude'],self.aircraft.constraint.TakeOffConstraints['Speed'],Ppropulsive)
+            to_alt, to_vel = self._ground_condition()      # take-off altitude and TAS
+            PRatio = self.aircraft.powertrain.Hybrid(self._takeoff_phi(), to_alt, to_vel, Ppropulsive)
             self.TO_PBat = Ppropulsive * PRatio[5]
+            self.TO_PMotor = Ppropulsive * PRatio[2]     # electric-motor shaft power
+            self.TO_PBus = Ppropulsive * PRatio[4]       # electric power into the motor
             self.TO_PP = Ppropulsive * PRatio[1]  
 
             #set/reset max values
@@ -1234,6 +1285,8 @@ class Mission:
             self.Max_PEng_alt = self.profile.Altitude(times[np.argmax(np.multiply(PP,PRatio[:,1]))]) #altitude at which peak power occurs 
 
             self.Max_PBat = np.max(np.multiply(PP,PRatio[:,5]))
+            self.Max_PMotor = np.max(np.multiply(PP,PRatio[:,2]))
+            self.Max_PBus = np.max(np.multiply(PP,PRatio[:,4]))
 
             return self.Ef[-1], self.EBat[-1]
 
@@ -1255,6 +1308,7 @@ class Mission:
         ``(fuel chemical energy [J], battery buffer capacity [J])``.
         """
         self.WTO = WTO
+        pt = self.aircraft.powertrain
         P_gt_rated = float(self.aircraft.EnergyInput['GT Rated Power'])   # sea-level rated shaft power [W]
         eta_charge = self.aircraft.EnergyInput.get('Battery Charge Efficiency', 1.0) or 1.0
 
@@ -1266,8 +1320,7 @@ class Mission:
         def flows(t, Beta):
             """Fuel chemical power and battery terminal power at one instant (see
             :meth:`_range_extender_flows`)."""
-            P_prop = PowerPropulsive(Beta, t)
-            self.check_PP(P_prop)
+            P_prop = self.check_PP(PowerPropulsive(Beta, t))
             return self._range_extender_flows(P_prop, self.profile.Altitude(t),
                                               self.profile.Velocity(t))
 
@@ -1278,9 +1331,10 @@ class Mission:
 
         # Off-mission worst case (take-off / OEI): turbine still at rated, battery covers the rest.
         P_total_TO = self._worst_case_propulsive_power(WTO)
-        to = self.aircraft.constraint.TakeOffConstraints
-        alt_TO, vel_TO = to['Altitude'], to['Speed']
+        alt_TO, vel_TO = self._ground_condition()      # take-off altitude and TAS
         Pbat_TO = self._range_extender_flows(P_total_TO, alt_TO, vel_TO)[1]
+        self.TO_PMotor = self._serial_motor_shaft_power(P_total_TO, alt_TO, vel_TO)
+        self.TO_PBus = self.TO_PMotor / pt.EtaEM2
         self.TO_PP = self._range_extender_gt_power(alt_TO)
         self.TO_PBat = max(Pbat_TO, 0.0)
 
@@ -1322,6 +1376,12 @@ class Mission:
         swing = float(levels.max() - levels.min())                   # usable buffer energy [J]
         pbat_all = np.array([flows(t_all[k], beta_all[k])[1] for k in range(len(t_all))])
         self.Max_PBat = max(float(pbat_all.max()) if len(pbat_all) else 0.0, self.TO_PBat)
+        p_motor = np.array([self._serial_motor_shaft_power(
+            self.check_PP(PowerPropulsive(beta_all[k], t_all[k])),
+            self.profile.Altitude(t_all[k]), self.profile.Velocity(t_all[k]))
+            for k in range(len(t_all))])
+        self.Max_PMotor = float(p_motor.max()) if len(p_motor) else 0.0
+        self.Max_PBus = self.Max_PMotor / pt.EtaEM2
         self.Max_PEng = P_gt_rated                                    # turbine sized for its rated power
         self.Max_PEng_alt = 0.0
         return self.Ef[-1], swing
@@ -1396,7 +1456,7 @@ class Mission:
         """
             # aircraft mass fraction
             Beta = y[2]
-            Ppropulsive = PowerPropulsive(Beta, t)
+            Ppropulsive = self.check_PP(PowerPropulsive(Beta, t))
             # takes in all the mission segments and finds the required power ratio for the current time of the mission
             PRatio = self.aircraft.powertrain.Hybrid(
                 self.aircraft.mission.profile.SuppliedPowerRatio(t),
@@ -1465,8 +1525,7 @@ class Mission:
             self.P_n_arr.append(P_number)
             # no maths needed to know nothing will work without a battery
             if P_number == 0:
-                # print(f"{P_number} is False")
-                return False
+                return False, None
 
             self.aircraft.battery.Configure(P_number)
 
@@ -1477,15 +1536,14 @@ class Mission:
 
 
             # hybrid power ratio for takeoff
+            to_alt, to_vel = self._ground_condition()      # take-off altitude and TAS
             PRatio = self.aircraft.powertrain.Hybrid(
-                self._takeoff_phi(),
-                self.aircraft.constraint.TakeOffConstraints["Altitude"],
-                self.aircraft.constraint.TakeOffConstraints["Speed"],
-                Ppropulsive_TO,
-            )
+                self._takeoff_phi(), to_alt, to_vel, Ppropulsive_TO)
 
             self.TO_PP = Ppropulsive_TO * PRatio[1]  # combustion engine power during takeoff
-            self.TO_PBat = Ppropulsive_TO * PRatio[5]  # electric motor power during takeoff
+            self.TO_PBat = Ppropulsive_TO * PRatio[5]  # battery power during takeoff
+            self.TO_PMotor = Ppropulsive_TO * PRatio[2]  # electric-motor shaft power
+            self.TO_PBus = Ppropulsive_TO * PRatio[4]    # electric power into the motor
 
             try:
                 # Taxi-out, take-off/OEI power feasibility and take-off run: the pack state
@@ -1565,94 +1623,19 @@ class Mission:
                 y0 = [sol.y[0][-1], sol.y[1][-1], sol.y[2][-1], sol.y[3][-1], sol.y[4][-1]]
             # taxi-in after landing must fit in what is left of the pack
             try:
-                self._pack_through_ground_legs(self._ground_battery_legs_in, y0[3], y0[4])
+                self.battery_end_state = self._pack_through_ground_legs(
+                    self._ground_battery_legs_in, y0[3], y0[4])
             except BatteryError as err:
                 if not self.size_battery_pack: print(err)
                 return False, err.code
             return True, None
 
-        def find_P_nr(n_guess, wto_ratio,bypass=True):
-            """
-            Find the feasible P-number using a bounded search (bisection-like).
-            Efficient and robust for large battery discretizations.
-
-            Returns
-            -------
-            int
-                Optimal feasible P-number.
-            """
-            # Flags used to prevent double checking the boundaries
-            nmin_is_bounded = False
-            nmax_is_bounded = False
-            if not bypass: # for debugging
-                if wto_ratio is not None:
-                    n = round(n_guess * wto_ratio)
-                    # check that the value below the initial guess is invalid
-                    if not evaluate_mission_given_P(n - 1)[0]:
-                        n_min = n - 1
-                        if evaluate_mission_given_P(n)[0]:  # check that the guess is valid
-                            # print(f"max={n} and min={n_min}")
-                            # print(f"Optimal n {n}")
-                            return n  # Optimal found
-                        else:
-                            n_min = n  # if the guess is invalid, its the new minimum
-                            n_max = max(n_min + 1, math.ceil((n_guess + 1) * wto_ratio))
-                            # nmin is a known invalid value, no need to reevaluate it
-                            nmin_is_bounded = True
-                    else:
-                        n_max = n - 1
-                        n_min = min(n_max - 1, math.floor((n_guess - 1) * wto_ratio))
-                        # nmax is a known valid value, no need to reevaluate it
-                        nmax_is_bounded = True
-
-                else:  # If its the first iteration theres no prev weight to scale off of yet
-                    n_max = n_guess
-                    n_min = math.floor(n_max / 2)
-            else:
-                if wto_ratio is not None:
-                    n_max = math.ceil(n_guess*wto_ratio)
-                    n_min = n_max-1
-                else:
-                    n_max = n_guess
-                    n_min = math.floor(n_max / 2)
-
-            # If its the weight scaling fails (or is the first iteration), boundaries
-            # need to be calculated with the doubling and halving method
-
-            # lower the min p number until it is invalid
-            if not nmin_is_bounded:
-                while evaluate_mission_given_P(n_min)[0]:
-                    n_max = n_min  # if the n_min guess is too large it can be the new n_max to save iterations since it has already been tried
-                    n_min = math.floor(n_min / 2)  # halve n_min until it fails
-                    nmax_is_bounded = True  # nmax is set to a known valid value and does not need to be reevaluated
-
-            # raise the max p number until its valid
-            if not nmax_is_bounded:
-                while not evaluate_mission_given_P(n_max)[0]:
-                    n_min = n_max  # if the nmax guess is too small it can be the new nmin to save iterations since it has already been tried
-                    n_max = n_max * 2  # double n_max until it works
-
-            # start from the middle
-            n = math.ceil((n_max + n_min) / 2)
-
-            # find optimal P number using bisection search
-            optimal = False
-            while not optimal:
-                valid_result = evaluate_mission_given_P(n)[0]
-
-                if valid_result and (n - n_min) == 1:
-                    optimal = True
-
-                elif valid_result:  # n is too big
-                    n_max = n
-                    n = math.floor((n_max + n_min) / 2)
-
-                else:  # n is too small
-                    n_min = n
-                    n = math.ceil((n_max + n_min) / 2)
-
-
-            print(f"max={n_max} and min={n_min}")
+        def find_P_nr(n_guess, wto_ratio):
+            """Smallest feasible P-number (see Battery.find_parallel_cells). The search may not
+            go beyond the pack that is as heavy as the aircraft."""
+            b = self.aircraft.battery
+            n_limit = math.floor(self.WTO / (b.cell_mass * b.S_number))
+            n = find_parallel_cells(evaluate_mission_given_P, n_guess, wto_ratio, n_limit)
             print(f"Optimal n {n}")
             return n
 
@@ -1669,16 +1652,7 @@ class Mission:
                 P_n_guess = self.optimal_n
 
 
-            self.optimal_n = find_P_nr(P_n_guess, ratio, bypass=True)  # algorithm D
-            # alg = "D"
-            # if alg == "D":
-            #     self.optimal_n = find_P_nr(P_n_guess, ratio, bypass=False)  # algorithm D
-            # if alg == "C":
-            #     self.optimal_n = find_P_nr(P_n_guess, ratio)  # algorithm C
-            # if alg == "B":
-            #     self.optimal_n = find_P_nr(P_n_guess, 1)  # algorithm B
-            # if alg == "A":
-            #     self.optimal_n = find_P_nr(128, None) # algorithm A
+            self.optimal_n = find_P_nr(P_n_guess, ratio)
 
 
 
@@ -1713,6 +1687,8 @@ class Mission:
         self.Max_PEng = np.max(np.multiply(PP,PRatio[:,1]))
         self.Max_PEng_alt = self.profile.Altitude(times[np.argmax(np.multiply(PP,PRatio[:,1]))]) #altitude at which peak power occurs
         self.Max_PBat = np.max(np.multiply(PP,PRatio[:,5]))
+        self.Max_PMotor = np.max(np.multiply(PP,PRatio[:,2]))
+        self.Max_PBus = np.max(np.multiply(PP,PRatio[:,4]))
 
         # Peak battery heat the thermal-management system actually has to reject, for TMS
         # sizing. With the bang-bang thermostat the cooling only acts when the pack is held at

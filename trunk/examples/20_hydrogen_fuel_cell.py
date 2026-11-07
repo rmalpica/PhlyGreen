@@ -54,7 +54,7 @@ def _plot_polarization(fc):
     p = i * v                                   # power density [W/cm^2]
     fig, ax = plt.subplots(figsize=(7.5, 5))
     ax.plot(i, v, color="tab:blue", label="cell voltage")
-    ax.axvline(fc.i_rated if hasattr(fc, "i_rated") else np.nan, ls=":", c="grey")
+    ax.axvline(fc.i_max_density, ls=":", c="grey")              # design current density
     ax.set_xlabel("current density [A/cm$^2$]"); ax.set_ylabel("cell voltage [V]", color="tab:blue")
     ax2 = ax.twinx()
     ax2.plot(i, p, color="tab:red", ls="--", label="power density")

@@ -57,16 +57,17 @@ for point in aircraft.mission.thermal_profile:
 Output (abridged):
 
 ```text
-MTOW 22569 kg, TMS 1123 kg (class II), pump 32.8 kW, ram drag 171 N, sized at 'Mission/Climb1'
-TMS Class II: design point 'Mission/Climb1' (Q_fc = 4633 kW)
-  coolant_to_h2       :   1 x plate_fin            3.9 kg  0.0094 m3 per unit,   350.3 kW
-  coolant_to_ram_air  :  32 x finned_tube_bank    33.5 kg  0.0495 m3 per unit,  4195.7 kW
-  pump: 32.8 kW, 47.5 kg;  ram air: 83.4 kg/s, drag 171 N
-  total TMS mass: 1122.8 kg
-Takeoff              required    4103 kW   capacity    4642 kW
-Mission/Climb1       required    4546 kW   capacity    4546 kW
-Mission/Climb2       required    4944 kW   capacity    5100 kW
-Mission/Cruise       required    1653 kW   capacity    5468 kW
+MTOW 22471 kg, TMS 1108 kg (class II), pump 32.3 kW, ram drag 168 N, sized at 'Mission/Climb1'
+TMS Class II: design point 'Mission/Climb1' (Q_fc = 4568 kW)
+  coolant_to_h2       :   1 x plate_fin            3.9 kg  0.0093 m3 per unit,   346.2 kW
+  coolant_to_ram_air  :  32 x finned_tube_bank    33.0 kg  0.0488 m3 per unit,  4136.0 kW
+  pump: 32.3 kW, 46.8 kg;  ram air: 82.2 kg/s, drag 168 N
+  total TMS mass: 1107.8 kg
+  duct drag work over the mission: 15.1 MJ (momentum balance) vs 376.9 MJ charged by the constant drag increment
+Takeoff              required    4059 kW   capacity    4577 kW
+Mission/Climb1       required    4482 kW   capacity    4482 kW
+Mission/Climb2       required    4869 kW   capacity    5028 kW
+Mission/Cruise       required    1624 kW   capacity    5390 kW
 ...
 ```
 
@@ -78,6 +79,13 @@ everywhere else with margin, while a geometry sized at Climb2 would fall short a
 If even `max_hex_units` units cannot keep each unit within the mass/volume caps, the report
 flags `[per-unit caps exceeded]` and a warning is issued; raise `max_hex_units` or the caps to
 remove it.
+
+The drag-work line comes from the check of the hardware along the mission
+([below](#checking-the-hardware-along-the-mission)). Over the mission, the constant drag
+increment of the aircraft charges 25 times the duct drag work of the momentum balance, so the
+aircraft carries the duct drag conservatively. The hardware rejects the heat, stays within its
+pressure budgets and does not choke at any point of the mission, and the coolant-side wall
+stays above the coolant freezing point.
 
 ### Legacy dictionaries
 
@@ -96,7 +104,9 @@ Without `TMSInput` (or with `'TMS Class': 'I'`) the Class-I model is used.
 | `aircraft.results()` | `tms_class`, `tms_mass`, `tms_pump_power` [W], `tms_ram_drag` [N], `tms_design_point` |
 | `aircraft.weight.WHeat_Exchanger` | TMS mass in the take-off-weight balance (the `cooling` item of the mass breakdown) |
 | `aircraft.weight.tms_result` | the `FCThermalManagementResult`: `units` (per role: `design`, `n_parallel`, family, geometry), `mdot_coolant`, `mdot_ram_air`, `capture_area`, `pump_power`, `pump_mass`, `hex_mass`, `ram_drag`, `ram_drag_raw`, `heat_balance`, `candidates` (design-point selection table) |
+| `aircraft.weight.tms_result.checks` | `tms.CheckAtPoint` of the chosen hardware at every profile point and every integration point of the mission (see [Checking the hardware](#checking-the-hardware-along-the-mission)); `tms_result.violations()` lists the broken limits |
 | `aircraft.mission.thermal_profile` | the heat-load points the TMS is sized and rated on |
+| `aircraft.mission.thermal_history` | the same quantities at every accepted integration point of the mission |
 | `aircraft.fuelcell.P_aux_tms` | pump power carried by the fuel cell [W] |
 | `aircraft.aerodynamics.extra_Cd` | ram-air drag increment on the polar |
 
@@ -161,7 +171,9 @@ At a design point with stack heat \(Q_{fc}\):
    The ram air enters at the free-stream total temperature and its temperature rise is
    \(\min(\Delta T_{\text{air}},\; \varepsilon_{\max}\,(T_{c,in} - T_{0}))\), which fixes the ram-air mass flow.
 5. **Pump.** \(P_{\text{pump}} = \dot V_c\,\Delta p_{\text{loop}} / (\eta_{\text{pump}}\,\eta_{\text{motor}})\);
-   the mass is \(P/\text{sp}_{\text{pump}} + P/\text{sp}_{\text{motor}}\).
+   the mass is \(P/\text{sp}_{\text{pump}} + P/\text{sp}_{\text{motor}}\). The stack channels
+   and the piping take `stack_pressure_drop` of the loop pressure rise; the two exchanger
+   cores share the rest.
 6. **Ram-air drag.** This uses a Meredith-type momentum balance of the duct (`Systems/Thermal/ram_air.py`).
    The free stream is decelerated in the intake, which recovers a fraction \(\eta_{\text{ram}}\)
    of the dynamic pressure, \(p_{0,1} = p_\infty + \eta_{\text{ram}}(p_{0,\infty} - p_\infty)\).
@@ -197,8 +209,10 @@ caps is kept:
   respects `max_weight_per_unit` and `max_volume_per_unit`. If even `max_hex_units` units
   cannot, the units are allowed to exceed the caps and a warning is issued.
 - **Pressure-drop limits.** The air-side pressure drop is limited to the recovered dynamic
-  pressure, \(\eta_{\text{ram}}\,q_\infty\). The H2 side is limited to 10 kPa and the liquid
-  side to the loop pressure rise.
+  pressure, \(\eta_{\text{ram}}\,q_\infty\). The H2 side is limited to 10 kPa. On the liquid
+  side the two cores are in series and share the loop pressure rise minus the stack and
+  piping drop, \(\Delta p_{\text{loop}} - \Delta p_{\text{stack+piping}}\): HEX 1 may use all
+  of it, HEX 2 what HEX 1 leaves.
 
 The drawings below show one unit of each role of the hydrogen example (to scale; large cores
 are shown as a detail), generated with `PhlyGreen.Systems.Thermal.plotting.draw_hex`:
@@ -223,13 +237,55 @@ not necessarily the one that needs the heaviest exchangers. `tms.SizeForMission(
    the pump, the air flow by the intake capture area (\(\dot m = \rho V A_{\text{capture}}\),
    flap fully open), and U is recomputed at the new flows;
 3. keeps the lightest geometry whose worst shortfall is within 2 %. If none qualifies, it keeps
-   the least-short one and issues a warning.
+   the least-short one and issues a warning;
+4. rates the kept geometry at every accepted integration point of the mission
+   (`mission.thermal_history`). A point inside a segment can carry less heat than the segment
+   peak and still need more cooling, for example at a lower speed. If the hardware falls short
+   there by more than 2 %, the worst such point joins the candidates and the rated points, and
+   steps 1-3 are repeated (at most three times). When the hardware is not short anywhere along
+   the mission, this step changes nothing.
 
 ![Design-point candidates](../images/tms/tms_candidates.png){ width="640px" }
 
 In the hydrogen example only the first climb segment gives hardware that rejects the heat
 everywhere. Lighter geometries sized at higher, faster points fall short at the slow early
 climb; heavier ones (take-off, Climb2) are not needed.
+
+### Checking the hardware along the mission
+
+`tms.CheckAtPoint(result, point)` gives the operating state of the fixed hardware at one point.
+The coolant flow is the pump flow. When the open intake would reject more heat than required,
+the flap throttles the air flow to the one that rejects the required heat. The check reports:
+
+- the heat rejected against the heat to reject;
+- the coolant-side pressure drop of the two cores against the loop budget
+  \(\Delta p_{\text{loop}} - \Delta p_{\text{stack+piping}}\);
+- the air-side pressure drop of the ram-air core against the recovered dynamic pressure;
+- thermal choking of the duct;
+- the duct drag of the momentum balance, and the drag the aircraft charges at that point
+  through the constant ΔCd;
+- the lowest coolant-side wall temperature of the cores (the coolant leaving a core against
+  the cold stream entering it) against the coolant freezing point. The freezing point is
+  CoolProp's `T_freeze` of the coolant (258.6 K for `INCOMP::MEG-30%`). Fluids without
+  CoolProp freezing data are not checked.
+
+The outputs are sorted by what the model can resolve:
+
+| Output | Treated as | Reason |
+|---|---|---|
+| heat (shortfall above 2 %) | violation | the hardware is sized against it with the same correlations |
+| core coolant pressure drop vs loop budget | violation | same: a sizing constraint of the cores |
+| ram-air core pressure drop vs recovered dynamic pressure | violation | same |
+| thermal choking of the duct | violation | same |
+| coolant-side wall below the freezing point | risk | the wall estimate uses core-average film resistances and single-stream hydrogen properties at the cold end; it flags the risk but cannot decide a margin of a few kelvin |
+| duct drag, point by point | not checked | the aircraft carries the duct drag as a constant ΔCd. It is compared over the mission as a drag work (`ram_drag_work` vs `ram_drag_work_accounted`). On the reference design the local excess at the start of climb is 71 N, 0.6 % of the aircraft drag, below the accuracy of the drag polar |
+
+At the converged design, `tms.CheckMission` runs this check at every profile point and every
+integration point, stores it in `tms_result.checks` and integrates the two drag works.
+`tms_result.violations()` and `tms_result.risks()` list one message per broken limit or
+flagged risk; each one is issued as a `RuntimeWarning`, and `tms.report()` prints them with
+the drag-work line. `fly_off_design` in `examples/30_off_design_mission.py` runs the same check
+on the flown off-design mission: broken limits are violations, risks go to `risks`.
 
 ### Coupling to the aircraft
 
@@ -273,6 +329,7 @@ and the duct gives a small thrust; a few percent of lost dynamic pressure turns 
 | `h2_approach_delta_t` | `TMS H2 Approach DeltaT` | 30 K | H2 leaves HEX 1 at \(T_{op}\) minus this |
 | `h2_supply_pressure` | `TMS H2 Supply Pressure` | 1.6 bar | LH2 enters HEX 1 saturated at this pressure |
 | `loop_pressure_drop` | `TMS Loop Pressure Drop` | 2 bar | pump pressure rise (stack, piping, cores) |
+| `stack_pressure_drop` | `TMS Stack And Piping Pressure Drop` | 0 bar | part of the loop rise taken by the stack channels and the piping; the cores share the rest (must be below `loop_pressure_drop`) |
 | `pump_efficiency` | `TMS Pump Efficiency` | 0.75 | |
 | `pump_motor_efficiency` | `TMS Pump Motor Efficiency` | 0.95 | |
 | `pump_specific_power` | `TMS Pump Specific Power` | 800 W/kg | |
@@ -280,7 +337,8 @@ and the duct gives a small thrust; a few percent of lost dynamic pressure turns 
 | `ram_recovery` | `TMS Ram Recovery` | 1.0 | fraction of the dynamic pressure the intake recovers |
 | `takeoff_coolant_overtemperature` | `TMS Takeoff Coolant Overtemperature` | 0 K | coolant/stack allowed above \(T_{op}\) at the take-off point only |
 
-None of the defaults is calibrated against flight hardware.
+None of the defaults is calibrated against flight hardware. There is no sourced value for the
+stack and piping pressure drop; its default of 0 gives the whole loop rise to the cores.
 
 ## 6. Limitations
 
@@ -290,7 +348,10 @@ None of the defaults is calibrated against flight hardware.
   is an approximation without a literature source.
 - **Drag is a lower bound.** With the default ideal intake (`ram_recovery = 1`), the Meredith
   heating can recover more momentum than the core loses, and the clipped drag is zero. There is
-  no spillage or cowl drag, so use `ram_recovery < 1` for a realistic duct.
+  no spillage or cowl drag, so use `ram_recovery < 1` for a realistic duct. The aircraft
+  carries the duct drag as a constant ΔCd fixed at the design point. Over the mission this
+  charges more drag work than the momentum balance, while at single points (the start of
+  climb) the momentum balance can give slightly more.
 - **No fans.** Take-off and low-speed points are cooled by ram air only. When take-off is the
   largest heat load at the lowest speed, it sizes the exchangers. Two levers reduce that
   penalty:
@@ -300,7 +361,13 @@ None of the defaults is calibrated against flight hardware.
     `phi`).
   When the power requirement comes from the climb rather than the take-off, the climb point
   sizes the TMS and neither lever has an effect.
-- **Coolant freezing is not modelled.** HEX 1 has a water-glycol coolant facing hydrogen at
-  ≈ 20 K. A real design needs an intermediate loop or a non-freezing coolant.
+- **Coolant freezing is a flagged risk, not a design constraint.** HEX 1 has a water-glycol
+  coolant facing hydrogen at ≈ 20 K. The check compares an estimate of the lowest coolant-side
+  wall temperature with the freezing point and reports a risk. The estimate uses the
+  core-average film resistances and single-stream hydrogen properties, so it does not resolve
+  the temperature field at the cold end of the core, and the sizing does not change the
+  geometry to avoid it. A design that flags the risk needs a finer model of HEX 1 or an
+  architecture that keeps the coolant away from the cryogenic hydrogen (an intermediate loop
+  or a hydrogen preheater), neither of which is modelled.
 - **Physics not included.** Ortho/para conversion is not modelled (pure para-hydrogen
   enthalpies). The stack is assumed to hold \(T_{op}\) at all loads. There are no transients.

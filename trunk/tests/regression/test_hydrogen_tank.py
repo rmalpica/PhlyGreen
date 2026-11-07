@@ -89,7 +89,7 @@ def test_heater_maintains_minimum_pressure():
 
 def _hydrogen_config_with_tank():
     energy = EnergyConfig(
-        Ef=120e6, eta_gearbox=0.96, eta_pmad=0.99, eta_electric_motor=0.96,
+        Ef=141.87e6, eta_gearbox=0.96, eta_pmad=0.99, eta_electric_motor=0.96,
         eta_gas_turbine_model='constant', eta_gas_turbine=0.22,
         eta_propulsive_model='constant', eta_propulsive=0.9,
         specific_power_powertrain=[3900, 5000], specific_power_pmad=10000,

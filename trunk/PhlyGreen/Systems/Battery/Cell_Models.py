@@ -40,19 +40,19 @@ Cell_Models = {
         # the reference 120 cell pack used in https://doi.org/10.1109%2FTIE.2016.2618363
         # values with * are not in the original paper,
         # and were taken from the Molicel INR-21700-P50B datasheet
-        'Reference Temperature': 275.15+23,     # in kelvin
+        'Reference Temperature': 273.15+23,     # in kelvin (23 C)
         'Exp Amplitude': 0.7,                   # in volts
         'Exp Time constant': 1.5213,            # in Ah^-1 
         'Internal Resistance': 0.0126,          # in ohms
-        'Resistance Arrhenius Constant': 2836,  # dimensionless
+        'Resistance Arrhenius Constant': 2836,  # in kelvin (activation temperature)
         'Polarization Constant': 0.0033,        # in Volts over amp hour
-        'Polarization Arrhenius Constant': 1225,# dimensionless
+        'Polarization Arrhenius Constant': 1225,# in kelvin (activation temperature)
         'Cell Capacity': 42.82,                 # in Ah
-        'Capacity Thermal Slope': 0.1766,       # in UNCLEAR per kelvin
+        'Capacity Thermal Slope': 0.1766,       # in Ah per kelvin (0.41 %/K of the capacity)
         'Voltage Constant':13.338,              # in volts
         'Voltage Thermal Slope': 0.00004918,    # in volts per kelvin
         'Cell Voltage Min': 2.5,                # in volts
-        'Cell Current Max': 4*42.82,            # dimensionless
+        'Cell Current Max': 4*42.82,            # in A
         'Cell Voltage Nominal': 13,             # in V
         'Cell Mass': 0.071*120,                 # in kg *
         'Cell Radius': 0.02155/2,               # in m  *
@@ -61,19 +61,21 @@ Cell_Models = {
         'Finger-Cell-Thermal':{
         # created by combining values from https://doi.org/10.1109%2FTIE.2016.2618363
         # with values from the Molicel INR-21700-P50B datasheet
-        'Reference Temperature': 275.15+23,     # in kelvin
+        'Reference Temperature': 273.15+23,     # in kelvin (23 C)
         'Exp Amplitude': 0.3,                   # in volts
         'Exp Time constant': 1.5213,            # in Ah^-1 
         'Internal Resistance': 0.015,           # in ohms
-        'Resistance Arrhenius Constant': 2836,  # dimensionless
+        'Resistance Arrhenius Constant': 2836,  # in kelvin (activation temperature)
         'Polarization Constant': 0.03,          # in Volts over amp hour
-        'Polarization Arrhenius Constant': 1225,# dimensionless
+        'Polarization Arrhenius Constant': 1225,# in kelvin (activation temperature)
         'Cell Capacity': 6,                     # in Ah
-        'Capacity Thermal Slope': 0.1766,       # in UNCLEAR per kelvin
+        # the reference pack's relative slope (0.1766 / 42.82 Ah = 0.41 %/K) applied to this
+        # cell; the reference pack's absolute value would be 2.9 %/K of a 6 Ah cell
+        'Capacity Thermal Slope': 0.1766 * 6 / 42.82,  # in Ah per kelvin
         'Voltage Constant':4.2-0.3,             # in volts
         'Voltage Thermal Slope': 0.00004918,    # in volts per kelvin
         'Cell Voltage Min': 2.5,                # in volts
-        'Cell Current Max': 12,                 # dimensionless
+        'Cell Current Max': 12,                 # in A
         'Cell Voltage Nominal': 3.7,            # in V
         'Cell Mass': 0.071,                     # in kg
         'Cell Radius': 0.02155/2,               # in m

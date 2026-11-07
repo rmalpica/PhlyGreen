@@ -1,0 +1,213 @@
+{
+  "scaled_cell": {
+    "Tref": 296.15,
+    "exp_amplitude": 0.3,
+    "exp_time_ctt": 0.31711605633802825,
+    "cell_resistance": 0.0011598591549295775,
+    "R_arrhenius": 2836.0,
+    "polarization_ctt": 0.002319718309859155,
+    "K_arrhenius": 1225.0,
+    "cell_capacity": 28.78378378378378,
+    "Q_slope": 0.1187112614716538,
+    "voltage_ctt": 3.9000000000000004,
+    "E_slope": 4.918e-05,
+    "cell_Vmax": 4.2,
+    "cell_Vmin": 2.5,
+    "cell_max_current": 155.19125683060108,
+    "cell_mass": 0.071,
+    "Vnom": 3.7,
+    "cell_energy_nom": 106.49999999999999,
+    "S_number": 190.0,
+    "pack_Vmax": 800.0,
+    "Rith": 0.7915951704545455,
+    "Cth": 71.0,
+    "cell_area_surface": 0.004749247716192932,
+    "module_area_section": 9.966162942281651e-05,
+    "pmax_cell_W": 568.0,
+    "specific_power_W_per_kg": 8000.000000000001,
+    "specific_energy_Wh_per_kg": 1500.0,
+    "max_C_rate": 5.391621129326047
+  },
+  "raw_cell": {
+    "Tref": 296.15,
+    "exp_amplitude": 0.3,
+    "exp_time_ctt": 1.5213,
+    "cell_resistance": 0.015,
+    "R_arrhenius": 2836.0,
+    "polarization_ctt": 0.03,
+    "K_arrhenius": 1225.0,
+    "cell_capacity": 6.0,
+    "Q_slope": 0.024745446053246148,
+    "voltage_ctt": 3.9000000000000004,
+    "E_slope": 4.918e-05,
+    "cell_Vmax": 4.2,
+    "cell_Vmin": 2.5,
+    "cell_max_current": 12.0,
+    "cell_mass": 0.071,
+    "Vnom": 3.7,
+    "cell_energy_nom": 22.200000000000003,
+    "S_number": 190.0,
+    "pack_Vmax": 800.0,
+    "Rith": 0.7915951704545455,
+    "Cth": 71.0,
+    "cell_area_surface": 0.004749247716192932,
+    "module_area_section": 9.966162942281651e-05,
+    "pmax_cell_W": 43.92,
+    "specific_power_W_per_kg": 618.5915492957747,
+    "specific_energy_Wh_per_kg": 312.6760563380282,
+    "max_C_rate": 2.0
+  },
+  "thermal_model_cell": {
+    "Tref": 296.15,
+    "exp_amplitude": 0.7,
+    "exp_time_ctt": 1.5213,
+    "cell_resistance": 0.0126,
+    "R_arrhenius": 2836.0,
+    "polarization_ctt": 0.0033,
+    "K_arrhenius": 1225.0,
+    "cell_capacity": 42.82,
+    "Q_slope": 0.1766,
+    "voltage_ctt": 13.338,
+    "E_slope": 4.918e-05,
+    "cell_Vmax": 14.037999999999998,
+    "cell_Vmin": 2.5,
+    "cell_max_current": 171.28,
+    "cell_mass": 8.52,
+    "Vnom": 13.0,
+    "cell_energy_nom": 556.66,
+    "S_number": 56.0,
+    "pack_Vmax": 800.0,
+    "Rith": 0.7915951704545455,
+    "Cth": 8520.0,
+    "cell_area_surface": 0.004749247716192932,
+    "module_area_section": 9.966162942281651e-05,
+    "pmax_cell_W": 1937.9729094399997,
+    "specific_power_W_per_kg": 227.46160908920186,
+    "specific_energy_Wh_per_kg": 65.33568075117371,
+    "max_C_rate": 4.0
+  },
+  "database": {
+    "ThermalModel-Cell": {
+      "Reference Temperature": 296.15,
+      "Exp Amplitude": 0.7,
+      "Exp Time constant": 1.5213,
+      "Internal Resistance": 0.0126,
+      "Resistance Arrhenius Constant": 2836,
+      "Polarization Constant": 0.0033,
+      "Polarization Arrhenius Constant": 1225,
+      "Cell Capacity": 42.82,
+      "Capacity Thermal Slope": 0.1766,
+      "Voltage Constant": 13.338,
+      "Voltage Thermal Slope": 4.918e-05,
+      "Cell Voltage Min": 2.5,
+      "Cell Current Max": 171.28,
+      "Cell Voltage Nominal": 13,
+      "Cell Mass": 8.52,
+      "Cell Radius": 0.010775,
+      "Cell Height": 0.07015
+    },
+    "Finger-Cell-Thermal": {
+      "Reference Temperature": 296.15,
+      "Exp Amplitude": 0.3,
+      "Exp Time constant": 1.5213,
+      "Internal Resistance": 0.015,
+      "Resistance Arrhenius Constant": 2836,
+      "Polarization Constant": 0.03,
+      "Polarization Arrhenius Constant": 1225,
+      "Cell Capacity": 6,
+      "Capacity Thermal Slope": 0.024745446053246148,
+      "Voltage Constant": 3.9000000000000004,
+      "Voltage Thermal Slope": 4.918e-05,
+      "Cell Voltage Min": 2.5,
+      "Cell Current Max": 12,
+      "Cell Voltage Nominal": 3.7,
+      "Cell Mass": 0.071,
+      "Cell Radius": 0.010775,
+      "Cell Height": 0.07015
+    }
+  },
+  "discharge_vs_C_rate": {
+    "0.5C": {
+      "charge_at_cutoff_Ah": 26.786794657762933,
+      "V_start": 4.149922297297297,
+      "V_at_SOCmin": 3.4494953300824247
+    },
+    "1C": {
+      "charge_at_cutoff_Ah": 26.066719532554252,
+      "V_start": 4.099844594594595,
+      "V_at_SOCmin": 3.2658745672117533
+    },
+    "2C": {
+      "charge_at_cutoff_Ah": 24.62656928213689,
+      "V_start": 3.9996891891891897,
+      "V_at_SOCmin": 2.89863304147041
+    },
+    "4C": {
+      "charge_at_cutoff_Ah": 21.554248747913185,
+      "V_start": 3.7993783783783788,
+      "V_at_SOCmin": null
+    },
+    "Imax": {
+      "current_A": 155.19125683060108,
+      "charge_at_cutoff_Ah": 19.20200333889816,
+      "V_start": 3.66
+    }
+  },
+  "discharge_vs_T_2C": {
+    "10C": {
+      "Q_T_Ah": 27.240537384652278,
+      "R_T_ohm": 0.001800317347068622,
+      "K_T": 0.00280487003638474,
+      "E0_T": 3.89936066,
+      "charge_at_cutoff_Ah": 22.48845065007926
+    },
+    "25C": {
+      "Q_T_Ah": 29.021206306727088,
+      "R_T_ohm": 0.0010876951603047793,
+      "K_T": 0.0022562373502735284,
+      "E0_T": 3.9000983600000003,
+      "charge_at_cutoff_Ah": 24.96260434056761
+    },
+    "40C": {
+      "Q_T_Ah": 30.801875228801894,
+      "R_T_ohm": 0.0006896528543197407,
+      "K_T": 0.001853158959112627,
+      "E0_T": 3.9008360600000005,
+      "charge_at_cutoff_Ah": 27.218839732888142
+    },
+    "50C": {
+      "Q_T_Ah": 31.98898784351843,
+      "R_T_ohm": 0.0005210967689307084,
+      "K_T": 0.0016418729383624142,
+      "E0_T": 3.9013278600000003,
+      "charge_at_cutoff_Ah": 28.658989983305503
+    }
+  },
+  "power_parabola": {
+    "SOC_1": {
+      "P_peak_W": 1267.3952641165756,
+      "I_at_peak_A": 603.5215543412265,
+      "V_at_peak": 2.0999999999999996,
+      "P_at_Imax_W": 568.0,
+      "V_at_Imax": 3.66
+    },
+    "SOC_0.5": {
+      "P_peak_W": 634.4575674797309,
+      "I_at_peak_A": 330.7605164245061,
+      "V_at_peak": 1.9181780653209908,
+      "P_at_Imax_W": 455.6967984165698,
+      "V_at_Imax": 2.9363561306419816
+    },
+    "SOC_0.2": {
+      "P_peak_W": 258.64365176781627,
+      "I_at_peak_A": 142.38096816466353,
+      "V_at_peak": 1.8165605635487392,
+      "P_at_Imax_W": 256.5499454074775,
+      "V_at_Imax": 1.6531211270974784
+    }
+  },
+  "heat_terms_2C_SOC05": {
+    "irreversible_W": 19.21901022644265,
+    "entropic_W": 0.8384518759459457
+  }
+}

@@ -340,8 +340,8 @@ class Weight:
            required power converges, so the fuel cell that flies the mission is the one that
            is weighed (the take-off/OEI requirement is a hard floor on its power).
         3. With the Class-II TMS, every pass also sizes the TMS over the mission thermal
-           profile: its pump becomes a constant electrical load on the fuel cell
-           (``fuelcell.P_aux_tms``) and its ram-air drag a drag-coefficient increment
+           profile, checked along the continuous mission (``mission.thermal_history``): its
+           pump becomes a constant electrical load on the fuel cell (``fuelcell.P_aux_tms``) and its ram-air drag a drag-coefficient increment
            (``aerodynamics.extra_Cd``, referred to the wing area S = WTO g / (W/S)); the loop
            then also waits for these two to converge.
 
@@ -362,7 +362,8 @@ class Weight:
             demand = max(self.aircraft.mission.TO_PP, self.aircraft.mission.Max_PEng)
             tms_settled = True
             if class_ii:
-                res = tms.SizeForMission(self.aircraft.mission.thermal_profile)
+                res = tms.SizeForMission(self.aircraft.mission.thermal_profile,
+                                         self.aircraft.mission.thermal_history)
                 wing_area = WTO * 9.81 / self.aircraft.DesignWTOoS
                 new_Cd = tms.RamDragCoefficient(res, wing_area)
                 tms_settled = (abs(res.pump_power - fc.P_aux_tms) <= 1e-3 * max(res.pump_power, 1.0)
@@ -376,16 +377,26 @@ class Weight:
                 break
             P_req = demand
             fc.SizeForPropulsivePower(P_req)
-        if not converged:                 # ensure the final stack size was actually flown
+        if not converged:
+            # Ensure the final stack size was actually flown and, with the Class-II TMS, that
+            # the TMS is sized on that flight and its couplings are those the mission uses.
             energies = self.aircraft.mission.EvaluateMission(WTO)
+            if class_ii:
+                res = tms.SizeForMission(self.aircraft.mission.thermal_profile,
+                                         self.aircraft.mission.thermal_history)
+                fc.P_aux_tms = res.pump_power
+                aero.extra_Cd = tms.RamDragCoefficient(res, WTO * 9.81 / self.aircraft.DesignWTOoS)
+                self.tms_result = res
+                energies = self.aircraft.mission.EvaluateMission(WTO)
         return energies
 
     def _fuel_cell_tms_mass(self):
         """Fuel-cell thermal-management mass [kg].
 
-        Class I: the peak fuel-cell heat over the mission AND the take-off/OEI point (the
-        fuel cell is sized there and rejects the most heat there) divided by the specific
-        power ``EnergyInput['HEX Specific Power H2']``. Class II: exchanger cores + pump +
+        Class I: the larger of the peak fuel-cell heat over the mission and the heat at the
+        take-off/OEI point (either can be the larger: on the hydrogen reference the climb
+        rejects more than the take-off), divided by the specific power
+        ``EnergyInput['HEX Specific Power H2']``. Class II: exchanger cores + pump +
         pump motor of the TMS sized in :meth:`_fuel_cell_and_tms_closure`.
         """
         if self.tms_result is not None:
@@ -400,7 +411,8 @@ class Weight:
 
     def _warn_tms_shortfall(self):
         """Warn, once at the converged design, if the Class-II TMS could not reject all the
-        heat or needed exchangers beyond the per-unit caps."""
+        heat, needed exchangers beyond the per-unit caps, or breaks a limit of
+        :meth:`ThermalManagementSystem.CheckAtPoint` along the mission."""
         r = self.tms_result
         if r is None:
             return
@@ -418,6 +430,14 @@ class Weight:
             warnings.warn("Class-II TMS: no candidate design point gives exchangers that reject "
                           "the heat at every mission point; the least-short one was used.",
                           RuntimeWarning)
+        # limits of the chosen hardware along the last flown mission, the one it was sized on
+        # (ThermalManagementSystem.CheckAtPoint at every profile and integration point)
+        mission = self.aircraft.mission
+        self.aircraft.tms.CheckMission(r, mission.thermal_profile, mission.thermal_history)
+        for message in r.violations():
+            warnings.warn(f"Class-II TMS: {message}.", RuntimeWarning)
+        for message in r.risks():
+            warnings.warn(f"Class-II TMS: {message}.", RuntimeWarning)
 
     def FuelCellBattery(self):
         """Solve the take-off-weight equation for a fuel-cell + battery hybrid aircraft.
@@ -465,8 +485,11 @@ class Weight:
             if self.aircraft.battery.BatteryClass == 'II':
                 self.WBat = self.aircraft.battery.pack_weight
             else:
-                WBat_energy = (E_bat / 3600.0) / (spec_energy_Wh * usable_soc)
-                WBat_power = self.aircraft.mission.Max_PBat / spec_power
+                # Aged pack (state of health, see Battery.set_state_of_health): the capacity
+                # scales the energy per kg, the resistance growth divides the power per kg.
+                b = self.aircraft.battery
+                WBat_energy = (E_bat / 3600.0) / (spec_energy_Wh * b.capacity_fraction * usable_soc)
+                WBat_power = self.aircraft.mission.Max_PBat * b.resistance_factor / spec_power
                 self.WBat = max(WBat_energy, WBat_power)
 
             # Reserve hydrogen and the tank (empty) mass, sized for load + reserve.

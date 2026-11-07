@@ -268,10 +268,12 @@ class Profile:
         return np.piecewise(t, [t >= ti for ti in self.Breaks], self.Velocities)
 
     def SuppliedPowerRatio(self, t):
-        """Hybrid supplied-power ratio phi(t) via per-segment linear interpolation."""
-        idx = np.piecewise(
-            t,
-            [self.times[i] < t <= self.times[i + 1] for i in range(len(self.times) - 1)],
-            [i for i in range(len(self.times) - 1)],
-        )
-        return self.SPWinterp[int(idx)](t)
+        """Hybrid supplied-power ratio phi(t) via per-segment linear interpolation.
+
+        A break time belongs to the segment that starts there, as in ``Altitude``,
+        ``Velocity`` and ``PowerExcess``: the integration of a segment starts with that
+        segment's phi, not with the end value of the previous one.
+        """
+        i = int(np.searchsorted(self.times, t, side='right')) - 1
+        i = min(max(i, 0), len(self.times) - 2)
+        return self.SPWinterp[i](t)

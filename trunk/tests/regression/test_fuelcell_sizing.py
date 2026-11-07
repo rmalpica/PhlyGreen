@@ -2,8 +2,9 @@
 
 The fuel cell is auto-sized to the worst-case propulsive demand, but its *available* net
 power falls with altitude (the air-system draws more), so a stack can still be power-limited.
-``FuelCell.report_sizing`` walks the flown mission and flags that shortfall — without it,
-``ComputePRatio`` silently substitutes an analytical fallback.
+``FuelCell.report_sizing`` walks the flown mission and flags that shortfall. At a
+power-limited point ``ComputePRatio`` runs the stack at its maximum-power point scaled to the
+demand, so the mission still closes and only this check reports the shortfall.
 """
 
 import warnings

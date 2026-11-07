@@ -28,8 +28,31 @@ What is checked (``result.violations``; empty = feasible):
 - Class-I battery: energy drawn <= usable energy of the pack, peak power <= its power
   capability. Class-II battery: the pack is frozen (``mission.size_battery_pack = False``) and
   the cell model itself enforces SOC, voltage, current and temperature limits;
-- the thermal engine / fuel cell never delivers more propulsive power than it did at
-  design (mission peak or take-off share): a conservative proxy for its rating.
+- thermal engine: it never delivers more shaft power than it did at design (mission peak or
+  take-off share), a conservative proxy for its rating (the engine model has no explicit
+  power limit);
+- fuel cell: the stack can deliver the demand at every point (not power-limited at its
+  present state of health, the limit of the same polarization model that sized it), and the
+  TMS rejects its heat. A stack sized on the take-off or OEI floor may deliver more than the
+  design mission peak, so the mission peak is not used as a limit. With a Class-I TMS the peak heat
+  must not exceed the heat the TMS was sized for; with a Class-II TMS the design hardware is
+  checked (``ThermalManagementSystem.CheckAtPoint``) at every point of the flown thermal
+  profile and at every accepted integration point of the flown mission. It must reject the
+  heat within its feasibility tolerance, its cores must fit in the coolant-loop pressure
+  budget and in the recovered dynamic pressure, and the ram-air duct must not choke. The
+  Class-II hardware has no margin at its design point, so comparing peak heats would not be
+  conservative. A coolant-side wall below the coolant freezing point is reported in
+  ``risks``, not as a violation: the wall-temperature estimate is too coarse to decide it.
+  The duct drag is not checked point by point (the aircraft carries it as a constant drag
+  increment, conservative over the mission).
+
+Degraded flights. ``state_of_health`` sets the degradation of the flown copy, relative to
+beginning of life (BOL), with the keys of ``EnergyConfig``: ``fc_voltage_loss`` [V],
+``fc_ohmic_resistance_factor``, ``fc_exchange_current_factor``, ``battery_capacity_fraction``
+and ``battery_resistance_factor``. Keys not given keep the design's state. A design sized at
+end of life (those fields set in its ``EnergyConfig``) is flown at BOL by passing the neutral
+values (0 V, 1.0). A degraded stack burns more hydrogen and rejects much more heat at the same
+power, so the heat and the stack power limit usually bind before the tank does.
 
 Fuel reported: ``trip_fuel`` is burnt from taxi-out to taxi-in on the off-design mission (the
 diversion is carried, not flown); ``fuel_load`` adds the diversion fuel.
@@ -48,6 +71,7 @@ from dataclasses import dataclass, field
 import numpy as np
 
 import PhlyGreen as pg
+from PhlyGreen.Systems.Thermal.TMS import limit_violations, limit_risks
 from common import fuelcell_battery_config, hybrid_config, savefig
 
 
@@ -61,21 +85,77 @@ class OffDesignResult:
     battery_soc_used: float     # fraction of the pack's usable energy (Class I), else nan
     missions_flown: int
     violations: list = field(default_factory=list)
+    risks: list = field(default_factory=list)   # flagged, not limits (e.g. coolant freezing)
 
     @property
     def feasible(self):
         return not self.violations
 
 
+FC_STATE_KEYS = {"fc_voltage_loss": "voltage_loss",
+                 "fc_ohmic_resistance_factor": "ohmic_resistance_factor",
+                 "fc_exchange_current_factor": "exchange_current_factor"}
+BATTERY_STATE_KEYS = {"battery_capacity_fraction": "capacity_fraction",
+                      "battery_resistance_factor": "resistance_factor"}
+
+
+def _set_state_of_health(aircraft, state):
+    """Apply ``state`` ({EnergyConfig key: value}) to the fuel cell and the battery of
+    ``aircraft``; keys not given keep their present value."""
+    state = dict(state or {})
+    unknown = set(state) - set(FC_STATE_KEYS) - set(BATTERY_STATE_KEYS)
+    if unknown:
+        raise ValueError(f"unknown state-of-health keys: {sorted(unknown)}")
+    fc = getattr(aircraft, "fuelcell", None)
+    if fc is not None and any(k in state for k in FC_STATE_KEYS):
+        fc.set_state_of_health(**{arg: state.get(key, getattr(fc, arg))
+                                  for key, arg in FC_STATE_KEYS.items()})
+    b = aircraft.battery
+    if any(k in state for k in BATTERY_STATE_KEYS):
+        b.set_state_of_health(**{arg: state.get(key, getattr(b, arg))
+                                 for key, arg in BATTERY_STATE_KEYS.items()})
+
+
+def _fc_design_heat(mission):
+    """Largest fuel-cell heat [W] over the mission and the take-off point (the Class-I TMS is
+    sized on it)."""
+    return max(mission.Max_FC_Thermal_Pwr, mission.TO_FC_Thermal_Pwr)
+
+
+def _tms_violation(aircraft, fc_heat_design):
+    """TMS check of a flown fuel-cell mission; returns (violation messages, risk messages),
+    each an empty list when there is none.
+
+    Class II: check the design hardware (``weight.tms_result``) at every point of the flown
+    thermal profile and of the flown mission (``ThermalManagementSystem.CheckAtPoint``).
+    Violations: heat, core pressure drops, duct choking. Risk: coolant freezing.
+    Class I: compare the peak heat with the heat the TMS was sized for.
+    """
+    m, result = aircraft.mission, aircraft.weight.tms_result
+    if result is not None:
+        tms = aircraft.tms
+        checks = [tms.CheckAtPoint(result, point)
+                  for point in m.thermal_profile + m.thermal_history]
+        return ([f"Class-II {message}" for message in limit_violations(checks)],
+                [f"Class-II TMS {message}" for message in limit_risks(checks)])
+    fc_heat = _fc_design_heat(m)
+    if fc_heat > fc_heat_design * (1 + 1e-3):
+        return ([f"fuel-cell heat {fc_heat/1e3:,.0f} kW > TMS design heat "
+                 f"{fc_heat_design/1e3:,.0f} kW"], [])
+    return [], []
+
+
 def _battery_limits(aircraft):
-    """Usable energy [J] and power capability [W] of a Class-I pack (None if no battery)."""
+    """Usable energy [J] and power capability [W] of a Class-I pack (None if no battery),
+    at the pack's present state of health."""
     w, cfg = aircraft.weight, aircraft.Configuration
     if not getattr(w, "WBat", None):
         return None, None
     if cfg == "FuelCellBattery":
-        e = aircraft.EnergyInput
-        energy = w.WBat * e.get("Battery Specific Energy", 250.0) * 3600.0 * e.get("Battery Usable SOC", 0.8)
-        power = w.WBat * e.get("Battery Specific Power", 1500.0)
+        e, b = aircraft.EnergyInput, aircraft.battery
+        energy = (w.WBat * e.get("Battery Specific Energy", 250.0) * b.capacity_fraction * 3600.0
+                  * e.get("Battery Usable SOC", 0.8))
+        power = w.WBat * e.get("Battery Specific Power", 1500.0) / b.resistance_factor
         return energy, power
     b = aircraft.battery                                    # Hybrid, Class I
     return w.WBat * b.Ebat * (1.0 - b.SOC_min), w.WBat * b.pbat
@@ -100,13 +180,17 @@ def _set_phi(stages, phi):
             spr["phi_start"], spr["phi_end"] = float(start), float(end)
 
 
-def fly_off_design(sized, range_nm, payload_kg=None, phi=None, tol_kg=1.0, max_iter=20):
+def fly_off_design(sized, range_nm, payload_kg=None, phi=None, state_of_health=None,
+                   tol_kg=1.0, max_iter=20):
     """Fly the frozen design ``sized`` on another mission. ``sized`` is not modified.
 
     range_nm   : off-design mission range [nm] (the diversion is the design one).
     payload_kg : off-design payload [kg] (default: the design payload).
     phi        : {stage name: phi or (phi_start, phi_end)} overriding the design schedule,
                  e.g. {"Takeoff": 0.15, "Cruise": 0.3}. Stages not listed keep their value.
+    state_of_health : {EnergyConfig key: value} degradation of the flown aircraft relative to
+                 BOL, e.g. {"fc_voltage_loss": 0.05, "battery_capacity_fraction": 0.8}.
+                 Keys not given keep the design's state.
     """
     if sized.Configuration == "Hybrid" and sized.EnergyInput.get("GT Rated Power"):
         raise NotImplementedError("the serial range-extender strategy has no phi split to fly")
@@ -114,10 +198,14 @@ def fly_off_design(sized, range_nm, payload_kg=None, phi=None, tol_kg=1.0, max_i
     design_fuel = w.Wf
     oew = w.WTO - w.Wf - w.final_reserve - w.WPayload - w.WCrew
     design_pk_engine = max(sized.mission.Max_PEng, getattr(sized.mission, "TO_PP", 0.0) or 0.0)
-    e_bat_max, p_bat_max = _battery_limits(sized)
     class_ii = getattr(sized.battery, "BatteryClass", None) == "II" and (w.WBat or 0) > 0
+    fc_heat_design = _fc_design_heat(sized.mission) if sized.fuelcell is not None else None
 
     a = copy.deepcopy(sized)
+    _set_state_of_health(a, state_of_health)
+    e_bat_max, p_bat_max = _battery_limits(a)
+    if a.fuelcell is not None:
+        a.fuelcell.reset_adequacy()
     a.MissionInput["Range Mission"] = range_nm
     payload = w.WPayload if payload_kg is None else payload_kg
     a.MissionInput["Payload Weight"] = payload
@@ -159,10 +247,21 @@ def fly_off_design(sized, range_nm, payload_kg=None, phi=None, tol_kg=1.0, max_i
         p_bat = max(m.Max_PBat, getattr(m, "TO_PBat", 0.0) or 0.0)
         if p_bat > p_bat_max * (1 + 1e-3):
             violations.append(f"battery power {p_bat/1e3:,.0f} kW > capability {p_bat_max/1e3:,.0f} kW")
+    fuel_cell = a.fuelcell is not None and a.Configuration in ("Hydrogen", "FuelCellBattery")
     pk_engine = max(m.Max_PEng, getattr(m, "TO_PP", 0.0) or 0.0)
-    if pk_engine > design_pk_engine * (1 + 1e-3):
-        violations.append(f"engine/fuel-cell power {pk_engine/1e3:,.0f} kW > design {design_pk_engine/1e3:,.0f} kW")
-    return OffDesignResult(range_nm, wto, trip, fuel, e_bat / 3.6e6, soc_used, n, violations)
+    if not fuel_cell and pk_engine > design_pk_engine * (1 + 1e-3):
+        violations.append(f"engine power {pk_engine/1e3:,.0f} kW > design {design_pk_engine/1e3:,.0f} kW")
+    risks = []
+    if fuel_cell:
+        fc = a.fuelcell
+        if fc._power_limited:
+            violations.append(f"fuel cell power-limited: demand up to {fc._worst_load_ratio:.3f} "
+                              f"of the deliverable power")
+        tms_violations, tms_risks = _tms_violation(a, fc_heat_design)
+        violations.extend(tms_violations)
+        risks.extend(tms_risks)
+    return OffDesignResult(range_nm, wto, trip, fuel, e_bat / 3.6e6, soc_used, n, violations,
+                           risks)
 
 
 def max_battery_phi(sized, range_nm, stage="Cruise", base_phi=None, step=0.1, tol=0.01):
@@ -231,6 +330,8 @@ def study(name, sized, ranges, fuel_name):
         phi_max, best = max_battery_phi(sized, rng)
         rows.append((rng, nominal, phi_max, best))
         flag = "" if nominal.feasible else "  INFEASIBLE: " + "; ".join(nominal.violations)
+        if nominal.risks:
+            flag += "  RISK: " + "; ".join(nominal.risks)
         if phi_max is None:          # every constant phi breaks the tank or the pack limit
             alt = f"{'none feasible':>14} {'-':>10} {'-':>8} {'-':>7}"
         else:

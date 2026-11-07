@@ -17,7 +17,7 @@ import _sample_configs as sc
 
 def _hydrogen_config(v_cell_design=0.5):
     energy = EnergyConfig(
-        Ef=120e6, eta_gearbox=0.96, eta_pmad=0.99, eta_electric_motor=0.96,
+        Ef=141.87e6, eta_gearbox=0.96, eta_pmad=0.99, eta_electric_motor=0.96,
         eta_gas_turbine_model='constant', eta_gas_turbine=0.22,
         eta_propulsive_model='constant', eta_propulsive=0.9,
         specific_power_powertrain=[3900, 5000], specific_power_pmad=10000,
@@ -93,11 +93,13 @@ def test_fuelcell_sized_for_takeoff_and_oei():
     aircraft = pg.build_aircraft()
     aircraft.configure(_hydrogen_config())
     fc, m = aircraft.fuelcell, aircraft.mission
-    eta_chain = fc.EtaEM * fc.EtaPM * fc.EtaGB
-    fc_propulsive_capability = fc.P_fc_rated * eta_chain
+    # net rating -> thrust power: motor, PMAD, gearbox and propeller (the chain of _size_stack)
+    eta_chain = fc.EtaEM * fc.EtaPM * fc.EtaGB * fc.EtaProp
+    fc_propulsive_capability = (fc.P_fc_rated - fc.P_aux_tms) * eta_chain
     # TO_PP holds the worst of take-off and OEI climb (evaluated at the constraint conditions).
-    assert fc_propulsive_capability >= m.Max_PEng * (1 - 1e-6)   # covers the mission peak
-    assert fc_propulsive_capability >= m.TO_PP * (1 - 1e-6)      # covers take-off / OEI
+    demand = max(m.Max_PEng, m.TO_PP)
+    # sized on exactly that demand (times the single sizing margin), within the loop tolerance
+    assert fc_propulsive_capability == pytest.approx(demand * fc.SizingMargin, rel=2e-3)
     # For the ATR baseline the take-off/OEI floor is the binding case (not the mission peak).
     assert m.TO_PP > m.Max_PEng
 

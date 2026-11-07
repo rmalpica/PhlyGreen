@@ -3,16 +3,18 @@ FC_Models.py
 Database dei parametri per le Fuel Cells.
 Include il modello validato da Massaro et al. basato sulle equazioni di Kulikovsky,
 con l'aggiunta dei parametri empirici calibrati per fittare il flooding ad alti carichi.
+
+Each model holds only the electrochemical and operating parameters that FuelCell.SetInput
+reads. The design choices of a stack (design cell voltage, stack power density, BoP mass ratio)
+are inputs of the design: EnergyInput 'V Cell Design', 'Stack Power Density', 'BoP Mass Ratio'
+(EnergyConfig v_cell_design, stack_power_density, bop_mass_ratio).
 """
 
 FC_Database = {
     'PEMFC_GoodPerformance': {
-        # --- Design Point & Generali ---
-        'V_design': 0.7,                # [V] Voltaggio nominale di dimensionamento
+        # --- Operating point ---
         'T_op': 353.15,                 # [K] Temperatura operativa
         'Target_Press': 150000.0,       # [Pa] Pressione operativa catodica
-        'Stack_Power_Density': 1600.0,  # [W/kg] System power density target (es. 2030)
-        'BoP_Mass_Ratio': 1.0,          # [-] Peso Balance of Plant / Peso Stack
         
         # --- Parametri Modello Kulikovsky (Massaro et al. Tabella 7) + Fitting ---
         'Voc': 1.145,                   # [V] Open circuit voltage
@@ -35,12 +37,9 @@ FC_Database = {
     },
     
     'PEMFC_HighPerformance': {
-        # --- Design Point & Generali ---
-        'V_design': 0.7,                # [V] Voltaggio nominale di dimensionamento
+        # --- Operating point ---
         'T_op': 443.15,                 # [K] Temperatura operativa
         'Target_Press': 150000.0,       # [Pa] Pressione operativa catodica
-        'Stack_Power_Density': 1600.0,  # [W/kg] 
-        'BoP_Mass_Ratio': 0.40,         # [-] Peso Balance of Plant / Peso Stack
         
         # --- Parametri Modello Kulikovsky (Massaro et al. Tabella 10) ---
         'Voc': 1.145,                   # [V] Open circuit voltage
@@ -63,12 +62,9 @@ FC_Database = {
     },
     
     'PEM_Generic': {
-        # --- Design Point & Generali ---
-        'V_design': 0.7,
+        # --- Operating point ---
         'T_op': 353.15,
         'Target_Press': 150000.0,
-        'Stack_Power_Density': 1500.0, 
-        'BoP_Mass_Ratio': 0.20,
         
         # --- Parametri Modello Kulikovsky ---
         'Voc': 1.145, 

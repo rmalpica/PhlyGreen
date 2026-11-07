@@ -221,13 +221,20 @@ class Aircraft:
             
             self.CellInput = CellInput
             self.battery.SetInput()
+
+        # Battery state of health (BOL by default), for every battery model.
+        if self.battery is not None:
+            self.battery.set_state_of_health(
+                EnergyInput.get('Battery Capacity Fraction', 1.0),
+                EnergyInput.get('Battery Resistance Factor', 1.0))
         
         if ClimateImpactInput is not None:
             self.ClimateImpactInput = ClimateImpactInput
             self.climateimpact.SetInput()
 
-        # Initialize the hydrogen fuel-cell system (Hydrogen configuration only).
-        if self.Configuration == 'Hydrogen' and self.fuelcell is not None:
+        # Initialize the hydrogen fuel-cell system (the configurations that carry one), so a
+        # reused aircraft object never keeps the inputs of a previous ReadInput.
+        if self.Configuration in ('Hydrogen', 'FuelCellBattery') and self.fuelcell is not None:
             self.fuelcell.SetInput()
 
 

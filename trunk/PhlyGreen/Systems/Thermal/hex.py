@@ -290,8 +290,9 @@ class HeatExchangerSizer(ABC):
     @abstractmethod
     def compute_U(self, built: dict, hot: FluidStream, cold: FluidStream) -> dict:
         """U [W/m^2K] of a built layout at the given flows, plus velocities and pressure
-        drops: keys ``U, v_hot, v_cold, dP_hot, dP_cold``. Raises ValueError when a
-        correlation is used outside its range."""
+        drops: keys ``U, v_hot, v_cold, dP_hot, dP_cold``, and ``R_hot``, the hot-side
+        convective resistance referred to the reference area [m^2 K/W]. Raises ValueError
+        when a correlation is used outside its range."""
 
     @abstractmethod
     def mass_volume(self, built: dict) -> tuple[float, float]:
@@ -465,7 +466,8 @@ class PlainTubeBankSizer(_TubeBankSizer):
         U = 1.0 / (d_o / (d_i * h_in) + r_wall + 1.0 / h_out)
         f_jakob = (0.25 + 0.118 / ((S_T - d_o) / d_o) ** 1.08) * Re ** -0.16
         dP_cold = 4.0 * f_jakob * built["n_rows"] * cold.rho * Vmax ** 2 / 2.0
-        return {"U": U, "v_hot": v_hot, "v_cold": Vmax, "dP_hot": dP_hot, "dP_cold": dP_cold}
+        return {"U": U, "v_hot": v_hot, "v_cold": Vmax, "dP_hot": dP_hot, "dP_cold": dP_cold,
+                "R_hot": d_o / (d_i * h_in)}
 
     def mass_volume(self, built):
         return self._tube_mass(built), self._bank_volume(built)
@@ -546,7 +548,7 @@ class FinnedTubeBankSizer(_TubeBankSizer):
         f = 1.5 * Re ** -0.2
         dP_cold = built["n_rows"] * f * cold.rho * Vmax ** 2 / 2.0
         return {"U": U, "v_hot": v_hot, "v_cold": Vmax, "dP_hot": dP_hot, "dP_cold": dP_cold,
-                "eta_o": eta_o}
+                "eta_o": eta_o, "R_hot": A_o / (A_i * h_in)}
 
     def mass_volume(self, built):
         A_fin, _ = self._fin_areas(built)
@@ -637,7 +639,7 @@ class PlateFinSizer(HeatExchangerSizer):
         dP_cold = 4.0 * f * (L / Dh_c) * cold.rho * v_c ** 2 / 2.0
         dP_hot = f_h * (L / (2.0 * gap_h)) * hot.rho * v_h ** 2 / 2.0
         return {"U": U, "v_hot": v_h, "v_cold": v_c, "dP_hot": dP_hot, "dP_cold": dP_cold,
-                "eta_o": eta_o}
+                "eta_o": eta_o, "R_hot": area_ratio / h_h}
 
     def mass_volume(self, built):
         s, h, w = built["fin_pitch"], built["fin_height"], built["width"]
@@ -692,14 +694,35 @@ class HeatExchangerSelector:
         return min(c, key=lambda d: (d.weight, d.volume)) if c else None
 
 
-def rate_design(design: HEX_Design, hot: FluidStream, cold: FluidStream) -> float:
-    """Heat [W] that ONE built unit transfers at the given (per-unit) streams.
+@dataclass
+class UnitRating:
+    """Operating state of ONE built unit at given (per-unit) streams (see :func:`rate_unit`).
+    Outside a correlation's range the heat is 0 and the other fields are nan."""
+    q: float                 # [W] heat transferred
+    U: float                 # [W/(m^2 K)] referred to HEX_Design.A
+    R_hot: float             # [m^2 K/W] hot-side film resistance, referred to HEX_Design.A
+    dP_hot: float            # [Pa] hot-side pressure drop
+    dP_cold: float           # [Pa] cold-side pressure drop
+    v_cold: float            # [m/s] cold-stream velocity in the core
+    in_range: bool           # False when a flow is outside a correlation's range
 
-    U is recomputed from the stored layout at the new flows (same correlations used to size
-    it); a flow outside a correlation's range is rated as transferring no heat."""
+
+def rate_unit(design: HEX_Design, hot: FluidStream, cold: FluidStream) -> UnitRating:
+    """Rate ONE built unit at the given (per-unit) streams.
+
+    U, velocities and pressure drops are recomputed from the stored layout at the new flows
+    (same correlations used to size it). A flow outside a correlation's range is rated as
+    transferring no heat, with unknown (nan) pressure drops."""
     sizer = SIZERS[design.family](DesignSpec(hot=hot, cold=cold, q_target=0.0))
     try:
-        U = sizer.compute_U(design.geometry, hot, cold)["U"]
+        r = sizer.compute_U(design.geometry, hot, cold)
     except ValueError:
-        return 0.0
-    return thermal_solve(hot, cold, U * design.A, sizer.arrangement(hot, cold))
+        return UnitRating(0.0, math.nan, math.nan, math.nan, math.nan, math.nan, False)
+    q = thermal_solve(hot, cold, r["U"] * design.A, sizer.arrangement(hot, cold))
+    return UnitRating(q, r["U"], r["R_hot"], r["dP_hot"], r["dP_cold"], r["v_cold"], True)
+
+
+def rate_design(design: HEX_Design, hot: FluidStream, cold: FluidStream) -> float:
+    """Heat [W] that ONE built unit transfers at the given (per-unit) streams
+    (the ``q`` of :func:`rate_unit`)."""
+    return rate_unit(design, hot, cold).q

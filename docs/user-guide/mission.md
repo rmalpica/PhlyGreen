@@ -66,6 +66,12 @@ and the fuel of all ground segments is added to the mission fuel energy (and the
 \(W_f\), the hydrogen tank and the well-to-wake energy). Set the inputs through
 `MissionConfig(taxi_out_time=..., taxi_in_time=..., taxi_power_fraction=..., takeoff_time=...,
 takeoff_power_fraction=..., taxi_phi=...)`.
+
+The ISA temperature deviation of the flown mission is `MissionConfig.disa` (`MissionInput`
+key `DISA`, default 0 K), stored as `mission.DISA`. It sets the flight performance, the
+fuel-cell ambient state and the ram air of the thermal-management system. The constraint
+diagram, and with it the take-off and one-engine-inoperative sizing points, uses its own
+deviation, `ConstraintsConfig.disa` (`ConstraintsInput['DISA']`). A hot-day design sets both.
 The former `Beta start` input is deprecated and ignored.
 
 Each segment prescribes:
@@ -117,6 +123,16 @@ Each segment **appends time‑resolved states** to the global mission arrays.
 
 The cruise is not given a length: it fills whatever range the climbs and descents of its phase
 leave. A phase therefore holds a single cruise, with a linear φ from `phi_start` to `phi_end`.
+
+!!! note "What φ measures"
+    The supplied-power ratio φ is the battery share, but of different powers in the two battery
+    architectures. In `Hybrid` (parallel and serial) it is the battery share of the power
+    **supplied by the sources**, \(\varphi = P_{bat}/(P_f + P_{bat})\), with \(P_f\) the fuel
+    chemical power (the split equation of the powertrain graph). In `FuelCellBattery` it is the
+    battery share of the **propulsive** power: the battery delivers \(\varphi P_p\) and the fuel
+    cell \((1-\varphi) P_p\). The same φ value therefore means a much smaller battery share in a
+    gas-turbine hybrid, whose fuel power is about three times its shaft power. At a segment
+    boundary φ takes the value of the segment that starts there.
 If the climbs and descents alone are longer than the phase range, the cruise would get a
 negative length. In that case building the profile raises a `ValueError` naming the phase. The
 example profile (cruise at 8,000 m) needs about 215 nm of climb and descent.
@@ -266,6 +282,34 @@ results = mission.EvaluateMission(WTO) # integrate energy and power use
 ```
 
 ---
+
+## Off-design flights and limit checks
+
+`fly_off_design(sized, range_nm, ...)` in `examples/30_off_design_mission.py` freezes a sized
+aircraft (OEW, powertrain, battery, tank, TMS) and flies it on another range, payload, phi
+schedule or state of health. It closes the off-design take-off mass and returns an
+`OffDesignResult` with a list of `violations` (empty means feasible) and a list of `risks`.
+
+Each check compares the flown mission with a limit of the frozen design. The limit and the
+flown value come from the same models, so the model errors common to both largely cancel, and
+the tolerances only absorb numerical noise. A check is a violation only when the model can
+resolve it; otherwise it is reported as a risk or not checked.
+
+| Check | Treated as | Tolerance | Fidelity |
+|---|---|---|---|
+| take-off mass ≤ design MTOW | violation | `tol_kg` | definition of the design |
+| fuel load ≤ design fuel load (tank) | violation | 0.5 kg | definition of the design |
+| Class-I battery energy ≤ usable energy, power ≤ capability | violation | 0.1 % | same specific-energy/power model as the sizing |
+| Class-II battery: SOC, voltage, current, temperature | violation (cell-model limit hit in flight) | none | same cell model as the sizing |
+| thermal engine: shaft power ≤ design peak (mission or take-off) | violation | 0.1 % | conservative proxy: the engine model has no explicit power limit |
+| fuel cell: demand ≤ maximum net power of the stack | violation (`_power_limited`) | none | same polarization model as the sizing |
+| Class-I TMS: peak heat ≤ design heat | violation | 0.1 % | the Class-I TMS is rated by its design heat |
+| Class-II TMS: heat, core pressure drops, choking | violation | 2 % on the heat | same correlations as the sizing |
+| Class-II TMS: coolant-side wall vs freezing point | risk | none | the wall estimate cannot decide a margin of a few kelvin |
+| Class-II TMS: duct drag point by point | not checked | none | carried as a constant ΔCd, conservative over the mission; local differences are below the accuracy of the drag polar |
+
+The fuel-cell power is not compared with the design mission peak: a stack sized on the
+take-off or OEI floor can deliver more than that, and the stack's own limit is checked.
 
 ## Limitations
 

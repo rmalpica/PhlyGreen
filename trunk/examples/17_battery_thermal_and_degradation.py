@@ -7,8 +7,11 @@ example runs the *opt-in, post-design* analysis (`battery.thermal_degradation_an
 2. then analyse, for a chosen ground fast-charge C-rate:
    - the recharge time from the end-of-flight SOC back to full,
    - the cell temperature reached during the recharge,
-   - the **peak active-cooling power** the thermal-management system (TMS) must reject,
-   - the expected **number of cycles to end-of-life** (Wang et al. fade + Miner damage).
+   - the **peak cooling power of the charge heat** the thermal-management system (TMS) must
+     reject (the pull-down of the heat brought from the flight is reported separately as
+     ``peak_pulldown_w``),
+   - the expected **number of cycles to end-of-life** (Wang et al. fade + Miner damage), with
+     the depth of discharge and the mean cell temperature of the flown design mission.
 
 This analysis never changes the baseline design — it is a separate study run after sizing — so
 you can sweep the charge C-rate to trade fast turnaround against cooling load and battery life.

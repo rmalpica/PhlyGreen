@@ -21,7 +21,7 @@ TANK_Database = {
         'sf_outer': 2.5,            # [-] SF Buckling
         'ew': 0.80,                 # [-] Efficienza saldatura
         'buckling_knockdown': 0.36, # [-] Imperfezione geometrica 
-        'accessory_mass_factor': 1.35, # [-] 15% massa aggiuntiva 
+        'accessory_mass_factor': 1.35, # [-] 35% massa aggiuntiva 
         
         # --- Isolamento (Tabella 4 - Configurazione VD-MLI) ---
         'n_layers_mli': 9,          # [-] Strati MLI

@@ -1,6 +1,8 @@
 """Full-design tests of the thermal-management system (Class I and Class II) for the
 fuel-cell configurations."""
 
+import copy
+
 import pytest
 
 import PhlyGreen as pg
@@ -106,3 +108,43 @@ def test_fuelcell_battery_class_ii_at_phi_zero_matches_hydrogen(h2_class_ii):
     assert a.weight.WBat == pytest.approx(0.0)
     assert a.weight.WTO == pytest.approx(h2_class_ii.weight.WTO, rel=1e-9)
     assert a.weight.WHeat_Exchanger == pytest.approx(h2_class_ii.weight.WHeat_Exchanger, rel=1e-9)
+
+
+@needs_coolprop
+@pytest.mark.slow
+def test_class_ii_hardware_is_checked_along_the_continuous_mission(h2_class_ii):
+    """The converged design is checked at every profile point and every accepted
+    integration point: heat, pressure budgets and choking are limits, coolant freezing a
+    risk; the duct drag is compared over the mission as a drag work."""
+    a = h2_class_ii
+    m, tms, r = a.mission, a.tms, a.weight.tms_result
+    assert len(m.thermal_history) > 10 * len(m.thermal_profile)
+    assert len(r.checks) == len(m.thermal_profile) + len(m.thermal_history)
+    # the continuous mission adds no candidate on the reference design
+    assert [c['point'] for c in r.candidates] == [
+        p['name'] for p in m.thermal_profile if p['Q_fc'] >= 0.5 * max(q['Q_fc'] for q in m.thermal_profile)]
+    for c in r.checks:
+        assert c['shortfall'] <= tms.FEASIBILITY_TOLERANCE
+        assert c['T_wall_min'] > c['T_freeze']
+        assert not c['choked']
+    assert r.violations() == [] and r.risks() == []
+    # the constant drag increment charges at least the duct drag work of the momentum balance
+    assert r.ram_drag_work_accounted >= r.ram_drag_work >= 0.0
+
+
+@needs_coolprop
+@pytest.mark.slow
+def test_offdesign_check_reports_tms_limits(h2_class_ii):
+    """Example 30 reports the limits of CheckAtPoint as off-design violations."""
+    import importlib.util, os
+    path = os.path.join(os.path.dirname(__file__), '..', '..', 'examples', '30_off_design_mission.py')
+    spec = importlib.util.spec_from_file_location('ex30_tms', path)
+    ex30 = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(ex30)
+    a = h2_class_ii
+    assert ex30._tms_violation(a, None) == ([], [])
+    worse = copy.deepcopy(a)
+    worse.tms.ram_recovery = 0.02         # an intake far worse than the one sized for
+    violations, risks = ex30._tms_violation(worse, None)
+    assert any('ram-air core pressure drop' in v for v in violations)
+    assert not any('drag' in v for v in violations)

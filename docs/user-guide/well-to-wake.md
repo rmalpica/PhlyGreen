@@ -31,6 +31,14 @@ The aggregate well-to-tank efficiencies are the products of the chain:
 \eta_{\text{transport}} .
 \]
 
+!!! note "Hydrogen energy basis"
+    For the fuel-cell configurations the fuel energy `E_fuel` is on the **higher-heating-value
+    (HHV)** basis, because the stack consumes \(\dot m_{H_2}\,\text{HHV}\) and `Ef` is the HHV
+    (141.87 MJ/kg). The fuel-chain efficiencies must therefore refer to the HHV of the delivered
+    hydrogen. A chain efficiency quoted on the lower-heating-value basis (LHV, 120 MJ/kg)
+    becomes \(\eta_{HHV} = \eta_{LHV}\cdot\text{HHV}/\text{LHV}\) for the same source energy.
+    The same holds for `WTW_CO2` in the [emissions](emissions.md) module.
+
 ---
 
 ## Source energy and the electricity fraction

@@ -17,7 +17,7 @@ import PhlyGreen.Utilities.Units as Units
 from PhlyGreen.config import (
     AircraftConfig, AerodynamicsConfig, ConstraintsConfig, MissionConfig,
     EnergyConfig, CellConfig, WellToTankConfig, ClimateImpactConfig,
-    StagesConfig, Segment, TankConfig,
+    StagesConfig, Segment, TankConfig, TMSConfig,
 )
 
 
@@ -60,6 +60,21 @@ def _mission():
         range_diversion=220,   # diversion range [nautical miles]
         payload_weight=4560,   # [kg]
         crew_weight=500,       # [kg]
+        # Ground segments (not in the flown profile). The values below are the defaults: the
+        # ICAO Annex 16 LTO reference times (26 min of taxi at 7 % of the take-off power, split
+        # out/in; 0.7 min at take-off power).
+        taxi_out_time=13.0,            # [min]
+        taxi_in_time=13.0,             # [min]
+        taxi_power_fraction=0.07,      # [-] of the take-off propulsive power
+        takeoff_time=0.7,              # [min]
+        takeoff_power_fraction=1.0,    # [-] of the take-off propulsive power, over takeoff_time
+        # Battery share of the taxi power (battery configurations only; 1 = electric taxi).
+        # None = the take-off phi, i.e. the phi of the 'Takeoff' stage.
+        taxi_phi=None,
+        # ISA temperature deviation of the flown mission [K] (default 0). It sets the flight
+        # performance, the fuel-cell ambient state and the TMS ram air; the constraint diagram
+        # has its own deviation (ConstraintsConfig.disa).
+        disa=0.0,
     )
 
 
@@ -113,6 +128,11 @@ def _energy():
         eta_electric_motor_1=0.96, eta_electric_motor_2=0.96,
         specific_power_powertrain=[3900, 5000],  # [thermal, electric motor] W/kg (motor ~current SOA)
         specific_power_pmad=10000,               # power-management / inverter [W/kg] (~current SOA)
+        specific_power_generator=5000,           # serial-hybrid generator [W/kg] (default: the motor value)
+        # --- battery configurations only (default values) ---
+        hex_specific_power_battery=1500.0,       # Class-II battery cooling: heat per HEX mass [W/kg]
+        battery_capacity_fraction=1.0,           # state of health C/C_BOL (1 = beginning of life)
+        battery_resistance_factor=1.0,           # state of health R/R_BOL (1 = beginning of life)
     )
 
 
@@ -129,7 +149,8 @@ def traditional_config():
 def _energy_hydrogen(v_cell_design=0.5):
     """Energy/efficiency inputs for a hydrogen fuel-cell aircraft.
 
-    Note `Ef` is now the hydrogen lower heating value (~120 MJ/kg). The fuel-cell stack is
+    `Ef` is the hydrogen higher heating value (141.87 MJ/kg): the stack consumes
+    mdot_h2 * HHV, so the hydrogen mass is E / Ef only on the HHV basis. The fuel-cell stack is
     described by a model in the FC database plus a few design knobs.
     """
     return EnergyConfig(
@@ -141,20 +162,63 @@ def _energy_hydrogen(v_cell_design=0.5):
         specific_power_pmad=10000,               # power-management / inverter [W/kg]
         # --- fuel-cell stack ---
         fc_model='PEMFC_GoodPerformance',  # see PhlyGreen.Systems.FuelCell.FC_Database
-        i_rated=2.5,                       # rated current density [A/cm^2]
+        i_rated=2.5,                       # [A/cm^2] fallback only: v_cell_design sets the design current density
         v_cell_design=v_cell_design,       # design cell voltage [V] (try sweeping this)
         stack_power_density=2000,          # [W/kg] (~2030 realistic stack+BoP ~2 kW/kg)
         bop_mass_ratio=0.40,               # balance-of-plant mass / stack mass
+        stack_design_voltage=1000.0,       # [V] bus voltage: sets the cell count (default)
         h2_gravimetric_index=0.35,         # usable H2 / (H2 + tank) mass
+        h2_fuel_margin=0.05,               # H2 loaded on top of the flown H2 (default)
+        hex_specific_power_h2=5000.0,      # Class-I TMS: heat per exchanger mass [W/kg] (default)
+        # --- product water and humidity (default values) ---
+        fc_product_water_vapour_fraction='auto',  # from the cathode-exhaust saturation
+        fc_cathode_inlet_rh=0.0,           # humidifier setting: RH at the stack temperature [-]
+        fc_ambient_relative_humidity=0.0,  # weather: RH of the ambient air [-] (0 = dry ISA)
+        # --- state of health (default values: beginning of life) ---
+        fc_voltage_loss=0.0,               # uniform cell-voltage loss [V]
+        fc_ohmic_resistance_factor=1.0,    # R_ohm / R_ohm,BOL
+        fc_exchange_current_factor=1.0,    # i_star / i_star,BOL
+        battery_capacity_fraction=1.0,     # C / C_BOL (fuel cell + battery only)
+        battery_resistance_factor=1.0,     # R / R_BOL (fuel cell + battery only)
     )
 
 
-def hydrogen_config(v_cell_design=0.5, tank=False):
+def tms_config(tms_class='II'):
+    """Thermal-management system with every input written out at its default value.
+
+    Class I only uses ``hex_specific_power_h2`` of the EnergyConfig; every field below
+    applies to Class II (geometric exchangers, pump and ram-air duct; needs CoolProp).
+    """
+    return TMSConfig(
+        tms_class=tms_class,
+        coolant='INCOMP::MEG-30%',         # CoolProp name of the coolant
+        coolant_delta_t=10.0,              # coolant temperature drop over the loop [K]
+        max_volume_per_unit=0.05,          # [m^3] per exchanger unit
+        max_weight_per_unit=50.0,          # [kg] per exchanger unit
+        max_hex_units=100,                 # max parallel units per role
+        ram_air_delta_t=50.0,              # design ram-air temperature rise [K]
+        ram_air_max_effectiveness=0.8,     # cap on the ram-air temperature rise
+        h2_approach_delta_t=30.0,          # H2 leaves its exchanger at T_op - this [K]
+        h2_supply_pressure=1.6e5,          # LH2 supply pressure [Pa]
+        loop_pressure_drop=2.0e5,          # coolant-loop pressure rise of the pump [Pa]
+        stack_pressure_drop=0.0,           # [Pa] of it taken by stack channels + piping (no
+        #                                    sourced value; the cores share the rest)
+        pump_efficiency=0.75,
+        pump_motor_efficiency=0.95,
+        pump_specific_power=800.0,         # [W/kg]
+        pump_motor_specific_power=5000.0,  # [W/kg]
+        ram_recovery=1.0,                  # fraction of the dynamic pressure the intake recovers
+        takeoff_coolant_overtemperature=0.0,  # [K] coolant above T_op at take-off only
+    )
+
+
+def hydrogen_config(v_cell_design=0.5, tank=False, tms_class=None):
     """A hydrogen fuel-cell (electric) ATR-like aircraft — no battery, no gas turbine.
 
     With ``tank=True`` a cryogenic LH2 tank (TankConfig) is attached, enabling the
     physics-based tank sizing and the transient tank thermodynamics (requires CoolProp).
     Without it, hydrogen storage uses a simple gravimetric-index mass model.
+    ``tms_class`` ('I' or 'II') attaches :func:`tms_config`; None keeps the Class-I default.
     """
     tank_cfg = None
     if tank:
@@ -165,7 +229,7 @@ def hydrogen_config(v_cell_design=0.5, tank=False):
         aerodynamics=_aerodynamics(), constraints=_constraints(),
         mission=_mission(), energy=_energy_hydrogen(v_cell_design),
         mission_stages=_mission_stages(), diversion_stages=_diversion_stages(),
-        tank=tank_cfg,
+        tank=tank_cfg, tms=tms_config(tms_class) if tms_class else None,
     )
 
 
@@ -179,7 +243,7 @@ def _mission_stages_with_cruise_phi(cruise_phi):
     return stages
 
 
-def fuelcell_battery_config(cruise_phi=0.15, tank=False):
+def fuelcell_battery_config(cruise_phi=0.15, tank=False, tms_class=None):
     """A fuel-cell + battery hybrid: the battery supplies ``cruise_phi`` of cruise power.
 
     Demonstrates hybridizing a hydrogen fuel cell with a battery. ``phi`` is the fraction of
@@ -199,6 +263,7 @@ def fuelcell_battery_config(cruise_phi=0.15, tank=False):
         mission=_mission(), energy=energy,
         mission_stages=_mission_stages_with_cruise_phi(cruise_phi),
         diversion_stages=_diversion_stages(), tank=tank_cfg,
+        tms=tms_config(tms_class) if tms_class else None,
     )
 
 
@@ -225,6 +290,14 @@ def hybrid_config(battery_class='II', hybrid_type='Parallel'):
             cell_class='II', model='Finger-Cell-Thermal',
             specific_power=8000, specific_energy=1500, minimum_soc=0.2,
             pack_voltage=800, initial_temperature=25, max_operative_temperature=50,
+            # post-design ground-charge and cycle-life analysis only
+            # (battery.thermal_degradation_analysis); default values, never used in the sizing
+            charge_c_rate=None,                # [1/h] required by the analysis (no default)
+            discharge_c_rate=None,             # [1/h] default: the charge C-rate
+            maximum_soc=1.0,                   # SOC at full charge
+            eol_capacity=0.8,                  # end-of-life capacity fraction
+            coolant_temperature=20.0,          # ground coolant inlet temperature [C]
+            ground_cooling_coefficient=150.0,  # ground cold-plate h [W/(m^2 K)]
         )
     well_to_tank = WellToTankConfig(
         eta_charge=0.95, eta_grid=1., eta_extraction=1., eta_production=1., eta_transportation=0.25)
