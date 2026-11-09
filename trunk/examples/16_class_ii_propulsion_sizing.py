@@ -135,7 +135,12 @@ def _plot_emissions(aircraft, name, title):
         aircraft.DesignWTOoS, beta[t], m.profile.PowerExcess(times[t]), 1, alt[t], DISA, v0[t], "TAS")
         for t in range(len(times))])
     mach = v0 / (20.0468 * np.sqrt(np.array([ISA.atmosphere.Tstd(float(a)) for a in alt]) + DISA))
-    pf = power / aircraft.powertrain.engineRating
+    # The PW127 map's coordinate: gas-turbine shaft power over the rating lapsed by the ISA
+    # pressure ratio (the same quantity ClimateImpact integrates over the mission).
+    shaft = np.array([power[t] * aircraft.powertrain.Traditional(alt[t], v0[t], power[t])[1]
+                      for t in range(len(times))])
+    pf = aircraft.climateimpact._surrogate_load_fraction(
+        alt, mach, power, shaft, v0, aircraft.powertrain.engineRating)
     ei = EmissionSurrogate().predict(np.column_stack([alt / 0.3048, mach, pf]))
 
     t_min = times / 60.0

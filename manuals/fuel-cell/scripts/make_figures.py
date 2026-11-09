@@ -14,7 +14,7 @@ Groups (each writes PDFs to ``manuals/fuel-cell/figures/`` and merges its number
     sweep     design-voltage sweep, 0.40-0.65 V (~2 min)
     eol       end-of-life sizing versus beginning-of-life sizing (~30 s)
     fcb       take-off-sized FC + battery design of example 30: duty and degraded flights (~2 min)
-    assist    take-off assist sweep of example 23 on two fields (~4 min)
+    assist    take-off assist of example 23: two fields, two packs, specific-power scan (~30 min)
     weather   ambient humidity, hot day (ISA+20) and humidifier on the reference (~2 min)
 
 Configurations: ``examples/common.py:hydrogen_config()`` (the reference hydrogen design,
@@ -46,7 +46,7 @@ import matplotlib.pyplot as plt                                      # noqa: E40
 
 import PhlyGreen as pg                                               # noqa: E402
 from PhlyGreen.Systems.FuelCell import FC_Database                   # noqa: E402
-from common import hydrogen_config, fuelcell_battery_config          # noqa: E402
+from common import hydrogen_config                                   # noqa: E402
 
 warnings.filterwarnings("ignore", category=PendingDeprecationWarning)
 warnings.filterwarnings("ignore", message=".*matrix subclass.*")
@@ -619,56 +619,68 @@ def group_fcb():
 
 
 # =========================================================================== take-off assist
+def load_example23():
+    spec = importlib.util.spec_from_file_location(
+        "ex23", os.path.join(EXAMPLES, "23_fuelcell_battery_hybrid.py"))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
 def group_assist():
+    """Take-off assist of example 23: the example's own ``design`` (strategy 'takeoff',
+    taxi_phi = 0) on its two fields and two battery packs, and its specific-power scan."""
     print("[assist] take-off assist sweep (example 23 strategy 'takeoff')")
-    phis = [0.00, 0.05, 0.10, 0.15, 0.20, 0.30]
-    res = {}
-    for field in (1107.0, 800.0):
-        rows = []
-        for phi in phis:
-            cfg = fuelcell_battery_config(cruise_phi=0.0)
-            cfg.constraints.phases["Take Off"]["sTO"] = field
-            for seg in cfg.mission_stages.segments:
-                if seg.name == "Takeoff":
-                    seg.phi = phi
-                elif seg.segment_type in ("ConstantRateClimb", "ConstantMachCruise"):
-                    seg.phi_start = seg.phi_end = 0.0
-            try:
-                a = design(cfg)
-            except Exception as exc:
-                print(f"  field {field}, phi {phi}: failed ({type(exc).__name__})")
-                rows.append(None)
-                continue
-            mm = a.mission
-            rows.append({"phi": phi, "WTO": a.weight.WTO, "WPT": a.weight.WPT,
-                         "WBat": a.weight.WBat, "WH2": a.weight.WH2_Fuel,
-                         "P_TO_total": mm.TO_PP / (1.0 - phi),   # propulsive TO/OEI requirement
-                         "TO_PP": mm.TO_PP, "TO_PBat_terminal": mm.TO_PBat,
-                         "Max_PEng": mm.Max_PEng})
-            print(f"  field {field:.0f} m, phi {phi:.2f}: WTO {a.weight.WTO:,.0f} kg")
-        base = rows[0]
-        res[str(int(field))] = {"rows": rows,
-                                "phi_star": max(0.0, 1 - base["Max_PEng"] / base["P_TO_total"])}
+    ex23 = load_example23()
+    phis = ex23.PHIS_TAKEOFF
+    fields = {"1107": 1107.0, "800": 800.0}
+    packs = {"1500": 1500.0, "3000": 3000.0}
+    res = {"phis": phis, "sweeps": {}, "bases": {}}
+    for fk, field in fields.items():
+        base = quiet(ex23.design, 0.0, "takeoff", field)
+        res["bases"][fk] = dict(base, phi_star=max(0.0, 1.0 - base["P_climb"] / base["P_TO"]))
+        for pk, sp in packs.items():
+            rows = [base] + [quiet(ex23.design, phi, "takeoff", field, sp) for phi in phis[1:]]
+            res["sweeps"][f"{fk}_{pk}"] = rows
+            print(f"  field {fk} m, {pk} W/kg: WTO " +
+                  ", ".join(f"{r['WTO']:,.0f}" if r else "--" for r in rows))
+    base_short = res["bases"]["800"]
+    phi_star = round(base_short["phi_star"], 2)
+    i_star = phis.index(min(phis, key=lambda p: abs(p - phi_star)))
+    res["phi_scan"] = phis[i_star]
+    res["balance"] = {pk: ex23.mass_balance(base_short, res["sweeps"][f"800_{pk}"][i_star])
+                      for pk in packs}
+    scan = []
+    for sp in ex23.SPECIFIC_POWER_SCAN:
+        known = res["sweeps"].get(f"800_{int(sp)}")
+        r = known[i_star] if known else quiet(ex23.design, phis[i_star], "takeoff", 800.0, sp)
+        scan.append({"sp": sp, **r})
+        print(f"  scan {sp/1e3:.2f} kW/kg: WTO {r['WTO']:,.0f} kg")
+    res["scan"] = scan
+
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(FULL, 2.6))
-    for k, field in enumerate(("1107", "800")):
-        rows = [r for r in res[field]["rows"] if r]
-        p = [r["phi"] for r in rows]
-        ax1.plot(p, [r["WTO"] / 1e3 for r in rows], ls=LS[k], marker=MK[k], color=C[k],
-                 label=f"{field} m field")
-        ax2.plot(p, [r["WPT"] for r in rows], ls="-", marker=MK[k], color=C[k],
-                 label=f"fuel-cell system, {field} m")
-        ax2.plot(p, [r["WBat"] for r in rows], ls="--", marker=MK[k], color=C[k], mfc="white",
-                 label=f"battery, {field} m")
-        if res[field]["phi_star"] > 0:
-            ax1.axvline(res[field]["phi_star"], color=C[k], lw=0.8, ls=":")
+    k = 0
+    for fk in fields:
+        for j, pk in enumerate(packs):
+            rows = res["sweeps"][f"{fk}_{pk}"]
+            p = [ph for ph, r in zip(phis, rows) if r]
+            dw = [r["WTO"] - rows[0]["WTO"] for r in rows if r]
+            ax1.plot(p, dw, ls=LS[j], marker=MK[k], color=C[0 if fk == "1107" else 1],
+                     mfc="white" if j == 0 else None,
+                     label=f"{fk} m, {float(pk)/1e3:.1f} kW/kg")
+            k += 1
+    ax1.axvline(base_short["phi_star"], color=C[1], lw=0.8, ls=":")
+    ax1.axhline(0.0, color=MUTED, lw=0.8)
     ax1.set_xlabel(r"take-off battery share $\varphi_\mathrm{TO}$ [-]")
-    ax1.set_ylabel(r"$W_\mathrm{TO}$ [t]")
+    ax1.set_ylabel(r"$\Delta W_\mathrm{TO}$ vs pure H$_2$ [kg]")
     ax1.legend(loc="upper left")
-    ax1.set_title(r"(a) take-off mass (dotted: $\varphi^*$)", loc="left")
-    ax2.set_xlabel(r"take-off battery share $\varphi_\mathrm{TO}$ [-]")
-    ax2.set_ylabel("mass [kg]")
-    ax2.legend(loc="center right", fontsize=6.5)
-    ax2.set_title("(b) fuel-cell system and battery", loc="left")
+    ax1.set_title(r"(a) take-off mass change (dotted: $\varphi^*$, 800 m)", loc="left")
+    ax2.plot([s["sp"] / 1e3 for s in scan], [s["WTO"] - base_short["WTO"] for s in scan],
+             marker=MK[0], color=C[1])
+    ax2.axhline(0.0, color=MUTED, lw=0.8)
+    ax2.set_xlabel(r"battery specific power [kW kg$^{-1}$]")
+    ax2.set_ylabel(r"$\Delta W_\mathrm{TO}$ vs pure H$_2$ [kg]")
+    ax2.set_title(rf"(b) 800 m field, $\varphi_\mathrm{{TO}}$ = {phis[i_star]:.2f}", loc="left")
     fig.tight_layout()
     save(fig, "fig_takeoff_assist.pdf")
     store("assist", res)

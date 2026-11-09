@@ -111,3 +111,19 @@ def test_write_timeseries_requires_aircraft():
     from PhlyGreen.results import AircraftResults
     with pytest.raises(ValueError):
         AircraftResults().write_timeseries("/tmp/should_not_be_written.csv")
+
+
+@pytest.mark.slow
+def test_compute_tank_history_matches_the_tracked_mission_with_ground_legs():
+    """postprocess.compute_tank_history delegates to Mission.compute_tank_history, so it
+    includes the ground legs (taxi-out + take-off at negative times, taxi-in at the end)."""
+    pytest.importorskip("CoolProp")
+    from PhlyGreen import postprocess as pp
+    from test_hydrogen_tank import _hydrogen_config_with_tank
+    aircraft = pg.build_aircraft()
+    aircraft.configure(_hydrogen_config_with_tank())
+    h = {k: list(v) for k, v in pp.compute_tank_history(aircraft).items()}
+    m = aircraft.mission
+    assert h['t'][0] == pytest.approx(-60.0 * (m.taxi_out_time + m.takeoff_time))
+    assert h['t'][-1] == pytest.approx(m.profile.MissionTime2 + 60.0 * m.taxi_in_time)
+    assert h == {k: list(v) for k, v in m.compute_tank_history().items()}

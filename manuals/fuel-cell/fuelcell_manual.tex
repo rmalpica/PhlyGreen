@@ -125,6 +125,7 @@ Code & Role \\
 \fn{FuelCell._get_env} & ambient state (ISA + DISA) \\
 \fn{FuelCell._size_stack} & stack, BoP and drive sizing kernel, Section~\ref{sec:design} \\
 \fn{FuelCell.ComputePRatio} & operating point at one flight condition, Section~\ref{sec:operating} \\
+\fn{FuelCell.drive_efficiencies} & motor and propeller efficiencies of the drive, Section~\ref{sec:operating} \\
 \fn{FuelCell.report_sizing} & power-adequacy report, Section~\ref{sec:adequacy} \\
 \fn{FuelCell.set_state_of_health} & degradation state, Section~\ref{sec:degradation} \\
 \fn{Mission/Mission.py:Mission.HydrogenConfiguration} & mission integration, pure fuel cell \\
@@ -563,7 +564,7 @@ gives the estimated stack cooling load:
   \label{eq:qcool}
 \end{equation}
 This is the expression implemented in \fn{ComputePRatio}
-(lines 609--611 of \fn{FuelCell.py}).
+(lines 728--731 of \fn{FuelCell.py}).
 
 The phase-dependent term can be interpreted as an effective
 reaction enthalpy,
@@ -605,8 +606,8 @@ would require these additional contributions.
 \paragraph{Cathode-exhaust saturation model.}
 Unless the input \code{'FC Product Water Vapour Fraction'} specifies
 a numerical value, $x_v$ is computed at every operating point by
-\fn{FuelCell.vapour_fraction_at(P_amb, T_amb)}, which calls
-\fn{FuelCell.product_water_vapour_fraction} using the cathode
+\fn{FuelCell.vapour_fraction_at(P_amb, T_amb)}. This method calls
+\fn{FuelCell.product_water_vapour_fraction} with the cathode
 inlet humidity associated with the ambient state
 (Section~\ref{sec:humidity}).
 
@@ -791,7 +792,7 @@ TMS sizing and the degradation results of Section~\ref{sec:degradation}.
 \label{sec:design}
 
 This section describes how the stack is sized for a required propulsive power. One kernel,
-\fn{FuelCell._size_stack(P_propulsive_design)} (\fn{FuelCell.py}, lines 396--471), sets the
+\fn{FuelCell._size_stack(P_propulsive_design)} (\fn{FuelCell.py}, lines 467--554), sets the
 cell geometry, the rated power and all the fuel-cell system masses. Two public methods call
 it: \fn{SizeForPropulsivePower} and \fn{SizeFromConstraint} (Section~\ref{sec:closure}).
 
@@ -862,15 +863,29 @@ voltage below \SI{0.7}{V} delivers more power per kilogram than $SP_\mathrm{stac
 \SI{0.5}{V} is \SI{0.574}{W/cm^2} against \SI{0.295}{W/cm^2} at \SI{0.7}{V}, a ratio of 1.95.
 
 \paragraph{Sixth, the balance of plant and the electric drive.}
-\begin{equation}
+\begin{gather}
   m_\mathrm{BoP} = r_\mathrm{BoP}\, m_\mathrm{stack}, \qquad
-  m_\mathrm{EM} = \frac{(P_\mathrm{fc,rated}-P_\mathrm{aux,TMS})\,\eta_\mathrm{PM}}{SP_\mathrm{EM}}, \qquad
-  m_\mathrm{PM} = \frac{P_\mathrm{fc,rated}}{SP_\mathrm{PMAD}},
-\end{equation}
+  m_\mathrm{EM} = \frac{P_\mathrm{drive}\,\eta_\mathrm{PM}}{SP_\mathrm{EM}}, \qquad
+  m_\mathrm{PM} = \frac{P_\mathrm{drive}+P_\mathrm{aux,TMS}}{SP_\mathrm{PMAD}}, \nonumber\\
+  P_\mathrm{drive} = \frac{P_\mathrm{prop,drive}}{\eta_\mathrm{EM}\,\eta_\mathrm{PM}\,\eta_\mathrm{GB}\,\eta_\mathrm{prop}},
+  \label{eq:drive}
+\end{gather}
 with $r_\mathrm{BoP}$ the input \code{bop_mass_ratio}, $SP_\mathrm{EM}$ the second entry of
 \code{specific_power_powertrain} (fallback \SI{5000}{W/kg}) and $SP_\mathrm{PMAD}$ from
 \fn{Powertrain.pmad_specific_power} (fallback \SI{10000}{W/kg}). The motor carries the power
-downstream of the PMAD and the PMAD the full net rating. The fuel-cell system mass is
+downstream of the PMAD and the PMAD the electrical drive power plus the pump. In
+\code{'Hydrogen'} the drive power is the stack's propulsive design power,
+$P_\mathrm{prop,drive}=P_\mathrm{prop,des}$, so the PMAD carries the full net rating
+$P_\mathrm{fc,rated}$. In \code{'FuelCellBattery'} the battery feeds the same PMAD and motor,
+so the drive is sized on the peak propulsive power through it at one instant, fuel-cell and
+battery shares together:
+\begin{equation}
+  P_\mathrm{prop,drive} = \max\big(P_\mathrm{prop,des},\ \mathtt{SizingMargin}\cdot\mathtt{mission.Max\_PDrive}\big).
+\end{equation}
+\code{Max_PDrive} is the largest of the mission peak, the take-off/OEI requirement
+$P_\mathrm{TO/OEI}$ and the ground-segment powers of the last flown mission
+(Section~\ref{sec:fcb}). It is never below the fuel-cell share, so a design with $\varphi=0$
+keeps the drive of the \code{'Hydrogen'} design. The fuel-cell system mass is
 $m_\mathrm{FCS}=m_\mathrm{stack}+m_\mathrm{BoP}+m_\mathrm{EM}+m_\mathrm{PM}$. The kernel
 writes it to \code{weight.WPT}; it also writes \code{weight.WThermal} $=m_\mathrm{stack}+m_\mathrm{BoP}+m_\mathrm{PM}$
 and \code{weight.WElectric} $=m_\mathrm{EM}$ (the names are inherited from the gas-turbine
@@ -954,7 +969,7 @@ The Class-I TMS mass falls with $\Vdes$ (\SI{909}{kg} at \SI{0.40}{V}, \SI{745}{
 \label{sec:operating}
 
 This section describes how the code finds the stack state at one flight condition. The method
-is \fn{FuelCell.ComputePRatio(alt, vel, P_req_net)} (\fn{FuelCell.py}, lines 506--618). The
+is \fn{FuelCell.ComputePRatio(alt, vel, P_req_net)} (\fn{FuelCell.py}, lines 632--740). The
 mission calls it at every right-hand-side evaluation of the ODE integrator, so it is the most
 frequently executed part of the model.
 
@@ -963,14 +978,24 @@ frequently executed part of the model.
 The argument \code{P_req_net} is the propulsive (thrust) power $P_\mathrm{prop}$ the fuel
 cell must supply. The method first forms the downstream efficiency
 \begin{equation}
-  \eta_\mathrm{mech} = \eta_\mathrm{GB}\,\eta_\mathrm{EM}\,\eta_\mathrm{PM}\,\eta_\mathrm{prop}.
+  \eta_\mathrm{mech} = \eta_\mathrm{GB}\,\eta_\mathrm{EM}\,\eta_\mathrm{PM}\,\eta_\mathrm{prop},
 \end{equation}
-The motor efficiency is the constant \code{Eta Electric Motor}, or the operating-point value
-of the Class-II d-q motor model when \code{'Eta Electric Motor Model'} is \code{'Smart'}
-(\fn{Powertrain.eta} for the component \code{'electric_motor'}, wrapping
-\fn{Systems/Powertrain/efficiency.py:MotorEfficiencyModel}; see example~25). The propeller
-efficiency is \fn{powertrain.Propeller.ComputePropEfficiency} when the powertrain has a
-propeller model and the constant \code{Eta Propulsive} otherwise. The electrical target is
+with the motor and propeller efficiencies from \fn{FuelCell.drive_efficiencies(alt, vel,
+P_propulsive)}. Both are constants by default (\code{Eta Electric Motor}, \code{Eta
+Propulsive}). When the powertrain has the Hamilton propeller attached, the propeller
+efficiency is the powertrain's \code{'propeller'} model (\fn{Powertrain.eta}, wrapping
+\fn{HamiltonPropellerEfficiency}, bounded to $[0.4,\,1]$), the same model the gas-turbine
+graphs use. It is evaluated at its own shaft input $P_\mathrm{prop}/\eta_\mathrm{prop}$, a
+fixed point started at $P_\mathrm{prop}$ (shaft-power tolerance $10^{-6}P_\mathrm{prop}$, at
+most 50 iterations). The step is halved whenever it changes sign, because at low power the
+propeller efficiency rises steeply with the shaft power and the plain iteration oscillates. When
+\code{'Eta Electric Motor Model'} is \code{'Smart'}, the motor efficiency is the operating-point
+value of the Class-II d-q motor model (\fn{Powertrain.eta} for the component
+\code{'electric_motor'}, wrapping \fn{Systems/Powertrain/efficiency.py:MotorEfficiencyModel};
+see example~25), evaluated at its shaft output $P_\mathrm{prop}/(\eta_\mathrm{GB}\eta_\mathrm{prop})$.
+In \code{'FuelCellBattery'} each branch evaluates these models at its own share of the
+propulsive power, although the two branches share the motor and the propeller; this is an
+approximation that does not affect constant efficiencies. The electrical target is
 \begin{equation}
   \Pel = \frac{P_\mathrm{prop}}{\max(\eta_\mathrm{mech},0.01)} + P_\mathrm{aux,TMS}.
 \end{equation}
@@ -1326,75 +1351,153 @@ run. The fuel cell is sized by the loop of Section~\ref{sec:loop} on
 A larger $\varphi$ shrinks the stack, but only until the other term of Eq.~\eqref{eq:fcbreq}
 takes over.
 
+\paragraph{Ground segments.} The battery also carries a share of the ground power
+(\fn{Mission._ground_power_split}): $\varphi_\mathrm{TO}$ of the take-off run and
+\code{taxi_phi} of the taxi power, with \code{taxi_phi} defaulting to $\varphi_\mathrm{TO}$.
+The fuel cell supplies the rest. The battery terminal energy of these legs is added to the
+battery energy, and their terminal powers to \code{Max_PBat}, so a battery that assists the
+take-off also covers $\varphi_\mathrm{TO}$ of the 26 minutes of taxi unless \code{taxi_phi} is
+set to zero.
+
+\paragraph{Drive sizing.} The battery feeds the same PMAD and motor as the stack. The mission
+therefore records \code{Max_PDrive}, the largest propulsive power through the drive at one
+instant with both shares together: the mission peak of $P_\mathrm{prop}$, the take-off/OEI
+requirement $P_\mathrm{TO/OEI}$ and, added by \fn{EvaluateMission}, the take-off-run and taxi
+powers. The kernel sizes the motor and the PMAD on it (Eq.~\eqref{eq:drive}). A battery share
+therefore shrinks the stack, its balance of plant and the TMS, but not the motor and the PMAD,
+which still carry the full take-off power and change only with $W_\mathrm{TO}$.
+
 \subsection{When does a take-off battery pay?}
 
-Example~23 (\fn{examples/23_fuelcell_battery_hybrid.py}) studies three strategies. We repeat
-the take-off-assist strategy (battery only on the \code{'Takeoff'} stage, $\varphi=0$ in
-flight) with \fn{common.fuelcell_battery_config(cruise_phi=0.0)}, Class-I battery
-(\SI{250}{Wh/kg}, \SI{1500}{W/kg}, usable SOC 0.8), on two take-off fields
-(\fn{make_figures.py:group_assist}). Figure~\ref{fig:assist} and Table~\ref{tab:assist}
-give the results.
+Example~23 (\fn{examples/23_fuelcell_battery_hybrid.py}) studies when a battery makes a
+fuel-cell aircraft lighter. A battery pays only if it lowers the power that sizes the fuel cell
+by more than its own mass, and the snowball of that mass, costs. The example varies one lever for
+each of the two conditions this implies: the take-off field, which decides whether the take-off
+sizes the fuel cell, and the battery specific power, which decides how much the battery weighs
+per kilowatt. Its take-off-assist strategy puts the battery on the take-off run only:
+$\varphi_\mathrm{TO}$ on the \code{'Takeoff'} stage, $\varphi=0$ in flight and
+\code{taxi_phi = 0}. The configuration is \fn{common.fuelcell_battery_config(cruise_phi=0.0)}
+with a Class-I battery (\SI{250}{Wh/kg}, usable SOC 0.8). The two fields are the baseline
+\SI{1107}{m} and the \SI{800}{m} runway of the ATR~42-600S short-field version. The two packs
+are the default \SI{1.5}{kW/kg} pack of \fn{common.py} and a \SI{3}{kW/kg} power pack. The
+\SI{3}{kW/kg} value, and the higher values of the specific-power scan below, are assumed
+technology levels for the study, not sourced pack data. \fn{make_figures.py:group_assist} runs
+the example's own \fn{design} function and reproduces its output. Figure~\ref{fig:assist} and
+Table~\ref{tab:assist} give the results.
 
 \begin{figure}[ht]
 \centering
 \includegraphics[width=\textwidth]{figures/fig_takeoff_assist.pdf}
-\caption{Take-off assist on the \SI{1107}{m} and \SI{800}{m} fields: take-off mass (a) and
-fuel-cell system and battery masses (b) against the take-off battery share. The dotted line
-in (a) is $\varphi^*$ of Eq.~\eqref{eq:phistar} for the \SI{800}{m} field.}
+\caption{Take-off assist of example~23 (battery on the take-off run only). (a) Change of the
+take-off mass against the pure fuel-cell design ($\varphi_\mathrm{TO}=0$) for the two fields and
+the two packs; the dotted line is $\varphi^*$ of Eq.~\eqref{eq:phistar} for the \SI{800}{m}
+field. (b) The same change on the \SI{800}{m} field at $\varphi_\mathrm{TO}=0.15$ against the
+battery specific power. Specific powers above \SI{1.5}{kW/kg} are assumed values.}
 \label{fig:assist}
 \end{figure}
 
 \begin{table}[ht]
 \centering\small
-\caption{Take-off assist sweep (\fn{make_figures.py:group_assist}). $P_\mathrm{TO/OEI}$ is
-the total propulsive off-mission requirement, $\mathtt{TO\_PP}/(1-\varphi_\mathrm{TO})$; masses
-in kg, powers in kW.}
+\caption{Take-off assist sweep of example~23 (\fn{make_figures.py:group_assist}): take-off
+mass, fuel-cell system ($m_\mathrm{FCS}$: stack, BoP, PMAD and motor), battery, hydrogen load and
+Class-I TMS, in kg.}
 \label{tab:assist}
-\begin{tabular}{@{}lrrrrrr@{}}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lrrrrr@{\hspace{2em}}rrrrr@{}}
 \toprule
-field, $\varphi_\mathrm{TO}$ & $W_\mathrm{TO}$ & $m_\mathrm{FCS}$ & battery & H$_2$ &
-$P_\mathrm{TO/OEI}$ & climb peak \\
+ & \multicolumn{5}{c}{\SI{1.5}{kW/kg} pack (default)} & \multicolumn{5}{c@{}}{\SI{3}{kW/kg} power pack (assumed)} \\
+\cmidrule(lr){2-6}\cmidrule(l){7-11}
+field, $\varphi_\mathrm{TO}$ & $W_\mathrm{TO}$ & $m_\mathrm{FCS}$ & battery & H$_2$ & TMS
+ & $W_\mathrm{TO}$ & $m_\mathrm{FCS}$ & battery & H$_2$ & TMS \\
 \midrule
-\SI{1107}{m}, 0.00 & 21634 & 2400 & 0 & 449.7 & 2803 & 2989 \\
-\SI{1107}{m}, 0.10 & 22563 & 2503 & 251 & 468.0 & 2923 & 3118 \\
-\SI{1107}{m}, 0.30 & 24665 & 2736 & 824 & 509.6 & 3196 & 3408 \\
-\SI{800}{m}, 0.00 & 24024 & 3153 & 0 & 493.8 & 3928 & 3357 \\
-\SI{800}{m}, 0.05 & 23856 & 2975 & 168 & 493.1 & 3900 & 3334 \\
-\SI{800}{m}, 0.10 & 23699 & 2799 & 333 & 493.4 & 3874 & 3312 \\
-\SI{800}{m}, 0.15 & 23705 & 2659 & 500 & 497.5 & 3876 & 3313 \\
-\SI{800}{m}, 0.20 & 24392 & 2736 & 686 & 511.2 & 3988 & 3409 \\
-\SI{800}{m}, 0.30 & 25884 & 2904 & 1091 & 541.0 & 4231 & 3617 \\
+\SI{1107}{m}, 0.00 & 21634 & 2400 & 0 & 449.7 & 940 & 21634 & 2400 & 0 & 449.7 & 940 \\
+\SI{1107}{m}, 0.05 & 22093 & 2451 & 123 & 459.0 & 960 & 21860 & 2425 & 61 & 454.2 & 949 \\
+\SI{1107}{m}, 0.10 & 22570 & 2504 & 251 & 468.7 & 980 & 22090 & 2450 & 123 & 458.7 & 959 \\
+\SI{1107}{m}, 0.15 & 23066 & 2559 & 385 & 478.8 & 1002 & 22326 & 2476 & 186 & 463.4 & 970 \\
+\SI{1107}{m}, 0.20 & 23584 & 2616 & 525 & 489.4 & 1024 & 22565 & 2503 & 251 & 468.3 & 980 \\
+\SI{1107}{m}, 0.30 & 24688 & 2739 & 825 & 511.9 & 1072 & 23060 & 2558 & 385 & 478.2 & 1002 \\
+\midrule
+\SI{800}{m}, 0.00 & 24024 & 3153 & 0 & 493.8 & 1213 & 24024 & 3153 & 0 & 493.8 & 1213 \\
+\SI{800}{m}, 0.05 & 24067 & 3051 & 169 & 497.9 & 1155 & 23723 & 3008 & 83 & 490.8 & 1138 \\
+\SI{800}{m}, 0.10 & 24119 & 2950 & 339 & 502.9 & 1096 & 23438 & 2867 & 165 & 488.7 & 1065 \\
+\SI{800}{m}, 0.15 & 24321 & 2877 & 513 & 511.6 & 1068 & 23298 & 2756 & 246 & 490.1 & 1023 \\
+\SI{800}{m}, 0.20 & 25046 & 2962 & 704 & 526.5 & 1100 & 23626 & 2794 & 332 & 496.7 & 1038 \\
+\SI{800}{m}, 0.30 & 26627 & 3149 & 1123 & 559.1 & 1170 & 24310 & 2875 & 513 & 510.5 & 1068 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-On the \SI{1107}{m} field the climb peak (\SI{2.99}{MW}) exceeds the take-off requirement
-(\SI{2.80}{MW}). The take-off battery removes no stack mass, and every share makes the
-aircraft heavier. On the \SI{800}{m} field the take-off requirement (\SI{3.93}{MW}) exceeds the
-climb peak (\SI{3.36}{MW}), so the take-off sizes the stack. The battery removes stack mass
-until it brings the fuel cell's take-off load down to its climb load, at the share
+\paragraph{The take-off must size the fuel cell.} On the \SI{1107}{m} field the climb peak
+(\SI{2989}{kW}) exceeds the take-off propulsive power (\SI{2803}{kW}). The take-off battery
+removes no stack mass, and every share makes the aircraft heavier with either pack. On the
+\SI{800}{m} field the take-off needs \SI{3928}{kW} against \SI{3357}{kW} for the climb, so the
+take-off sizes the stack. The battery removes stack mass until it brings the fuel cell's
+take-off load down to its climb load, at the share
 \begin{equation}
   \varphi^* = 1 - \frac{P_\mathrm{climb,peak}}{P_\mathrm{TO/OEI}} ,
   \label{eq:phistar}
 \end{equation}
 which the pure fuel-cell design ($\varphi_\mathrm{TO}=0$) gives as 0.145. Up to $\varphi^*$ the
-fuel-cell system shrinks (\SI{3153}{kg} to \SI{2659}{kg} at 0.15); beyond it the climb sizes the
-stack again and the battery only adds mass. Whether the aircraft gets lighter depends on the
-battery mass per unit of propulsive power removed from the stack. The battery is sized by power:
-at $\varphi_\mathrm{TO}=0.15$ its take-off terminal power is \SI{750}{kW}, and
-$\SI{750}{kW}/\SI{1500}{W/kg}=\SI{500}{kg}$. The terminal power includes the whole chain down to
-the propeller ($\eta=0.776$), so the battery costs \SI{1.29}{kg} per kilogram that a
-propulsive-power sizing would give. The lightest designs are at $\varphi_\mathrm{TO}=0.10$
-(\SI{23699}{kg}) and 0.15 (\SI{23705}{kg}), about \SI{320}{kg} (\SI{1.3}{\percent}) lighter than
-the pure fuel-cell design. The minimum is flat between the two shares, slightly below $\varphi^*$,
-because the last increments of battery cost about as much as the stack mass they remove. The
-\SI{0.15}{} design is \fn{fc_battery_design} of example~30, used again in
-Section~\ref{sec:degradation}.
+fuel-cell system and the TMS shrink; beyond it the climb sizes the stack again and the battery
+only adds mass. The lightest design of the \SI{3}{kW/kg} sweep is at $\varphi_\mathrm{TO}=0.15$,
+next to $\varphi^*$.
 
-Two side effects of the take-off share deserve attention. First, the taxi share defaults to the
-take-off share (\code{taxi_phi = None}), so the battery also supplies $\varphi_\mathrm{TO}$ of the
-26 minutes of taxi power. Second, $W_\mathrm{TO}$ changes the take-off power, so the
-requirements in Table~\ref{tab:assist} move with $\varphi_\mathrm{TO}$.
+\paragraph{The battery must be lighter per kilowatt than what it removes.} With the default
+\SI{1.5}{kW/kg} pack the pure fuel-cell design is the lightest on both fields. With the
+\SI{3}{kW/kg} pack the \SI{800}{m} design at $\varphi_\mathrm{TO}=0.15$ weighs \SI{23298}{kg},
+\SI{726}{kg} (\SI{3.0}{\percent}) less than the pure fuel-cell design. Table~\ref{tab:assistbal}
+shows where the mass goes at this share. The stack, its balance of plant and the PMAD lose
+\SI{283}{kg} with the default pack and \SI{382}{kg} with the power pack, and the TMS \SI{145}{kg}
+and \SI{190}{kg}. The motor changes by a few kilograms only: it carries the full take-off power
+(Eq.~\eqref{eq:drive}) and shrinks only through the snowball of a lighter aircraft. The default
+pack weighs \SI{513}{kg}, more than the \SI{428}{kg} that the stack, BoP, PMAD and TMS save, and
+the snowball adds \SI{188}{kg}: the aircraft is \SI{297}{kg} heavier. The power pack weighs
+\SI{246}{kg}, less than the \SI{572}{kg} saving, and the snowball multiplies the gain to
+\SI{726}{kg}.
+
+\begin{table}[ht]
+\centering\small
+\caption{Mass changes against the pure fuel-cell design (\SI{24024}{kg}) on the \SI{800}{m}
+field at $\varphi_\mathrm{TO}=0.15$ (example~23, \fn{ex23.mass_balance}), in kg. The snowball is
+the remainder: structure and every other mass that follows $W_\mathrm{TO}$.}
+\label{tab:assistbal}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Mass change & \SI{1.5}{kW/kg} pack (default) & \SI{3}{kW/kg} power pack (assumed) \\
+\midrule
+stack + BoP + PMAD & $-283$ & $-382$ \\
+motor & $+6$ & $-15$ \\
+TMS & $-145$ & $-190$ \\
+battery & $+513$ & $+246$ \\
+hydrogen & $+18$ & $-4$ \\
+structure and the rest (snowball) & $+188$ & $-380$ \\
+\midrule
+take-off weight & $+297$ & $-726$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Break-even specific power.} Figure~\ref{fig:assist}(b) scans the battery specific
+power at $\varphi_\mathrm{TO}=0.15$ on the \SI{800}{m} field. The take-off mass changes by
+\SI{297}{kg} at \SI{1.5}{kW/kg}, $-\SI{4}{kg}$ at \SI{1.75}{kW/kg}, $-\SI{224}{kg}$ at
+\SI{2}{kW/kg}, $-\SI{528}{kg}$ at \SI{2.5}{kW/kg}, $-\SI{726}{kg}$ at \SI{3}{kW/kg} and
+$-\SI{1112}{kg}$ at \SI{5}{kW/kg}. The break-even is therefore about \SI{1.75}{kW/kg}. Because
+the specific powers above the default are assumed, the conclusion holds only for a pack that
+reaches them; the scan gives the value to check a datasheet against.
+
+\paragraph{Other strategies.} Example~23 also puts the battery on the take-off and the climb,
+and in cruise (energy hybridization). Its output gives, on the \SI{800}{m} field with the
+\SI{3}{kW/kg} pack and the battery also on every climb segment, \SI{26087}{kg} at $\varphi=0.10$
+and \SI{29446}{kg} at 0.20: the climb lasts about 27 minutes, so the battery is sized by energy
+and a high specific power does not help. With the battery in cruise on the \SI{1107}{m} field
+the take-off mass grows to \SI{31432}{kg} at $\varphi=0.10$ and \SI{54363}{kg} at 0.20.
+
+\paragraph{The design of example~30.} The FC + battery design of example~30
+(\fn{fc_battery_design}), used in Section~\ref{sec:degradation}, is the \SI{800}{m} field at
+$\varphi_\mathrm{TO}=0.15$ with the default \SI{1.5}{kW/kg} pack and the default
+\code{taxi_phi}, so its battery also covers 0.15 of the taxi power. It weighs \SI{24306}{kg},
+with a \SI{512}{kg} battery and a \SI{2875}{kg} fuel-cell system
+(\fn{make_figures.py:group_fcb}).
 
 \subsection{The powertrain graph}
 
@@ -1499,26 +1602,27 @@ budget or a choked duct is a violation, and a coolant-side wall below the coolan
 point is a risk.
 
 Table~\ref{tab:degflight} flies the take-off-sized FC + battery design of example~30
-(\fn{fc_battery_design}: $\varphi_\mathrm{TO}=0.15$, \SI{800}{m} field, sized at BOL) on its
+(\fn{fc_battery_design}: $\varphi_\mathrm{TO}=0.15$, \SI{800}{m} field, \SI{1.5}{kW/kg} pack, battery
+also on the taxi, sized at BOL, $W_\mathrm{TO}=\SI{24306}{kg}$) on its
 nominal 750~nm mission in five states (\fn{make_figures.py:group_fcb}).
 
 \begin{table}[ht]
 \centering\small
 \caption{Degraded flights of the example-30 design on its 750~nm mission. Trip hydrogen
 includes the ground segments. Peak heat is compared with the TMS design heat of
-\SI{5.206}{MW}. Load ratio: worst $\Pel/P_\mathrm{net,max}$ over the mission.}
+\SI{5.338}{MW}. Load ratio: worst $\Pel/P_\mathrm{net,max}$ over the mission.}
 \label{tab:degflight}
 \setlength{\tabcolsep}{4pt}
 \begin{tabular}{@{}lrrrrl@{}}
 \toprule
 State & trip H$_2$ [kg] & change & peak heat [MW] & load ratio & violations \\
 \midrule
-BOL & 365.3 & -- & 5.19 & 0.888 & none \\
-$\Delta V$ = 25 mV & 384.4 & +5.2\,\% & 6.12 & 0.941 & TMS heat \\
-$\Delta V$ = 50 mV & 407.9 & +11.7\,\% & 8.44 & 1.000 & TMS heat; fuel load; MTOW; \\
+BOL & 374.6 & -- & 5.33 & 0.888 & none \\
+$\Delta V$ = 25 mV & 394.1 & +5.2\,\% & 6.27 & 0.941 & TMS heat \\
+$\Delta V$ = 50 mV & 418.3 & +11.7\,\% & 8.65 & 1.000 & TMS heat; fuel load; MTOW; \\
  & & & & & battery power \\
-$k_R$ = 1.5 & 381.3 & +4.4\,\% & 7.15 & 0.991 & TMS heat \\
-$k_i$ = 0.5 & 381.0 & +4.3\,\% & 5.93 & 0.931 & TMS heat \\
+$k_R$ = 1.5 & 390.9 & +4.4\,\% & 7.33 & 0.991 & TMS heat \\
+$k_i$ = 0.5 & 390.6 & +4.3\,\% & 6.08 & 0.931 & TMS heat \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1710,9 +1814,14 @@ Table~\ref{tab:refdesign}, the lower bus voltage changed the cell count and the 
 nothing else. The legacy dictionary API is equivalent: \code{cfg.energy.to_dict()} returns the
 \code{EnergyInput} dictionary with the keys of Table~\ref{tab:inputs}.
 
-\paragraph{Reading the results.} Besides \code{aircraft.results()} (fields \code{WTO},
-\code{WPT}, \code{Wf}, \code{fuelcell_rating}, \code{tms_mass}, \code{TO_PP},
-\code{Max_PEng}, \ldots), the useful attributes are on the subsystems:
+\paragraph{Reading the results.} \code{aircraft.results()} returns, among others,
+\code{WTO}, \code{WPT}, \code{Wf}, \code{fuelcell_rating}, \code{tank_mass}
+(\code{weight.WTank}), \code{hex_mass} and \code{tms_mass} (both \code{weight.WHeat_Exchanger}
+for the fuel-cell configurations: the fuel-cell TMS, plus the heat exchanger of a Class-II
+battery), \code{TO_PP} and \code{Max_PEng}. Its \code{empty_weight} is every closure mass that
+is not payload or fuel: structure, fuel-cell system, crew, battery, hydrogen tank and heat
+exchangers, so that \code{empty_weight} + \code{WPayload} + \code{Wf} + reserve $=W_\mathrm{TO}$.
+The useful attributes are on the subsystems:
 \code{aircraft.weight.WH2_Fuel}, \code{WTank}, \code{WHeat_Exchanger}, \code{WBat};
 \code{aircraft.fuelcell.N_cells}, \code{A_cell_reale}, \code{P_fc_rated},
 \code{i_max_density} ($\jdes$), \code{x_vapour}; and \code{aircraft.mission.TO_PP},
@@ -1824,11 +1933,11 @@ Test (file: function) & What it pins \\
 \fn{regression/test_hydrogen.py} & polarization curve decreasing in $j$; sizing sets geometry and a positive mass; $\eta_\mathrm{FCS}$ a sensible fraction; design closes and the mass breakdown sums to $W_\mathrm{TO}$ (slow); stack covers mission peak and take-off/OEI (slow); design voltage changes the design (slow) \\
 \fn{regression/test_fuelcell_sizing.py} & auto-sized stack is not power-limited; a stack shrunk to \SI{45}{\percent} of \code{TO_PP} is reported \code{'UNDERSIZED'} with a warning and \code{min_rating} above the rating (slow) \\
 \fn{unit/test_fuelcell_heat.py} & Antoine saturation pressure; $x_v=1$ for dry air at \SI{80}{\celsius}, \SI{1.5}{bar}; $x_v=0$ for saturated inlet; $x_v$ falls with humidity and pressure; $x_v=1$ above the boiling point; thermoneutral voltages \\
-\fn{regression/test_fuelcell_battery.py} & configuration valid; both sources used; no battery at $\varphi=0$; battery grows with $\varphi$; default battery is Class I; Class-II pack sized (slow) \\
-\fn{regression/test_fc_battery_takeoff_assist.py} & take-off battery does not pay on \SI{1107}{m}; pays on \SI{800}{m}, with $0.1<\varphi^*<0.2$ and a smaller stack (slow) \\
+\fn{regression/test_fuelcell_battery.py} & configuration valid; both sources used; no battery at $\varphi=0$; battery grows with $\varphi$; default battery is Class I; Class-II pack sized; battery power flows through the motor and PMAD masses (slow) \\
+\fn{regression/test_fc_battery_takeoff_assist.py} & take-off battery does not pay on \SI{1107}{m}; on \SI{800}{m} $0.1<\varphi^*<0.2$, the stack shrinks, the motor does not, and the default pack does not pay; an assumed \SI{3}{kW/kg} pack on the take-off run only makes the aircraft lighter (slow) \\
 \fn{regression/test_degradation.py} & $\Delta V$ shifts the curve and the BOL curve stays available; parameter drift lowers the curve and resets; inputs validated and read; power-limited branch continuous and monotone in demand and degradation (slow); EOL sizing enlarges stack and TMS (slow); degraded flight reports the TMS heat violation and leaves the design unchanged (slow) \\
 \fn{regression/test_fuelcell_air_system.py} & exhaust mass balance; the expander works on the exhaust, not on air; ambient humidity reaches the cathode; the mission DISA input reaches \code{mission.DISA} and the fuel-cell ambient; a hot day changes the hydrogen design \\
-\fn{regression/test_degradation.py} (new items) & the running stack burns hydrogen at zero propulsive power; the FC + battery chain includes the propeller; battery energy and power are terminal quantities; degraded flight rates the Class-II TMS hardware \\
+\fn{regression/test_degradation.py} (mission accounting) & the running stack burns hydrogen at zero propulsive power; the FC + battery chain includes the propeller; battery energy and power are terminal quantities; degraded flight rates the Class-II TMS hardware \\
 \fn{regression/test_hydrogen_tank.py} & LH2 tank sizing, self-pressurisation, venting, heater, tracked mission (CoolProp) \\
 \bottomrule
 \end{tabularx}
@@ -1850,15 +1959,17 @@ Test (file: function) & What it pins \\
   stack mass.
   \item $x_v$ is an equilibrium upper bound at the stack exit; no system-level water balance.
   \item The battery assists the OEI climb with the take-off share.
+  \item In \code{'FuelCellBattery'} a Class-II motor or propeller model is read at the power of
+  each branch, not at the total power through the shared drive.
   \item No ageing estimator: the state of health is an input.
 \end{itemize}
 
 
 \section*{Reproducing this manual}
 
-From \fn{trunk/}, \code{conda run -n phlygreen python ../manuals/fuel-cell/scripts/make_figures.py}
+From \fn{trunk/}, \code{python ../manuals/fuel-cell/scripts/make_figures.py} in the \code{phlygreen} environment
 regenerates every figure and writes every quoted number to
-\fn{manuals/fuel-cell/figures/manual_numbers.json} (about ten minutes in total). Then, from
+\fn{manuals/fuel-cell/figures/manual_numbers.json} (about 40 minutes in total, of which the take-off-assist group of example~23 takes about 30; each group can be run alone by naming it on the command line). Then, from
 \fn{manuals/fuel-cell/}, \code{latexmk -pdf -interaction=nonstopmode -outdir=build fuelcell_manual.tex}.
 
 

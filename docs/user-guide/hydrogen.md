@@ -290,16 +290,35 @@ structural + multi-layer-insulation (MLI) sizing (after Svensson et al.) and a t
 - a **heater** adds power at the minimum pressure \(P_{\min}\) to keep feed pressure up.
 
 It requires **CoolProp** (para-hydrogen properties) and is therefore optional: with a
-`TankConfig` and CoolProp installed it is used for sizing (reporting the **gravimetric index**
-H₂/(H₂+tank), geometry and pressure limits); otherwise a simple gravimetric-index mass model is
-used so the design always closes.
+`TankConfig` and CoolProp installed it sizes the hydrogen storage of the `'Hydrogen'` and
+`'FuelCellBattery'` configurations (reporting the **gravimetric index** H₂/(H₂+tank), geometry
+and pressure limits; `results().tank_mass` is the empty tank-system mass). Without a `TankConfig`
+a simple gravimetric-index mass model (`EnergyConfig.h2_gravimetric_index`) is used. A
+`TankConfig` given without CoolProp raises a `RuntimeWarning` and falls back to the same
+gravimetric index (`aircraft.tank` is then `None`). A CoolProp failure inside the tank model
+(liquid density at sizing, properties in a time step) also warns and uses fixed fallback values.
 
 ```python
 from PhlyGreen.config import TankConfig
 config.tank = TankConfig(max_diameter=2.4, number_of_tanks=1, tank_model='Svensson_Default')
 ```
 
-To watch the tank state evolve over the mission, switch on tracking and re-fly:
+`TankConfig` fields:
+
+| field | meaning |
+|---|---|
+| `max_diameter` | maximum tank **outer** diameter [m]. The inner radius is capped at `max_diameter/2 − 0.15 m`; the sized outer diameter is checked against `max_diameter` (`ValueError` if larger). |
+| `number_of_tanks` | starting number of tanks; the automatic split adds tanks when that improves the gravimetric index, or when a cylinder would be longer than 20 inner radii. |
+| `max_number_of_tanks` | cap on the split (default 4). At the cap the split stops; a cylinder longer than the aspect limit is then kept, with a warning. |
+| `tank_model` | key into `TANK_Database`. |
+| `fuselage_diameter` | **not used** by the model (kept for API compatibility): there is no fuselage-integration rule, so set `max_diameter` to the space available. |
+
+The minimum pressure is floored at 1.2 bar: a database entry with a lower `min_p_bar` is raised
+to it with a warning. The ambient temperature of the heat leak is the package ISA
+(`Utilities/Atmosphere.py`) plus the mission `DISA`.
+
+To watch the tank state evolve over the mission, switch on tracking and re-fly (works for both
+`'Hydrogen'` and `'FuelCellBattery'`):
 
 ```python
 aircraft.configure(config)                       # sizes the tank
@@ -308,6 +327,21 @@ aircraft.mission.EvaluateMission(aircraft.weight.WTO)
 from PhlyGreen import postprocess as pp
 pp.plot_tank_state(aircraft)                      # pressure / mass / vent vs time
 ```
+
+The history (`Mission.compute_tank_history`) starts with the full tank (load + reserve) at the
+start of taxi-out and draws the same hydrogen as the sizing: taxi-out and the take-off run, the
+flown mission and taxi-in, at the flows of the ground segments. Time follows the profile clock
+(0 = start of the climb), so taxi-out and the take-off run have negative times. The end mass is
+the fuel margin + the reserve − the vented mass; the vented mass is not part of the sizing.
+
+**Limitations.** The following constants of `Tank.py` are unsourced engineering assumptions
+(marked as such in the code): the 0.15 m radial clearance under `max_diameter`, the 4 % ullage
+volume, the cylinder aspect limit `L_cyl ≤ 20 r_inner`, the 0.8 mm minimum gauge, the inner-wall
+design pressure `2.2 P_max`, the 2.5× cylindrical jacket thickness, the cylinder accessory penalty
+`0.15 + 0.20 L_cyl/r_inner`, the factors 1.3 (heat leak) and 2 in the pressure rate of
+`time_step`, the 1.2 bar floor on `P_min` and the default cap of 4 tanks. The tank is not
+integrated with the fuselage (no shielding, no fuselage resizing), and the thin-wall and
+buckling formulas have no fatigue, thermal-stress or support loads.
 
 See example `22_hydrogen_tank.py` and notebook `03_hydrogen_fuel_cell.ipynb`.
 
@@ -326,25 +360,39 @@ kg, hybridization helps short power-limited segments more than sustained cruise.
 
 **When does a battery pay?** A battery makes the aircraft lighter only if it lowers the power
 that sizes the fuel cell by more than its own mass (plus the snowball) costs. Example
-`23_fuelcell_battery_hybrid.py` shows the two conditions on the ATR 42-600 reference:
+`23_fuelcell_battery_hybrid.py` shows the two conditions on the ATR 42-600 reference, with the
+battery on the take-off run only (`taxi_phi = 0`):
 
 - **The take-off must size the fuel cell.** On the baseline 1,107 m field the climb needs more
   power than the take-off (3.0 vs 2.8 MW), so a take-off battery removes no stack mass and every
-  battery share makes the aircraft heavier. On an 800 m field (the ATR 42-600S short-field
-  version) the take-off needs 3.9 MW against 3.4 MW for the climb.
-- **The battery must be a power battery.** A battery on the take-off only (under a minute) is
-  sized by its specific power and stays small. A battery that also covers the ~27-minute climb
-  is sized by energy and never pays, on either field.
+  battery share makes the aircraft heavier, whatever the battery. On an 800 m field (the ATR
+  42-600S short-field version) the take-off needs 3.9 MW against 3.4 MW for the climb.
+- **The battery must be lighter per kW than what it removes.** The battery shrinks the stack,
+  its balance of plant and the TMS, but not the motor and the PMAD: the battery power flows
+  through the same drive, which still carries the full take-off power. A battery on the
+  take-off only (under a minute) is sized by its specific power. A battery that also covers
+  the ~27-minute climb is sized by energy and never pays.
 
 On the 800 m field the power balance gives the take-off share at which the battery brings the
 fuel cell's take-off load down to its climb load,
-\(\varphi^* = 1 - P_{\text{climb}}/P_{\text{take-off}} = 0.145\). The sweep finds a flat optimum
-between φ = 0.10 and 0.15, about 320 kg (1.3 %) lighter than pure hydrogen. At φ = 0.10 the
-stack is 354 kg lighter and the battery weighs 333 kg; at φ = 0.15 the stack is 494 kg lighter
-and the battery weighs 500 kg. The battery is sized on its terminal power, so it pays back only
-part of the stack mass it removes. Beyond φ* the climb sizes the fuel cell again and the battery
-only adds mass. The take-off battery also adds hydrogen (497 vs 494 kg on the design mission),
-because the heavier aircraft needs more power in cruise.
+\(\varphi^* = 1 - P_{\text{climb}}/P_{\text{take-off}} = 0.145\), and the sweep finds the lightest
+design at φ = 0.15. Whether that design is lighter than pure hydrogen depends on the battery
+specific power (table: changes against the pure-hydrogen design, 24,024 kg, at φ = 0.15):
+
+| Mass change [kg] | 1.5 kW/kg pack (default) | 3 kW/kg power pack (assumed) |
+|---|---|---|
+| stack + BoP + PMAD | −283 | −382 |
+| motor | +6 | −15 |
+| TMS | −145 | −190 |
+| battery | +513 | +246 |
+| hydrogen | +18 | −4 |
+| structure and the rest (snowball) | +188 | −380 |
+| **take-off weight** | **+297 (+1.2 %)** | **−726 (−3.0 %)** |
+
+A scan of the specific power at φ = 0.15 puts the break-even at about 1.75 kW/kg (−4 kg); at
+5 kW/kg the aircraft is 1,112 kg (4.6 %) lighter. The 3 kW/kg and higher values are assumed
+technology levels for the study, not sourced pack data. Beyond φ* the climb sizes the fuel
+cell again and the battery only adds mass.
 
 ---
 

@@ -26,11 +26,21 @@ Run it:
     cd trunk && python examples/26_turbofan_design.py
 """
 
+import os
+import sys
+
 import numpy as np
 
 import PhlyGreen as pg
 from common import turbofan_config, savefig
 from PhlyGreen.Systems.Powertrain.turbofan_surrogate import TurbofanResponseSurface
+
+# Sourced A320-200 reference values (validation/a320_reference.py, provenance table in
+# validation/a320_reference.md): MTOW 78,000 kg (Airbus ACAP WV017 / EASA TCDS-N), SLS thrust
+# 2 x 120.1 kN (EASA TCDS), wing area 122.6 m2 and OEW 42,600 kg (secondary sources).
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                                "validation"))
+from a320_reference import REFERENCE as A320_REFERENCE   # noqa: E402
 
 LHV = 43.0e6   # Jet-A [J/kg], the value the map was generated with
 
@@ -107,27 +117,31 @@ def main():
     print(f"wing area                  : {ac.WingSurface:.1f} m2")
 
     # --- against the real aircraft ---------------------------------------------------
-    # Reference values are sourced and cited in validation/a320_reference.md: MTOW and the
-    # engine thrust rating are certification data (Airbus ACAP, EASA TCDS A.064); wing area
-    # and OEW are secondary-source figures. Stated, not tuned.
-    print("\n--- against an A320-200 ---")
-    for label, got, ref in [("MTOW  [kg]", r.WTO, 73500.0),
-                            ("OEW   [kg]", r.empty_weight, 42175.0),
-                            ("S     [m2]", ac.WingSurface, 122.6),
-                            ("SLS thrust/engine [kN]", r.engineRating / 2000, 120.1)]:
+    # Reference values are the ones of validation/a320_reference.py, sourced and cited in
+    # validation/a320_reference.md: MTOW and the engine thrust rating are certification data
+    # (Airbus ACAP WV017, EASA TCDS A.064); wing area and OEW are secondary-source figures.
+    # Stated, not tuned.
+    mtow_ref = A320_REFERENCE["MTOW"][0]
+    oew_ref = A320_REFERENCE["OEW"][0]
+    area_ref = A320_REFERENCE["wing_area"][0]
+    thrust_per_engine_ref = A320_REFERENCE["SLS_thrust_total"][0] / 2.0
+    print("\n--- against an A320-200 (validation/a320_reference.md) ---")
+    for label, got, ref in [("MTOW  [kg]", r.WTO, mtow_ref),
+                            ("OEW   [kg]", r.empty_weight, oew_ref),
+                            ("S     [m2]", ac.WingSurface, area_ref),
+                            ("SLS thrust/engine [kN]", r.engineRating / 2000, thrust_per_engine_ref)]:
         print(f"{label:<24}{got:>10.1f}{ref:>10.1f}   {100*(got-ref)/ref:+6.1f}%")
-    print(f"{'OEW/MTOW [-]':<24}{r.empty_weight/r.WTO:>10.3f}{42175.0/73500.0:>10.3f}"
-          f"   {100*((r.empty_weight/r.WTO)/(42175.0/73500.0)-1):+6.1f}%")
+    print(f"{'OEW/MTOW [-]':<24}{r.empty_weight/r.WTO:>10.3f}{oew_ref/mtow_ref:>10.3f}"
+          f"   {100*((r.empty_weight/r.WTO)/(oew_ref/mtow_ref)-1):+6.1f}%")
 
     print("""
 Reading these numbers
 ---------------------
-The absolute masses come out light, the empty-weight FRACTION does not. Raymer's Class-I jet
-regression under-predicts this particular aircraft's empty weight by ~13 %, and that propagates
-to take-off weight; the fraction it predicts is within a couple of percent. The powertrain mass
-is deliberately not added on top of that regression (`avoid_powertrain_double_count`), because
-an empty-weight fraction already contains the installed engines -- adding them again used to
-make the totals look better only by cancelling the under-prediction.
+The reference is the 78 t MTOW variant (WV017) with a secondary-source OEW of 42.6 t, the
+values of validation/a320_reference.md. The empty-weight FRACTION comes from Raymer's Class-I
+jet regression. The powertrain mass is deliberately not added on top of that regression
+(`avoid_powertrain_double_count`), because an empty-weight fraction already contains the
+installed engines -- adding them again would only shift the totals.
 
 Note too that this design point minimises installed THRUST, which is not the same as minimising
 take-off weight: a narrow-body is sized at its landing-field wing-loading limit, where the wing

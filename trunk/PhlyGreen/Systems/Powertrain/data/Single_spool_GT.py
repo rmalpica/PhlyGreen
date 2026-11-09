@@ -279,145 +279,220 @@ class EngineWeightCalculator:
         return w_dry_engine * 1.10
 
 # ==============================================================================
-# 3. MAIN EXECUTION
+# 3. UNIVERSAL MAP GENERATION
 # ==============================================================================
-if __name__ == "__main__":
+# The map is written for a single reference engine, with reference (unscaled) component
+# efficiencies, and stored as a function of the POWER FRACTION (required / available at the
+# flight condition), so it applies to any engine size. The size-dependent efficiency scaling
+# (get_scaled_efficiency / calibrate_scaling_exponent above) is NOT applied here: it is a
+# runtime effect, applied in PhlyGreen.Systems.Powertrain.gas_turbine_surrogate. The two
+# helpers above are kept only as the reference implementation reused at runtime.
 
-    # ------------------------------------------------------------------
-    # STEP 1: SETUP PYCYCLE
-    # ------------------------------------------------------------------
-    # NOTE: the size-dependent efficiency scaling (get_scaled_efficiency /
-    # calibrate_scaling_exponent) is intentionally NOT applied at generation time. This
-    # script now produces a SINGLE reference-engine, UNIVERSAL map: thermal efficiency vs
-    # (altitude, Mach, power fraction). The dependence of efficiency on engine *size* is
-    # applied at RUNTIME (keyed on the nominal power chosen before sizing) in
-    # PhlyGreen.Systems.Powertrain.gas_turbine_surrogate, so the map itself stays universal.
-    # The two helpers above are kept only as the reference implementation reused at runtime.
-    prob = om.Problem()
-    prob.model = mp_single_spool = MPSingleSpool()
+REF_PWR = 2750.0                                   # reference engine [hp], also the runtime reference
+REF_EFF_COMP, REF_EFF_HPT, REF_EFF_LPT = 0.86, 0.885, 0.915
+LHV_J_KG = 43e6
+LBM_TO_KG = 0.45359237
+HP_TO_W = 745.7
+
+# Grid: 4 altitudes x 4 Mach numbers x 5 power fractions (0.3 .. 1.0 of the available power).
+ALTITUDES_FT = np.linspace(0, 30000, 4)
+MACHS = np.linspace(0.0, 0.6, 4)
+POWER_FRACTIONS = np.linspace(0.3, 1.0, 5)
+
+# pyCycle's FlightConditions is singular at MN = 0 exactly (the static-pressure residual takes
+# the square root of a negative number and returns NaN, so Newton never moves and FAR stays at
+# its initial guess). The "static" column is therefore solved at this small Mach number, and the
+# CSV stores the Mach number actually solved.
+STATIC_MACH = 0.01
+
+# A point is accepted only if all three off-design balances are closed:
+#   delivered shaft power within POWER_TOL of the target,
+#   gas-generator shaft net power within POWER_TOL of the target power,
+#   nozzle throat area within POWER_TOL of the design throat area.
+POWER_TOL = 1e-3
+
+
+def isa_pressure_ratio(alt_ft):
+    """ISA pressure ratio delta = p/p_SL (troposphere, temperature floored at 390 degR)."""
+    P_std_sl, T_std_sl = 14.696, 518.67
+    T_amb = max(T_std_sl - 3.566e-3 * alt_ft, 390.0)
+    P_amb = P_std_sl * (T_amb / T_std_sl) ** 5.2561
+    return P_amb / P_std_sl
+
+
+def run_quietly(prob):
+    """run_model without pyCycle/OpenMDAO console output."""
+    import contextlib, io
+    with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+        prob.run_model()
+
+
+def read_off_design_state(prob, od, target_hp):
+    """Balance variables, delivered power, fuel flow and closure errors of the last solve."""
+    delivered_hp = prob.get_val(f'{od}.LP_shaft.pwr_net', units='hp')[0]
+    hp_shaft_net = prob.get_val(f'{od}.HP_shaft.pwr_net', units='hp')[0]
+    area = prob.get_val(f'{od}.nozz.Throat:stat:area', units='inch**2')[0]
+    area_design = prob.get_val(f'{od}.balance.rhs:W', units='inch**2')[0]
+    wfuel_kg_s = prob.get_val(f'{od}.perf.Wfuel')[0] * LBM_TO_KG
+    state = {
+        "W": prob.get_val(f'{od}.balance.W')[0],
+        "FAR": prob.get_val(f'{od}.balance.FAR')[0],
+        "HP_Nmech": prob.get_val(f'{od}.balance.HP_Nmech')[0],
+        "delivered_hp": delivered_hp,
+        "wfuel_kg_s": wfuel_kg_s,
+        "power_error": abs(delivered_hp - target_hp) / target_hp,
+        "hp_shaft_error": abs(hp_shaft_net) / target_hp,
+        "area_error": abs(area - area_design) / area_design,
+    }
+    finite = np.isfinite([state[k] for k in ("W", "FAR", "HP_Nmech", "delivered_hp",
+                                            "wfuel_kg_s", "area_error")]).all()
+    state["converged"] = bool(finite
+                              and state["power_error"] < POWER_TOL
+                              and state["hp_shaft_error"] < POWER_TOL
+                              and state["area_error"] < POWER_TOL)
+    return state
+
+
+def solve_from_guess(prob, od, alt, mach, target_hp, guess):
+    """Set the balance guesses, solve one off-design point and return its state."""
+    prob.set_val(f'{od}.balance.W', guess["W"])
+    prob.set_val(f'{od}.balance.FAR', guess["FAR"])
+    prob.set_val(f'{od}.balance.HP_Nmech', guess["HP_Nmech"])
+    prob.set_val(f'{od}.fc.alt', alt, units='ft')
+    prob.set_val(f'{od}.fc.MN', mach)
+    prob.set_val(f'{od}.balance.pwr_target', target_hp, units='hp')
+    try:
+        run_quietly(prob)
+    except Exception:
+        return {"converged": False}
+    return read_off_design_state(prob, od, target_hp)
+
+
+def solve_by_power_continuation(prob, od, alt, mach, start_state, start_hp, target_hp, n_steps):
+    """Walk the power target from a converged state to target_hp in n_steps warm-started solves."""
+    state, guess = None, start_state
+    for p in np.linspace(start_hp, target_hp, n_steps + 1)[1:]:
+        state = solve_from_guess(prob, od, alt, mach, p, guess)
+        if not state["converged"]:
+            return state
+        guess = state
+    return state
+
+
+def solve_point(prob, od, alt, mach, target_hp, guesses, continuation_start):
+    """Solve one map point, trying each guess in order, then a power continuation.
+
+    ``guesses`` are dicts of balance values (W, FAR, HP_Nmech), typically the converged
+    neighbours. ``continuation_start`` is ``(state, power_hp)`` of a converged point at the same
+    flight condition, or None. Raises RuntimeError if nothing converges: a map point is never
+    written unless the deck delivered the requested power.
+    """
+    for guess in guesses:
+        if guess is None:
+            continue
+        state = solve_from_guess(prob, od, alt, mach, target_hp, guess)
+        if state["converged"]:
+            return state
+    if continuation_start is not None:
+        start_state, start_hp = continuation_start
+        for n_steps in (4, 10):
+            state = solve_by_power_continuation(prob, od, alt, mach, start_state, start_hp,
+                                                target_hp, n_steps)
+            if state["converged"]:
+                return state
+    raise RuntimeError(
+        f"Turboshaft deck did not converge at {alt:.0f} ft, Mach {mach:.2f}, "
+        f"{target_hp:.1f} hp: no guess or power continuation closed the balances "
+        f"(power, gas-generator shaft, nozzle area) within {POWER_TOL:.0e}.")
+
+
+def generate_map(prob, base_mass_flow):
+    """Sweep the grid and return rows [alt, Mach, power fraction, efficiency, target, delivered].
+
+    Each (altitude, Mach) column is solved from full power downwards (full power is closest to
+    the design point), each point warm-started from its converged neighbour. The first point of
+    a column starts from the full-power point of the previous Mach column (or of the previous
+    altitude), so the whole map is reached by continuation from the design point.
+    """
+    od = prob.model.od_pts[0]
+    fresh_guess_at_sl = {"W": base_mass_flow, "FAR": 0.017, "HP_Nmech": 8070.0}
+    rows = []
+    previous_column_top = None          # converged full-power state of the previous column
+    for alt in ALTITUDES_FT:
+        delta = isa_pressure_ratio(alt)
+        max_pwr_at_alt = REF_PWR * delta          # available power lapses with the ISA pressure ratio
+        fresh_guess = {"W": base_mass_flow * delta, "FAR": 0.017, "HP_Nmech": 8070.0}
+        for mach in MACHS:
+            mach_solved = max(mach, STATIC_MACH)
+            previous_in_column = None
+            column_top = None
+            for fraction in POWER_FRACTIONS[::-1]:
+                target_hp = fraction * max_pwr_at_alt
+                guesses = [previous_in_column, previous_column_top, fresh_guess, fresh_guess_at_sl]
+                continuation_start = None
+                if previous_in_column is not None:
+                    continuation_start = (previous_in_column, previous_in_column["target_hp"])
+                state = solve_point(prob, od, alt, mach_solved, target_hp, guesses,
+                                    continuation_start)
+                state["target_hp"] = target_hp
+                eta = target_hp * HP_TO_W / (state["wfuel_kg_s"] * LHV_J_KG)
+                if not 0.05 < eta < 0.6:
+                    raise RuntimeError(
+                        f"Implausible thermal efficiency {eta:.3f} at {alt:.0f} ft, Mach "
+                        f"{mach_solved:.2f}, power fraction {fraction:.3f}.")
+                rows.append([alt, mach_solved, fraction, eta, target_hp, state["delivered_hp"]])
+                previous_in_column = state
+                if column_top is None:
+                    column_top = state
+                sys.stdout.write(".")
+                sys.stdout.flush()
+            previous_column_top = column_top
+        print(f" | {alt:.0f} ft done")
+    # restore the grid order of the original map: altitude, Mach, increasing power fraction
+    rows.sort(key=lambda r: (r[0], r[1], r[2]))
+    return rows
+
+
+if __name__ == "__main__":
+    import os as _os
+    _os.environ.setdefault("OPENMDAO_REPORTS", "0")
+
+    prob = om.Problem(reports=False)
+    prob.model = MPSingleSpool()
     prob.setup()
 
-    # ------------------------------------------------------------------
-    # STEP 2: RUN THE UNIVERSAL GRID (single reference engine, no size scaling)
-    # ------------------------------------------------------------------
-    # This creates the CSV map used later to train the universal surrogate. Only the
-    # reference engine is run, with reference (unscaled) component efficiencies; the map is
-    # stored as a function of the POWER FRACTION (req/available), so it applies to any size.
-    design_powers_to_run = [2750.0]   # single UNIVERSAL reference engine
-
-    # Reference Constants (ATR-72 Class Baseline) — also the runtime scaling reference.
-    REF_PWR = 2750.0
-    REF_EFF_COMP, REF_EFF_HPT, REF_EFF_LPT = 0.86, 0.885, 0.915
-
-    # Storage for CSV file.
-    training_data = []
-
     total_start = time.time()
+    print("\n" + "=" * 70)
+    print(" UNIVERSAL MAP GENERATION (reference engine, unscaled)")
+    print("=" * 70)
+    print(f"  Reference engine {REF_PWR:.0f} hp; efficiencies comp {REF_EFF_COMP:.3f}, "
+          f"HPT {REF_EFF_HPT:.3f}, PT {REF_EFF_LPT:.3f}")
 
-    print("\n" + "="*70)
-    print(" 2. STARTING UNIVERSAL MAP GENERATION (reference engine, unscaled)")
-    print("="*70)
+    # Design point: sea-level static, T4 2370 degR, compressor PR 13.5.
+    prob.set_val('DESIGN.fc.alt', 0.0, units='ft')
+    prob.set_val('DESIGN.fc.MN', 1e-6)
+    prob.set_val('DESIGN.balance.T4_target', 2370.0, units='degR')
+    prob.set_val('DESIGN.balance.pwr_target', REF_PWR, units='hp')
+    prob.set_val('DESIGN.balance.nozz_PR_target', 1.2)
+    prob.set_val('DESIGN.comp.PR', 13.5)
+    prob.set_val('DESIGN.comp.eff', REF_EFF_COMP)
+    prob.set_val('DESIGN.turb.eff', REF_EFF_HPT)
+    prob.set_val('DESIGN.pt.eff', REF_EFF_LPT)
+    run_quietly(prob)
+    design_power = prob.get_val('DESIGN.LP_shaft.pwr_net', units='hp')[0]
+    if abs(design_power - REF_PWR) / REF_PWR > POWER_TOL:
+        raise RuntimeError(f"Design point did not converge: {design_power:.1f} hp delivered "
+                           f"for {REF_PWR:.0f} hp.")
+    base_mass_flow = prob.get_val('DESIGN.inlet.Fl_O:stat:W')[0]
+    est_weight = EngineWeightCalculator(prob, pt='DESIGN').estimate_weight()
+    print(f"  > DESIGN OK. Mass Flow: {base_mass_flow:.2f} lb/s, Weight: {est_weight:.0f} lbs")
 
-    # LOOP: ENGINE SIZING (single reference engine)
-    for des_pwr in design_powers_to_run:
-        print(f"\n--- SIZING REFERENCE ENGINE: {des_pwr:.0f} HP ---")
+    print("  > Mapping performance...")
+    training_data = generate_map(prob, base_mass_flow)
 
-        # A. REFERENCE EFFICIENCIES (no size scaling — that is a runtime effect)
-        scaled_comp_eff = REF_EFF_COMP
-        scaled_hpt_eff  = REF_EFF_HPT
-        scaled_lpt_eff  = REF_EFF_LPT
-
-        print(f"  Efficiencies -> Comp: {scaled_comp_eff:.3f}, HPT: {scaled_hpt_eff:.3f}, LPT: {scaled_lpt_eff:.3f}")
-
-        # B. SET DESIGN INPUTS
-        prob.set_val('DESIGN.fc.alt', 0.0, units='ft')
-        prob.set_val('DESIGN.fc.MN', 1e-6)
-        prob.set_val('DESIGN.balance.T4_target', 2370.0, units='degR')
-        prob.set_val('DESIGN.balance.pwr_target', des_pwr, units='hp')
-        prob.set_val('DESIGN.balance.nozz_PR_target', 1.2)
-        prob.set_val('DESIGN.comp.PR', 13.5)
-        prob.set_val('DESIGN.comp.eff', scaled_comp_eff)
-        prob.set_val('DESIGN.turb.eff', scaled_hpt_eff)
-        prob.set_val('DESIGN.pt.eff', scaled_lpt_eff)
-
-        # C. RUN DESIGN POINT
-        try:
-            prob.run_model()
-            
-            # Get Sizing Info
-            base_mass_flow = prob.get_val('DESIGN.inlet.Fl_O:stat:W')[0]
-            weight_calc = EngineWeightCalculator(prob, pt='DESIGN')
-            est_weight = weight_calc.estimate_weight()
-            
-            print(f"  > DESIGN OK. Mass Flow: {base_mass_flow:.2f} lb/s, Weight: {est_weight:.0f} lbs")
-            
-        except Exception:
-            print(f"  > DESIGN FAILED for {des_pwr} HP. Skipping.")
-            continue
-
-        # D. OFF-DESIGN MAPPING
-        od = mp_single_spool.od_pts[0]
-        
-        # Grid: 4 Altitudes, 4 Machs. The user can change those ranges and densities as they wish to create a custom map for their specific use case.
-        alts = np.linspace(0, 30000, 4)   
-        machs = np.linspace(0.0, 0.6, 4)  
-        
-        print(f"  > Mapping performance...")
-        
-        for alt in alts:
-            # Atmosphere (Standard)
-            P_std_sl, T_std_sl = 14.696, 518.67
-            T_amb = T_std_sl - 3.566e-3 * alt
-            if T_amb < 390.0: T_amb = 390.0
-            P_amb = P_std_sl * (T_amb / T_std_sl)**5.2561
-            delta = P_amb / P_std_sl
-
-            # Max power decreases with altitude
-            max_pwr_at_alt = des_pwr * delta
-            
-            # Idle ~30%
-            current_powers = np.linspace(max_pwr_at_alt*0.3, max_pwr_at_alt, 5) 
-            guess_W = base_mass_flow * delta
-
-            for mach in machs:
-                # Reset Guesses
-                prob.set_val(f'{od}.balance.W', guess_W)
-                prob.set_val(f'{od}.balance.FAR', 0.017)
-                prob.set_val(f'{od}.balance.HP_Nmech', 5000.0)
-
-                for pwr in current_powers:
-                    prob.set_val(f'{od}.fc.alt', alt, units='ft')
-                    prob.set_val(f'{od}.fc.MN', mach)
-                    prob.set_val(f'{od}.balance.pwr_target', pwr, units='hp')
-
-                    try:
-                        prob.run_model()
-                        
-                        Wfuel = prob.get_val(f'{od}.perf.Wfuel')[0]
-                        P_out_watts = pwr * 745.7
-                        eta = P_out_watts / (max(Wfuel, 1e-6) * 0.45359237 * 43e6)
-
-                        # Store the POWER FRACTION (req / available-at-condition) so the map
-                        # is universal (size-independent): runtime scales available power by
-                        # the nominal power and looks efficiency up at this fraction.
-                        power_fraction = pwr / max_pwr_at_alt if max_pwr_at_alt > 0 else 0.0
-
-                        if 0.05 < eta < 0.6:
-                            training_data.append([alt, mach, power_fraction, eta])
-                            sys.stdout.write(".")
-                        else:
-                            sys.stdout.write("x") 
-                    except:
-                        sys.stdout.write("F") 
-                    sys.stdout.flush()
-            print(f" | {alt:.0f} ft done")
-
-    # SAVE DATA 
-    print(f"\nTotal Run Time: {(time.time()-total_start)/60:.1f} minutes")
-    
-    header = "Altitude_ft,Mach,Power,Efficiency"
+    print(f"\nTotal Run Time: {(time.time() - total_start) / 60:.1f} minutes")
+    header = "Altitude_ft,Mach,Power,Efficiency,Target_hp,Delivered_hp"
     out_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "GT_Universal_Map.csv")
     np.savetxt(out_path, training_data, delimiter=",", header=header, comments="")
-    print(f"SUCCESS: '{out_path}' created ({len(training_data)} universal map points).")
-    
-    print("\nSUCCESS: 'GT_Universal_Map.csv' created.")
+    print(f"SUCCESS: '{out_path}' created ({len(training_data)} universal map points, "
+          f"all converged within {POWER_TOL:.0e}).")

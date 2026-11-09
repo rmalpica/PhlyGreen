@@ -117,3 +117,19 @@ def test_tms_config_validation(kwargs):
     from PhlyGreen.config import TMSConfig, ConfigError
     with pytest.raises(ConfigError):
         TMSConfig(**kwargs)
+
+
+def test_propeller_rpm_and_fuel_cell_efficiency_round_trip():
+    from PhlyGreen.config import EnergyConfig
+    energy = EnergyConfig(Ef=43.5e6, propeller_rpm=1100.0, eta_fuel_cell=0.52)
+    d = energy.to_dict()
+    assert d['Propeller RPM'] == 1100.0
+    assert d['Eta Fuel Cell'] == 0.52
+    back = EnergyConfig.from_dict(d)
+    assert back.propeller_rpm == 1100.0 and back.eta_fuel_cell == 0.52
+    # unset -> no key, so the powertrain keeps its 1200 rpm default
+    assert 'Propeller RPM' not in EnergyConfig(Ef=43.5e6).to_dict()
+    with pytest.raises(ConfigError):
+        EnergyConfig(Ef=43.5e6, propeller_rpm=-5.0)
+    with pytest.raises(ConfigError):
+        EnergyConfig(Ef=43.5e6, eta_fuel_cell=1.2)

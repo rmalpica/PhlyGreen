@@ -159,14 +159,16 @@ class GasTurbineEfficiencyModel(EfficiencyModel):
     ratio of required to nominal power, accounting for the altitude power lapse.
 
     Args:
-        design_power: nominal (rated) shaft power of the whole installation [W] — typically
-            ``DesignPW * WTO``. Required.
+        design_power: nominal (rated) shaft power of the whole installation [W]. ``None``
+            leaves it to be set later (``Powertrain.set_gt_design_power``, used when the
+            weight loop makes the nominal follow the sized engine rating); ``eta`` raises
+            while it is unset.
         surrogate: a :class:`GasTurbineResponseSurface` (loaded by default).
         n_engines: number of engines the installation is split over.
     """
 
     def __init__(self, design_power, surrogate=None, n_engines=1):
-        if design_power is None or design_power <= 0:
+        if design_power is not None and design_power <= 0:
             raise ValueError(
                 "GasTurbineEfficiencyModel needs a positive nominal 'design_power' [W] "
                 "(size the engine before the mission, e.g. DesignPW * WTO).")
@@ -183,6 +185,9 @@ class GasTurbineEfficiencyModel(EfficiencyModel):
         a = Speed.soundspeed(op.altitude, 0.0)
         mach = op.velocity / a if a > 0 else 0.0
         alt_ft = Units.mToft(op.altitude)
+        if self.design_power is None:
+            raise ValueError("GasTurbineEfficiencyModel: the nominal 'design_power' is not set "
+                             "yet (it is set by the weight loop, or by 'GT Design Power').")
         design_hp = Units.wTohp(self.design_power) / self.n_engines   # per engine
         req_hp = Units.wTohp(op.power) / self.n_engines
         efficiency, _, _, _ = self.surrogate.predict(design_hp, alt_ft, mach, req_hp)

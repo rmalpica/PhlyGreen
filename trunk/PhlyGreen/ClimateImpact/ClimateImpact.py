@@ -5,6 +5,7 @@ import scipy.integrate as integrate
 import matplotlib.pyplot as plt
 import statistics
 import PhlyGreen.Utilities.Atmosphere as ISA
+from PhlyGreen.Systems.Powertrain.gas_turbine_surrogate import _isa_pressure_ratio
 
 
 class ClimateImpact:
@@ -20,8 +21,11 @@ class ClimateImpact:
         • Temperature response ΔT(t) from convolution of RF *(t) with the climate kernel
         • ATR(H): Average Temperature Response over the time horizon H
 
-    NOx is estimated with the Filippone semi-empirical model. (A dedicated emissions model
-    may be added in the future.)
+    NOx is estimated either with the Filippone semi-empirical correlation or with the
+    emission-index response surface of the engine class (``'Surrogate'``: PW127 turboprop map,
+    or the CFM56-class map for a Turbofan), which also gives CO and UHC. Both integrate the
+    flown mission and add the ground segments (taxi-out, take-off run, taxi-in) that
+    ``Mission._ground_segments`` adds to the fuel, so NOx/CO/UHC and CO2 cover the same fuel.
 
     Inputs expected in `aircraft.ClimateImpactInput`:
         H             : time horizon [yr]
@@ -29,15 +33,17 @@ class ClimateImpact:
         Y             : operative years
         Grid_CO2      : CO2 intensity of electricity [kg CO2 / MJ]
         WTW_CO2       : well-to-wake CO2 intensity of fuel [kg CO2 / MJ]
-        EINOx_model   : {'unset', 'Filippone'}
+        EINOx_model   : {'unset', 'Filippone', 'Surrogate'}
 
     The class relies on mission profiles produced by the Mission module, including:
-        • continuous or discrete altitude/velocity profiles
+        • the continuous mission solution (``aircraft.MissionType = 'Continue'``, the default
+          that ``build_aircraft`` sets; ``'Discrete'`` is the legacy discretised path)
         • power demand, beta schedule, supplied power ratio (Hybrid), etc.
 
     Outputs (stored internally):
         self.mission_emissions = dict with keys:
-            'co2', 'h2o', 'so4', 'soot', 'nox'
+            'co2', 'h2o', 'so4', 'soot', 'nox' (+ 'co', 'uhc' with the surrogate)
+        self.ground_emissions : the ground-segment share of the fuel and of NOx (CO, UHC)
         self.media_pesata_quote : altitude-weighted average cruise height
         self.frazioni_di_missione : altitude PDF over mission range
         ATR(H)                   : final climate metric [K]
@@ -83,6 +89,9 @@ class ClimateImpact:
         # over the mission for NOx/CO/UHC, as an alternative to the Filippone NOx correlation.
         # Default None -> existing behaviour is unchanged.
         self.emission_surrogate = None
+        # Ground-segment (taxi-out, take-off run, taxi-in) share of the mission emissions [kg],
+        # filled by calculate_mission_emissions: {'fuel', 'nox'} (+ 'co', 'uhc' with the surrogate).
+        self.ground_emissions = {}
     
 
     """ Properties """
@@ -92,9 +101,11 @@ class ClimateImpact:
         """Selected emissions model: {'unset', 'Filippone', 'Surrogate'}.
 
         ``'Filippone'`` — semi-empirical gas-turbine NOx correlation (default). ``'Surrogate'`` —
-        the packaged gas-turbine emission-index response surface (PW127), which provides NOx, CO
-        and UHC as a function of altitude/Mach/power along the mission (see
-        :class:`PhlyGreen.Systems.Powertrain.emissions_surrogate.EmissionSurrogate`).
+        the packaged emission-index response surface of the engine class (PW127 turboprop map,
+        or the CFM56-class map for a Turbofan), which provides NOx, CO and UHC as a function of
+        altitude, Mach and load fraction along the mission (see
+        :class:`PhlyGreen.Systems.Powertrain.emissions_surrogate.EmissionSurrogate`). Both add
+        the ground segments.
         """
         return self._EINOx_model
 
@@ -224,6 +235,15 @@ class ClimateImpact:
     EI_HYDROCARBON = {'co2': 3.16, 'h2o': 1.26, 'so4': 2e-4, 'soot': 4e-5}
     EI_HYDROGEN = {'co2': 0.0, 'h2o': 8.94, 'so4': 0.0, 'soot': 0.0}
 
+    # Filippone NOx correlation coefficients, one row per LTO phase: climb-out, idle, approach.
+    # The flown mission uses climb-out for the climbs, idle for the cruises and approach for
+    # the descents; the ground segments use climb-out for the take-off run and idle for taxi.
+    FILIPPONE_COEFF = np.array([
+        [0.7194e+1, 0.5609e+0, -0.1059e-1, -0.3223e+1, 0.2889e+0, 0.2591e+0],
+        [0.1605e+0, 0.2412e+0, -0.1650e-2, -0.8818e+1, 0.3714e+2, -0.2268e+0],
+        [ 0.3699e+0, 0.5470e+0, -0.7445e-2, -0.6914e+1, 0.6782e+1, 0.1138e+0]
+    ])
+
     def _burns_hydrogen(self):
         """True for the configurations whose fuel is hydrogen (fuel cell, with or without battery)."""
         return self.aircraft.Configuration in ('Hydrogen', 'FuelCellBattery')
@@ -279,8 +299,10 @@ class ClimateImpact:
             • Upstream WTW fuel CO₂ (``WTW_CO2`` per MJ of ``EnergyInput['Ef']``)
             • Upstream grid CO₂ for battery energy (Hybrid and FuelCellBattery)
 
-        NOx is computed using the Filippone empirical model (or the EI surrogate) for the
-        gas-turbine configurations. A fuel cell emits no NOx. The contrail term (``rf_AIC``)
+        NOx is computed using the Filippone empirical model (or the EI surrogate, which also
+        gives CO and UHC) for the gas-turbine configurations, over the flown mission plus the
+        ground segments (taxi-out, take-off run, taxi-in; see :meth:`_ground_legs`). A fuel
+        cell emits no NOx. The contrail term (``rf_AIC``)
         keeps its kerosene-derived parametrisation for every configuration; for a fuel cell,
         whose exhaust is cool and water-rich, it is a placeholder, not a model.
         """
@@ -354,11 +376,7 @@ class ClimateImpact:
 
 
                     portata = np.zeros(len(times))  # [kg(fuel)/s]
-                    coeff = np.array([
-                        [0.7194e+1, 0.5609e+0, -0.1059e-1, -0.3223e+1, 0.2889e+0, 0.2591e+0],
-                        [0.1605e+0, 0.2412e+0, -0.1650e-2, -0.8818e+1, 0.3714e+2, -0.2268e+0],
-                        [ 0.3699e+0, 0.5470e+0, -0.7445e-2, -0.6914e+1, 0.6782e+1, 0.1138e+0]
-                    ])
+                    coeff = self.FILIPPONE_COEFF
                     # coeff sono i coefficienti del metodo di Filippone per climbout, idle e approach
 
                     EI_NOx = np.zeros(len(times))  # [g/kg(fuel)]
@@ -438,11 +456,7 @@ class ClimateImpact:
                     
 
                     portata = np.zeros(len(times))  # [kg(fuel)/s]
-                    coeff = np.array([
-                        [0.7194e+1, 0.5609e+0, -0.1059e-1, -0.3223e+1, 0.2889e+0, 0.2591e+0],
-                        [0.1605e+0, 0.2412e+0, -0.1650e-2, -0.8818e+1, 0.3714e+2, -0.2268e+0],
-                        [ 0.3699e+0, 0.5470e+0, -0.7445e-2, -0.6914e+1, 0.6782e+1, 0.1138e+0]
-                    ])
+                    coeff = self.FILIPPONE_COEFF
                     # coeff sono i coefficienti del metodo di Filippone per climbout, idle e approach
 
                     EI_NOx = np.zeros(len(times))  # [g/kg(fuel)]
@@ -497,12 +511,17 @@ class ClimateImpact:
 
 
 
-        if self.aircraft.MissionType == 'Continue':
+        if self._mission_type() == 'Continue':
             nox = E_nox_1m()
-        elif self.aircraft.MissionType == 'Discrete': 
-            nox = E_nox_1m_DISCRETO()  
+        elif self._mission_type() == 'Discrete':
+            nox = E_nox_1m_DISCRETO()
 
-
+        # Ground segments (taxi-out, take-off run, taxi-in): their fuel is in weight.Wf (hence
+        # in CO2) but not in the flown mission integrated above.
+        self.ground_emissions = {}
+        if self.EINOx_model == 'Filippone':
+            self.ground_emissions = self._ground_emissions_filippone()
+            nox = nox + self.ground_emissions['nox']
 
         self.mission_emissions['nox'] = nox
 
@@ -524,9 +543,84 @@ class ClimateImpact:
         return float(energy.get('OPR') or 15.77)
 
     def _n_engines(self):
-        """Number of engines the fuel flow is split over (the correlation is per engine)."""
-        prop = getattr(self.aircraft, 'PropellerInput', None) or {}
-        return max(int(prop.get('Number of Engines', 2)), 1)
+        """Number of engines the fuel flow is split over (the correlation is per engine).
+
+        The powertrain's engine count (``powertrain.n_engines``, the one count of the model),
+        or 2 if the powertrain does not carry one.
+        """
+        n_engines = getattr(self.aircraft.powertrain, 'n_engines', None)
+        if n_engines is None:
+            return 2
+        return max(int(n_engines), 1)
+
+    def _mission_type(self):
+        """``aircraft.MissionType``: 'Continue' (default) or the legacy 'Discrete'."""
+        return getattr(self.aircraft, 'MissionType', 'Continue')
+
+    def _filippone_einox(self, phase_row, mfuel_engine):
+        """Filippone EINOx [g/kg] for one coefficient row and a fuel flow per engine [kg/s]."""
+        c = self.FILIPPONE_COEFF[phase_row]
+        OPR = self._opr()
+        return 2 * (c[0] + c[1] * OPR + c[2] * OPR ** 2 + c[3] * mfuel_engine
+                    + c[4] * mfuel_engine ** 2 + c[5] * OPR * mfuel_engine)
+
+    def _ground_legs(self):
+        """The ground segments of the sized mission, one dict per leg.
+
+        Read-only use of the Mission. The legs, their durations [s] and their fuel chemical
+        powers [W] are ``mission._ground_fuel_legs_out`` / ``_ground_fuel_legs_in``, the same
+        numbers ``Mission._ground_segments`` adds to the mission fuel (hence to ``weight.Wf``).
+        All legs are flown at the take-off condition (``mission._ground_condition``), at
+        ``takeoff_power_fraction`` (take-off run) or ``taxi_power_fraction`` (taxi) of the
+        take-off-field propulsive power ``mission._takeoff_power(WTO)``; this is rebuilt here
+        to call the powertrain at the same point and read its gas-turbine shaft power.
+
+        Each dict: ``name``, ``duration`` [s], ``fuel_flow`` [kg/s], ``altitude`` [m],
+        ``velocity`` [m/s TAS] of the powertrain call, ``mach`` for the emission query (0 for
+        taxi, the take-off Mach for the run), ``mach_takeoff`` (the Mach of the powertrain
+        call), ``propulsive_power`` [W], ``shaft_power`` [W]
+        (gas-turbine shaft, all engines) and ``filippone_row`` (0 = climb-out for the take-off
+        run, 1 = idle for taxi). Returns [] if the mission has no ground segments.
+        """
+        m = self.aircraft.mission
+        legs = (list(getattr(m, '_ground_fuel_legs_out', None) or [])
+                + list(getattr(m, '_ground_fuel_legs_in', None) or []))
+        if not legs:
+            return []
+        alt, vel = m._ground_condition()
+        P_TO = m._takeoff_power(self.aircraft.weight.WTO)
+        T = ISA.atmosphere.Tstd(float(alt)) + m.DISA
+        mach_takeoff = vel / (20.0468 * np.sqrt(T))
+        out = []
+        for name, duration, fuel_chemical_power in legs:
+            is_takeoff = (name == 'Takeoff')
+            fraction_of_takeoff = m.takeoff_power_fraction if is_takeoff else m.taxi_power_fraction
+            phi = m._takeoff_phi() if is_takeoff else m._taxi_phi()
+            P = fraction_of_takeoff * P_TO
+            if self.aircraft.Configuration == 'Hybrid':
+                PRatio = self.aircraft.powertrain.Hybrid(phi, alt, vel, P)
+            else:
+                PRatio = self.aircraft.powertrain.Traditional(alt, vel, P)
+            # shaft power = fuel chemical power x (shaft / fuel) of the powertrain at this point
+            shaft = fuel_chemical_power * PRatio[1] / PRatio[0] if PRatio[0] > 0 else 0.0
+            out.append({'name': name, 'duration': float(duration),
+                        'fuel_flow': fuel_chemical_power / self.aircraft.weight.ef,
+                        'altitude': float(alt), 'velocity': float(vel),
+                        'mach': float(mach_takeoff) if is_takeoff else 0.0,
+                        'mach_takeoff': float(mach_takeoff),
+                        'propulsive_power': float(P), 'shaft_power': float(shaft),
+                        'filippone_row': 0 if is_takeoff else 1})
+        return out
+
+    def _ground_emissions_filippone(self):
+        """Fuel [kg] and NOx [kg] of the ground segments with the Filippone correlation."""
+        n_eng = self._n_engines()
+        fuel, nox_g = 0.0, 0.0
+        for leg in self._ground_legs():
+            ei = self._filippone_einox(leg['filippone_row'], leg['fuel_flow'] / n_eng)
+            fuel += leg['fuel_flow'] * leg['duration']
+            nox_g += ei * leg['fuel_flow'] * leg['duration']
+        return {'fuel': float(fuel), 'nox': float(nox_g) * 1e-3}
 
     def _ensure_emission_surrogate(self):
         """Attach the packaged EmissionSurrogate matching this configuration, if none was set.
@@ -542,21 +636,76 @@ class ClimateImpact:
                 default_model_path(self.aircraft.Configuration))
         return self.emission_surrogate
 
+    def _surrogate_load_fraction(self, alt, mach, propulsive_power, shaft_power, velocity, rating):
+        """Third coordinate of the emission map at the given points (arrays).
+
+        Each artifact is read at the coordinate it was generated at:
+
+        * Turboprop (PW127 map, 'Traditional'/'Hybrid'): the gas-turbine SHAFT power over the
+          power available at the altitude, ``P_shaft / (engineRating * delta(h))``, with
+          ``delta`` the ISA pressure ratio. ``emissions_pipeline/pw127_partpower.py`` runs the
+          deck at a gross power ``G(f) * delta(h)`` for a useful-power fraction ``f``, so
+          ``f`` is a fraction of the rated power lapsed by ``delta`` (the same lapse as the
+          turboshaft efficiency map). The shaft power is ``PRatio[1] * P``: in a Hybrid it is
+          the thermal share only, the battery share does not pass through the combustor.
+          ``engineRating`` is rated with ``Powertrain.PowerLapse``. With the Class-II
+          gas-turbine map that is ``delta`` itself, so the fraction peaks at exactly 1 at the
+          sizing point. With constant efficiencies it is Ruijgrok's density ratio ** 0.75,
+          which lapses less than ``delta``: at altitude the fraction then exceeds 1 (up to 1.75
+          on the turboprop reference of examples/common.py) and the surrogate clips it to the
+          map edge (full power).
+        * Turbofan (CFM56-class map): the THRUST ``F = P / V`` over the lapsed available thrust
+          ``engineRating * ThrustLapse(h, M)``, the map's ``ThrustFraction`` (``F / F_max(h, M)``
+          of ``data/HBTF_turbofan.py``, with ``ThrustLapse = F_max(h, M) / F_SLS``).
+
+        ``rating`` is the whole-aircraft value (all engines); the fraction is the same per
+        engine.
+        """
+        if self.aircraft.Configuration == 'Turbofan':
+            thrust = propulsive_power / np.maximum(velocity, 1e-6)
+            lapse = np.array([self.aircraft.powertrain.ThrustLapse(alt[i], mach[i],
+                                                                   self.aircraft.mission.DISA)
+                              for i in range(len(alt))])
+            return thrust / np.maximum(rating * lapse, 1e-9)
+        delta = np.array([_isa_pressure_ratio(float(a) / 0.3048) for a in alt])
+        return shaft_power / np.maximum(rating * delta, 1e-9)
+
+    def _surrogate_rating(self, power_fraction_basis, alt, propulsive_power, shaft_power, velocity):
+        """Rating the load fraction is taken against: ``engineRating`` (shaft power [W], SLS
+        thrust [N] for a Turbofan). Without one (or with another ``power_fraction_basis``), the
+        peak of the mission, so that the most loaded point reads as full power."""
+        rating = getattr(self.aircraft.powertrain, 'engineRating', None) \
+            if power_fraction_basis == 'engineRating' else None
+        if rating and rating > 0:
+            return rating
+        if self.aircraft.Configuration == 'Turbofan':
+            return float(np.max(propulsive_power / np.maximum(velocity, 1e-6))) or 1.0
+        delta = np.array([_isa_pressure_ratio(float(a) / 0.3048) for a in alt])
+        return float(np.max(shaft_power / delta)) or 1.0
+
     def _integrate_surrogate_emissions(self, power_fraction_basis='engineRating'):
         """Set ``mission_emissions['nox'|'co'|'uhc']`` from the EI surrogate; return them.
 
         Walks the (continuous) mission exactly as the Filippone path does — recovering, at each
-        solver point, the altitude, true airspeed and required shaft power, hence the fuel mass
-        flow ``portata = power * PRatio[0] / ef`` — then queries the surrogate for
-        ``EI(alt_ft, Mach, power_fraction)`` and integrates ``EI * portata`` over time. Does not
-        touch CO2 (the caller handles it). ``power_fraction`` is ``power / engineRating`` clipped
-        to the surrogate's training domain. For a Turbofan the third coordinate is a THRUST
-        fraction against the lapsed available thrust instead. Thermal-engine configs only.
+        solver point, the altitude, true airspeed and required propulsive power, hence the fuel
+        mass flow ``portata = power * PRatio[0] / ef`` and the gas-turbine shaft power
+        ``PRatio[1] * power`` — then queries the surrogate for ``EI(alt_ft, Mach, fraction)``
+        and integrates ``EI * portata`` over time. The fraction is the coordinate of the map
+        (:meth:`_surrogate_load_fraction`): shaft power over ``engineRating * delta(h)`` for
+        the turboprop map, thrust over the lapsed available thrust for a Turbofan. Inputs
+        outside the map box are clipped to it by the surrogate.
+
+        The ground segments (taxi-out, take-off run, taxi-in, :meth:`_ground_legs`) are added
+        at their constant fuel flows; their share is stored in ``self.ground_emissions``. Taxi
+        runs at 7 % of the take-off power by default, below the 0.3 lower edge of both maps,
+        so it is read at the map edge (approach EI): the taxi NOx is then overestimated and the
+        taxi CO underestimated relative to an idle index. Does not touch CO2 (the caller
+        handles it). Thermal-engine configs only.
         """
         if self.aircraft.Configuration not in ('Traditional', 'Hybrid', 'Turbofan'):
             raise ValueError("The EI surrogate path applies to thermal-engine configurations "
                              "(Traditional / Hybrid / Turbofan) only.")
-        if getattr(self.aircraft, 'MissionType', 'Continue') != 'Continue':
+        if self._mission_type() != 'Continue':
             raise ValueError("The EI surrogate path requires MissionType == 'Continue'.")
         self._ensure_emission_surrogate()
 
@@ -574,6 +723,7 @@ class ClimateImpact:
 
         DISA = self.aircraft.mission.DISA
         power = np.zeros(len(times))
+        shaft = np.zeros(len(times))     # gas-turbine shaft power [W], all engines
         portata = np.zeros(len(times))   # [kg fuel / s]
         for t in range(len(times)):
             p = self.aircraft.weight.WTO * self.aircraft.performance.PoWTO(
@@ -584,44 +734,50 @@ class ClimateImpact:
             else:
                 PRatio = self.aircraft.powertrain.Hybrid(spr[t], alt[t], v0[t], p)
             power[t] = p
+            shaft[t] = p * PRatio[1]
             portata[t] = p * PRatio[0] / self.aircraft.weight.ef
 
         # --- 2. operating-point coordinates for the surrogate ---
         T = np.array([ISA.atmosphere.Tstd(float(a)) for a in alt]) + DISA   # static temp [K]
         mach = v0 / (20.0468 * np.sqrt(T))           # a = sqrt(gamma R T), gamma R ~ 401.9
         alt_ft = alt / 0.3048
-        rating = getattr(self.aircraft.powertrain, 'engineRating', None) \
-            if power_fraction_basis == 'engineRating' else None
+        rating = self._surrogate_rating(power_fraction_basis, alt, power, shaft, v0)
+        power_fraction = self._surrogate_load_fraction(alt, mach, power, shaft, v0, rating)
 
-        if self.aircraft.Configuration == 'Turbofan':
-            # The turbofan map's third coordinate is a THRUST fraction F/F_available, and
-            # engineRating carries SLS thrust [N] here rather than shaft power. Available
-            # thrust lapses with altitude and Mach, so the fraction has to be taken against
-            # the lapsed value -- against the SLS rating it would understate the load
-            # everywhere above the ground and read the map at the wrong place.
-            thrust = power / np.maximum(v0, 1e-6)
-            if not rating or rating <= 0:
-                rating = float(np.max(thrust)) or 1.0
-            lapse = np.array([self.aircraft.powertrain.ThrustLapse(alt[i], mach[i], DISA)
-                              for i in range(len(times))])
-            load_fraction = thrust / np.maximum(rating * lapse, 1e-9)
-        else:
-            if not rating or rating <= 0:
-                rating = float(np.max(power)) or 1.0     # fallback: peak required power
-            load_fraction = power / rating
-        power_fraction = load_fraction
-
-        # --- 3. EI(alt, Mach, power) along the mission, then integrate EI * fuel-flow ---
+        # --- 3. EI(alt, Mach, fraction) along the mission, then integrate EI * fuel-flow ---
         X = np.column_stack([alt_ft, mach, power_fraction])
         ei = self.emission_surrogate.predict(X)      # {'EINOX','EICO','EIUHC'} in g/kg fuel
+
+        # --- 4. ground segments at constant fuel flow ---
+        legs = self._ground_legs()
         species = {'nox': 'EINOX', 'co': 'EICO', 'uhc': 'EIUHC'}
+        ground = {'fuel': float(sum(leg['fuel_flow'] * leg['duration'] for leg in legs))}
+        ei_ground = {}
+        if legs:
+            g_alt = np.array([leg['altitude'] for leg in legs])
+            g_mach = np.array([leg['mach'] for leg in legs])
+            g_power = np.array([leg['propulsive_power'] for leg in legs])
+            g_shaft = np.array([leg['shaft_power'] for leg in legs])
+            g_vel = np.array([leg['velocity'] for leg in legs])
+            # The thrust lapse of every leg is taken at the take-off Mach, where Mission flies
+            # them; only the emission query uses Mach 0 for taxi.
+            g_mach_lapse = np.array([leg['mach_takeoff'] for leg in legs])
+            g_fraction = self._surrogate_load_fraction(g_alt, g_mach_lapse, g_power, g_shaft,
+                                                       g_vel, rating)
+            ei_ground = self.emission_surrogate.predict(
+                np.column_stack([g_alt / 0.3048, g_mach, g_fraction]))
+        g_mass = np.array([leg['fuel_flow'] * leg['duration'] for leg in legs])
+
         out = {}
         for key, col in species.items():
             if col in ei:
                 grams = integrate.cumulative_trapezoid(np.asarray(ei[col]) * portata, times,
                                                        initial=0.0)[-1]
-                self.mission_emissions[key] = float(grams) * 1e-3   # g -> kg
+                grams_ground = float(np.sum(np.asarray(ei_ground[col]) * g_mass)) if legs else 0.0
+                ground[key] = grams_ground * 1e-3
+                self.mission_emissions[key] = (float(grams) + grams_ground) * 1e-3   # g -> kg
                 out[key] = self.mission_emissions[key]
+        self.ground_emissions = ground
         return out
 
     def mission_emissions_from_surrogate(self, power_fraction_basis='engineRating'):
@@ -630,7 +786,8 @@ class ClimateImpact:
         Convenience that runs :meth:`_integrate_surrogate_emissions` and also fills CO2. For the
         integrated accounting, set ``ClimateImpactInput['EINOx_model'] = 'Surrogate'`` and call
         :meth:`calculate_mission_emissions` (which keeps CO2/H2O/SO4/soot consistent). Attaches the
-        packaged PW127 surrogate automatically if ``self.emission_surrogate`` is unset.
+        packaged surrogate of the configuration (PW127, or the turbofan map for a Turbofan)
+        automatically if ``self.emission_surrogate`` is unset.
         """
         self._integrate_surrogate_emissions(power_fraction_basis)   # thermal engines only
         Wf = self._fuel_mass_burnt()

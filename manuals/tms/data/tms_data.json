@@ -2,7 +2,7 @@
  "h2_I": {
   "configuration": "Hydrogen",
   "tms_class": "I",
-  "runtime_s": 24.85651707649231,
+  "runtime_s": 25.52555203437805,
   "tms_warnings": [],
   "WTO": 21634.417098035,
   "WPT": 2399.786123656135,
@@ -122,6 +122,10 @@
    }
   ],
   "results_tms_mass": 939.606778543858,
+  "results_hex_mass": 939.606778543858,
+  "results_tank_mass": 876.8613135884524,
+  "results_empty_weight": 16602.30085299045,
+  "results_fuelcell_rating": 3854699.1921708304,
   "heat_split": [
    {
     "name": "Takeoff",
@@ -258,7 +262,7 @@
  "h2_II": {
   "configuration": "Hydrogen",
   "tms_class": "II",
-  "runtime_s": 115.65304493904114,
+  "runtime_s": 124.93660068511963,
   "tms_warnings": [],
   "WTO": 22282.4119738008,
   "WPT": 2488.320933395798,
@@ -378,6 +382,10 @@
    }
   ],
   "results_tms_mass": 1096.3681897184854,
+  "results_hex_mass": 1096.3681897184854,
+  "results_tank_mass": 921.2693695076748,
+  "results_empty_weight": 17226.305872894634,
+  "results_fuelcell_rating": 4002006.303569988,
   "tms": {
    "design_point": "Mission/Climb1",
    "design_Q_fc": 4531360.55441002,
@@ -788,7 +796,8 @@
       "limits": [],
       "risks": []
      }
-    ]
+    ],
+    "drag_over_worst": null
    }
   },
   "heat_split": [
@@ -2773,7 +2782,7 @@
  "h2_II_eta09": {
   "configuration": "Hydrogen",
   "tms_class": "II",
-  "runtime_s": 150.7892186641693,
+  "runtime_s": 157.48628091812134,
   "tms_warnings": [],
   "WTO": 22470.540796350033,
   "WPT": 2530.5388674456685,
@@ -2893,6 +2902,10 @@
    }
   ],
   "results_tms_mass": 1107.843145698584,
+  "results_hex_mass": 1107.843145698584,
+  "results_tank_mass": 945.6431349860186,
+  "results_empty_weight": 17401.38477423744,
+  "results_fuelcell_rating": 4069860.934408731,
   "tms": {
    "design_point": "Mission/Climb1",
    "design_Q_fc": 4568237.005708532,
@@ -3303,14 +3316,22 @@
       "limits": [],
       "risks": []
      }
-    ]
+    ],
+    "drag_over_worst": {
+     "name": "Mission/Climb1 t=0s",
+     "altitude": 100.0,
+     "V_inf": 80.0,
+     "ram_drag": 258.8036704602421,
+     "ram_drag_accounted": 187.42268030684275,
+     "aircraft_drag_level": 11696.333187126082
+    }
    }
   }
  },
  "fcb_I": {
   "configuration": "FuelCellBattery",
   "tms_class": "I",
-  "runtime_s": 29.08799171447754,
+  "runtime_s": 29.746286153793335,
   "tms_warnings": [],
   "WTO": 40102.61880701075,
   "WPT": 4448.3456407246,
@@ -3429,12 +3450,16 @@
     "mdot_h2": 0.008785700829917198
    }
   ],
-  "results_tms_mass": 1741.6951237108112
+  "results_tms_mass": 1741.6951237108112,
+  "results_hex_mass": 1741.6951237108112,
+  "results_tank_mass": 1488.322078151518,
+  "results_empty_weight": 34741.172507749085,
+  "results_fuelcell_rating": 7145234.393502455
  },
  "fcb_II": {
   "configuration": "FuelCellBattery",
   "tms_class": "II",
-  "runtime_s": 107.62633085250854,
+  "runtime_s": 112.09479570388794,
   "tms_warnings": [],
   "WTO": 42197.7135966711,
   "WPT": 4712.3141966279345,
@@ -3554,6 +3579,10 @@
    }
   ],
   "results_tms_mass": 2081.9515456313907,
+  "results_hex_mass": 2081.9515456313907,
+  "results_tank_mass": 1600.3014187547708,
+  "results_empty_weight": 36776.05503977948,
+  "results_fuelcell_rating": 7578889.043181143,
   "tms": {
    "design_point": "Mission/Climb1",
    "design_Q_fc": 8580579.138400396,
@@ -3964,7 +3993,8 @@
       "limits": [],
       "risks": []
      }
-    ]
+    ],
+    "drag_over_worst": null
    }
   },
   "heat_split": [
@@ -5592,30 +5622,30 @@
  },
  "check_cost_h2": {
   "n_history": 420,
-  "SizeForMission_profile_s": 1.0881149768829346,
-  "SizeForMission_history_s": 1.2023258209228516,
-  "CheckMission_s": 0.30822181701660156
+  "SizeForMission_profile_s": 1.160202980041504,
+  "SizeForMission_history_s": 1.245802879333496,
+  "CheckMission_s": 0.32602500915527344
  },
  "fcb30": {
   "configuration": "FuelCellBattery",
   "tms_class": "I",
-  "runtime_s": 25.382591009140015,
+  "runtime_s": 26.219566822052002,
   "tms_warnings": [],
-  "WTO": 23705.386619821093,
-  "WPT": 2659.3830182353245,
-  "WH2": 497.47567311421443,
-  "WTank": 970.0775625727182,
-  "WBat": 499.7651268119916,
-  "WStructure": 12952.603798196591,
-  "W_TMS": 1041.2511408607318,
-  "wing_area": 99.93572967556406,
+  "WTO": 24306.015866399423,
+  "WPT": 2874.892721266585,
+  "WH2": 510.08092246727665,
+  "WTank": 994.6577988111895,
+  "WBat": 512.4277727863004,
+  "WStructure": 13260.863058248497,
+  "W_TMS": 1067.6335005928681,
+  "wing_area": 102.46782598700328,
   "WS": 2326.993993993994,
   "PW": 163.74649915059572,
-  "P_fc_rated": 4271681.326520335,
+  "P_fc_rated": 4379913.667056233,
   "P_aux_tms": 0.0,
   "extra_Cd": 0.0,
-  "Q_TO": 5050731.38422448,
-  "Q_mission_peak": 5206255.704303659,
+  "Q_TO": 5178702.857311902,
+  "Q_mission_peak": 5338167.502964341,
   "Q_mission_peak_alt": 1200.0,
   "Q_mission_peak_V": 100.0,
   "hex_sp_h2": 5000.0,
@@ -5627,228 +5657,232 @@
   "thermal_profile": [
    {
     "name": "Takeoff",
-    "Q_fc": 5050731.38422448,
+    "Q_fc": 5178702.857311902,
     "altitude": 100.0,
     "V_inf": 90.0,
-    "mdot_h2": 0.07899662890065808,
+    "mdot_h2": 0.08099818273043288,
     "takeoff": 1.0
    },
    {
     "name": "Mission/Climb1",
-    "Q_fc": 4674399.795495103,
-    "altitude": 1207.8871270064533,
+    "Q_fc": 4792696.199721752,
+    "altitude": 1206.4433825828255,
     "V_inf": 80.0,
-    "mdot_h2": 0.0745749204055366
+    "mdot_h2": 0.07646276830669939
    },
    {
     "name": "Mission/Climb2",
-    "Q_fc": 5206255.704303659,
+    "Q_fc": 5338167.502964341,
     "altitude": 1200.0,
     "V_inf": 100.0,
-    "mdot_h2": 0.08077982601403273
+    "mdot_h2": 0.08282655846800482
    },
    {
     "name": "Mission/Climb3",
-    "Q_fc": 4503807.720816144,
+    "Q_fc": 4617921.494098244,
     "altitude": 2600.0,
     "V_inf": 115.0,
-    "mdot_h2": 0.0725191509655409
+    "mdot_h2": 0.07435658150586909
    },
    {
     "name": "Mission/Climb4",
-    "Q_fc": 3676696.1839549965,
+    "Q_fc": 3769853.2937591933,
     "altitude": 4200.0,
     "V_inf": 125.0,
-    "mdot_h2": 0.062064165516220925
+    "mdot_h2": 0.06363669634904524
    },
    {
     "name": "Mission/Climb5",
-    "Q_fc": 2941069.5159041947,
+    "Q_fc": 3015587.9167561936,
     "altitude": 6000.0,
     "V_inf": 130.0,
-    "mdot_h2": 0.052012189696334976
+    "mdot_h2": 0.0533300317678623
    },
    {
     "name": "Mission/Cruise",
-    "Q_fc": 1561945.8137828337,
+    "Q_fc": 1601521.1005861943,
     "altitude": 8000.0,
     "V_inf": 123.23073146454874,
-    "mdot_h2": 0.030767890653852346
+    "mdot_h2": 0.031547461959137955
    },
    {
     "name": "Mission/Descent1",
-    "Q_fc": 382020.4606941092,
+    "Q_fc": 391699.76274033304,
     "altitude": 8000.0,
     "V_inf": 90.0,
-    "mdot_h2": 0.008851427555547577
+    "mdot_h2": 0.00907569736334918
    },
    {
     "name": "Diversion/Climb1",
-    "Q_fc": 4521978.043908563,
-    "altitude": 1159.3924672913677,
+    "Q_fc": 4636552.160783085,
+    "altitude": 1159.3928569869151,
     "V_inf": 80.0,
-    "mdot_h2": 0.0727396821961931
+    "mdot_h2": 0.07458269987683218
    },
    {
     "name": "Diversion/Climb2",
-    "Q_fc": 5051995.227093713,
+    "Q_fc": 5179998.483584397,
     "altitude": 1200.0,
     "V_inf": 100.0,
-    "mdot_h2": 0.07901122207824583
+    "mdot_h2": 0.08101314290040247
    },
    {
     "name": "Diversion/Climb3",
-    "Q_fc": 4402055.356155624,
+    "Q_fc": 4513591.003457693,
     "altitude": 2600.0,
     "V_inf": 115.0,
-    "mdot_h2": 0.0712772064333088
+    "mdot_h2": 0.07308316950396308
    },
    {
     "name": "Diversion/Cruise",
-    "Q_fc": 1536898.001783401,
+    "Q_fc": 1575838.6657671698,
     "altitude": 3100.0,
     "V_inf": 114.85459261912541,
-    "mdot_h2": 0.030346413850300357
+    "mdot_h2": 0.031115306426555786
    },
    {
     "name": "Diversion/Descent1",
-    "Q_fc": 230960.63916322176,
-    "altitude": 200.99239946073794,
+    "Q_fc": 236812.5351798526,
+    "altitude": 200.99234194075234,
     "V_inf": 90.0,
-    "mdot_h2": 0.005596330345547567
+    "mdot_h2": 0.005738125677635903
    }
   ],
-  "results_tms_mass": 1041.2511408607318,
+  "results_tms_mass": 1067.6335005928681,
+  "results_hex_mass": 1067.6335005928681,
+  "results_tank_mass": 994.6577988111895,
+  "results_empty_weight": 19210.47485170544,
+  "results_fuelcell_rating": 4379913.667056233,
   "heat_split": [
    {
     "name": "Takeoff",
-    "Q_fc": 5050731.38422448,
-    "q_reactant": 136934.00433796257,
-    "q_h2": 377668.70578883926,
-    "q_ram": 4536128.674097678,
+    "Q_fc": 5178702.857311902,
+    "q_reactant": 140403.52936229896,
+    "q_h2": 387237.77544380334,
+    "q_ram": 4651061.5525058,
     "T_amb": 287.50001022546843,
     "V_inf": 90.0,
     "T0_ram": 291.5298609717371
    },
    {
     "name": "Mission/Climb1",
-    "Q_fc": 4674399.795495103,
-    "q_reactant": 88531.55649390673,
-    "q_h2": 356529.3110074736,
-    "q_ram": 4229338.927993723,
-    "T_amb": 280.30022530144663,
+    "Q_fc": 4792696.199721752,
+    "q_reactant": 90827.89946360432,
+    "q_h2": 365554.7730237698,
+    "q_ram": 4336313.527234377,
+    "T_amb": 280.309606076892,
     "V_inf": 80.0,
-    "T0_ram": 283.4843049034367
+    "T0_ram": 283.49368567888206
    },
    {
     "name": "Mission/Climb2",
-    "Q_fc": 5206255.704303659,
-    "q_reactant": 96216.1790929356,
-    "q_h2": 386193.8511696821,
-    "q_ram": 4723845.674041041,
+    "Q_fc": 5338167.502964341,
+    "q_reactant": 98654.02510058228,
+    "q_h2": 395978.9117190344,
+    "q_ram": 4843534.566144724,
     "T_amb": 280.3514722126932,
     "V_inf": 100.0,
     "T0_ram": 285.32659659080264
    },
    {
     "name": "Mission/Climb3",
-    "Q_fc": 4503807.720816144,
-    "q_reactant": 34708.93810496534,
-    "q_h2": 346701.0462497486,
-    "q_ram": 4122397.7364614294,
+    "Q_fc": 4617921.494098244,
+    "q_reactant": 35588.36460192927,
+    "q_h2": 355485.4719119537,
+    "q_ram": 4226847.657584361,
     "T_amb": 271.2569096991639,
     "V_inf": 115.0,
     "T0_ram": 277.83651168921364
    },
    {
     "name": "Mission/Climb4",
-    "Q_fc": 3676696.1839549965,
-    "q_reactant": -22892.25644724615,
-    "q_h2": 296717.63710134977,
-    "q_ram": 3402870.803300893,
+    "Q_fc": 3769853.2937591933,
+    "q_reactant": -23472.28163242014,
+    "q_h2": 304235.6248017193,
+    "q_ram": 3489089.9505898943,
     "T_amb": 260.8680260996416,
     "V_inf": 125.0,
     "T0_ram": 268.64165794043765
    },
    {
     "name": "Mission/Climb5",
-    "Q_fc": 2941069.5159041947,
-    "q_reactant": -71214.45237869828,
-    "q_h2": 248660.94466589057,
-    "q_ram": 2763623.023617002,
+    "Q_fc": 3015587.9167561936,
+    "q_reactant": -73018.8255841594,
+    "q_h2": 254961.3111057509,
+    "q_ram": 2833645.431234602,
     "T_amb": 249.18677755098287,
     "V_inf": 130.0,
     "T0_ram": 257.59473774998787
    },
    {
     "name": "Mission/Cruise",
-    "Q_fc": 1561945.8137828337,
-    "q_reactant": -78349.80606996156,
-    "q_h2": 147095.76351296858,
-    "q_ram": 1493199.8563398267,
+    "Q_fc": 1601521.1005861943,
+    "q_reactant": -80334.96850030149,
+    "q_h2": 150822.75401920368,
+    "q_ram": 1531033.3150672922,
     "T_amb": 236.21536176716847,
     "V_inf": 123.23073146454874,
     "T0_ram": 243.77049270114247
    },
    {
     "name": "Mission/Descent1",
-    "Q_fc": 382020.4606941092,
-    "q_reactant": -22539.979754271353,
-    "q_h2": 42317.086637851135,
-    "q_ram": 362243.3538105294,
+    "Q_fc": 391699.76274033304,
+    "q_reactant": -23111.078246081775,
+    "q_h2": 43389.28034078061,
+    "q_ram": 371421.5606456342,
     "T_amb": 236.21536176716847,
     "V_inf": 90.0,
     "T0_ram": 240.24521251343714
    },
    {
     "name": "Diversion/Climb1",
-    "Q_fc": 4521978.043908563,
-    "q_reactant": 88115.21572882734,
-    "q_h2": 347755.3664862637,
-    "q_ram": 4086107.461693472,
-    "T_amb": 280.6153232317274,
+    "Q_fc": 4636552.160783085,
+    "q_reactant": 90347.79140169459,
+    "q_h2": 356566.5032636093,
+    "q_ram": 4189637.866117781,
+    "T_amb": 280.61532069963016,
     "V_inf": 80.0,
-    "T0_ram": 283.79940283371747
+    "T0_ram": 283.7994003016202
    },
    {
     "name": "Diversion/Climb2",
-    "Q_fc": 5051995.227093713,
-    "q_reactant": 94109.60965070158,
-    "q_h2": 377738.4731519484,
-    "q_ram": 4580147.144291064,
+    "Q_fc": 5179998.483584397,
+    "q_reactant": 96494.080896295,
+    "q_h2": 387309.29733162845,
+    "q_ram": 4696195.1053564735,
     "T_amb": 280.3514722126932,
     "V_inf": 100.0,
     "T0_ram": 285.32659659080264
    },
    {
     "name": "Diversion/Climb3",
-    "Q_fc": 4402055.356155624,
-    "q_reactant": 34114.521660135106,
-    "q_h2": 340763.53232444596,
-    "q_ram": 4027177.3021710427,
+    "Q_fc": 4513591.003457693,
+    "q_reactant": 34978.887273971064,
+    "q_h2": 349397.51766139193,
+    "q_ram": 4129214.5985223306,
     "T_amb": 271.2569096991639,
     "V_inf": 115.0,
     "T0_ram": 277.83651168921364
    },
    {
     "name": "Diversion/Cruise",
-    "Q_fc": 1536898.001783401,
-    "q_reactant": 6607.714675933302,
-    "q_h2": 145080.7585547485,
-    "q_ram": 1385209.5285527192,
+    "Q_fc": 1575838.6657671698,
+    "q_reactant": 6775.135537765675,
+    "q_h2": 148756.69597392887,
+    "q_ram": 1420306.8342554753,
     "T_amb": 268.0098220397042,
     "V_inf": 114.85459261912541,
     "T0_ram": 274.5727958932889
    },
    {
     "name": "Diversion/Descent1",
-    "Q_fc": 230960.63916322176,
-    "q_reactant": 9425.535531136728,
-    "q_h2": 26755.051046895373,
-    "q_ram": 194780.05258518964,
-    "T_amb": 286.84359071163965,
+    "Q_fc": 236812.5351798526,
+    "q_reactant": 9664.352355524765,
+    "q_h2": 27432.949082570343,
+    "q_ram": 199715.2337417575,
+    "T_amb": 286.8435910854959,
     "V_inf": 90.0,
-    "T0_ram": 290.8734414579083
+    "T0_ram": 290.8734418317646
    }
   ]
  },
@@ -5858,85 +5892,85 @@
    "rows": [
     {
      "value": 0.0,
-     "total_mass": 1564.2710698084945,
-     "hex_mass": 1512.9123718872913,
-     "pump_mass": 51.3586979212031,
-     "pump_power": 35419.791669795246,
-     "mass_h2": 4.196085756385191,
-     "mass_ram": 1508.7162861309062,
-     "n_ram": 45,
+     "total_mass": 1602.2531340950945,
+     "hex_mass": 1549.5931497253807,
+     "pump_mass": 52.65998436971375,
+     "pump_power": 36317.230599802584,
+     "mass_h2": 4.314578193815072,
+     "mass_ram": 1545.2785715315656,
+     "n_ram": 46,
      "family_ram": "finned_tube_bank",
-     "mdot_ram_air": 92.52631474990072,
-     "capture_area": 0.8471896769702425,
-     "ram_drag_raw": -274.25618660267423,
+     "mdot_ram_air": 94.87067409000034,
+     "capture_area": 0.8686551058853533,
+     "ram_drag_raw": -280.3931826073432,
      "design_point": "Takeoff",
      "feasible": true,
      "caps_exceeded": false
     },
     {
      "value": 5.0,
-     "total_mass": 1130.496383725885,
-     "hex_mass": 1082.5651803438802,
-     "pump_mass": 47.93120338200463,
-     "pump_power": 33056.00233241699,
-     "mass_h2": 3.9346672781167915,
-     "mass_ram": 1078.6305130657634,
-     "n_ram": 32,
+     "total_mass": 1159.6013322265285,
+     "hex_mass": 1110.4577035765788,
+     "pump_mass": 49.14362864994972,
+     "pump_power": 33892.15768962049,
+     "mass_h2": 4.047944616437009,
+     "mass_ram": 1106.4097589601417,
+     "n_ram": 33,
      "family_ram": "finned_tube_bank",
-     "mdot_ram_air": 84.03980073141457,
-     "capture_area": 0.9643618315178087,
-     "ram_drag_raw": -213.49027840246924,
+     "mdot_ram_air": 86.16540239493834,
+     "capture_area": 0.9886123594057374,
+     "ram_drag_raw": -219.28618931393856,
      "design_point": "Mission/Climb1",
      "feasible": true,
      "caps_exceeded": false
     },
     {
      "value": 10.0,
-     "total_mass": 1130.496383725885,
-     "hex_mass": 1082.5651803438802,
-     "pump_mass": 47.93120338200463,
-     "pump_power": 33056.00233241699,
-     "mass_h2": 3.9346672781167915,
-     "mass_ram": 1078.6305130657634,
-     "n_ram": 32,
+     "total_mass": 1159.6013322265285,
+     "hex_mass": 1110.4577035765788,
+     "pump_mass": 49.14362864994972,
+     "pump_power": 33892.15768962049,
+     "mass_h2": 4.047944616437009,
+     "mass_ram": 1106.4097589601417,
+     "n_ram": 33,
      "family_ram": "finned_tube_bank",
-     "mdot_ram_air": 84.03980073141457,
-     "capture_area": 0.9643618315178087,
-     "ram_drag_raw": -213.49027840246924,
+     "mdot_ram_air": 86.16540239493834,
+     "capture_area": 0.9886123594057374,
+     "ram_drag_raw": -219.28618931393856,
      "design_point": "Mission/Climb1",
      "feasible": true,
      "caps_exceeded": false
     },
     {
      "value": 15.0,
-     "total_mass": 1130.496383725885,
-     "hex_mass": 1082.5651803438802,
-     "pump_mass": 47.93120338200463,
-     "pump_power": 33056.00233241699,
-     "mass_h2": 3.9346672781167915,
-     "mass_ram": 1078.6305130657634,
-     "n_ram": 32,
+     "total_mass": 1159.6013322265285,
+     "hex_mass": 1110.4577035765788,
+     "pump_mass": 49.14362864994972,
+     "pump_power": 33892.15768962049,
+     "mass_h2": 4.047944616437009,
+     "mass_ram": 1106.4097589601417,
+     "n_ram": 33,
      "family_ram": "finned_tube_bank",
-     "mdot_ram_air": 84.03980073141457,
-     "capture_area": 0.9643618315178087,
-     "ram_drag_raw": -213.49027840246924,
+     "mdot_ram_air": 86.16540239493834,
+     "capture_area": 0.9886123594057374,
+     "ram_drag_raw": -219.28618931393856,
      "design_point": "Mission/Climb1",
      "feasible": true,
      "caps_exceeded": false
     },
     {
      "value": 20.0,
-     "total_mass": 1130.496383725885,
-     "hex_mass": 1082.5651803438802,
-     "pump_mass": 47.93120338200463,
-     "pump_power": 33056.00233241699,
-     "mass_h2": 3.9346672781167915,
-     "mass_ram": 1078.6305130657634,
-     "n_ram": 32,
+     "total_mass": 1159.6013322265285,
+     "hex_mass": 1110.4577035765788,
+     "pump_mass": 49.14362864994972,
+     "pump_power": 33892.15768962049,
+     "mass_h2": 4.047944616437009,
+     "mass_ram": 1106.4097589601417,
+     "n_ram": 33,
      "family_ram": "finned_tube_bank",
-     "mdot_ram_air": 84.03980073141457,
-     "capture_area": 0.9643618315178087,
-     "ram_drag_raw": -213.49027840246924,
+     "mdot_ram_air": 86.16540239493834,
+     "capture_area": 0.9886123594057374,
+     "ram_drag_raw": -219.28618931393856,
      "design_point": "Mission/Climb1",
      "feasible": true,
      "caps_exceeded": false
@@ -5947,20 +5981,20 @@
  "degradation_fcb30": {
   "voltage_loss": 0.05,
   "range_nm": 750.0,
-  "Q_design": 5206255.704303659,
-  "Q_degraded_same_WTO": 8158891.629503888,
-  "Q_TO_design": 5050731.38422448,
-  "Q_TO_degraded": 7287752.1984438235,
-  "Q_peak_design": 5206255.704303659,
-  "Q_peak_degraded": 8158891.629503888,
+  "Q_design": 5338167.502964341,
+  "Q_degraded_same_WTO": 8365621.932273058,
+  "Q_TO_design": 5178702.857311902,
+  "Q_TO_degraded": 7472405.928988111,
+  "Q_peak_design": 5338167.502964341,
+  "Q_peak_degraded": 8365621.932273058,
   "off_design_violations": [
-   "take-off mass 23,737 kg > MTOW 23,705 kg",
-   "fuel load 529 kg > design fuel load 497 kg",
-   "battery power 751 kW > capability 750 kW",
-   "fuel-cell heat 8,436 kW > TMS design heat 5,206 kW"
+   "take-off mass 24,338 kg > MTOW 24,306 kg",
+   "fuel load 542 kg > design fuel load 510 kg",
+   "battery power 770 kW > capability 769 kW",
+   "fuel-cell heat 8,649 kW > TMS design heat 5,338 kW"
   ],
   "off_design_risks": [],
-  "off_design_wto": 23736.55400382767
+  "off_design_wto": 24337.972398933205
  },
  "degradation_h2_II": {
   "rows": [
@@ -6070,11 +6104,33 @@
   "risks": [],
   "WTO": 22446.887827714367
  },
+ "freezing_eta08": {
+  "WTO": 29907.326239413604,
+  "ram_drag": 1197.6390797223269,
+  "extra_Cd": 0.002735783640670823,
+  "T_wall_min": 248.87543344111756,
+  "T_wall_min_at": "Takeoff",
+  "T_freeze": 258.57422213921586,
+  "n_below_freeze": 80,
+  "below_freeze_at": [
+   "Mission/Climb1",
+   "Mission/Climb2",
+   "Mission/Climb3",
+   "Takeoff"
+  ],
+  "violations": [],
+  "risks": [
+   "risk of coolant freezing: estimated coolant-side wall at 249 K, below the coolant freezing point 259 K, at 'Takeoff' (80 point(s))"
+  ],
+  "tms_warnings": [
+   "Class-II TMS: risk of coolant freezing: estimated coolant-side wall at 249 K, below the coolant freezing point 259 K, at 'Takeoff' (80 point(s))."
+  ]
+ },
  "humidity": {
   "humidifier_rh1": {
    "configuration": "Hydrogen",
    "tms_class": "I",
-   "runtime_s": 24.851473808288574,
+   "runtime_s": 24.991191148757935,
    "tms_warnings": [],
    "WTO": 22661.86520376843,
    "WPT": 2513.7675962109934,
@@ -6193,12 +6249,16 @@
      "mdot_h2": 0.004935852399911968
     }
    ],
-   "results_tms_mass": 1289.4809664751842
+   "results_tms_mass": 1289.4809664751842,
+   "results_hex_mass": 1289.4809664751842,
+   "results_tank_mass": 898.7813872237222,
+   "results_empty_weight": 17617.94731823774,
+   "results_fuelcell_rating": 4037783.9620378506
   },
   "ambient_rh06": {
    "configuration": "Hydrogen",
    "tms_class": "I",
-   "runtime_s": 29.312145948410034,
+   "runtime_s": 30.043243885040283,
    "tms_warnings": [],
    "WTO": 21635.009171678925,
    "WPT": 2399.851709222313,
@@ -6317,12 +6377,16 @@
      "mdot_h2": 0.0047391953880606555
     }
    ],
-   "results_tms_mass": 939.7570259923364
+   "results_tms_mass": 939.7570259923364,
+   "results_hex_mass": 939.7570259923364,
+   "results_tank_mass": 876.9071216976405,
+   "results_empty_weight": 16602.86826381903,
+   "results_fuelcell_rating": 3854804.5401543323
   },
   "ambient_rh1": {
    "configuration": "Hydrogen",
    "tms_class": "I",
-   "runtime_s": 29.357808828353882,
+   "runtime_s": 30.23595690727234,
    "tms_warnings": [],
    "WTO": 21635.408704611633,
    "WPT": 2399.8959663846917,
@@ -6441,7 +6505,11 @@
      "mdot_h2": 0.004739435557663167
     }
    ],
-   "results_tms_mass": 939.8584125254284
+   "results_tms_mass": 939.8584125254284,
+   "results_hex_mass": 939.8584125254284,
+   "results_tank_mass": 876.9378003369918,
+   "results_empty_weight": 16603.250920112707,
+   "results_fuelcell_rating": 3854875.6290094545
   }
  }
 }

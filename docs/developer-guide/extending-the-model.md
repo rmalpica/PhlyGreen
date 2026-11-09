@@ -46,22 +46,33 @@ linear system. Write a builder that composes them; no matrix algebra:
 ```python
 from PhlyGreen.Systems.Powertrain.graph import PowertrainGraph
 
-def my_architecture_graph(eta_a, eta_b, eta_pp, phi):
-    g = PowertrainGraph(["Pf", "Pa", "Pp", "Pbat"])
-    g.converter("Pf", "Pa", eta_a)     # source -> stage A
-    g.converter("Pa", "Pp", eta_pp)    # stage A -> propulsive
-    g.split("Pf", "Pbat", phi)         # battery takes a fraction phi of the load
-    g.sink("Pp", 1.0)                  # normalise to unit propulsive power
+def my_architecture_graph(eta_a, eta_pm, eta_pp, phi):
+    g = PowertrainGraph(["Pf", "Pa", "Pbat", "Pe", "Pp"])
+    g.converter("Pf", "Pa", eta_a)          # fuel -> shaft of stage A
+    g.converter("Pbat", "Pe", eta_pm)       # battery -> electrical branch
+    g.combiner("Pp", ["Pa", "Pe"], eta_pp)  # both branches drive the propeller
+    g.split("Pf", "Pbat", phi)              # phi = Pbat / (Pf + Pbat), share of the supplied power
+    g.sink("Pp", 1.0)                       # normalise to unit propulsive power
     return g
 
-sol = my_architecture_graph(0.40, 0.98, 0.85, phi=0.3).solution()  # {'Pf':…, 'Pbat':…}
+sol = my_architecture_graph(0.40, 0.98, 0.85, phi=0.3).solution()
+# {'Pf': 1.4347, 'Pa': 0.5739, 'Pbat': 0.6149, 'Pe': 0.6026, 'Pp': 1.0}
 ```
 
-Then expose it from `Powertrain` (a `PowerRatio…` method that maps the solution onto the
-`PRatio` indices Mission/Weight consume: `[0]`=fuel, `[1]`=gas‑turbine shaft, `[5]`=battery) and add
-the matching `Mission.*Configuration` / `Weight.*` methods, wired to a new `Configuration` flag value.
-See `fuelcell_battery_graph` + `PowerRatioFuelCellBattery` as the worked example. The
-`_traditional_legacy`/`_hybrid_legacy` solvers are reference‑only.
+Every source must reach the sink through the graph: a variable that only appears in the `split`
+is a number with no load attached. The system must be square (one equation per variable).
+
+Then expose it from `Powertrain` with a method that solves the graph through
+`Powertrain._solve_at_component_powers`, giving it the list of components, the graph builder and the
+power through each component (the conventions are listed in `Powertrain.eta`), so Class-II
+efficiency models are evaluated at their own power. Map the solution onto the `PRatio` indices
+Mission/Weight consume (`[0]`=fuel, `[1]`=gas‑turbine shaft, `[5]`=battery) and add the matching
+`Mission.*Configuration` / `Weight.*` methods, wired to a new `Configuration` flag value.
+The complete worked example is the parallel hybrid: `parallel_hybrid_graph` (graph),
+`Powertrain.Hybrid` (component powers and solve), `Mission.HybridConfiguration` and `Weight.Hybrid`.
+`fuelcell_battery_graph` + `Powertrain.PowerRatioFuelCellBattery` show a new topology at the
+power-ratio level only: no mission calls them (the `'FuelCellBattery'` mission uses the fuel-cell
+physics model). The `_traditional_legacy`/`_hybrid_legacy` solvers are reference‑only.
 
 ---
 

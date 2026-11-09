@@ -112,7 +112,7 @@ File & Content \\
 \code{Systems/FuelCell/FuelCell.py} & \code{Q_thermal}, \code{P_aux_tms} \\
 \code{Systems/Aerodynamics/Aerodynamics.py} & \code{extra_Cd} added in \code{Cd} \\
 \code{config/sections.py} & \code{TMSConfig}; \code{EnergyConfig.hex_specific_power_h2}, \code{hex_specific_power_battery} \\
-\code{results.py} & \code{tms_class}, \code{tms_mass}, \code{tms_pump_power}, \code{tms_ram_drag}, \code{tms_design_point} \\
+\code{results.py} & \code{tms_class}, \code{tms_mass}, \code{hex_mass}, \code{tms_pump_power}, \code{tms_ram_drag}, \code{tms_design_point}, \code{fuelcell_rating}, \code{empty_weight} \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -128,8 +128,9 @@ File & Content \\
 \item \textbf{FCB}: \code{fuelcell_battery_config(tms_class=...)}, the same aircraft with a Class-I
   battery that supplies 15\,\% of the cruise power (cruise $\phi = 0.15$);
 \item \textbf{FCB-800}: \code{examples/30_off_design_mission.py:fc_battery_design()},
-  the FCB aircraft with $\phi = 0$ in cruise, $\phi = 0.15$ at take-off and an
-  \SI{800}{m} take-off field. It is used only for the take-off over-temperature and the
+  the FCB aircraft with $\phi = 0$ in flight, $\phi = 0.15$ at take-off and an
+  \SI{800}{m} take-off field. The taxi legs take the take-off $\phi$, the default of
+  \code{MissionConfig.taxi_phi}. It is used only for the take-off over-temperature and the
   degradation study.
 \end{itemize}
 Unless stated otherwise the TMS inputs are the defaults of Table~\ref{tab:inputs}.
@@ -144,7 +145,7 @@ that heat is computed and where it is sampled. The details are in the fuel-cell 
 \subsection{Stack heat on the coolant basis}
 At every operating point \code{FuelCell.ComputePRatio} solves the stack current for the
 required electrical power and stores the stack heat as \code{fc.Q_thermal}
-(\code{FuelCell.py}, lines 685--688):
+(\code{FuelCell.py}, lines 728--731):
 \begin{equation}
   \Qfc = I\,N_{cells}\left[\frac{\Delta H_{HHV} - x_v\,(\Delta H_{HHV} - \Delta H_{LHV})}{2F} - V_{cell}\right],
   \label{eq:qfc}
@@ -215,7 +216,8 @@ mass term in \code{Weight.Hybrid} and \code{Weight.FuelCellBattery}: the peak in
 battery waste heat \code{mission.Max_Bat_Thermal_Pwr} divided by
 \code{EnergyConfig.hex_specific_power_battery} (default \SI{1500}{W/kg}). In the
 fuel-cell + battery closure this term is added to \code{weight.WHeat_Exchanger} after the
-fuel-cell TMS mass, so \code{results().tms_mass} includes it when the battery is Class~II.
+fuel-cell TMS mass, so \code{results().tms_mass} and \code{results().hex_mass}, which both
+report \code{weight.WHeat_Exchanger}, include it when the battery is Class~II.
 The battery manual describes the battery heat.
 
 %% ======================================================================================
@@ -856,7 +858,7 @@ Mission peak heat [kW]        & 4,698 & 4,878 & 4,960 & 8,708 & 9,238 \\
 Design point                  & -- & M/Climb1 & M/Climb1 & -- & M/Climb1 \\
 Net duct drag at design point [N] & -- & $-207$ & 168 & -- & $-396$ \\
 $\Delta C_D$                  & 0 & 0 & $5.59\times10^{-4}$ & 0 & 0 \\
-Run time [s]                  & 25 & 116 & 151 & 29 & 108 \\
+Run time [s]                  & 26 & 125 & 157 & 30 & 112 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1021,8 +1023,8 @@ Lowest coolant-side wall [K]          & 274.9 & 275.0 & 275.0 \\
 
 \paragraph{Freezing at a lower intake recovery.} The regression design of
 \code{test_tms_design.py::test_ram_drag_feeds_back_as_a_drag_increment}, the hydrogen test
-aircraft of \code{tests/regression/test_hydrogen.py} with $\eta_{ram} = 0.8$, flags the
-freezing risk: the estimated coolant-side wall reaches \SI{248.9}{K} at take-off,
+aircraft of \code{tests/regression/test_hydrogen.py} with $\eta_{ram} = 0.8$ (rerun by
+\code{compute_data.py:freezing_design}), flags the freezing risk: the estimated coolant-side wall reaches \SI{248.9}{K} at take-off,
 \SI{9.7}{K} below the freezing point, at 80 points of take-off and climb. The margin is of
 the order the estimate cannot resolve, so the flag means that HEX~1 of this design needs a
 finer model or an architecture that keeps the coolant away from the cryogenic hydrogen (an
@@ -1104,10 +1106,10 @@ than their pressure drop at the default budget.
 \paragraph{Take-off coolant over-temperature.} On the H2 profile the over-temperature has
 no effect, because \code{Mission/Climb1} sets the design. On the FCB-800 profile the
 take-off point sets it: the larger take-off power of the \SI{800}{m} field gives a take-off
-heat of \SI{5051}{kW} at \SI{90}{m/s}, close to the mission peak of \SI{5206}{kW}. With
-$\Delta T_{TO} = 0$ the TMS is sized at take-off and weighs \SI{1564}{kg}. With
+heat of \SI{5179}{kW} at \SI{90}{m/s}, close to the mission peak of \SI{5338}{kW}. With
+$\Delta T_{TO} = 0$ the TMS is sized at take-off and weighs \SI{1602}{kg}. With
 $\Delta T_{TO} = \SI{5}{K}$ the design moves to \code{Mission/Climb1} and the mass drops to
-\SI{1130}{kg} ($-28$\,\%). Larger values change nothing more. This confirms the statement of
+\SI{1160}{kg} ($-28$\,\%). Larger values change nothing more. This confirms the statement of
 the user guide: the lever works only when the take-off point limits the design.
 
 \subsection{Degraded fuel cell}\label{sec:degradation}
@@ -1119,13 +1121,12 @@ propulsive power.
 
 We flew the FCB-800 design (\code{examples/30_off_design_mission.py:fc_battery_design},
 Class-I TMS) at its design take-off mass with a \SI{50}{mV} loss. The design heat, the
-larger of the take-off and mission peak, is \SI{5206}{kW}. The degraded peak is
-\SI{8159}{kW} (+57\,\%), and the degraded take-off heat \SI{7288}{kW} against
-\SI{5051}{kW} (+44\,\%). \texttt{fly\_off\_design(sized, 750, state\_of\_health=\{"fc\_voltage\_loss": 0.05\})}
-iterates the take-off mass and reports \SI{8436}{kW} against \SI{5206}{kW} (+62\,\%). It
-also reports that the take-off mass, the fuel load, the battery power and the fuel-cell
-power are exceeded, but by at most 6.4\,\% (the fuel load, \SI{529}{kg} against
-\SI{497}{kg}). The heat limit is exceeded by far the most, so the TMS is the first system to
+larger of the take-off and mission peak, is \SI{5338}{kW}. The degraded peak is
+\SI{8366}{kW} (+57\,\%), and the degraded take-off heat \SI{7472}{kW} against
+\SI{5179}{kW} (+44\,\%). \texttt{fly\_off\_design(sized, 750, state\_of\_health=\{"fc\_voltage\_loss": 0.05\})}
+iterates the take-off mass and reports \SI{8649}{kW} against \SI{5338}{kW} (+62\,\%). It
+also reports that the take-off mass, the fuel load and the battery power are exceeded, but
+by at most 6.3\,\% (the fuel load, \SI{542}{kg} against \SI{510}{kg}). The heat limit is exceeded by far the most, so the TMS is the first system to
 bind in a degraded flight.
 
 \begin{figure}[htbp]
@@ -1163,12 +1164,12 @@ the 441 checked points fall short of heat, and the lowest coolant-side wall is
 \SI{266.5}{K}, still above the freezing point.
 
 \subsection{Cost}
-The Class-II designs took 108 to \SI{151}{s} and the Class-I designs 25 to \SI{29}{s}
+The Class-II designs took 112 to \SI{157}{s} and the Class-I designs 26 to \SI{30}{s}
 (Table~\ref{tab:designs}). On the converged H2 Class-II design, one \code{SizeForMission}
-takes \SI{1.21}{s} on the 13-point profile and \SI{1.32}{s} with the 420 integration
-points added, so the continuous rating costs about \SI{0.11}{s} per call. The closure calls
+takes \SI{1.16}{s} on the 13-point profile and \SI{1.25}{s} with the 420 integration
+points added, so the continuous rating costs about \SI{0.09}{s} per call. The closure calls
 \code{SizeForMission} once per fuel-cell pass, up to six passes per take-off-weight
-evaluation. \code{CheckMission} on the 433 points takes \SI{0.35}{s} and runs once per
+evaluation. \code{CheckMission} on the 433 points takes \SI{0.33}{s} and runs once per
 design. The hydrogen properties of HEX~1 depend only on $T_{op}$ and the inputs, so
 \code{TMS._hydrogen_properties} evaluates them once per coolant temperature and keeps them.
 
@@ -1279,7 +1280,7 @@ Table~\ref{tab:outputs} lists where the design exposes the TMS. The Class-II res
 \toprule
 Where & What \\
 \midrule
-\code{aircraft.results()} & \code{tms_class}, \code{tms_mass} [kg], \code{tms_pump_power} [W], \code{tms_ram_drag} [N], \code{tms_design_point} \\
+\code{aircraft.results()} & \code{tms_class}, \code{tms_mass} [kg] (= \code{weight.WHeat_Exchanger}), \code{hex_mass} [kg] (the same term, the heat-exchanger mass of the closure), \code{tms_pump_power} [W], \code{tms_ram_drag} [N], \code{tms_design_point}, \code{fuelcell_rating} [W]; \code{empty_weight} [kg] contains the TMS mass with the structure, powertrain, crew, battery and H$_2$ tank \\
 \code{aircraft.weight.WHeat_Exchanger} & TMS mass in the weight balance [kg] \\
 \code{aircraft.weight.tms_result} & \code{FCThermalManagementResult} (Class~II), fields below \\
 \quad\code{design_point} & the mission point the hardware was sized at (dictionary) \\
@@ -1371,7 +1372,8 @@ modified attribute afterwards, because \code{SetInput} is the only place that re
   the freezing point; the sizing does not change the geometry to avoid it. With a coolant that
   has no CoolProp freezing data the check is skipped.
 \item \textbf{Class-II battery.} In a fuel-cell + battery design with a Class-II battery,
-  \code{tms_mass} also contains the battery cooling mass (Section~\ref{sec:battery-hex}).
+  \code{tms_mass} and \code{hex_mass} also contain the battery cooling mass
+  (Section~\ref{sec:battery-hex}).
 \end{itemize}
 
 %% ======================================================================================

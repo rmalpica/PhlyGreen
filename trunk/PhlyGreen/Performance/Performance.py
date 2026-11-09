@@ -35,7 +35,6 @@ class Performance:
     def __init__(self, aircraft):
         self.aircraft = aircraft
         self.g_acc = 9.81 
-        self.n_engines = 2
         self.Mach = None
         self.TAS = None
         self.CAS = None 
@@ -43,6 +42,19 @@ class Performance:
         self.KCAS = None
 
     """ Properties """
+
+    @property
+    def n_engines(self):
+        """Number of engines for the one-engine-inoperative factor ``n / (n - 1)``: the engine
+        count of the powertrain (``powertrain.n_engines``, ``PropellerInput['Number of
+        Engines']``, default 2; set by ``Powertrain.SetInput``, which ``ReadInput`` runs before
+        the constraint diagram and the mission use it)."""
+        powertrain = getattr(self.aircraft, 'powertrain', None)
+        n_engines = getattr(powertrain, 'n_engines', 2) if powertrain is not None else 2
+        if n_engines < 2:
+            raise ValueError("The one-engine-inoperative climb needs at least 2 engines; "
+                             "powertrain.n_engines = %r." % n_engines)
+        return n_engines
 
     @property
     def Mach(self):

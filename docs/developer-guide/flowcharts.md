@@ -43,7 +43,7 @@ guess W_TO
   ├─ size fuel / battery (or H2 + tank / fuel cell)
   ├─ size powertrain + structure + remaining masses
   └─ W_TO_new = Σ component masses
-residual = W_TO_new - W_TO    →    brentq drives residual → 0
+residual = W_TO_new - W_TO    →    brenth drives residual → 0
 ```
 
 The bracket defaults to the full range and falls back to a grid‑scan if the endpoints don't bracket

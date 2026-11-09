@@ -33,8 +33,8 @@ with one of two models, selected by `EINOx_model`:
 
     | configuration | artifact | third coordinate | NOₓ |
     |---|---|---|---|
-    | `Traditional`, `Hybrid` | `Emission_Model_PW127.pkl` | shaft‑power fraction | certification‑**anchored** |
-    | `Turbofan` | `Emission_Model_Turbofan.pkl` | **thrust** fraction | **unanchored** (predicted) |
+    | `Traditional`, `Hybrid` | `Emission_Model_PW127.pkl` | shaft power over lapsed rating, \(P_{shaft}/(P_{rated}\,\delta(h))\) | certification‑**anchored** |
+    | `Turbofan` | `Emission_Model_Turbofan.pkl` | **thrust** over lapsed thrust, \(F/(F_{00}\,\lambda_T(h,M))\) | **unanchored** (predicted) |
 
     The turboprop NOₓ is anchored because an equal‑split CRN cannot reproduce a *staged*
     turboprop combustor. The Cantera CRN is natively a CFM56 single‑annular model, so for the
@@ -42,16 +42,60 @@ with one of two models, selected by `EINOx_model`:
     (take‑off), +29 % (climb), +19 % (approach). That is a prediction with a stated error, not a
     level asserted from certification data.
 
-    For a turbofan the fraction is taken against the **lapsed** available thrust
-    \(F/(F_{00}\lambda_T(h,M))\), not against the sea‑level rating — otherwise the load would be
-    understated everywhere above the ground and the map read at the wrong place.
+    Each map is read at the coordinate it was generated at
+    (`ClimateImpact._surrogate_load_fraction`):
+
+    - **Turboprop.** The PW127 deck of `emissions_pipeline/pw127_partpower.py` is run at a gross
+      power \(G(PC)\,\delta(h)\), with \(\delta\) the ISA pressure ratio, so \(PC\) is the
+      gas‑turbine **shaft** power over the rated power lapsed by \(\delta\). `ClimateImpact`
+      forms the same quantity: `PRatio[1] * P / (engineRating * delta(h))`. In a `Hybrid` only
+      the thermal share passes through the combustor, so the battery share is excluded.
+      `engineRating` is rated with `Powertrain.PowerLapse`. With the Class‑II gas‑turbine
+      map that lapse is \(\delta\) itself, so the fraction reaches exactly 1 at the sizing
+      point and never exceeds it. With constant efficiencies the rating uses Ruijgrok's
+      \((\rho/\rho_0)^{0.75}\), which lapses less than \(\delta\): at cruise altitude the
+      fraction then exceeds 1 (132 of 239 points, up to 1.75, on the constant‑efficiency
+      turboprop of `examples/common.py`) and is clipped to the map edge, i.e. read at the
+      full‑power indices. \(\delta\) stays the coordinate either way, because it is how the
+      map was generated.
+    - **Turbofan.** The fraction is taken against the **lapsed** available thrust
+      \(F/(F_{00}\lambda_T(h,M))\), the map's thrust fraction, not against the sea‑level
+      rating — otherwise the load would be understated everywhere above the ground and the map
+      read at the wrong place.
+
+    Queries outside a map box (below \(PC = 0.3\), Mach or altitude outside the grid) are
+    clipped to its edge.
+
+    Until this coordinate was fixed, the turboprop map was read at the propulsive power over the
+    sea‑level rating, i.e. at part power. On the turboprop reference of `examples/common.py`
+    this gave 8.1 kg of NOₓ instead of 22.2 kg (Filippone: 21.8 kg) for the flown mission.
 
 ```python
 aircraft.configure(hybrid_config())            # carries a ClimateImpactInput
-aircraft.MissionType = 'Continue'
 aircraft.climateimpact.calculate_mission_emissions()
 print(aircraft.climateimpact.mission_emissions) # {'co2','h2o','so4','soot','nox'} in kg
+print(aircraft.climateimpact.ground_emissions)  # ground-segment share of fuel and NOx
 ```
+
+**Ground segments.** Taxi‑out, the take‑off run and taxi‑in are not in the flown profile, but
+their fuel is in `weight.Wf` (see [Mission](mission.md)). Both NOₓ models add them, so NOₓ (CO,
+UHC) and CO₂ cover the same fuel. Each leg is taken at the fuel flow and duration that
+`Mission._ground_segments` used (`mission._ground_fuel_legs_out/_in`), at the take‑off
+condition:
+
+- **Filippone**: climb‑out coefficients for the take‑off run, idle coefficients for taxi;
+- **Surrogate**: the map at the leg's load fraction (taxi at Mach 0). Taxi runs at 7 % of the
+  take‑off power by default, below the \(PC = 0.3\) edge of both maps, so it is read at the
+  map edge (approach indices): taxi NOₓ is overestimated and taxi CO underestimated relative
+  to an idle index.
+
+On the turboprop reference the ground legs burn 42 kg of the 1,939 kg of fuel and add about
+0.5 kg of NOₓ; on the turbofan reference 200 kg of 21,216 kg, about 2–3 kg of NOₓ.
+
+**Mission type and engine count.** `build_aircraft` sets `aircraft.MissionType = 'Continue'`
+(the continuous mission solution, which both NOₓ paths integrate), and `ClimateImpact` assumes
+it when the attribute is missing. The Filippone correlation is per engine; the engine count is
+`powertrain.n_engines` (2 if the powertrain has none).
 
 The CO₂ intensities are user inputs: `WTW_CO2` (upstream CO₂ of the fuel, kg CO₂ per MJ of
 `EnergyInput['Ef']`) and `Grid_CO2` (CO₂ of the electricity, kg CO₂/MJ). This keeps the
@@ -137,7 +181,6 @@ See example `14_welltowake_and_climate.py`, which prints the per-species mission
 the ATR, and plots the emissions breakdown alongside the design dashboard.
 
 ```python
-aircraft.MissionType = 'Continue'
 aircraft.climateimpact.calculate_mission_emissions()
 for species, kg in aircraft.climateimpact.mission_emissions.items():
     print(f"{species}: {float(kg):.2f} kg")

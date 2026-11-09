@@ -58,7 +58,9 @@ class AircraftResults:
     WBat: Optional[float] = None             # battery mass (Hybrid only) [kg]
     WCrew: Optional[float] = None            # crew mass [kg]
     WPayload: Optional[float] = None         # payload mass [kg]
-    empty_weight: Optional[float] = None     # operating empty weight [kg]
+    empty_weight: Optional[float] = None     # operating empty weight: every mass that is not
+    #                                          payload or fuel (structure, powertrain, crew, battery,
+    #                                          H2 tank, heat exchangers) [kg]
     zero_fuel_weight: Optional[float] = None # zero-fuel weight [kg]
 
     # --- geometry / powers --------------------------------------------------
@@ -102,6 +104,10 @@ class AircraftResults:
     tms_ram_drag: Optional[float] = None     # ram-air duct drag at the design point [N] (Class II)
     tms_design_point: Optional[str] = None   # mission point the TMS was sized at (Class II)
     fuelcell_rating: Optional[float] = None  # fuel-cell net electrical rating [W]
+    tank_mass: Optional[float] = None        # empty H2 tank-system mass [kg] (= weight.WTank)
+    hex_mass: Optional[float] = None         # heat-exchanger mass in the closure [kg]
+    #                                          (= weight.WHeat_Exchanger: fuel-cell TMS, plus the
+    #                                          Class-II battery HEX; Hybrid: battery HEX only)
 
     # --- provenance ---------------------------------------------------------
     configuration: Optional[str] = None
@@ -143,12 +149,30 @@ class AircraftResults:
         r.WCrew = _get(w, 'WCrew')
         r.WPayload = _get(w, 'WPayload')
 
+        # Masses that are neither payload nor fuel, each read only for the configurations whose
+        # take-off-weight closure contains it (an attribute left over from another
+        # configuration is never picked up).
+        if r.configuration in ('Hydrogen', 'FuelCellBattery'):
+            r.tank_mass = _get(w, 'WTank')
+        if r.configuration in ('Hybrid', 'Hydrogen', 'FuelCellBattery'):
+            r.hex_mass = _get(w, 'WHeat_Exchanger')
+
         if None not in (r.WPT, r.WStructure, r.WCrew):
-            # Add the powertrain only when the structural model does not already contain it --
-            # the same rule the take-off-weight closure uses, so the reported empty weight and
-            # the weight the design actually converged on stay consistent.
-            wpt = w.powertrain_in_closure(r.WPT) if hasattr(w, 'powertrain_in_closure') else r.WPT
-            r.empty_weight = wpt + r.WStructure + r.WCrew + (r.WBat or 0.0)
+            # Operating empty weight: every closure term that is not payload or fuel (mission
+            # fuel and final reserve). Each term is the one the take-off-weight closure of the
+            # configuration adds (Weight.Traditional / Hybrid / Hydrogen / FuelCellBattery), so
+            # empty_weight + WPayload + Wf + final_reserve = WTO.
+            if r.configuration in ('Hydrogen', 'FuelCellBattery'):
+                wpt = r.WPT          # the fuel-cell closures always add the powertrain
+            elif hasattr(w, 'powertrain_in_closure'):
+                # Add the powertrain only when the structural model does not already contain
+                # it, the rule of the gas-turbine closures.
+                wpt = w.powertrain_in_closure(r.WPT)
+            else:
+                wpt = r.WPT
+            wbat = r.WBat if r.configuration in ('Hybrid', 'FuelCellBattery') else None
+            r.empty_weight = (wpt + r.WStructure + r.WCrew + (wbat or 0.0)
+                              + (r.tank_mass or 0.0) + (r.hex_mass or 0.0))
             if r.WPayload is not None:
                 r.zero_fuel_weight = r.empty_weight + r.WPayload
 

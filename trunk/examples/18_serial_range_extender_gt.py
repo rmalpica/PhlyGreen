@@ -38,9 +38,9 @@ from PhlyGreen.Systems.Powertrain.gas_turbine_surrogate import (
     GasTurbineResponseSurface, _isa_pressure_ratio)
 import PhlyGreen.Utilities.Units as Units
 
-# A turbine nominal/rated power [W]. The parallel turbine is sized for the installed (peak) power;
-# the serial range-extender turbine is set to GT_RATED and run at full throttle the whole mission.
-GT_DESIGN_PARALLEL = 3.2e6     # parallel installed gas-turbine power [W]
+# The parallel turbine has no explicit nominal: its map nominal follows the rating the weight loop
+# sizes (the installed power, lapsed with the map's own pressure ratio). The serial range-extender
+# turbine is set to GT_RATED_SERIAL and run at full throttle the whole mission.
 GT_RATED_SERIAL = 3.0e6        # serial range-extender constant turbine power [W] (~charge-sustaining)
 
 
@@ -50,8 +50,7 @@ def parallel_turboprop():
     cfg = hybrid_config(battery_class='I', hybrid_type='Parallel')
     for s in cfg.mission_stages.segments:                  # phi = 0 everywhere -> turbine-only
         s.phi, s.phi_start, s.phi_end = 0.0, 0.0, 0.0
-    cfg.energy.eta_gas_turbine_model = 'ResponseSurface'
-    cfg.energy.gt_design_power = GT_DESIGN_PARALLEL
+    cfg.energy.eta_gas_turbine_model = 'ResponseSurface'     # nominal = sized engine rating
     a = pg.build_aircraft()
     a.configure(cfg)
     return a

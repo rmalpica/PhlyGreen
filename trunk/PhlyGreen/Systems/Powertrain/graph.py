@@ -133,9 +133,14 @@ def fuelcell_battery_graph(eta_fc, eta_pm, eta_em, eta_gb, eta_pp, phi):
     """Fuel-cell + battery hybrid (no gas turbine) — example of an arbitrary topology.
 
     Hydrogen feeds a fuel cell; the fuel cell and battery feed a common electrical bus,
-    then a motor, gearbox and propeller. ``phi`` splits demand between hydrogen and
-    battery. Demonstrates that a new architecture needs only a new composition of the
-    same primitives — no new matrix algebra.
+    then a motor, gearbox and propeller. ``phi`` is the battery share of the *propulsive*
+    power, the convention of the ``'FuelCellBattery'`` mission: the battery delivers
+    ``phi * Pp`` and the fuel cell ``(1 - phi) * Pp``. Both sources reach the propeller
+    through the same bus, motor, gearbox and propeller, so this is the split
+    ``Pbat / (Pfc + Pbat) = phi`` of the two electrical outputs (not of the hydrogen
+    chemical power, unlike the supplied-power ``phi`` of the gas-turbine hybrids).
+    Demonstrates that a new architecture needs only a new composition of the same
+    primitives — no new matrix algebra.
     """
     g = PowertrainGraph(["PfH2", "Pfc", "Pbat", "Pe1", "Pem", "Pgb", "Pp1"])
     g.converter("PfH2", "Pfc", eta_fc)          # fuel cell: H2 power -> electrical
@@ -143,6 +148,6 @@ def fuelcell_battery_graph(eta_fc, eta_pm, eta_em, eta_gb, eta_pp, phi):
     g.converter("Pe1", "Pem", eta_em)           # electric motor
     g.converter("Pem", "Pgb", eta_gb)           # gearbox
     g.converter("Pgb", "Pp1", eta_pp)           # propeller
-    g.split("PfH2", "Pbat", phi)                # hydrogen/battery split
+    g.split("Pfc", "Pbat", phi)                 # fuel-cell/battery split (propulsive share)
     g.sink("Pp1", 1.0)
     return g

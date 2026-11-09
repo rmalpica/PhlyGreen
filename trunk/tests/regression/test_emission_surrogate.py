@@ -51,9 +51,9 @@ def test_packaged_surrogate_reproduces_training_data():
 @pytest.mark.slow
 def test_climateimpact_surrogate_path():
     a_f = pg.build_aircraft(); a_f.configure(_traditional_climate_config('Filippone'))
-    a_f.MissionType = 'Continue'; a_f.climateimpact.calculate_mission_emissions()
+    a_f.climateimpact.calculate_mission_emissions()
     a_s = pg.build_aircraft(); a_s.configure(_traditional_climate_config('Surrogate'))
-    a_s.MissionType = 'Continue'; a_s.climateimpact.calculate_mission_emissions()
+    a_s.climateimpact.calculate_mission_emissions()
     fil, sur = a_f.climateimpact.mission_emissions, a_s.climateimpact.mission_emissions
 
     # Filippone gives NOx only; the surrogate adds CO and UHC.
@@ -122,10 +122,17 @@ def test_turbofan_nox_brackets_the_cfm56_certification_value():
 def test_turbofan_nox_trends_are_physical():
     es = EmissionSurrogate(_TF_PKL)
     sl = es.predict_op(0.0, 0.25, 1.00)['EINOX']
-    # NOx is thermal: it rises with combustor pressure and temperature, so it falls with
-    # altitude and rises with thrust fraction.
-    assert es.predict_op(30000.0, 0.75, 1.00)['EINOX'] < sl
+    # NOx is thermal: it rises with combustor pressure and temperature, so it rises with
+    # thrust fraction.
     assert es.predict_op(0.0, 0.25, 0.30)['EINOX'] < sl
+
+
+@needs_tf
+def test_turbofan_nox_falls_with_altitude():
+    """NOx falls with altitude (lower combustor pressure and temperature). This failed while
+    the 32,500 / 35,000 ft deck points sat on a hotter cycle branch (T3 802 K, EINOx 43 g/kg)."""
+    es = EmissionSurrogate(_TF_PKL)
+    assert es.predict_op(30000.0, 0.75, 1.00)['EINOX'] < es.predict_op(0.0, 0.25, 1.00)['EINOX']
 
 
 @needs_tf

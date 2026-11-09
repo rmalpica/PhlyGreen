@@ -2,27 +2,29 @@ import numpy as np
 import CoolProp.CoolProp as CP
 import warnings
 
-# --- DATABASE IMPORT MANAGEMENT (Strict Fail-Fast) ---
-try:
-    from PhlyGreen.Systems.Serbatoio_H2.TANK_Database import TANK_Database
-except ImportError:
-    try:
-        from .TANK_Database import TANK_Database
-    except ImportError:
-        try:
-            from TANK_Database import TANK_Database
-        except ImportError:
-            raise ImportError("CRITICAL ERROR: 'TANK_Database.py' file not found. Ensure the file is in the correct directory.")
+from .TANK_Database import TANK_Database
+from PhlyGreen.Utilities.Atmosphere import atmosphere
+
+# Default cap on the number of tanks the automatic split may reach (TankConfig
+# ``max_number_of_tanks`` / TankInput 'Max Number of Tanks', used when the key is absent;
+# an explicit None in a TankInput dict removes the cap).
+# Unsourced engineering assumption: it stands for the installation limit of a real
+# aircraft (feed lines, supports, fuselage space), which the model does not represent.
+DEFAULT_MAX_NUMBER_OF_TANKS = 4
+
 
 # ==========================================
 # 0. ATMOSPHERE MODEL HELPER
 # ==========================================
-def get_isa_atmosphere(altitude_m):
-    """Computes ISA Temperature and Pressure up to the Tropopause."""
-    T0 = 288.15; P0 = 101325.0; L = 0.0065; g = 9.80665; R_air = 287.05
-    altitude_m = min(altitude_m, 11000.0) # Cap at tropopause for simplicity
-    T_amb = T0 - L * altitude_m
-    P_amb = P0 * (1 - L * altitude_m / T0)**(g / (R_air * L))
+def get_isa_atmosphere(altitude_m, DISA=0.0):
+    """Ambient static temperature [K] and pressure [Pa] at ``altitude_m`` [m].
+
+    Thin wrapper on ``PhlyGreen.Utilities.Atmosphere`` (the package ISA model, valid to
+    32 km), with the temperature offset ``DISA`` [K] added to the temperature. Kept for
+    API compatibility; the tank itself only uses the temperature.
+    """
+    T_amb = atmosphere.Tstd(altitude_m) + DISA
+    P_amb = atmosphere.Pstd(altitude_m)
     return T_amb, P_amb
 
 
@@ -48,6 +50,14 @@ class LH2_Tank:
         self.max_diameter_limit = TankInput['Max Diameter']
         self.n_tanks = int(TankInput['Number of Tanks'])
         model_key = TankInput['Tank Model']
+        # Upper bound on the number of tanks reached by the automatic split (None: no cap).
+        if 'Max Number of Tanks' in TankInput:
+            self.max_n_tanks = TankInput['Max Number of Tanks']
+        else:
+            self.max_n_tanks = DEFAULT_MAX_NUMBER_OF_TANKS
+        if self.max_n_tanks is not None and self.n_tanks > self.max_n_tanks:
+            raise ValueError(f"'Number of Tanks' ({self.n_tanks}) exceeds 'Max Number of Tanks' "
+                             f"({self.max_n_tanks}).")
 
         self.m_tot_capacity = capacity_kg
         self.fluid = 'ParaHydrogen'
@@ -61,7 +71,7 @@ class LH2_Tank:
 
         # Fail-Fast for internal Database variables
         db_required_keys = [
-            'max_p_bar', 'min_p_bar', 'sigma_y', 'rho_al', 'E_al', 'nu_al',
+            'max_p_bar', 'min_p_bar', 'sigma_y', 'rho_al', 'E_al',
             'sf_inner', 'sf_outer', 'ew', 'buckling_knockdown', 'accessory_mass_factor',
             'n_layers_mli', 't_foam', 'rho_foam', 'insulation_gap',
             'C1', 'C2', 'C3', 'Cg', 'ng', 'p_mli', 'Nt', 'eps'
@@ -75,13 +85,19 @@ class LH2_Tank:
         
         # Pressures
         self.P_max = params['max_p_bar'] * 1e5
+        # The minimum pressure is floored at 1.2 bar (the value of the shipped database; the
+        # floor itself is an unsourced engineering assumption).
+        # A database entry with a lower 'min_p_bar' is raised to it, with a warning.
+        if params['min_p_bar'] < 1.2:
+            warnings.warn(f"Tank model '{model_key}': min_p_bar = {params['min_p_bar']} bar is "
+                          "raised to the 1.2 bar floor of LH2_Tank.", RuntimeWarning)
         self.P_min = max(params['min_p_bar'], 1.2) * 1e5
         
-        # Material Properties
+        # Material Properties (the jacket buckling formula needs no Poisson ratio, so the
+        # database 'nu_al' is not read)
         self.sigma_y = params['sigma_y']
         self.rho_al = params['rho_al']
         self.E_al = params['E_al']
-        self.nu_al = params['nu_al']
         
         # Safety and Structural Factors
         self.sf_inner = params['sf_inner']
@@ -109,9 +125,13 @@ class LH2_Tank:
         # --- 3. GEOMETRIC SIZING & SPLITTING LOGIC ---
         try:
             rho_liq = CP.PropsSI('D', 'P', self.P_min, 'Q', 0, self.fluid)
-        except Exception:
+        except Exception as err:
             rho_liq = 70.0 # Fallback liquid density if CoolProp fails at initialization
+            warnings.warn(f"CoolProp failed to give the saturated-liquid density at P_min ({err}); "
+                          "the tank is sized with a fixed 70 kg/m^3.", RuntimeWarning)
 
+        # Ullage (vapour) volume as a fraction of the liquid volume.
+        # Unsourced engineering assumption.
         self.ullage_frac = 0.04 
         sizing_ok = False
         
@@ -119,9 +139,13 @@ class LH2_Tank:
             self.capacity_single = self.m_tot_capacity / self.n_tanks
             self.V_internal = (self.capacity_single / rho_liq) * (1 + self.ullage_frac)
             
-            # Geometric constraints (subtracting clearance)
+            # Largest inner radius: half the 'Max Diameter' minus a 0.15 m radial clearance
+            # that has to hold the inner wall, the insulation gap and the vacuum jacket.
+            # The 0.15 m is an unsourced engineering assumption; the outer diameter is
+            # checked against 'Max Diameter' after sizing.
             R_limit = (self.max_diameter_limit / 2.0) - 0.15
             V_sphere_limit = (4/3) * np.pi * R_limit**3
+            at_cap = self.max_n_tanks is not None and self.n_tanks >= self.max_n_tanks
             
             if self.V_internal <= V_sphere_limit:
                 # SPHERICAL REGIME
@@ -140,15 +164,22 @@ class LH2_Tank:
                 V_cyl_needed = self.V_internal - V_sphere_limit
                 self.L_cyl = V_cyl_needed / (np.pi * self.r_inner**2)
                 
-                # Aspect Ratio check: If too long, split the tank
-                if self.L_cyl > 20 * self.r_inner: 
+                # Aspect Ratio check: If too long, split the tank (unless the cap on the
+                # number of tanks is reached). The limit L_cyl <= 20 r_inner is an unsourced
+                # engineering assumption.
+                if self.L_cyl > 20 * self.r_inner and not at_cap:
                      self.n_tanks += 1
                 else:
+                     if self.L_cyl > 20 * self.r_inner:
+                         warnings.warn(f"LH2 tank: the cylinders are {self.L_cyl / self.r_inner:.1f} "
+                                       f"inner radii long (limit 20) but the number of tanks is "
+                                       f"capped at 'Max Number of Tanks' = {self.max_n_tanks}.",
+                                       RuntimeWarning)
                      self.area_sphere = 4 * np.pi * self.r_inner**2
                      self.area_cyl = 2 * np.pi * self.r_inner * self.L_cyl
                      self.area_inner_tot = self.area_sphere + self.area_cyl
                      
-                     if not self.allow_auto_split:
+                     if not self.allow_auto_split or at_cap:
                          sizing_ok = True
                      else:
                          # --- GRAVIMETRIC INDEX COMPARISON ---
@@ -198,6 +229,10 @@ class LH2_Tank:
         t_max_struct = max(self.t_wall_cyl if self.shape == "Cylinder" else 0, self.t_wall_sphere)
         self.r_outer = self.r_inner + t_max_struct + self.insulation_gap + self.t_wall_outer_cyl 
         self.D_outer = 2 * self.r_outer
+        if self.D_outer > self.max_diameter_limit:
+            raise ValueError(f"LH2 tank outer diameter {self.D_outer:.3f} m exceeds 'Max Diameter' "
+                             f"{self.max_diameter_limit:.3f} m: the 0.15 m radial clearance does not "
+                             "hold the walls and insulation gap of this tank model.")
         
         # Initialize Mission State
         self.m_curr = self.capacity_single
@@ -209,10 +244,12 @@ class LH2_Tank:
 
     def _calculate_structure(self):
         """Computes wall thicknesses and total mass based on internal and external loads."""
-        min_gauge = 0.0008 # Minimum manufacturing thickness [m]
+        # Minimum manufacturing thickness [m]. Unsourced engineering assumption.
+        min_gauge = 0.0008
 
         # 1. INNER WALL (Vessel) - Svensson Eq. 3
-        # 10% overpressure for valves + 2.0x for dynamic flight loads -> P_design = 2.2 * P_max
+        # 10% overpressure for valves + 2.0x for dynamic flight loads -> P_design = 2.2 * P_max.
+        # The factor 2.2 is an unsourced engineering assumption.
         P_design_inner = 2.2 * self.P_max
 
         # Sphere
@@ -231,17 +268,21 @@ class LH2_Tank:
         # 2. OUTER WALL (Vacuum Jacket) - Svensson Eq. 6 & Eq. 7
         # Double design pressure and squared Safety Factor under the root (NASA SP-8007 buckling formula)
         P_design_outer = 2.0 * 101325.0 
-        
-        t_out_sphere_req = self.r_inner * np.sqrt((P_design_outer * self.sf_outer**2) / (self.buckling_knockdown * self.E_al))
+
+        # The jacket sits outside the inner wall and the insulation gap: its radius, not the
+        # inner radius, enters the buckling formula (same radius as r_outer in __init__).
+        r_jacket = self.r_inner + max(self.t_wall_cyl, self.t_wall_sphere) + self.insulation_gap
+        t_out_sphere_req = r_jacket * np.sqrt((P_design_outer * self.sf_outer**2) / (self.buckling_knockdown * self.E_al))
         self.t_wall_outer_sphere = max(t_out_sphere_req, min_gauge)
         
         if self.shape == "Cylinder":
+            # Cylindrical jacket = 2.5x the spherical one. Unsourced engineering assumption.
             self.t_wall_outer_cyl = max(t_out_sphere_req * 2.5, min_gauge) 
         else:
             self.t_wall_outer_cyl = self.t_wall_outer_sphere
             
-        area_outer_sphere = 4 * np.pi * (self.r_inner + self.insulation_gap)**2
-        area_outer_cyl = 2 * np.pi * (self.r_inner + self.insulation_gap) * self.L_cyl
+        area_outer_sphere = 4 * np.pi * r_jacket**2
+        area_outer_cyl = 2 * np.pi * r_jacket * self.L_cyl
         
         self.mass_outer = (area_outer_sphere * self.t_wall_outer_sphere + area_outer_cyl * self.t_wall_outer_cyl) * self.rho_al
         
@@ -253,6 +294,8 @@ class LH2_Tank:
         final_acc_factor = self.accessory_mass_factor
         
         if self.shape == "Cylinder":
+            # Extra accessory mass of a cylinder (supports, longer feed lines), growing with
+            # the aspect ratio. Both constants are unsourced engineering assumptions.
             penalty_fixed = 0.15  
             penalty_variable = 0.20 * (self.L_cyl / self.r_inner)
             final_acc_factor += (penalty_fixed + penalty_variable)
@@ -262,6 +305,34 @@ class LH2_Tank:
         
         # Gravimetric Index: M_fuel / (M_fuel + M_tank)
         self.gravimetric_index = self.m_tot_capacity / (self.m_tot_capacity + self.mass_system_empty)
+
+    def _ambient_temperature(self, altitude):
+        """Ambient static temperature [K] at ``altitude`` [m]: package ISA plus the mission
+        temperature offset ``aircraft.mission.DISA`` (0 when the aircraft has no mission)."""
+        mission = getattr(self.aircraft, 'mission', None)
+        DISA = getattr(mission, 'DISA', 0.0) if mission is not None else 0.0
+        return atmosphere.Tstd(altitude) + DISA
+
+    def log_state(self, t, altitude):
+        """Append the current state to ``history`` at time ``t`` [s] without advancing it
+        (no feed, no vent, no heater). Used to record the full tank at the start of a
+        mission, so the following ``time_step`` calls are time-stamped from ``t``."""
+        try:
+            T_sat = CP.PropsSI('T', 'P', self.P_curr, 'Q', 0, self.fluid)
+        except Exception as err:
+            warnings.warn(f"CoolProp failed in LH2_Tank.log_state ({type(err).__name__}); the "
+                          "logged heat leak uses T_sat = 20 K.", RuntimeWarning)
+            T_sat = 20.0
+        self.history['t'].append(t)
+        self.history['P'].append(self.P_curr / 1e5)
+        self.history['m_tot'].append(self.m_curr * self.n_tanks)
+        self.history['Vent'].append(0.0)
+        self.history['Alt'].append(altitude)
+        self.history['Q_in'].append(self.get_heat_leak(T_sat, self._ambient_temperature(altitude))
+                                    * self.n_tanks)
+        self.history['Q_heater'].append(0.0)
+        self.history['m_vent_cum'].append(self.cum_vented_mass)
+        self.history['Consumption'].append(0.0)
 
     def get_heat_leak(self, T_fluid, T_amb_external):
         """Computes heat ingress through MLI (Multi-Layer Insulation)."""
@@ -296,7 +367,7 @@ class LH2_Tank:
 
         m_dot_fuel = m_dot_req_total / self.n_tanks
         rho_bulk = self.m_curr / self.V_internal
-        T_amb, P_amb = get_isa_atmosphere(altitude)
+        T_amb = self._ambient_temperature(altitude)
         
         # --- THERMODYNAMIC STATE EVALUATION ---
         try:
@@ -315,8 +386,10 @@ class LH2_Tank:
             du_dp_rho = (u_plus - u_bulk) / dP_eps
             phi = 1.0 / (rho_bulk * du_dp_rho)
             
-        except Exception:
+        except Exception as err:
             # Fallback values if CoolProp numerical solver fails for a single timestep
+            warnings.warn(f"CoolProp failed in LH2_Tank.time_step ({type(err).__name__}); this "
+                          "step uses fixed fallback properties.", RuntimeWarning)
             phi, T_sat = 0.5, 20.0
             h_liq, h_gas = 0, 445000
             delta_h, rho_star = 445000, 0.05
@@ -326,6 +399,8 @@ class LH2_Tank:
         m_dot_l = m_dot_fuel
         m_dot_g = 0.0
         
+        # The factor 1.3 on the heat leak (extra heat paths: supports, feed lines) and the
+        # factor 2.0 in the pressure rate below are unsourced engineering assumptions.
         term_heat = 1.3 * Q_mli
         term_mass = delta_h * (rho_star * m_dot_l)
         
@@ -345,7 +420,7 @@ class LH2_Tank:
         elif P_next > self.P_max:
             # Vent gaseous hydrogen to maintain maximum pressure
             self.P_curr = self.P_max
-            numerator = 1.3 * Q_mli - (delta_h * rho_star * m_dot_l)
+            numerator = 1.3 * Q_mli - (delta_h * rho_star * m_dot_l)   # same 1.3 as term_heat
             denominator = delta_h * (1.0 + rho_star)
             if denominator > 0: m_dot_g = numerator / denominator
             if m_dot_g < 0: m_dot_g = 0.0

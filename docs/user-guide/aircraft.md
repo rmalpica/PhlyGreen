@@ -110,6 +110,15 @@ and (for hybrids) the battery pack specs; `input_summary()` echoes the configura
 every input block (mission, aerodynamics, constraints, energy, cell, flight segments, …) so a
 design is fully traceable.
 
+The mass fields add up to the take-off weight:
+`WTO = empty_weight + WPayload + Wf + final_reserve`. `empty_weight` (operating empty weight)
+holds every mass that is neither payload nor fuel: structure, powertrain (counted once, see
+`Weight.powertrain_in_closure`), crew, battery, the H2 tank and the heat exchangers. The last
+two also have their own fields: `tank_mass` (`weight.WTank`, `'Hydrogen'` and
+`'FuelCellBattery'`) and `hex_mass` (`weight.WHeat_Exchanger`: the fuel-cell TMS plus the
+Class-II battery cooling, or in `'Hybrid'` the battery cooling alone). For the fuel-cell
+configurations `tms_mass` equals `hex_mass`.
+
 For plots and time histories use `PhlyGreen.postprocess` — `mission_timeseries`,
 `power_timeseries` (propulsive / gas-turbine / electric-motor power, totals for the aircraft),
 `component_timeseries`, and the ready-made `plot_mission_profile`, `plot_energy_timeseries`,

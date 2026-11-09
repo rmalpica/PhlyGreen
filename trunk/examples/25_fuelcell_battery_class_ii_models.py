@@ -10,9 +10,16 @@ the simple Class-I constants:
 * **propeller** — the analytic Hamilton-Standard model, so the propeller efficiency varies with
   airspeed / altitude / power.
 
-The battery here is used for **peak power** — it covers part of the take-off and climb power and
-nothing in cruise — so the fuel cell is sized for the (lower) cruise power and the take-off weight
-comes down.
+The battery covers part of the take-off and climb power and nothing in cruise. This split is
+chosen to exercise the battery model through high-power phases, not to give a light aircraft.
+The climb to cruise altitude lasts tens of minutes, so a battery that covers part of it is sized
+by energy, and on this reference the climb also sets the fuel-cell rating. The design is
+therefore heavier than the pure-hydrogen one. Example 23 shows when a battery does pay: on a
+short field, covering the take-off run only, with a high specific-power pack.
+
+At the taxi legs the Hamilton propeller runs at low power and is evaluated at the take-off
+speed, where it windmills; the propeller model then sits at its lower bound (0.4), so the taxi
+battery energy is approximate.
 
 This script sizes such a design and plots the relevant time series: the flight profile, the
 fuel-cell / battery power split, the battery state of charge and temperature, and the electric-motor
@@ -31,16 +38,15 @@ from common import fuelcell_battery_config, print_results, savefig
 
 
 TAKEOFF_CLIMB_PHI = 0.30  # battery covers part of the take-off/climb power peak; cruise on H2 alone
-RANGE_NM = 500            # a short regional hop (a longer range snowballs with a realistic battery)
+RANGE_NM = 500            # a short regional hop: the climb battery energy snowballs with range
 
 
 def _base_config():
-    """Fuel-cell + battery with a Class-II battery, hybridised for **peak power**.
+    """Fuel-cell + battery with a Class-II battery covering part of the take-off and climb.
 
     The battery supplies a share (``TAKEOFF_CLIMB_PHI``) of the take-off and climb power and
-    *nothing* in cruise, so the fuel cell is sized for the lower cruise power (a smaller, lighter
-    stack) and the battery only needs energy for the short high-power phases — both push the
-    take-off weight down relative to hybridising the (long) cruise.
+    nothing in cruise. The share is a demonstration setting for the Class-II models; it does
+    not minimise the take-off weight (see the module docstring and example 23).
     """
     cfg = fuelcell_battery_config(cruise_phi=0.0)
     cfg.mission.range_mission = RANGE_NM

@@ -23,19 +23,21 @@
   "battery_class": "II",
   "block_fuel": 1959.555130569924,
   "configuration": "Hybrid",
-  "empty_weight": 17007.34323789362,
+  "empty_weight": 17027.549025378186,
   "engineRating": 5311405.27702878,
   "engineRating_units": "W",
   "final_reserve": 130,
   "fuelcell_rating": null,
+  "hex_mass": 20.20578748456567,
   "hybrid_type": "Parallel",
   "mean_TSFC": null,
   "pack_energy": 2772194.9999999995,
   "pack_power_max": 14915501.169876235,
+  "tank_mass": null,
   "tms_class": null,
   "tms_design_point": null,
   "tms_mass": null,
   "tms_pump_power": null,
   "tms_ram_drag": null,
-  "zero_fuel_weight": 21567.34323789362
+  "zero_fuel_weight": 21587.549025378186
 }

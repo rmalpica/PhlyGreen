@@ -43,6 +43,22 @@ python pw127_partpower.py        # -> pw127_crn_inputs_corrected.csv  (pyCycle, 
 python build_pw127_surrogate.py  # -> ../data/PW127_Emission_Map.csv + Emission_Model_PW127.pkl (Cantera, ~2 min)
 ```
 
+## Convergence checks
+
+- **Deck.** `pw127_deck._od_state` returns a state only if the deck delivered the requested
+  shaft power within 0.1 % (`POWER_TOL`); the Newton solver of `Single_spool_GT.py` does not
+  raise when it stalls. `pw127_partpower.py` re-solves a failed point warm-started from a
+  converged neighbour (restoring its full model state, since the deck's convergence depends on
+  more than the three balance variables), then by a power continuation, and stops if that
+  fails. In the previous run two points of the `G(f)` calibration curve (704 and 1074 hp) and
+  the sea-level / Mach 0.1 / 0.3 envelope state had stalled at the FAR initial guess 0.017;
+  the corrected schedule reproduces the four certified LTO fuel flows to 0.1 % (take-off was
+  1.8 % low).
+- **CRN.** `crn/evap_model_ottimizzato.py` does not accept the secondary or dilution zone as
+  steady before five residence times (`N_TAU_MIN_STAGE`). Before, the first CVODE steps of a
+  new reactor (~1e-12 s) could pass the steadiness test and the zone came out unreacted: CO
+  34-79 g/kg at 12 of the 198 states of the previous turbofan map.
+
 ## Calibration provenance / how the constants were chosen
 - `crn/` — the Chemical Reactor Network and its kerosene mechanism (`kerosene_surrogate_luche.yaml`),
   from A. Pietrosanto's thesis (Luche surrogate, evaporation model, 9-PSR primary zone + SZ + DZ),
@@ -73,8 +89,8 @@ The turbofan combustor box lands inside the CRN's native calibration box, which 
 
 | | CFM56 CRN calibration | turbofan map | PW127 |
 |---|---|---|---|
-| T3 [K] | 477–795 | 551–796 | 469–662 |
-| FAR | 0.014–0.026 | 0.0153–0.0290 | 0.0091–0.0172 |
+| T3 [K] | 477–795 | 551–769 | 469–662 |
+| FAR | 0.014–0.026 | 0.0153–0.0250 | 0.0091–0.0172 |
 | ṁ_air3 [kg/s] | 8.3–47.5 | 9.9–42.6 | 2.2–9.5 |
 
 ```bash

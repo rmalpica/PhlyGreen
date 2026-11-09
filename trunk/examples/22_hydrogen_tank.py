@@ -3,8 +3,9 @@
 Hydrogen is stored as a cryogenic liquid (~20 K). Heat leaking through the insulation
 boils some of it off, raising the tank pressure; a valve vents gas when the pressure
 reaches its maximum, and a heater adds power when it drops to the minimum. This example
-sizes the tank for the design hydrogen load, then re-flies the mission while advancing the
-tank's thermodynamic state, and plots:
+sizes the tank for the design hydrogen load (load + reserve), then re-flies the mission while
+advancing the tank's thermodynamic state from the start of taxi-out to the end of taxi-in
+(time 0 = start of the climb, so taxi-out and the take-off run have negative times), and plots:
 
   * tank pressure vs time (regulated between P_min and P_max),
   * stored hydrogen mass vs time (depletes as it is consumed + vented),
@@ -32,7 +33,8 @@ def main():
     print_results(aircraft, "Hydrogen aircraft with cryogenic LH2 tank")
 
     print("\n=== LH2 tank (sized for the design hydrogen load) ===")
-    print(f"Stored hydrogen     : {aircraft.weight.WH2_Fuel:8.1f} kg")
+    print(f"Stored hydrogen     : {tank.m_tot_capacity:8.1f} kg (load "
+          f"{aircraft.weight.WH2_Fuel:.1f} + reserve {aircraft.weight.final_reserve:.1f})")
     print(f"Tank empty mass     : {aircraft.weight.WTank:8.1f} kg ({tank.n_tanks} tank(s))")
     print(f"Geometry            : {tank.shape}, r_inner = {tank.r_inner:.2f} m, "
           f"D_outer = {tank.D_outer:.2f} m")
@@ -53,6 +55,14 @@ def main():
     print(f"Pressure swing      : {P.min():.3f} - {P.max():.3f} bar")
     print(f"Hydrogen mass       : {m[0]:.1f} -> {m[-1]:.1f} kg")
     print(f"Total vented        : {h['m_vent_cum'][-1]:.2f} kg")
+    # End-of-mission balance: what is left = fuel margin + reserve - vented.
+    mission = aircraft.mission
+    burnt = (mission.Ef[-1] + mission.E_ground) / mission.ef   # flight + ground legs
+    margin = aircraft.weight.WH2_Fuel - burnt
+    print(f"End mass balance    : margin {margin:.1f} + reserve "
+          f"{aircraft.weight.final_reserve:.1f} - vented {h['m_vent_cum'][-1]:.1f} = "
+          f"{margin + aircraft.weight.final_reserve - h['m_vent_cum'][-1]:.1f} kg "
+          f"(tank: {m[-1]:.1f} kg)")
     print(f"H2 feed to fuel cell: {feed.min()*1000:.2f} - {feed.max()*1000:.2f} g/s")
     print(f"Peak heat leak      : {max(h['Q_in']):.0f} W;  peak heater: {max(h['Q_heater']):.0f} W")
 

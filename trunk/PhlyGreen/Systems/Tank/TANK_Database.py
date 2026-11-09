@@ -14,7 +14,7 @@ TANK_Database = {
         'sigma_y': 228e6,           # [Pa] Snervamento 
         'rho_al': 2660.0,           # [kg/m^3] Densità
         'E_al': 71e9,               # [Pa] Modulo di Young
-        'nu_al': 0.33,              # [-] Poisson ratio
+        'nu_al': 0.33,              # [-] Poisson ratio (not used by LH2_Tank)
         
         # --- Fattori di Sicurezza & Calibrazione ---
         'sf_inner': 2.0,            # [-] SF Burst Pressure
@@ -35,7 +35,7 @@ TANK_Database = {
         'C3': 8.03e-10,             # Irraggiamento
         'Cg': 1.46e4,               # Conduzione gas
         'ng': 0.53,                 # Esponente T gas
-        'p_mli': 1.0e-3,            # [Torr] MODIFICATO: Dedotto per ingegneria inversa. "1 mBar" nel paper è un refuso per "1 microBar"!
+        'p_mli': 1.0e-3,            # [Torr] = 1.33 microbar. Inferred by reverse engineering: the "1 mBar" in the paper is taken as a typo; 1e-3 Torr (1.33 microbar, not exactly 1 microbar) is the value used.
         'Nt': 20,                   # [layers/cm] Densità strati (Low density)
         'eps': 0.03                 # [-] Emissività
     }

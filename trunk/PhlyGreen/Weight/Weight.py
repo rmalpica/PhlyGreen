@@ -12,6 +12,10 @@ from .FLOPS_model import FLOPS_model
 _FC_RESIZE_ITERS = 3
 # With the Class-II TMS the same loop also converges the TMS pump load and ram-air drag.
 _FC_TMS_RESIZE_ITERS = 6
+# Max passes and relative tolerance of the "fly -> rate -> set the nominal" loop of a Class-II
+# gas turbine whose nominal follows the sized rating (Weight._mission_and_powertrain).
+_GT_RATING_ITERS = 20
+_GT_RATING_RTOL = 1e-7
 
 
 class Weight:
@@ -180,6 +184,48 @@ class Weight:
             return 0.0
         return WPT
 
+    def _mission_and_powertrain(self, WTO):
+        """Fly the mission and size the gas-turbine powertrain at one take-off weight; return
+        ``(mission energies, powertrain mass)``.
+
+        Without a Class-II gas turbine whose nominal follows the rating this is
+        ``EvaluateMission`` then ``WeightPowertrain``. With one (Class-II map and no explicit
+        'GT Design Power', ``powertrain.gt_design_power_follows_rating``), the map's nominal
+        is seeded with ``DesignPW * WTO``, the mission is flown, the engine is rated, and the
+        nominal is set to that rating and the mission re-flown until the two agree within
+        ``_GT_RATING_RTOL``: the engine that flies the mission is the one that is weighed.
+        """
+        mission = self.aircraft.mission
+        pt = self.aircraft.powertrain
+        if not pt.gt_design_power_follows_rating:
+            energies = mission.EvaluateMission(WTO)
+            return energies, pt.WeightPowertrain(WTO)
+        pt.set_gt_design_power(self.aircraft.DesignPW * WTO)
+        for _ in range(_GT_RATING_ITERS):
+            energies = mission.EvaluateMission(WTO)
+            WPT = pt.WeightPowertrain(WTO)
+            if abs(pt.engineRating - pt.gt_design_power) <= _GT_RATING_RTOL * pt.engineRating:
+                self._gt_rating_converged = True
+                return energies, WPT
+            pt.set_gt_design_power(pt.engineRating)
+        # the last nominal set was not flown: fly it, so the reported mission uses it.
+        # Reported by _warn_gt_rating_not_converged if it happens at the converged WTO (the
+        # far probes of the root bracket may not converge without consequence).
+        energies = mission.EvaluateMission(WTO)
+        WPT = pt.WeightPowertrain(WTO)
+        self._gt_rating_converged = False
+        return energies, WPT
+
+    def _warn_gt_rating_not_converged(self):
+        """Warn when the nominal of a rating-following Class-II gas turbine did not converge
+        at the last weight evaluation (the converged WTO)."""
+        pt = self.aircraft.powertrain
+        if pt.gt_design_power_follows_rating and not getattr(self, '_gt_rating_converged', True):
+            warnings.warn(
+                f"Class-II gas turbine: the nominal did not converge to the sized rating in "
+                f"{_GT_RATING_ITERS} passes (nominal {pt.gt_design_power/1e3:.1f} kW, rating "
+                f"{pt.engineRating/1e3:.1f} kW).", RuntimeWarning)
+
     def _structural_weight(self, WTO):
         """Airframe structural mass [kg] for the current weight class.
 
@@ -234,12 +280,11 @@ class Weight:
                  - Final reserve rule
                 """
             
-                E_fuel = self.aircraft.mission.EvaluateMission(WTO)
+                E_fuel, self.WPT = self._mission_and_powertrain(WTO)
                 self.Wf = E_fuel/self.ef
                 # Energies used over the mission [J] = [fuel, battery]; consumed by the
                 # well-to-wake accounting (no battery in a traditional aircraft).
                 self.TotalEnergies = [E_fuel, 0.0]
-                self.WPT = self.aircraft.powertrain.WeightPowertrain(WTO)
 
                 self.WStructure = self._structural_weight(WTO)
 
@@ -249,6 +294,7 @@ class Weight:
                 return (self.Wf + self.final_reserve + self.powertrain_in_closure(self.WPT) + self.WStructure + self.WPayload + self.WCrew - WTO)
 
         self.WTO = self._solve_wto(func, 1000, 300000, xtol=0.1)
+        self._warn_gt_rating_not_converged()
 
 
     def Hydrogen(self):
@@ -273,12 +319,7 @@ class Weight:
 
         # Use the physics-based LH2 tank model when a TankInput is given and CoolProp is
         # installed; otherwise fall back to the simple gravimetric-index model.
-        LH2_Tank = None
-        if getattr(self.aircraft, 'TankInput', None) is not None:
-            try:
-                from PhlyGreen.Systems.Tank import LH2_Tank
-            except Exception:
-                LH2_Tank = None
+        LH2_Tank = self._physics_tank_class(grav_index)
 
         def func(WTO):
             # Fuel cell (and Class-II TMS) sized self-consistently with the flown mission.
@@ -318,6 +359,30 @@ class Weight:
         self._warn_tms_shortfall()
         return self.WTO
 
+
+    def _physics_tank_class(self, grav_index):
+        """The cryogenic ``LH2_Tank`` class when a TankInput is given and the tank module can
+        be imported (it needs CoolProp), else None. Shared by :meth:`Hydrogen` and
+        :meth:`FuelCellBattery`.
+
+        ``aircraft.tank`` is reset to None here; ``_hydrogen_tank_mass`` sets it again only
+        when the physics tank is used, so it never keeps a tank from an earlier design.
+        A TankInput that cannot be honoured raises a warning (the design then uses the
+        gravimetric index).
+        """
+        self.aircraft.tank = None
+        if getattr(self.aircraft, 'TankInput', None) is None:
+            return None
+        try:
+            from PhlyGreen.Systems.Tank import LH2_Tank
+        except ImportError as err:
+            warnings.warn(
+                f"A TankConfig is given but the cryogenic LH2 tank model cannot be imported "
+                f"({err}; it needs CoolProp). The tank mass uses the gravimetric index "
+                f"H2 Gravimetric Index = {grav_index} instead, and aircraft.tank is None.",
+                RuntimeWarning)
+            return None
+        return LH2_Tank
 
     def _hydrogen_tank_mass(self, m_h2, LH2_Tank, grav_index):
         """Empty mass [kg] of the tank holding ``m_h2`` kg of hydrogen: the cryogenic
@@ -456,12 +521,7 @@ class Weight:
         grav_index = energy.get('H2 Gravimetric Index', 0.35)
         h2_margin = energy.get('H2 Fuel Margin', 0.05)
 
-        LH2_Tank = None
-        if getattr(self.aircraft, 'TankInput', None) is not None:
-            try:
-                from PhlyGreen.Systems.Tank import LH2_Tank
-            except Exception:
-                LH2_Tank = None
+        LH2_Tank = self._physics_tank_class(grav_index)
 
         def func(WTO):
             # Size the fuel cell self-consistently (same rule as the pure-hydrogen path, so a
@@ -555,7 +615,7 @@ class Weight:
                  - reserve fuel
                 """
 
-                self.TotalEnergies = self.aircraft.mission.EvaluateMission(WTO)
+                self.TotalEnergies, self.WPT = self._mission_and_powertrain(WTO)
                 self.Wf = self.TotalEnergies[0]/self.ef
                 if self.aircraft.battery.BatteryClass == 'II':
                     self.WBat=self.aircraft.battery.pack_weight
@@ -563,8 +623,6 @@ class Weight:
                     WBat  = [(self.TotalEnergies[1]/(1-self.aircraft.battery.SOC_min))/self.aircraft.battery.Ebat , self.aircraft.mission.Max_PBat*(1/self.aircraft.battery.pbat), self.aircraft.mission.TO_PBat*(1/self.aircraft.battery.pbat)]
                     self.WBatidx = np.argmax(WBat)
                     self.WBat = WBat[self.WBatidx] 
-
-                self.WPT = self.aircraft.powertrain.WeightPowertrain(WTO)
 
                 self.WStructure = self._structural_weight(WTO)
 
@@ -583,3 +641,4 @@ class Weight:
                         + self.WHeat_Exchanger + self.WPayload + self.WCrew - WTO)
         # iterate the weight estimator with Brent's method until WTO converges (robust bracketing)
         self.WTO = self._solve_wto(func, 10000, 60000, xtol=0.1)
+        self._warn_gt_rating_not_converged()

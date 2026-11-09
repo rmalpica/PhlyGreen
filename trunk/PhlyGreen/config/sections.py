@@ -107,6 +107,9 @@ class EnergyConfig(DictConfig):
     eta_electric_motor_1: Optional[float] = None   # serial config (generator)
     eta_electric_motor_2: Optional[float] = None   # serial config (motor)
     eta_pmad: Optional[float] = None
+    # constant fuel-cell system efficiency of the powertrain graph
+    # (Powertrain.PowerRatioFuelCellBattery only; the fuel-cell missions use the physics model)
+    eta_fuel_cell: Optional[float] = None
     specific_power_powertrain: Optional[List[float]] = None  # [thermal, electric motor] W/kg
     specific_power_pmad: Optional[float] = None              # power-management / inverter [W/kg]
     specific_power_generator: Optional[float] = None         # serial-hybrid generator [W/kg];
@@ -157,6 +160,8 @@ class EnergyConfig(DictConfig):
     em_design_power: Optional[float] = None           # nominal electric-motor power [W]
     em_design_voltage: Optional[float] = None         # [V]
     em_design_rpm: Optional[float] = None             # [rpm]
+    propeller_rpm: Optional[float] = None             # RBF propeller surrogate rpm (eta_propulsive_model
+    #                                                   'Surrogate'/'RBF'); default 1200 rpm
     # --- serial "range-extender" strategy (Hybrid + HybridType 'Serial') ---
     # When set, the serial gas turbine runs at this constant shaft power for the whole mission
     # (only the altitude/velocity lapse affects its efficiency); the battery absorbs the surplus
@@ -185,6 +190,7 @@ class EnergyConfig(DictConfig):
         "eta_electric_motor_1": "Eta Electric Motor 1",
         "eta_electric_motor_2": "Eta Electric Motor 2",
         "eta_pmad": "Eta PMAD",
+        "eta_fuel_cell": "Eta Fuel Cell",
         "specific_power_powertrain": "Specific Power Powertrain",
         "specific_power_pmad": "Specific Power PMAD",
         "specific_power_generator": "Specific Power Generator",
@@ -214,6 +220,7 @@ class EnergyConfig(DictConfig):
         "em_design_power": "EM Design Power",
         "em_design_voltage": "EM Design Voltage",
         "em_design_rpm": "EM Design RPM",
+        "propeller_rpm": "Propeller RPM",
         "gt_rated_power": "GT Rated Power",
         "battery_charge_efficiency": "Battery Charge Efficiency",
         "turbofan_design_thrust": "Turbofan Design Thrust",
@@ -225,7 +232,7 @@ class EnergyConfig(DictConfig):
     def __post_init__(self):
         _check_positive("Ef", self.Ef)
         for n in ("eta_gas_turbine", "eta_gearbox", "eta_propulsive", "eta_electric_motor",
-                  "eta_electric_motor_1", "eta_electric_motor_2", "eta_pmad"):
+                  "eta_electric_motor_1", "eta_electric_motor_2", "eta_pmad", "eta_fuel_cell"):
             _check_efficiency(n, getattr(self, n))
         if self.fc_voltage_loss is not None and self.fc_voltage_loss < 0:
             raise ConfigError(f"fc_voltage_loss must be >= 0, got {self.fc_voltage_loss!r}")
@@ -234,6 +241,7 @@ class EnergyConfig(DictConfig):
             _check_positive(n, getattr(self, n))
         _check_efficiency("battery_capacity_fraction", self.battery_capacity_fraction)
         _check_positive("specific_power_generator", self.specific_power_generator)
+        _check_positive("propeller_rpm", self.propeller_rpm)
         _check_fraction("fc_cathode_inlet_rh", self.fc_cathode_inlet_rh)
         _check_fraction("fc_ambient_relative_humidity", self.fc_ambient_relative_humidity)
 
@@ -407,24 +415,48 @@ _CONSTRAINT_PHASES = (
 
 @dataclass
 class TankConfig(DictConfig):
-    """Liquid-hydrogen tank configuration (``TankInput``, Hydrogen configuration only)."""
+    """Liquid-hydrogen tank configuration (``TankInput``), used by the ``Hydrogen`` and
+    ``FuelCellBattery`` configurations: with it (and CoolProp installed) the hydrogen
+    storage is sized with the cryogenic ``LH2_Tank`` model instead of the gravimetric index.
+
+    * ``max_diameter``: maximum tank outer diameter [m]. The inner radius is capped at
+      ``max_diameter/2 - 0.15 m`` (an unsourced clearance for walls and insulation) and the
+      sized outer diameter is checked against ``max_diameter`` (ValueError if larger).
+    * ``number_of_tanks``: starting number of tanks; the automatic split may add tanks.
+    * ``max_number_of_tanks``: cap on the number of tanks the split may reach (default 4,
+      an unsourced stand-in for the installation limit; pass a larger number to relax it).
+      At the cap the split stops; a cylinder longer than the aspect limit is then kept,
+      with a warning.
+    * ``fuselage_diameter``: NOT used by the tank model (kept for API compatibility). The
+      model has no fuselage-integration rule; set ``max_diameter`` to the space available.
+    """
 
     max_diameter: float = None          # max tank outer diameter [m]
     number_of_tanks: int = 1
     tank_model: str = "Svensson_Default"  # key into TANK_Database
-    fuselage_diameter: Optional[float] = None
+    fuselage_diameter: Optional[float] = None   # not used by the tank model
+    max_number_of_tanks: int = 4      # = Tank.DEFAULT_MAX_NUMBER_OF_TANKS (None -> the same default)
 
     _KEY_MAP = {
         "max_diameter": "Max Diameter",
         "number_of_tanks": "Number of Tanks",
         "tank_model": "Tank Model",
         "fuselage_diameter": "Fuselage Diameter",
+        "max_number_of_tanks": "Max Number of Tanks",
     }
 
     def __post_init__(self):
         _check_positive("max_diameter", self.max_diameter)
         if self.number_of_tanks is not None and self.number_of_tanks < 1:
             raise ConfigError(f"number_of_tanks must be >= 1, got {self.number_of_tanks!r}")
+        if self.max_number_of_tanks is not None:
+            if self.max_number_of_tanks < 1:
+                raise ConfigError(
+                    f"max_number_of_tanks must be >= 1 or None, got {self.max_number_of_tanks!r}")
+            if self.number_of_tanks is not None and self.number_of_tanks > self.max_number_of_tanks:
+                raise ConfigError(
+                    f"number_of_tanks ({self.number_of_tanks}) exceeds max_number_of_tanks "
+                    f"({self.max_number_of_tanks})")
 
 
 @dataclass

@@ -106,3 +106,22 @@ def test_fcb_class_ii_sizes_a_physics_pack():
     total = (w.WStructure + w.WPT + w.WBat + w.WH2_Fuel + w.WTank + w.WHeat_Exchanger
              + w.WPayload + w.WCrew + w.final_reserve)
     assert total == pytest.approx(w.WTO, rel=1e-3)
+
+
+@pytest.mark.slow
+def test_battery_power_flows_through_the_motor_and_pmad_masses():
+    """The battery feeds the same PMAD and motor as the fuel cell, so both are sized on the
+    peak propulsive power through the drive at one instant (fuel-cell and battery shares
+    together), not on the fuel-cell share only."""
+    aircraft = pg.build_aircraft()
+    aircraft.configure(_fcb_config(cruise_phi=0.1))
+    fc, pt, m = aircraft.fuelcell, aircraft.powertrain, aircraft.mission
+    eta_downstream = fc.EtaEM * fc.EtaPM * fc.EtaGB * fc.EtaProp
+    fuel_cell_share = max(m.TO_PP, m.Max_PEng)
+    # the coincident peak: at least the fuel-cell share, at most the sum of the two peaks
+    # (on this design the climb, flown without battery, sets it: Max_PDrive = the share)
+    assert m.Max_PDrive >= fuel_cell_share
+    assert m.Max_PDrive <= fuel_cell_share + m.Max_PBat
+    motor_power = aircraft.weight.WElectric * pt.SPowerPT[1] / fc.EtaPM
+    # Max_PDrive of the last flight; the stack was sized on the flight before it (converged)
+    assert motor_power == pytest.approx(m.Max_PDrive / eta_downstream, rel=2e-3)

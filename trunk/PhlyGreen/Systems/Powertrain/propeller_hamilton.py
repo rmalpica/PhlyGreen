@@ -23,7 +23,9 @@ class Propeller:
 
         self.diam_prop = Units.mToft(self.aircraft.PropellerInput['Propeller Diameter'])
         self.RPM_prop = self.aircraft.PropellerInput['RPM'] 
-        self.n_engines = self.aircraft.PropellerInput['N_ENGINES']
+        # the engine count of the whole powertrain (PropellerInput['Number of Engines'],
+        # default 2): the shaft power is split over this many propellers
+        self.n_engines = self.aircraft.powertrain.n_engines
         self.V_tip = self.RPM_prop * self.diam_prop * np.pi / 60.
         self.n_blades = self.aircraft.PropellerInput['N_BLADES']
         self.activity_factor = self.aircraft.PropellerInput['ACTIVITY_FACTOR']
@@ -32,6 +34,8 @@ class Propeller:
         return None
     
     def ComputePropEfficiency(self,Altitude,Velocity,ShaftPower):
+        """Propeller efficiency at altitude [m], true airspeed [m/s] and ``ShaftPower`` [W],
+        the total shaft power into the propellers (all engines; split over ``n_engines``)."""
 
         # CHECK THAT VELOCITY IS TAS m/s
         # Shaft Power [hp]

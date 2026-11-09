@@ -5,9 +5,9 @@ transient ``time_step`` model of the tank thermodynamic state — self-pressuriz
 heat ingress, venting at the maximum pressure, and heater power at the minimum pressure.
 
 This module requires **CoolProp** (for para-hydrogen properties) and is therefore an
-*optional* dependency: it is imported lazily where needed (e.g. ``Weight.Hydrogen`` falls
-back to a simple gravimetric-index tank model when CoolProp is unavailable). Importing this
-package without CoolProp raises ImportError by design.
+*optional* dependency: it is imported lazily where needed (``Weight.Hydrogen`` and
+``Weight.FuelCellBattery`` warn and fall back to a simple gravimetric-index tank model when
+CoolProp is unavailable). Importing this package without CoolProp raises ImportError by design.
 """
 
 from .Tank import LH2_Tank, get_isa_atmosphere

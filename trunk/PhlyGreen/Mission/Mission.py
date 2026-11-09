@@ -62,11 +62,16 @@ class Mission:
         self.Takeoff_PBat = 0.0            # battery power over the take-off run [W]
         self._ground_battery_legs_out = [] # Class-II pack legs before the climb
         self._ground_battery_legs_in = []  # ... and after landing
+        self._ground_fuel_legs_out = []    # (name, duration [s], fuel chemical power [W]) before the climb
+        self._ground_fuel_legs_in = []     # ... and after landing (LH2 tank history)
         self.DISA = 0
         self.WTO = None
         self.Max_PBat = -1
         self.Max_PEng = -1
         self.Max_PEng_alt = 0
+        # Largest gas-turbine shaft power over the full-throttle lapse, max P_shaft / lapse(h),
+        # over the mission points: the sea-level rating a Class-II (map-lapse) engine needs.
+        self.Max_PEng_lapsed = -1
         self.TO_PBat = 0
         self.TO_PP = 0
         # Hybrid electric machines: peak motor shaft power and peak bus (motor input) power,
@@ -75,6 +80,12 @@ class Mission:
         self.TO_PMotor = 0.0
         self.Max_PBus = 0.0
         self.TO_PBus = 0.0
+        # FuelCellBattery: peak propulsive power through the shared electric drive (fuel-cell
+        # and battery shares at the same instant) over the mission, the take-off / OEI
+        # requirement and the ground legs. Sizes its motor and PMAD (FuelCell._size_stack).
+        self.Max_PDrive = 0.0
+        self.Takeoff_PP_ground = 0.0       # propulsive power over the take-off run [W]
+        self.Taxi_PP_ground = 0.0          # propulsive power while taxiing [W]
         # Sizing-critical mission thrust and the condition it occurs at (for a Turbofan,
         # the largest thrust/lapse -- see TraditionalConfiguration).
         self.Max_Thrust = -1.0
@@ -101,8 +112,10 @@ class Mission:
         # of the TMS hardware.
         self.thermal_history = []
         self._phase_peak = None
-        # when True (and aircraft.tank is set) the LH2 tank thermodynamic state is
-        # advanced through the mission; off by default so the weight loop stays fast.
+        # when True (and aircraft.tank is set) EvaluateMission advances the LH2 tank
+        # thermodynamic state through the ground legs and the flown mission of the Hydrogen
+        # and FuelCellBattery configurations (see compute_tank_history); off by default so
+        # the weight loop stays fast.
         self.track_tank = False
 
         self.ef = None
@@ -242,7 +255,77 @@ class Mission:
         result = self._fly_configuration(WTO)
         if self._has_battery() and not (isinstance(result, tuple) and result[0] == 0):
             self.Max_PBat = max(self.Max_PBat, self.Takeoff_PBat, self.Taxi_PBat)
+        if (self.aircraft.Configuration == 'FuelCellBattery'
+                and not (isinstance(result, tuple) and result[0] == 0)):
+            self.Max_PDrive = max(self.Max_PDrive, self.Takeoff_PP_ground, self.Taxi_PP_ground)
+        mission_failed = isinstance(result, tuple) and result[0] == 0
+        if (self.track_tank and self.aircraft.Configuration in ('Hydrogen', 'FuelCellBattery')
+                and not mission_failed):
+            if getattr(self.aircraft, 'tank', None) is None:
+                warnings.warn("mission.track_tank is set but the aircraft has no physics LH2 "
+                              "tank (needs a TankConfig and CoolProp); no tank history.",
+                              RuntimeWarning)
+            else:
+                self.compute_tank_history()
         return self._add_ground_energy(result)
+
+    def compute_tank_history(self):
+        """Advance the LH2 tank state through the ground legs and the flown mission, filling
+        ``aircraft.tank.history``. Used by :meth:`EvaluateMission` when ``track_tank`` is
+        set, for both the ``Hydrogen`` and the ``FuelCellBattery`` configurations.
+
+        The tank starts full (its sized capacity: load + reserve) at the start of taxi-out
+        and is drained by the same hydrogen flows the sizing counts:
+
+        1. taxi-out and the take-off run, at the constant flows of :meth:`_ground_segments`;
+        2. the flown mission, with the flow recovered from the cumulative hydrogen chemical
+           energy (ODE state ``y[0]``) over each solver step;
+        3. taxi-in, after landing.
+
+        Time follows the mission profile clock (0 = start of the climb), so the taxi-out and
+        take-off records have negative times and taxi-in follows the end of the profile. The
+        ground legs are at the take-off altitude, in steps of at most 10 s. At the end the
+        stored mass is the capacity minus the hydrogen burnt (``E / ef``, ground included)
+        minus the vented mass: the fuel margin + reserve - vented.
+        """
+        tank = self.aircraft.tank
+        tank.m_curr = tank.capacity_single        # start full
+        tank.P_curr = tank.P_min
+        tank.history = {'t': [], 'P': [], 'm_tot': [], 'Vent': [], 'Q_in': [],
+                        'Alt': [], 'Q_heater': [], 'm_vent_cum': [], 'Consumption': []}
+        tank.cum_vented_mass = 0.0
+        ground_alt = self._ground_condition()[0]
+        max_ground_step = 10.0                    # [s] time step on the ground legs
+
+        # Full tank at the start of taxi-out.
+        t_start = -sum(duration for _, duration, _ in self._ground_fuel_legs_out)
+        tank.log_state(t_start, ground_alt)
+
+        # 1. Taxi-out and take-off run.
+        for _, duration, P_chem in self._ground_fuel_legs_out:
+            if duration <= 0:
+                continue
+            n_steps = int(math.ceil(duration / max_ground_step))
+            for _ in range(n_steps):
+                tank.time_step(duration / n_steps, P_chem / self.ef, ground_alt)
+
+        # 2. Flown mission.
+        for sol in self.integral_solution:
+            for k in range(1, len(sol.t)):
+                dt = sol.t[k] - sol.t[k - 1]
+                dE = max(float(sol.y[0][k] - sol.y[0][k - 1]), 0.0)   # hydrogen chemical energy
+                m_dot = (dE / self.ef) / dt if dt > 0 else 0.0
+                t_mid = 0.5 * (sol.t[k] + sol.t[k - 1])
+                tank.time_step(dt, m_dot, float(self.profile.Altitude(t_mid)))
+
+        # 3. Taxi-in.
+        for _, duration, P_chem in self._ground_fuel_legs_in:
+            if duration <= 0:
+                continue
+            n_steps = int(math.ceil(duration / max_ground_step))
+            for _ in range(n_steps):
+                tank.time_step(duration / n_steps, P_chem / self.ef, ground_alt)
+        return tank.history
 
     def _fly_configuration(self, WTO):
         """Fly the profile with the configuration's mission method."""
@@ -290,15 +373,18 @@ class Mission:
                 and bool(self.aircraft.EnergyInput.get('GT Rated Power')))
 
     def _takeoff_phi(self):
-        """Battery fraction of the propulsive power at take-off: the phi of the profile's
-        'Takeoff' stage (0 without a battery)."""
+        """Battery phi at take-off: the phi of the profile's 'Takeoff' stage (0 without a
+        battery). In 'Hybrid' it is the battery share of the supplied power,
+        ``Pbat / (Pf + Pbat)``; in 'FuelCellBattery' the battery share of the propulsive
+        power."""
         if not self._has_battery() or getattr(self.profile, 'SPW', None) is None:
             return 0.0
         return float(self.profile.SPW[0][0])
 
     def _taxi_phi(self):
-        """Battery fraction of the propulsive power while taxiing ('Taxi Supplied Power
-        Ratio'; defaults to the take-off phi)."""
+        """Battery phi while taxiing ('Taxi Supplied Power Ratio'; defaults to the take-off
+        phi). In 'Hybrid' it is the battery share of the supplied power, ``Pbat / (Pf + Pbat)``;
+        in 'FuelCellBattery' the battery share of the propulsive power."""
         if not self._has_battery():
             return 0.0
         return self._takeoff_phi() if self.taxi_phi is None else float(self.taxi_phi)
@@ -308,17 +394,10 @@ class Mission:
         architecture: PMAD, electric motor, gearbox and propeller, the same chain the fuel-cell
         branch uses in ``FuelCell.ComputePRatio``. ``P`` is the battery propulsive power. The
         electric-motor term varies with the operating point when the Class-II ('Smart') d-q
-        motor model is selected; the propeller term when a propeller model is attached."""
+        motor model is selected; the propeller term when a propeller model is attached, each
+        at its own shaft power (``FuelCell.drive_efficiencies``)."""
         fc = self.aircraft.fuelcell
-        pt = self.aircraft.powertrain
-        if self.aircraft.EnergyInput.get('Eta Electric Motor Model') == 'Smart':
-            em = pt.eta('electric_motor', alt, vel, P)
-        else:
-            em = fc.EtaEM
-        if hasattr(pt, 'Propeller'):
-            eta_prop = pt.Propeller.ComputePropEfficiency(alt, vel, P)
-        else:
-            eta_prop = fc.EtaProp
+        em, eta_prop = fc.drive_efficiencies(alt, vel, P)
         return em * fc.EtaPM * fc.EtaGB * eta_prop
 
     def _fc_battery_terminal_power(self, alt, vel, P_bat):
@@ -354,14 +433,63 @@ class Mission:
         import PhlyGreen.Utilities.Units as Units
         from PhlyGreen.Systems.Powertrain.gas_turbine_surrogate import _isa_pressure_ratio
         P_gt_rated = float(self.aircraft.EnergyInput['GT Rated Power'])
-        gt_design = self.aircraft.EnergyInput.get('GT Design Power') or P_gt_rated
+        gt_design = self.aircraft.powertrain.gt_design_power or P_gt_rated
         return min(P_gt_rated, gt_design * _isa_pressure_ratio(Units.mToft(alt)))
+
+    def _lapsed_engine_peak(self, times, P_shaft):
+        """Largest ``P_shaft / PowerLapse(h)`` over the mission points ``times`` [W]: the
+        sea-level rating that gives full power at every point. Used for the Class-II gas
+        turbine, whose ``PowerLapse`` is the map's own lapse (``Powertrain.WeightPowertrain``);
+        -1 (not computed) for the other gas turbines, which are rated from ``Max_PEng``."""
+        pt = self.aircraft.powertrain
+        if not pt.gas_turbine_has_map_lapse():
+            return -1
+        lapse = np.array([pt.PowerLapse(self.profile.Altitude(t), 0) for t in times])
+        return float(np.max(np.asarray(P_shaft) / lapse)) if len(times) else -1
+
+    def _serial_drive_efficiencies(self, P_prop, alt, vel):
+        """Efficiencies ``(eta_pp, eta_gb, eta_em)`` of the serial drive (motor -> gearbox ->
+        propeller) delivering the propulsive power ``P_prop`` [W].
+
+        Each model is evaluated at the power through its own component (the convention of
+        ``Powertrain.eta``): the propeller at its shaft input ``P_prop / eta_pp``, the gearbox
+        at its input and the motor at its shaft output, both ``P_prop / (eta_pp * eta_gb)``.
+        These powers depend on the efficiencies, so the models are first evaluated at
+        ``P_prop`` and then re-evaluated at the resulting powers until the efficiencies stop
+        changing. With constant models the first evaluation is returned as it is.
+        """
+        pt = self.aircraft.powertrain
+        eta_pp = pt.eta('propeller', alt, vel, P_prop)
+        eta_gb = pt.eta('gearbox', alt, vel, P_prop)
+        eta_em = pt.eta('electric_motor', alt, vel, P_prop)
+        if (pt.has_constant_efficiency('propeller') and pt.has_constant_efficiency('gearbox')
+                and pt.has_constant_efficiency('electric_motor')):
+            return eta_pp, eta_gb, eta_em
+        for _ in range(pt.COMPONENT_POWER_MAX_ITER):
+            P_prop_shaft = P_prop / eta_pp
+            P_motor_shaft = P_prop_shaft / eta_gb
+            new = (pt.eta('propeller', alt, vel, P_prop_shaft),
+                   pt.eta('gearbox', alt, vel, P_motor_shaft),
+                   pt.eta('electric_motor', alt, vel, P_motor_shaft))
+            change = max(abs(new[0] - eta_pp), abs(new[1] - eta_gb), abs(new[2] - eta_em))
+            eta_pp, eta_gb, eta_em = new
+            if change <= pt.COMPONENT_POWER_RTOL:
+                return eta_pp, eta_gb, eta_em
+        warnings.warn("serial drive: the component efficiencies did not converge.",
+                      RuntimeWarning)
+        return eta_pp, eta_gb, eta_em
 
     def _serial_motor_shaft_power(self, P_prop, alt, vel):
         """Shaft power [W] of the serial hybrid's electric motor for the propulsive power
         ``P_prop``: the motor drives the propeller through the gearbox."""
-        pt = self.aircraft.powertrain
-        return P_prop / (pt.eta('propeller', alt, vel, P_prop) * pt.eta('gearbox', alt, vel, P_prop))
+        eta_pp, eta_gb, _ = self._serial_drive_efficiencies(P_prop, alt, vel)
+        return P_prop / (eta_pp * eta_gb)
+
+    def _serial_bus_power(self, P_prop, alt, vel):
+        """Electrical power [W] into the serial hybrid's motor (bus output) for the
+        propulsive power ``P_prop``."""
+        eta_pp, eta_gb, eta_em = self._serial_drive_efficiencies(P_prop, alt, vel)
+        return P_prop / (eta_pp * eta_gb) / eta_em
 
     def _range_extender_flows(self, P_prop, alt, vel):
         """Fuel chemical power and battery terminal power of the range extender at one point.
@@ -369,16 +497,32 @@ class Mission:
         Forward serial chain (turbine -> generator -> bus + battery -> motor -> gearbox ->
         propeller); the turbine runs at full throttle and the battery makes up the difference
         between the bus demand and the generator output. ``Pbat > 0`` discharging,
-        ``Pbat < 0`` recharging.
+        ``Pbat < 0`` recharging. Each efficiency model is evaluated at the power through its
+        own component: the drive as in :meth:`_serial_drive_efficiencies`, the turbine at its
+        shaft output, the generator at its electrical output and the PMAD at its input (the
+        bus output divided by its efficiency), the last two by a fixed point that is skipped
+        for constant models.
         """
         pt = self.aircraft.powertrain
         P_gt = self._range_extender_gt_power(alt)
-        eta_pp = pt.eta('propeller', alt, vel, P_prop)
-        eta_gb = pt.eta('gearbox', alt, vel, P_prop)
+        eta_pp, eta_gb, eta_em = self._serial_drive_efficiencies(P_prop, alt, vel)
         eta_pm = pt.eta('pmad', alt, vel, P_prop)
         eta_gt = pt.eta('gas_turbine', alt, vel, P_gt)
-        Pe1 = P_prop / (eta_pp * eta_gb * pt.EtaEM2)             # electrical bus -> motor
-        Ps1 = P_gt * pt.EtaEM1                                    # generator electrical output
+        eta_gen = pt.eta('generator', alt, vel, P_gt)
+        Pe1 = P_prop / (eta_pp * eta_gb * eta_em)                # electrical bus -> motor
+        if not pt.has_constant_efficiency('generator'):
+            for _ in range(pt.COMPONENT_POWER_MAX_ITER):
+                new = pt.eta('generator', alt, vel, P_gt * eta_gen)
+                change, eta_gen = abs(new - eta_gen), new
+                if change <= pt.COMPONENT_POWER_RTOL:
+                    break
+        if not pt.has_constant_efficiency('pmad'):
+            for _ in range(pt.COMPONENT_POWER_MAX_ITER):
+                new = pt.eta('pmad', alt, vel, Pe1 / eta_pm)
+                change, eta_pm = abs(new - eta_pm), new
+                if change <= pt.COMPONENT_POWER_RTOL:
+                    break
+        Ps1 = P_gt * eta_gen                                      # generator electrical output
         return P_gt / eta_gt, Pe1 / eta_pm - Ps1
 
     def _ground_condition(self):
@@ -394,7 +538,9 @@ class Mission:
         the configuration's own powertrain at the take-off condition (so part-load
         efficiencies apply).
 
-        ``phi`` is the battery fraction of ``P``. The range extender ignores it at take-off:
+        ``phi`` is the battery phi of the configuration: in 'Hybrid' the battery share of the
+        supplied power, ``Pbat / (Pf + Pbat)`` (passed to ``Powertrain.Hybrid``); in
+        'FuelCellBattery' the battery share of ``P``. The range extender ignores it at take-off:
         its turbine runs at full throttle and the battery covers the rest, the rule that sizes
         it for take-off (see :meth:`SerialRangeExtenderConfiguration`).
 
@@ -458,12 +604,18 @@ class Mission:
         self.EBat_ground = self.EBat_taxi_out_takeoff + t_in * Pel_tx
         self.Takeoff_PBat = Pbat_to
         self.Taxi_PBat = Pbat_tx
+        self.Takeoff_PP_ground = P_takeoff
+        self.Taxi_PP_ground = P_taxi
         # (name, duration [s], battery terminal power [W], phi, speed [m/s TAS] for the
         # ambient cooling of a Class-II pack)
         _, vel = self._ground_condition()
         self._ground_battery_legs_out = [('Taxi-out', t_out, Pel_tx, phi_taxi, 0.0),
                                          ('Takeoff', t_to, Pel_to, phi_takeoff, vel)]
         self._ground_battery_legs_in = [('Taxi-in', t_in, Pel_tx, phi_taxi, 0.0)]
+        # (name, duration [s], fuel chemical power [W]): the same legs for the fuel, used by
+        # the LH2 tank history (compute_tank_history).
+        self._ground_fuel_legs_out = [('Taxi-out', t_out, Pf_tx), ('Takeoff', t_to, Pf_to)]
+        self._ground_fuel_legs_in = [('Taxi-in', t_in, Pf_tx)]
 
     def _add_ground_energy(self, result):
         """Add the ground-segment energies to what a mission method returns: a float (fuel
@@ -679,16 +831,6 @@ class Mission:
         self.TO_PP = self._worst_case_propulsive_power(WTO)
         self._takeoff_fc_heat(self.TO_PP)
 
-        # Optionally advance the LH2 tank thermodynamic state through the mission.
-        track = self.track_tank and getattr(self.aircraft, 'tank', None) is not None
-        if track:
-            tank = self.aircraft.tank
-            tank.m_curr = tank.capacity_single        # start full
-            tank.P_curr = tank.P_min
-            tank.history = {'t': [], 'P': [], 'm_tot': [], 'Vent': [], 'Q_in': [],
-                            'Alt': [], 'Q_heater': [], 'm_vent_cum': [], 'Consumption': []}
-            tank.cum_vented_mass = 0.0
-
         y0 = [0, self.beta0]
         self.integral_solution = []
         times = np.append(self.profile.Breaks, self.profile.MissionTime2)
@@ -700,14 +842,6 @@ class Mission:
                 sol, 1, lambda t, b: self.check_PP(PowerPropulsive(b, t)))
             self._end_thermal_phase()
             self.integral_solution.append(sol)
-            if track:
-                # Drive the tank with the hydrogen mass flow over each solver micro-step.
-                for k in range(1, len(sol.t)):
-                    dt_mini = sol.t[k] - sol.t[k - 1]
-                    dE = max(sol.y[0][k] - sol.y[0][k - 1], 0.0)
-                    m_dot = (dE / self.ef) / dt_mini if dt_mini > 0 else 0.0
-                    t_mid = 0.5 * (sol.t[k] + sol.t[k - 1])
-                    tank.time_step(dt_mini, m_dot, float(self.profile.Altitude(t_mid)))
             y0 = [sol.y[0][-1], sol.y[1][-1]]
 
         self.Ef = sol.y[0]
@@ -800,7 +934,7 @@ class Mission:
 
         # Post-process the battery: electrical energy drawn and peak battery terminal power.
         E_bat = 0.0
-        pp_fc_peak, p_el_peak = 0.0, 0.0
+        pp_fc_peak, p_el_peak, pp_peak = 0.0, 0.0, 0.0
         for arr in self.integral_solution:
             pp = np.array([self.check_PP(PowerPropulsive(b, t)) for t, b in zip(arr.t, arr.y[1])])
             p_bat = np.array([float(self.profile.SuppliedPowerRatio(t)) for t in arr.t]) * pp
@@ -812,8 +946,12 @@ class Mission:
                 E_bat += float(np.trapezoid(p_el, arr.t))
             p_el_peak = max(p_el_peak, float(p_el.max()) if len(p_el) else 0.0)
             pp_fc_peak = max(pp_fc_peak, float(p_fc.max()) if len(p_fc) else 0.0)
+            pp_peak = max(pp_peak, float(pp.max()) if len(pp) else 0.0)
         self.EBat = E_bat
         self.Max_PEng = pp_fc_peak           # fuel-cell propulsive peak (no hidden margin)
+        # both shares flow through the motor: the coincident peak, with the take-off / OEI
+        # requirement (the ground legs are added by EvaluateMission)
+        self.Max_PDrive = max(pp_peak, P_total_TO)
         self.Max_PEng_alt = 0.0
         self.Max_PBat = max(p_el_peak, self.TO_PBat)
         return self.Ef[-1], self.EBat
@@ -979,6 +1117,9 @@ class Mission:
         self.Max_PEng = float(np.max(p_fc)) if len(p_fc) else 0.0
         self.Max_PEng_alt = self.profile.Altitude(times[int(np.argmax(p_fc))]) if len(p_fc) else 0.0
         self.Max_PBat = max(float(np.max(p_el)) if len(p_el) else 0.0, self.TO_PBat)
+        # both shares flow through the motor: the coincident peak, with the take-off / OEI
+        # requirement (the ground legs are added by EvaluateMission)
+        self.Max_PDrive = max(float(np.max(PP)) if len(PP) else 0.0, P_total_TO)
 
         ceiling = 273.15 + self.T_battery_limit
         b = self.aircraft.battery
@@ -1125,6 +1266,7 @@ class Mission:
         PRatio = np.array([self.aircraft.powertrain.Traditional(self.profile.Altitude(times[i]),self.profile.Velocity(times[i]),PP[i]) for i in range(len(times))] )
         self.Max_PEng = np.max(np.multiply(PP,PRatio[:,1])) #shaft power
         self.Max_PEng_alt = self.profile.Altitude(times[np.argmax(np.multiply(PP,PRatio[:,1]))]) #altitude at which peak power occurs 
+        self.Max_PEng_lapsed = self._lapsed_engine_peak(times, np.multiply(PP,PRatio[:,1]))
 
         # Peak THRUST over the mission. A thrust-rated engine cannot be sized from a peak
         # shaft power, and the two peaks need not even coincide: thrust is PP/V, so a
@@ -1242,6 +1384,7 @@ class Mission:
             #set/reset max values
             self.Max_PBat = -1
             self.Max_PEng = -1
+            self.Max_PEng_lapsed = -1
 
             y0 = [0,0,self.beta0]
             
@@ -1283,6 +1426,7 @@ class Mission:
 
             self.Max_PEng = np.max(np.multiply(PP,PRatio[:,1]))
             self.Max_PEng_alt = self.profile.Altitude(times[np.argmax(np.multiply(PP,PRatio[:,1]))]) #altitude at which peak power occurs 
+            self.Max_PEng_lapsed = self._lapsed_engine_peak(times, np.multiply(PP,PRatio[:,1]))
 
             self.Max_PBat = np.max(np.multiply(PP,PRatio[:,5]))
             self.Max_PMotor = np.max(np.multiply(PP,PRatio[:,2]))
@@ -1334,7 +1478,7 @@ class Mission:
         alt_TO, vel_TO = self._ground_condition()      # take-off altitude and TAS
         Pbat_TO = self._range_extender_flows(P_total_TO, alt_TO, vel_TO)[1]
         self.TO_PMotor = self._serial_motor_shaft_power(P_total_TO, alt_TO, vel_TO)
-        self.TO_PBus = self.TO_PMotor / pt.EtaEM2
+        self.TO_PBus = self._serial_bus_power(P_total_TO, alt_TO, vel_TO)
         self.TO_PP = self._range_extender_gt_power(alt_TO)
         self.TO_PBat = max(Pbat_TO, 0.0)
 
@@ -1376,14 +1520,18 @@ class Mission:
         swing = float(levels.max() - levels.min())                   # usable buffer energy [J]
         pbat_all = np.array([flows(t_all[k], beta_all[k])[1] for k in range(len(t_all))])
         self.Max_PBat = max(float(pbat_all.max()) if len(pbat_all) else 0.0, self.TO_PBat)
+        pp_all = [self.check_PP(PowerPropulsive(beta_all[k], t_all[k])) for k in range(len(t_all))]
         p_motor = np.array([self._serial_motor_shaft_power(
-            self.check_PP(PowerPropulsive(beta_all[k], t_all[k])),
-            self.profile.Altitude(t_all[k]), self.profile.Velocity(t_all[k]))
+            pp_all[k], self.profile.Altitude(t_all[k]), self.profile.Velocity(t_all[k]))
+            for k in range(len(t_all))])
+        p_bus = np.array([self._serial_bus_power(
+            pp_all[k], self.profile.Altitude(t_all[k]), self.profile.Velocity(t_all[k]))
             for k in range(len(t_all))])
         self.Max_PMotor = float(p_motor.max()) if len(p_motor) else 0.0
-        self.Max_PBus = self.Max_PMotor / pt.EtaEM2
+        self.Max_PBus = float(p_bus.max()) if len(p_bus) else 0.0
         self.Max_PEng = P_gt_rated                                    # turbine sized for its rated power
         self.Max_PEng_alt = 0.0
+        self.Max_PEng_lapsed = P_gt_rated                             # its full power at altitude is the lapsed rating
         return self.Ef[-1], swing
 
 
@@ -1686,6 +1834,7 @@ class Mission:
         PRatio = np.array([self.aircraft.powertrain.Hybrid(self.aircraft.mission.profile.SuppliedPowerRatio(times[i]),self.profile.Altitude(times[i]),self.profile.Velocity(times[i]),PP[i]) for i in range(len(times))] )
         self.Max_PEng = np.max(np.multiply(PP,PRatio[:,1]))
         self.Max_PEng_alt = self.profile.Altitude(times[np.argmax(np.multiply(PP,PRatio[:,1]))]) #altitude at which peak power occurs
+        self.Max_PEng_lapsed = self._lapsed_engine_peak(times, np.multiply(PP,PRatio[:,1]))
         self.Max_PBat = np.max(np.multiply(PP,PRatio[:,5]))
         self.Max_PMotor = np.max(np.multiply(PP,PRatio[:,2]))
         self.Max_PBus = np.max(np.multiply(PP,PRatio[:,4]))

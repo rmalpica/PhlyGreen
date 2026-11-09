@@ -32,7 +32,31 @@ eta = powertrain.eta('gas_turbine', altitude, velocity, power, rpm)
 ```
 
 Internally each call builds an `OperatingPoint(altitude, velocity, power, rpm)` and passes it
-to that component's model. Two fidelities are available **per component**:
+to that component's model. `power` is the power through **that component** (all engines
+together; the models divide by `powertrain.n_engines`, set by
+`PropellerInput['Number of Engines']`, default 2):
+
+| Component | Power passed to its model |
+|---|---|
+| `gas_turbine` | shaft output |
+| `propeller` | shaft input (gearbox output) |
+| `electric_motor` | shaft output |
+| `generator` (serial hybrid) | electrical output |
+| `gearbox`, `pmad` | input (sum of the inputs where they combine two flows) |
+| `fuel_cell` | net electrical output |
+
+The component powers depend on the efficiencies, so `Powertrain.Traditional`, `Hybrid` and
+`PowerRatioFuelCellBattery` solve the graph a few times: first with every model at the
+propulsive power, then with each model at the component power of the previous solution, until
+the powers the models are read at match the solved ones (relative tolerance 1e-6, at most 50
+passes). The step is damped: whenever a component's step changes sign, it is halved. A
+propeller at low power has an efficiency that rises steeply with its shaft power, and the
+undamped iteration oscillates there. A warning is issued if the 50 passes are not enough, for
+example when the demand exceeds the thrust power the propeller model can deliver at that flight
+condition. With constant efficiencies the first solution is returned, so Class-I results are
+unchanged bit for bit.
+
+Two fidelities are available **per component**:
 
 - **Class‑I — `ConstantEfficiency`** (the default): a fixed user value, independent of the
   operating point. This reproduces the legacy behaviour exactly and is what the golden
@@ -66,23 +90,53 @@ fraction for one reference engine). At run time:
 2. the efficiency is read at the current **power fraction** \(P_{\text{req}}/P_{\text{avail}}\);
 3. it is then **scaled to the actual engine size** — smaller engines are less efficient — via
    \((1-\eta) = (1-\eta_{\text{ref}})\,(P_{\text{ref}}/P_{\text{design}})^{n}\), with the
-   exponent \(n\) calibrated once from real turboshaft SFC‑vs‑power data.
+   exponent \(n\) calibrated once from real turboshaft SFC‑vs‑power data (\(n = 0.0556\);
+   0.068 without the D‑25V row, which lies far below the trend).
 
-Because the model works as a *percentage of a fixed nominal power*, that nominal power
-(`GT Design Power`) must be chosen **before** the mission. After sizing,
-`powertrain.report_class_ii_sizing()` flags whether the engine is power‑limited at altitude
-(undersized) or oversized — see example `16_class_ii_propulsion_sizing.py`.
+`GasTurbineResponseSurface.predict` clips its inputs to the training box of the map
+(0–30,000 ft, Mach 0.01–0.6, power fraction 0.3–1.0, stored in the pickle as `input_ranges`)
+and issues a `RuntimeWarning` the first time each coordinate is clipped (once per surrogate
+instance). Below a fraction of 0.3 it therefore returns the 0.3 efficiency, which is
+optimistic towards idle. A requirement above \(P_{\text{avail}}\) is capped at a fraction of 1
+and flagged as power-limited. If the inputs are invalid (non-positive design power, NaN power
+or Mach) or the evaluation fails, it returns a constant 0.30 with a `RuntimeWarning` instead of
+failing silently.
+
+The model works as a *percentage of a nominal power*, so the engine is rated with the map's own
+lapse: with the Class-II map, `Powertrain.PowerLapse` returns the deck's ISA pressure ratio
+\(\delta(h)\) (no Mach or ISA-deviation dependence, as in the deck) instead of the Ruijgrok
+\((\rho/\rho_0)^{0.75}\) used for constant efficiencies. It sets the constraint diagram (through
+`SizingDenominator`) and the engine rating, which is the largest
+\(P_{\text{shaft}}/\delta(h)\) over the mission points (`mission.Max_PEng_lapsed`) and the
+take-off / OEI shaft power referred to sea level.
+
+Without an explicit `GT Design Power` the nominal **follows the rating**: the weight loop
+(`Weight._mission_and_powertrain`) seeds it with `DesignPW * WTO`, flies the mission, rates the
+engine, sets the nominal to the rating and re-flies until they agree (relative 1e-7, a few
+passes). The engine that flies is then the one that is weighed, and no mission point exceeds
+the map's full power (the sizing point runs at a fraction of 1). An explicit `GT Design Power`
+is kept as a fixed nominal; `powertrain.report_class_ii_sizing()` flags power-limiting at
+altitude, and warns when the nominal differs from the rating by more than 5 %
+(`Powertrain.GT_NOMINAL_RATING_RTOL`), since a nominal above the rating reads the map at a lower
+load and a larger engine size without weighing that engine — see example
+`16_class_ii_propulsion_sizing.py`.
 
 ### Electric motor — `MotorEfficiencyModel`
 Wraps the d‑q `ElectricMotor` physics model (`EM.py`): given the design power, voltage and
 rpm it returns efficiency as a function of the operating point (copper, iron and switching
-losses), so the battery power ratio changes with load. Also needs a fixed nominal power.
+losses), so the battery power ratio changes with load. Also needs a fixed nominal power,
+`EM Design Power`, which is a **mechanical** (shaft-output) rating: `report_class_ii_sizing()`
+compares it with the peak motor shaft power `max(Max_PMotor, TO_PMotor)`. With `'Smart'` (or
+`powertrain.em_model`) the model acts on the parallel motor, the serial propulsion motor and the
+fuel-cell motor; the serial generator is the separate `'generator'` entry of
+`powertrain.efficiency` (constant `Eta Electric Motor 1` unless replaced).
 
 ### Propeller — `HamiltonPropellerEfficiency` / `PropellerSurrogateEfficiency`
 Two interchangeable models: the analytic **Hamilton‑Standard** method
 (`propeller_hamilton.py` + `propeller_hamilton_tables.py`) and a data‑trained **RBF
 surrogate** (`propeller_surrogate.py`, needs pandas), both giving propeller efficiency vs
-true airspeed, altitude and power (and, for the surrogate, blade pitch / rpm).
+true airspeed, altitude and shaft power (and, for the surrogate, blade pitch / rpm). The
+surrogate runs at `Propeller RPM` (`EnergyConfig.propeller_rpm`, default 1200 rpm).
 
 All of these (plus the electric motor) can be plotted as efficiency maps in example
 `05_powertrain_graph_and_efficiency_models.py`.
@@ -351,13 +405,19 @@ alt, vel, pwr)`; each \(\eta\) comes from `Powertrain.eta(component, …)` and i
 ### 4. Fuel cell + battery
 
 The `'FuelCellBattery'` architecture replaces the gas turbine with a **fuel cell** on a shared
-electrical bus with a battery. It is assembled from the same graph primitives
-(`graph.fuelcell_battery_graph`) and solved through `Powertrain.PowerRatioFuelCellBattery(phi,
-alt, vel, P)`. The supplied‑power ratio φ sets the **battery share** of the propulsive power;
-the fuel cell supplies the rest, using its physics system efficiency (see
-[Hydrogen](hydrogen.md)). The solution exposes the hydrogen chemical power `PfH2` and the
-battery power `Pbat` (per unit propulsive power), so the mission integrates hydrogen and
-battery energy consistently. A pure `'Hydrogen'` design is the φ = 0 limit.
+electrical bus with a battery. At the power-ratio level it is assembled from the same graph
+primitives (`graph.fuelcell_battery_graph`) and solved through
+`Powertrain.PowerRatioFuelCellBattery(phi, alt, vel, P)`. φ is the **battery share of the
+propulsive power**, as in the `'FuelCellBattery'` mission: the battery delivers φ·P and the fuel
+cell (1 − φ)·P. The solution exposes the hydrogen chemical power `PfH2` (index 0) and the battery
+power `Pbat` (index 2), per unit propulsive power. The graph's fuel-cell node is the constant
+`Eta Fuel Cell` (`EnergyConfig.eta_fuel_cell`) or a `powertrain.fc_model`; without either it
+raises. The mission does not call this method: `Mission.FuelCellBatteryConfiguration` flies the
+fuel cell with its physics model (see [Hydrogen](hydrogen.md)), and a pure `'Hydrogen'` design is
+its φ = 0 limit. The motor and PMAD of a `'FuelCellBattery'` design carry the battery power too,
+so their masses are sized on the peak propulsive power through the drive at one instant
+(fuel-cell and battery shares together, over the mission, the take-off / OEI requirement and
+the ground legs: `mission.Max_PDrive`).
 
 ```python
 from PhlyGreen.Systems.Powertrain.graph import fuelcell_battery_graph
@@ -447,4 +507,4 @@ for a thrust-rated aircraft — see [Constraints](constraints.md).
 
 ## References
 
-de Vries, R., Brown, M., & Vos, R. (2019). Preliminary Sizing Method for Hybrid-Electric Distributed-Propulsion Aircraft. Journal of Aircraft: devoted to aeronautical science and technology, 56(6), 2172-2188.
+de Vries, R., Brown, M., & Vos, R. (2019). Preliminary Sizing Method for Hybrid-Electric Distributed-Propulsion Aircraft. Journal of Aircraft, 56(6), 2172-2188.

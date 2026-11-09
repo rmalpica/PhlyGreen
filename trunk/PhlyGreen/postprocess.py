@@ -240,7 +240,7 @@ def class_ii_components(aircraft):
 
 
 def component_timeseries(aircraft, components=None, n_engines=None, gt_design_hp=None,
-                         em_design=None, propeller_rpm=1200.0):
+                         em_design=None, propeller_rpm=None):
     """Evaluate the Class-II propulsion models along the flown mission.
 
     Walks the converged mission timeline and computes the power flow
@@ -254,9 +254,14 @@ def component_timeseries(aircraft, components=None, n_engines=None, gt_design_hp
     (forced exploration). Only the requested components load their surrogate, so e.g. the
     propeller RBF is *not* loaded unless the propeller is requested.
 
-    By default the GT/EM nominal powers and the engine count are taken from the *designed*
-    aircraft (``powertrain.gt_design_power``/``em_design_power``/``n_engines``); pass overrides
-    to explore other sizes. A component is skipped silently if its model/data is unavailable.
+    By default the GT/EM nominal powers, the engine count and the propeller rpm are taken from
+    the *designed* aircraft (``powertrain.gt_design_power``/``em_design_power``/``n_engines``,
+    ``EnergyInput['Propeller RPM']``, default 1200); pass overrides to explore other sizes.
+    Each model is evaluated at the power through its own component (the convention of
+    ``Powertrain.eta``): the gas turbine at its shaft output (``gt_power``), the motor at its
+    shaft output (``em_shaft_power``) and the propeller at its shaft input
+    (``propeller_shaft_power``). A component is skipped silently if its model/data is
+    unavailable.
     """
     import PhlyGreen.Utilities.Units as Units
     import PhlyGreen.Utilities.Speed as Speed
@@ -272,7 +277,9 @@ def component_timeseries(aircraft, components=None, n_engines=None, gt_design_hp
     perf, pt = aircraft.performance, aircraft.powertrain
     WTO, WS, DISA = aircraft.weight.WTO, aircraft.DesignWTOoS, aircraft.mission.DISA
     if n_engines is None:
-        n_engines = getattr(pt, "n_engines", 1) or 1
+        n_engines = getattr(pt, "n_engines", 2) or 2
+    if propeller_rpm is None:
+        propeller_rpm = (getattr(aircraft, "EnergyInput", None) or {}).get("Propeller RPM", 1200.0)
 
     # Propulsive power and its thermal(Pgt)/electric(Pbat) split. Use the hybrid graph for a
     # Hybrid configuration, else the traditional (gas-turbine-only) chain so the function also
@@ -283,12 +290,20 @@ def component_timeseries(aircraft, components=None, n_engines=None, gt_design_hp
         PR = np.array([pt.Hybrid(float(phi[i]), alt[i], vel[i], PP[i]) for i in range(len(t))])
         p_thermal = PR[:, 1] * PP    # gas-turbine shaft power
         p_electric = PR[:, 5] * PP   # battery (electric) power
+        p_em_shaft = PR[:, 2] * PP   # electric-motor shaft output (parallel and serial)
+        if getattr(aircraft, "HybridType", None) == "Serial":
+            p_prop_shaft = PR[:, 6] * PP   # gearbox output = propeller shaft input
+        else:
+            p_prop_shaft = PR[:, 3] * PP
     else:
         PR = np.array([pt.Traditional(alt[i], vel[i], PP[i]) for i in range(len(t))])
         p_thermal = PR[:, 1] * PP    # gas-turbine shaft power (all propulsion is thermal)
         p_electric = np.zeros_like(PP)
+        p_em_shaft = np.zeros_like(PP)
+        p_prop_shaft = PR[:, 2] * PP   # gearbox output = propeller shaft input
 
-    out = {"time": t, "propulsive_power": PP, "gt_power": p_thermal, "em_power": p_electric}
+    out = {"time": t, "propulsive_power": PP, "gt_power": p_thermal, "em_power": p_electric,
+           "em_shaft_power": p_em_shaft, "propeller_shaft_power": p_prop_shaft}
 
     # --- Gas turbine (Class-II response surface) ---
     if 'gas_turbine' in requested:
@@ -323,16 +338,17 @@ def component_timeseries(aircraft, components=None, n_engines=None, gt_design_hp
                 if getattr(pt, "em_design_power", None):
                     em_kw = (pt.em_design_power / n_engines) / 1000.0
                 else:
-                    em_kw = max(float(np.max(p_electric)) / n_engines / 1000.0, 1.0)
+                    em_kw = max(float(np.max(p_em_shaft)) / n_engines / 1000.0, 1.0)
                 em_design = (em_kw, 800.0, 11000.0)
             em = MotorEfficiencyModel(*em_design, n_engines=n_engines)
             em_nominal_total = em_design[0] * 1000.0 * n_engines   # [W]
             eta_em, em_throttle = [], []
             for i in range(len(t)):
-                # EM throttle = electric demand / nominal; efficiency only when loaded.
-                em_throttle.append(p_electric[i] / em_nominal_total if em_nominal_total > 0 else 0.0)
-                if p_electric[i] > 1.0:
-                    eta_em.append(em.eta(OperatingPoint(power=p_electric[i], rpm=em_design[2])))
+                # EM throttle = shaft output / nominal (a mechanical rating); efficiency only
+                # when loaded.
+                em_throttle.append(p_em_shaft[i] / em_nominal_total if em_nominal_total > 0 else 0.0)
+                if p_em_shaft[i] > 1.0:
+                    eta_em.append(em.eta(OperatingPoint(power=p_em_shaft[i], rpm=em_design[2])))
                 else:
                     eta_em.append(np.nan)
             out["eta_electric_motor"] = np.array(eta_em)
@@ -350,7 +366,7 @@ def component_timeseries(aircraft, components=None, n_engines=None, gt_design_hp
             prop = _prbf.PropellerSurrogate(csv)
             eta_pp, pitch = [], []
             for i in range(len(t)):
-                pk = (PP[i] / n_engines) / 1000.0
+                pk = (p_prop_shaft[i] / n_engines) / 1000.0
                 pit = prop.solve_pitch(pk, alt[i], vel[i], propeller_rpm)
                 eta_pp.append(prop.get_efficiency(pk, alt[i], vel[i], pit, propeller_rpm))
                 pitch.append(pit)
@@ -682,13 +698,16 @@ def plot_mass_breakdown(aircraft, ax=None):
 
 def compute_tank_history(aircraft):
     """Advance the LH2 tank thermodynamic state along the converged mission, filling
-    ``aircraft.tank.history``.
+    ``aircraft.tank.history``, and return it.
 
-    Works for any hydrogen architecture (``Hydrogen`` and ``FuelCellBattery``): it walks the
-    flown mission solution and drives the tank with the hydrogen mass flow recovered from the
-    cumulative hydrogen chemical energy (ODE state ``y[0]``). Unlike setting
-    ``mission.track_tank`` and re-flying, this is a cheap post-processing pass and needs no
-    re-integration. Requires a physics LH2 tank (a ``TankConfig`` + CoolProp) and a flown mission.
+    Works for any hydrogen architecture (``Hydrogen`` and ``FuelCellBattery``). Delegates to
+    :meth:`Mission.compute_tank_history`, the pass ``EvaluateMission`` runs with
+    ``mission.track_tank``: the tank starts full at the start of taxi-out and is drained
+    through taxi-out, the take-off run, the flown mission and taxi-in. Times follow the
+    profile clock (0 = start of the climb), so the taxi-out and take-off records have negative
+    times. Unlike setting ``mission.track_tank`` and re-flying, this is a cheap post-processing
+    pass and needs no re-integration. Requires a physics LH2 tank (a ``TankConfig`` +
+    CoolProp) and a flown mission.
     """
     tank = getattr(aircraft, "tank", None)
     m = getattr(aircraft, "mission", None)
@@ -696,19 +715,7 @@ def compute_tank_history(aircraft):
         raise ValueError("No physics LH2 tank — attach a TankConfig (needs CoolProp).")
     if m is None or not getattr(m, "integral_solution", None):
         raise ValueError("No mission solution — design the aircraft first.")
-    tank.m_curr = tank.capacity_single        # start full
-    tank.P_curr = tank.P_min
-    tank.history = {'t': [], 'P': [], 'm_tot': [], 'Vent': [], 'Q_in': [],
-                    'Alt': [], 'Q_heater': [], 'm_vent_cum': [], 'Consumption': []}
-    tank.cum_vented_mass = 0.0
-    for arr in m.integral_solution:
-        for k in range(1, len(arr.t)):
-            dt = arr.t[k] - arr.t[k - 1]
-            dE = max(float(arr.y[0][k] - arr.y[0][k - 1]), 0.0)   # hydrogen chemical energy used
-            m_dot = (dE / m.ef) / dt if dt > 0 else 0.0
-            t_mid = 0.5 * (arr.t[k] + arr.t[k - 1])
-            tank.time_step(dt, m_dot, float(m.profile.Altitude(t_mid)))
-    return tank.history
+    return m.compute_tank_history()
 
 
 def plot_tank_state(aircraft, axes=None):

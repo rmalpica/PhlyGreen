@@ -520,6 +520,8 @@ def _state(prob, pt):
         # solved against the bypass-nozzle throat area, bounded 2-10 -- so it moves across the
         # envelope and total flow cannot be recovered from the core flow and a fixed BPR.
         mdot_inlet=g('inlet.Fl_O:stat:W') * 0.45359237,    # lbm/s -> kg/s
+        T4_degR=g('burner.Fl_O:tot:T'),                    # combustor exit (full-throttle check)
+        Ps_psia=g('fc.Fl_O:stat:P'),                       # freestream static pressure (stale check)
         BPR=g('splitter.BPR'),
     )
 
@@ -539,8 +541,15 @@ def _load_existing(path):
     return rows, done
 
 
-def _reject_reason(full, part, pc, fn_max_sls, eta, tsfc):
+def _reject_reason(full, part, pc, fn_max_sls, eta, tsfc, max_lapse=None):
     """Return why this point must be rejected, or None if it is trustworthy.
+
+    ``max_lapse`` is the full-throttle thrust lapse at the previous (lower) altitude of the
+    same Mach column. At constant T4 and Mach the available thrust falls with altitude, so a
+    lapse above it means the full-throttle solve converged on a different, hotter cycle
+    branch. That happened at 32,500 and 35,000 ft in an earlier map (lapse 0.38 at 32,500 ft
+    against 0.32 at 30,000 ft, T3 802 K against 711 K): every other check passed, because the
+    branch is a converged solution, just not the engine's.
 
     `prob.run_model()` does NOT raise when the off-design Newton solve stalls -- it returns
     whatever state it reached. Recording that silently produced thrust lapses above 1.0 and
@@ -559,12 +568,39 @@ def _reject_reason(full, part, pc, fn_max_sls, eta, tsfc):
     lapse = full['Fn_N'] / fn_max_sls
     if not (0.02 < lapse <= 1.02):
         return f"unphysical thrust lapse {lapse:.3f}"
+    # In 'T4' throttle mode the full-throttle balance sets T4 = T4_MAX; a stalled solve leaves
+    # it elsewhere (a fresh start at 32,500 ft / M0.70 returned T4 = 2910 degR, lapse 0.36).
+    t4_full = full.get('T4_degR')          # absent only in hand-built test states
+    if t4_full is not None and abs(t4_full - T4_MAX_DEGR) / T4_MAX_DEGR > 2e-3:
+        return f"full-throttle T4 {t4_full:.0f} degR is not T4_MAX {T4_MAX_DEGR:.0f} degR"
+    if max_lapse is not None and lapse >= max_lapse - 1e-4:
+        return (f"full-throttle thrust lapse {lapse:.4f} did not fall with altitude (previous "
+                f"altitude {max_lapse:.4f}): hotter cycle branch or stale state")
     # Compressor exit pressure must stay in a sane OPR band for this cycle.
     opr = part['P3_Pa'] / 101325.0
     if not (5.0 < opr < 60.0):
         return f"unphysical OPR {opr:.0f}"
     if not (0.05 < eta < 0.65):
         return f"eta_o {eta:.3f} out of range"
+    return None
+
+
+def _stale_state_reason(full, part, alt_ft, mach):
+    """Return why a solve is not at the requested flight condition, or None.
+
+    A failed solve can leave, or a state restore can bring back, a converged state of a
+    neighbouring condition; it then passes every physical check of :func:`_reject_reason`.
+    In an intermediate regeneration the 20,000 and 25,000 ft points of the M 0.50 column came
+    out identical to the 15,000 ft one. Both points must sit at the requested Mach number and
+    at the ISA static pressure of the requested altitude.
+    """
+    p_isa = 14.696 * _isa_delta(alt_ft)
+    for name, st in (("full-throttle", full), ("part-power", part)):
+        if abs(st['Mach'] - mach) > 1e-3 * max(mach, 0.1):
+            return f"{name} point at Mach {st['Mach']:.4f}, not {mach:.4f} (stale state)"
+        if abs(st['Ps_psia'] / p_isa - 1.0) > 2e-3:
+            return (f"{name} point at static pressure {st['Ps_psia']:.3f} psia, not the ISA "
+                    f"{p_isa:.3f} psia of {alt_ft:.0f} ft (stale state)")
     return None
 
 
@@ -591,6 +627,9 @@ ENVELOPE = [
     # continuation path, not cosmetic -- merging these entries breaks the cruise columns.
     # For the same reason M 0.85 carries a 25 000 ft step: without it the 20 -> 30 kft jump is
     # too large and the column stops at 20 000 ft.
+    # The M 0.75 low segment carries a 5 000 ft step and the M 0.85 high segment a 32 500 ft
+    # step for the same reason: with full-throttle-first ordering the 0 -> 10 kft and
+    # 30 -> 35 kft steps diverged (thrust fraction -0.29; hotter branch at 35 000 ft).
     (0.20, [0., 5000., 10000.]),
     (0.30, [0., 5000., 10000., 15000.]),
     (0.40, [0., 5000., 10000., 15000., 20000.]),
@@ -598,11 +637,25 @@ ENVELOPE = [
     (0.60, [0., 10000., 15000., 20000., 25000., 30000.]),
     (0.70, [0., 10000.]),
     (0.70, [20000., 25000., 30000., 32500.]),
-    (0.75, [0., 10000.]),
+    (0.75, [0., 5000., 10000.]),
     (0.75, [20000., 25000., 30000., 35000.]),
     (0.85, [10000.]),
-    (0.85, [20000., 25000., 30000., 35000.]),
+    (0.85, [20000., 25000., 30000., 32500., 35000.]),
 ]
+
+# Points of ENVELOPE the deck does not solve on the engine's branch, so they are not attempted.
+# At these conditions the part-power solve at PC 0.30 throws the full-throttle point onto the
+# hotter cycle branch (lapse 0.382 at 32,500 ft / M0.70 against 0.303 at PC >= 0.55 at the same
+# condition; 0.347 against 0.279 at 35,000 ft / M0.75), with or without the 0.1 thrust-fraction
+# continuation and with re-seeded guesses; at 35,000 ft / M0.85 it stalls (OPR 5). The earlier
+# map recorded hot-branch states for every thrust fraction at these three conditions; they are
+# now left out rather than recorded. The surrogate fills them from PC 0.30 at lower altitude
+# and PC 0.55 at the same altitude.
+KNOWN_UNCONVERGED = {
+    (32500.0, 0.70, 0.30),
+    (35000.0, 0.75, 0.30),
+    (35000.0, 0.85, 0.30),
+}
 
 # Ceiling of the map. Above ~35,000 ft this deck's off-design solve stops converging: the
 # part-power balance loses its thrust target and the validator rejects the result rather than
@@ -613,6 +666,37 @@ ENVELOPE = [
 # requirement evaluated above 35,000 ft (a service ceiling, say) reads the 35,000 ft thrust
 # lapse. That *overestimates* available thrust there, making such a constraint optimistic.
 # Keep ceiling requirements at or below 35,000 ft, or extend the deck first.
+
+
+def _build_problem():
+    """A set-up deck with the design-point inputs and fresh balance guesses.
+
+    The sweep builds a new one for every Mach column. A solve that diverges leaves NaNs or
+    absurd values in internal (thermochemical, map) states that re-seeding the balances does
+    not reset; in an intermediate regeneration one failed point at 32,500 ft made every later
+    column fail (thrust fractions of 1e5). A fresh problem per column confines a failure to
+    its column.
+    """
+    prob = om.Problem()
+    prob.model = MPhbtf()
+    prob.setup(check=False)
+
+    prob.set_val('DESIGN.fan.PR', 1.685);  prob.set_val('DESIGN.fan.eff', 0.8948)
+    prob.set_val('DESIGN.lpc.PR', 1.935);  prob.set_val('DESIGN.lpc.eff', 0.9243)
+    prob.set_val('DESIGN.hpc.PR', 9.369);  prob.set_val('DESIGN.hpc.eff', 0.8707)
+    prob.set_val('DESIGN.hpt.eff', 0.8888)
+    prob.set_val('DESIGN.lpt.eff', 0.8996)
+    prob.set_val('DESIGN.fc.alt', 35000., units='ft')
+    prob.set_val('DESIGN.fc.MN', 0.8)
+    prob.set_val('DESIGN.T4_MAX', T4_MAX_DEGR, units='degR')
+    prob.set_val('DESIGN.Fn_DES', REF_FN_LBF, units='lbf')
+    prob.set_val('OD_full_pwr.T4_MAX', T4_MAX_DEGR, units='degR')
+    prob.set_val('OD_part_pwr.PC', 1.0)
+
+    _set_guesses(prob, alt_ft=0.0)
+    prob.set_solver_print(level=-1)
+    return prob
+
 
 
 def generate_map(envelope=None, pcs=None, out_path=None, resume=True):
@@ -632,25 +716,7 @@ def generate_map(envelope=None, pcs=None, out_path=None, resume=True):
     out_path = out_path or os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                         "Turbofan_Universal_Map.csv")
 
-    prob = om.Problem()
-    prob.model = MPhbtf()
-    prob.setup(check=False)
-
-    prob.set_val('DESIGN.fan.PR', 1.685);  prob.set_val('DESIGN.fan.eff', 0.8948)
-    prob.set_val('DESIGN.lpc.PR', 1.935);  prob.set_val('DESIGN.lpc.eff', 0.9243)
-    prob.set_val('DESIGN.hpc.PR', 9.369);  prob.set_val('DESIGN.hpc.eff', 0.8707)
-    prob.set_val('DESIGN.hpt.eff', 0.8888)
-    prob.set_val('DESIGN.lpt.eff', 0.8996)
-    prob.set_val('DESIGN.fc.alt', 35000., units='ft')
-    prob.set_val('DESIGN.fc.MN', 0.8)
-    prob.set_val('DESIGN.T4_MAX', T4_MAX_DEGR, units='degR')
-    prob.set_val('DESIGN.Fn_DES', REF_FN_LBF, units='lbf')
-    prob.set_val('OD_full_pwr.T4_MAX', T4_MAX_DEGR, units='degR')
-    prob.set_val('OD_part_pwr.PC', 1.0)
-
-    _set_guesses(prob, alt_ft=0.0)
-    prob.set_solver_print(level=-1)
-
+    prob = _build_problem()
     # Reference for the thrust lapse: full-throttle thrust at sea level, essentially static.
     # Anchoring here (rather than at whichever point happens to run first) is what makes
     # 'Turbofan Design Thrust' mean the familiar SLS rating F00. M is 0.001 rather than 0
@@ -697,28 +763,67 @@ def generate_map(envelope=None, pcs=None, out_path=None, resume=True):
     if rows:
         print(f"Resuming: {len(rows)} points already in {os.path.basename(out_path)}",
               flush=True)
-    failures = 0
+    failures = []
     t0 = time.time()
+    # Full-throttle lapse at the last accepted altitude of each Mach (the low and high segments
+    # of a split column share it), for the branch check of _reject_reason.
+    column_lapse = {}
 
     for mach, alt_list in envelope:
-        # New Mach column: start from clean guesses at its lowest altitude, then march up.
+        column_keys = [(round(float(alt), 3), round(float(mach), 4), round(float(pc), 4))
+                       for alt in alt_list for pc in pcs]
+        if resume and all(k in done or k in KNOWN_UNCONVERGED for k in column_keys):
+            # already recorded: carry its lapse forward for the branch check
+            recorded = [r[5] for r in rows if round(r[0], 3) == round(float(alt_list[-1]), 3)
+                        and round(r[1], 4) == round(float(mach), 4)]
+            column_lapse[round(float(mach), 4)] = recorded[0]
+            print(f"--- M {mach:.2f} segment already recorded ---", flush=True)
+            continue
+        # New Mach column: a fresh problem (see _build_problem), warmed at sea level as the
+        # reference solve was, then clean guesses at the lowest altitude and march up. Points
+        # already recorded are re-solved (not re-recorded) so the continuation stays warm.
+        prob = _build_problem()
+        for pt in ('OD_full_pwr', 'OD_part_pwr'):
+            prob[pt + '.fc.alt'] = 0.0
+            prob[pt + '.fc.MN'] = 0.001
+        prob['OD_part_pwr.PC'] = 1.0
+        prob.run_model()
         _set_guesses(prob, alt_ft=alt_list[0])
         for alt in alt_list:
-            if resume and all((round(float(alt), 3), round(float(mach), 4),
-                               round(float(pc), 4)) in done for pc in pcs):
-                continue
             prob['OD_full_pwr.fc.alt'] = alt
             prob['OD_full_pwr.fc.MN'] = mach
             prob['OD_part_pwr.fc.alt'] = alt
             prob['OD_part_pwr.fc.MN'] = mach
+            max_lapse = column_lapse.get(round(float(mach), 4))
+            lapse_here = None
 
-            for pc in pcs:
+            # Thrust fractions from full throttle downwards: the step from the previous altitude
+            # is then taken at full throttle on both points (the gentlest continuation, and the
+            # one on which the 32,500 and 35,000 ft points stay on the engine's branch), and
+            # each later step only lowers the part-power target.
+            previous_pc = 1.0
+            for pc in sorted(pcs, reverse=True):
                 key = (round(float(alt), 3), round(float(mach), 4), round(float(pc), 4))
-                if resume and key in done:
+                if key in KNOWN_UNCONVERGED:
                     continue
+                # Lower the thrust target in steps of at most 0.1 (only the grid fractions are
+                # recorded): at 32,500 ft / M0.70 the direct 0.55 -> 0.30 step threw the
+                # full-throttle point onto the hotter branch.
+                n_sub = int(np.ceil((previous_pc - pc) / 0.1 - 1e-9))
+                for pc_step in np.linspace(previous_pc, pc, n_sub + 1)[1:-1]:
+                    prob['OD_part_pwr.PC'] = pc_step
+                    try:
+                        prob.run_model()
+                    except Exception:
+                        break
+                previous_pc = pc
                 prob['OD_part_pwr.PC'] = pc
 
-                # Try warm-started first; on failure re-seed and try once more.
+                # Attempt 0: warm start from the previous solve. Attempt 1: re-seeded guesses.
+                # Every attempt is checked (_stale_state_reason, _reject_reason): fresh guesses
+                # at high altitude can land on a hotter cycle branch or stall, and a failed
+                # solve can leave a neighbour's state behind.
+                reason = None
                 for attempt in (0, 1):
                     if attempt == 1:
                         _set_guesses(prob, alt_ft=alt)
@@ -728,21 +833,18 @@ def generate_map(envelope=None, pcs=None, out_path=None, resume=True):
                         full = _state(prob, 'OD_full_pwr')
                         part = _state(prob, 'OD_part_pwr')
                     except Exception as exc:
-                        if attempt == 1:
-                            failures += 1
-                            print(f"  [ ! ] alt={alt:6.0f} M={mach:.2f} PC={pc:.2f} did not "
-                                  f"converge ({type(exc).__name__})", flush=True)
+                        reason = f"did not converge ({type(exc).__name__})"
                         continue
 
                     eta, tsfc = part['eta_o'], part['TSFC']
-                    bad = _reject_reason(full, part, pc, fn_max_sls, eta, tsfc)
-                    if bad:
-                        if attempt == 1:
-                            failures += 1
-                            print(f"  [ x ] alt={alt:6.0f} M={mach:.2f} PC={pc:.2f} "
-                                  f"rejected: {bad}", flush=True)
+                    reason = _stale_state_reason(full, part, alt, mach)
+                    if reason:
+                        continue
+                    reason = _reject_reason(full, part, pc, fn_max_sls, eta, tsfc, max_lapse)
+                    if reason:
                         continue
 
+                    lapse_here = full['Fn_N'] / fn_max_sls
                     if key in done:
                         break          # already recorded; this solve only warmed the chain
                     rows.append([alt, mach, pc, eta, tsfc, full['Fn_N'] / fn_max_sls,
@@ -753,15 +855,36 @@ def generate_map(envelope=None, pcs=None, out_path=None, resume=True):
                         fh.write(_HEADER + "\n")
                         np.savetxt(fh, np.array(rows), delimiter=",")
                     print(f"  [{len(rows):3d}] alt={alt:6.0f} M={mach:.2f} PC={pc:.2f} "
-                          f"eta_o={eta:.4f} TSFC={tsfc*3600*9.80665:.4f} lb/lbf/h",
-                          flush=True)
+                          f"eta_o={eta:.4f} TSFC={tsfc*3600*9.80665:.4f} lb/lbf/h "
+                          f"lapse={lapse_here:.4f}", flush=True)
+                    reason = None
                     break
+                if reason:
+                    message = f"alt={alt:.0f} M={mach:.2f} PC={pc:.2f}: {reason}"
+                    if key not in done:          # a recorded point only warms the chain
+                        failures.append(message)
+                    print(f"  [ x ] {message}", flush=True)
+            if lapse_here is not None:
+                column_lapse[round(float(mach), 4)] = lapse_here
+            # Back to full throttle before the altitude step, so the step is taken with both
+            # points at full throttle (a step from PC 0.3 lands the part-power point far away).
+            prob['OD_part_pwr.PC'] = 1.0
+            try:
+                prob.run_model()
+            except Exception:
+                pass                             # the next point's own checks decide
 
         print(f"--- M {mach:.2f} column done ({len(rows)} points so far) ---", flush=True)
 
+    rows.sort(key=lambda r: (r[1], r[0], r[2]))     # Mach, altitude, thrust fraction
     np.savetxt(out_path, np.array(rows), delimiter=",", header=_HEADER, comments="")
     print(f"\nRun time: {(time.time()-t0)/60:.1f} min")
-    print(f"SUCCESS: {out_path} written ({len(rows)} points, {failures} rejected).")
+    if failures:
+        # The converged points are kept on disk (the sweep is resumable), but a map with
+        # missing envelope points must not be fitted as if it were complete.
+        raise RuntimeError(f"{len(failures)} envelope points did not converge on the engine's "
+                           f"branch; {out_path} is incomplete:\n  " + "\n  ".join(failures))
+    print(f"SUCCESS: {out_path} written ({len(rows)} points, all converged).")
     return out_path
 
 

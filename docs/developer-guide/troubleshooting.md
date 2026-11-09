@@ -23,7 +23,7 @@ These are **optional**, needed only for specific paths:
 | Dependency | Needed by |
 |------------|-----------|
 | `pandas` | the data‑trained propeller surrogate (`'Eta Propulsive Model': 'Surrogate'`) |
-| `CoolProp` | the cryogenic LH2 tank physics (falls back to a gravimetric‑index model if absent) |
+| `CoolProp` | the cryogenic LH2 tank physics (warns and falls back to a gravimetric‑index model if absent) |
 | `pycycle` + `openmdao`, `cantera` | only to **regenerate** the GT efficiency / emission surrogates; the shipped `.pkl`/`.csv` load without them |
 
 The shipped surrogates and the default install don't need the heavy stack — see
@@ -48,7 +48,7 @@ The design point wasn't computed before something read it. Run the full
 just `weight.WeightEstimation()` on its own.
 
 **`ValueError: Missing '<key>' in the TankInput dictionary`.**
-A `'Hydrogen'` design with a `TankConfig` needs the full tank input set; check the
+A `'Hydrogen'` or `'FuelCellBattery'` design with a `TankConfig` needs the full tank input set; check the
 [Hydrogen](../user-guide/hydrogen.md) page for the required keys, or omit `TankConfig` to use the
 gravimetric‑index tank model.
 
@@ -79,6 +79,11 @@ must be chosen **before** the mission. After sizing, `powertrain.report_class_ii
 undersized (`power_limited`) or oversized component. Re‑run with an adjusted `GT Design Power` /
 `EM Design Power` (a good first guess is `DesignPW * WTO`); example
 `16_class_ii_propulsion_sizing.py` walks the pre‑pass → size → re‑size loop.
+
+**"the flown engine is not the weighed one".**
+The engine mass follows the sized `engineRating`, while the Class-II map is read against
+`GT Design Power`. The warning fires when they differ by more than 5 %: the efficiency then
+belongs to an engine of a different size than the one in the mass budget.
 
 ---
 

@@ -520,15 +520,27 @@ class FuelCell:
         M_BoP = M_Stack * self.BoP_Mass_Ratio
         # Electric drive sized with the *same* specific powers as the hybrid powertrain, so the
         # motor + power-management mass is consistent across configurations (no hard-coded values).
-        # The motor carries the power downstream of the PMAD (P_fc_rated · EtaPM); the PMAD carries
-        # the full net rating. Specific powers come from the powertrain (config), with literature
-        # current-SOA fallbacks (motor 5000, inverter 10000 W/kg).
+        # Specific powers come from the powertrain (config), with literature current-SOA
+        # fallbacks (motor 5000, inverter 10000 W/kg).
         pt = getattr(self.aircraft, 'powertrain', None)
         sp_powertrain = getattr(pt, 'SPowerPT', None) if pt is not None else None
         sp_motor = sp_powertrain[1] if sp_powertrain else 5000.0
         sp_pmad = pt.pmad_specific_power() if (pt is not None and hasattr(pt, 'pmad_specific_power')) else 10000.0
-        M_EM = (P_elec_propulsive * self.EtaPM) / sp_motor      # the motor carries propulsion only
-        M_PM = self.P_fc_rated / sp_pmad
+        # The PMAD carries the net electrical rating and the motor the propulsive part of it
+        # downstream of the PMAD (· EtaPM). In 'FuelCellBattery' the battery feeds the same PMAD
+        # and motor, so both are sized on the peak propulsive power through the drive at one
+        # instant, fuel-cell and battery shares together (mission.Max_PDrive: mission,
+        # take-off / OEI, ground legs, from the last flown mission), turned into electrical
+        # power with the same downstream efficiency as the stack rating. It is never below
+        # the fuel-cell share, so a phi = 0 design stays identical to the 'Hydrogen' one.
+        P_drive_propulsive = P_propulsive_design
+        if self.aircraft.Configuration == 'FuelCellBattery':
+            mission = getattr(self.aircraft, 'mission', None)
+            P_drive_peak = getattr(mission, 'Max_PDrive', 0.0) or 0.0
+            P_drive_propulsive = max(P_propulsive_design, P_drive_peak * self.SizingMargin)
+        P_drive_elec = P_drive_propulsive / eta_downstream
+        M_EM = (P_drive_elec * self.EtaPM) / sp_motor
+        M_PM = (P_drive_elec + self.P_aux_tms) / sp_pmad
 
         self._Weight = M_Stack + M_BoP + M_EM + M_PM
         self.Sizing_Done = True
@@ -579,24 +591,64 @@ class FuelCell:
         P = 101325.0 * (1 - 0.0065 * alt / 288.15)**5.255
         return P, T + DISA
 
+    # Fixed point of the propeller efficiency at its own shaft power (Hamilton model).
+    DRIVE_EFFICIENCY_TOL = 1e-6      # shaft-power residual, relative to P_propulsive
+    DRIVE_EFFICIENCY_MAX_ITER = 50
+
+    def drive_efficiencies(self, alt, vel, P_propulsive):
+        """Electric-motor and propeller efficiencies ``(eta_em, eta_prop)`` of the drive
+        delivering the propulsive power ``P_propulsive`` [W].
+
+        Constant by default (``EtaEM``, ``EtaProp``). With the Hamilton propeller attached
+        (``powertrain.Propeller``) the propeller is the powertrain's ``'propeller'`` model
+        (``HamiltonPropellerEfficiency``, the one the gas-turbine graphs use, bounded to
+        [0.4, 1]), evaluated at its shaft input ``P_propulsive / eta_prop``, a damped fixed
+        point started at ``P_propulsive``; with the
+        Class-II ('Smart') motor the motor is evaluated at its shaft output
+        ``P_propulsive / (EtaGB * eta_prop)``: the conventions of ``Powertrain.eta``.
+
+        ``P_propulsive`` is the power of the branch the caller evaluates: the whole propulsive
+        power in 'Hydrogen', the fuel-cell or the battery share in 'FuelCellBattery'. There the
+        two branches share the motor and the propeller, so a Class-II model is read at the
+        branch power, not at the total power through it (an approximation; constant models
+        are unaffected).
+        """
+        pt = self.aircraft.powertrain
+        if hasattr(pt, 'Propeller'):
+            # Fixed point on the shaft power P_shaft = P_propulsive / eta(P_shaft), damped as in
+            # Powertrain._solve_at_component_powers: the step is halved whenever it changes sign
+            # (a propeller at low power overshoots and oscillates otherwise).
+            P_shaft = P_propulsive
+            eta_prop = pt.eta('propeller', alt, vel, P_shaft)
+            relax, previous_step = 1.0, 0.0
+            for _ in range(self.DRIVE_EFFICIENCY_MAX_ITER):
+                step = P_propulsive / eta_prop - P_shaft
+                if abs(step) <= self.DRIVE_EFFICIENCY_TOL * max(P_propulsive, 1.0):
+                    break
+                if step * previous_step < 0.0:
+                    relax *= 0.5                     # overshoot: damp the step
+                previous_step = step
+                P_shaft += relax * step
+                eta_prop = pt.eta('propeller', alt, vel, P_shaft)
+        else:
+            eta_prop = self.EtaProp
+        if self.aircraft.EnergyInput.get('Eta Electric Motor Model') == 'Smart':
+            eta_em = pt.eta('electric_motor', alt, vel, P_propulsive / (self.EtaGB * eta_prop))
+        else:
+            eta_em = self.EtaEM
+        return eta_em, eta_prop
+
     def ComputePRatio(self, alt, vel, P_req_net):
         """Computes operational state given altitude, velocity and required net power."""
         if not self.Sizing_Done: self.ComputeAndStoreWeights(1000.0)
 
         P_amb, T_amb = self._get_env(alt)
         
-        # Electric-motor efficiency: the constant Eta Electric Motor, or — when the Class-II
-        # ('Smart') d-q motor model is selected — its operating-point efficiency.
-        if self.aircraft.EnergyInput.get('Eta Electric Motor Model') == 'Smart':
-            eta_em = self.aircraft.powertrain.eta('electric_motor', alt, vel, P_req_net)
-        else:
-            eta_em = self.EtaEM
+        # Electric-motor and propeller efficiencies (constant, or the Class-II models at their
+        # own shaft powers, see drive_efficiencies).
+        eta_em, eta_prop = self.drive_efficiencies(alt, vel, P_req_net)
         eta_mech = self.EtaGB * eta_em * self.EtaPM
-        if hasattr(self.aircraft.powertrain, 'Propeller'):
-            eta_prop = self.aircraft.powertrain.Propeller.ComputePropEfficiency(alt, vel, P_req_net)
-            eta_mech *= eta_prop
-        else:
-            eta_mech *= self.EtaProp
+        eta_mech *= eta_prop
 
         P_elec_propulsive = P_req_net / max(eta_mech, 0.01)
         P_elec_target = P_elec_propulsive + self.P_aux_tms      # + TMS pump (Class II)

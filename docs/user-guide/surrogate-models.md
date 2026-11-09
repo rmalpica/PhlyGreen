@@ -41,14 +41,26 @@ A **universal RBF response surface** maps
 (\text{altitude [ft]},\ \text{Mach},\ \text{power fraction}) \;\longrightarrow\; \eta_{\text{th}}
 \]
 
-for one reference engine. The grid of operating points is run through the pyCycle deck offline; the
-efficiencies are fitted with a multiquadric `Rbf` on inputs normalised by a `StandardScaler`. At run
-time three things happen, in order:
+for one reference engine. The grid of operating points (0–30,000 ft, Mach 0.01–0.6, power
+fractions 0.3–1.0) is run through the pyCycle deck offline; the efficiencies are fitted with a
+`linear` `Rbf` (an interpolant) on inputs normalised by a `StandardScaler`. Every map point is
+checked: the generator accepts a point only if the deck delivers its target power and closes its
+shaft and nozzle balances within 0.1 %, warm-starts from converged neighbours, and stops if a
+point cannot be converged; the trainer refuses a map with an unconverged row. (The static column
+is solved at Mach 0.01, because pyCycle's flight conditions are singular at Mach 0 exactly.) At
+run time three things happen, in order:
 
 1. **Power lapse** — the available shaft power falls with altitude via the ISA pressure ratio,
-   \(P_{\text{avail}} = P_{\text{design}}\,\delta(h)\);
+   \(P_{\text{avail}} = P_{\text{design}}\,\delta(h)\). This is the coordinate the map was
+   generated at; with the map selected, `Powertrain.PowerLapse` returns the same \(\delta\)
+   to rate the engine (see [Powertrain](powertrain.md)). With constant efficiencies the
+   rating uses Ruijgrok's \((\rho/\rho_0)^{0.75}\), which lapses less (0.624 against 0.460
+   at 20,000 ft);
 2. **Read the map** — efficiency is evaluated at the current power fraction
-   \(P_{\text{req}}/P_{\text{avail}}\);
+   \(P_{\text{req}}/P_{\text{avail}}\). Altitude, Mach and fraction are clipped to the training
+   box, with a warning the first time each is clipped (below a fraction of 0.3 the 0.3 value is
+   used, which is optimistic towards idle). If the surrogate cannot be evaluated it returns 0.30
+   with a warning;
 3. **Size scaling** — the map is for the reference engine, so the efficiency penalty of a *smaller*
    engine is added back with a calibrated law,
 
@@ -57,7 +69,8 @@ time three things happen, in order:
 \]
 
 where the exponent \(n\) is fitted once (`calibrate_scaling_exponent`) from a small embedded dataset of
-real turboshaft SFC‑vs‑power points and cached. This is why a single map can size engines from a few
+real turboshaft SFC‑vs‑power points and cached. The fit gives \(n = 0.0556\); one of the nine rows
+(the 5,500 shp D‑25V, far below the trend of the others) pulls it down, and without it \(n = 0.068\). This is why a single map can size engines from a few
 hundred kW to several MW.
 
 Because the model works as a *percentage of a fixed nominal power*, that nominal
@@ -215,13 +228,19 @@ of magnitude across the power range.
    fuel flow matches the FOCA/EASA certification). A calibrated gas‑generator power schedule \(G(f)\)
    makes the deck reproduce the certified **part‑power** fuel flow (idle/approach). The deck exports the
    combustor inlet state — temperature \(T_3\), pressure \(P_3\), fuel‑air ratio FAR, air mass flow — over
-   a flight‑envelope grid (Mach ≥ 0.1; the Mach = 0 static point is a deck convergence artifact and is
-   dropped).
+   a flight‑envelope grid (Mach ≥ 0.1). The map coordinate \(PC\) is the shaft power over the rated
+   power lapsed by the ISA pressure ratio: the deck runs at \(G(PC)\,\delta(h)\). Every deck point,
+   including those of the \(G(f)\) calibration curve, must deliver its requested power within 0.1 %;
+   a point that does not is re‑solved warm‑started from a converged neighbour (its full model state),
+   and the script stops if it still fails.
 2. **Chemical Reactor Network (`crn/`).** A Cantera CRN — a 9‑PSR primary zone
    plus secondary and dilution zones, with a Luche kerosene surrogate mechanism and an evaporation model —
    is run at each combustor state to produce \(EI_{NO_x},\ EI_{CO},\ EI_{UHC}\). It is calibrated to the
    PW127 with a richer primary‑zone air fraction `ARPZ = 0.24` (vs the CFM56 baseline 0.31), found by
-   `calibrate_crn_pw127.py` scanning the four ICAO LTO modes.
+   `calibrate_crn_pw127.py` scanning the four ICAO LTO modes. The secondary and dilution zones are not
+   accepted as steady before five residence times: without that guard the first, tiny integrator steps
+   could pass the steadiness test before any reaction, and the zone was returned frozen at its inlet
+   state (CO of 34–79 g/kg at 12 of the 198 states of the previous turbofan map).
 
 ### NOₓ certification anchor
 

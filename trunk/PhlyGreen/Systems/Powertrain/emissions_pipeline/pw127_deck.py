@@ -85,14 +85,35 @@ def tune_rated_power():
     return prob, rated, _design_state(prob)
 
 
-def _od_state(prob, od, alt_ft, mach, pwr_hp, base_W):
-    """Run one off-design point; return combustor state dict or None if not converged."""
+# A solve is accepted only if the deck delivers the requested shaft power within this relative
+# tolerance. The Newton solver of Single_spool_GT.py does not raise when it stalls
+# (reraise_child_analysiserror = False), so without this check a stalled solve is returned as
+# if it had converged (e.g. FAR left at its 0.017 initial guess).
+POWER_TOL = 1e-3
+
+
+def _od_state(prob, od, alt_ft, mach, pwr_hp, base_W, guess=None):
+    """Run one off-design point; return combustor state dict or None if not converged.
+
+    ``guess`` is an optional dict of balance values (``W``, ``FAR``, ``HP_Nmech``), e.g. a
+    converged neighbour returned by a previous call; by default the solve starts from the fixed
+    initial guesses (inlet flow scaled by the ISA pressure ratio, FAR 0.017, 5000 rpm). If the
+    guess also carries ``outputs`` (the model's full output vector, returned by this function
+    for every converged point), that vector is restored first. The deck's convergence depends
+    on its whole internal state (thermochemical equilibrium, turbomachinery maps), not only on
+    the three balances: a solve at 3287 hp that follows one at 150 hp stalls at 607 hp even
+    with design-point balance guesses, and converges once the converged state is restored.
+    """
     P_std_sl, T_std_sl = 14.696, 518.67
     T_amb = max(T_std_sl - 3.566e-3 * alt_ft, 390.0)
     delta = (P_amb := P_std_sl * (T_amb / T_std_sl) ** 5.2561) / P_std_sl
-    prob.set_val(f'{od}.balance.W', base_W * delta)
-    prob.set_val(f'{od}.balance.FAR', 0.017)
-    prob.set_val(f'{od}.balance.HP_Nmech', 5000.0)
+    if guess is None:
+        guess = {"W": base_W * delta, "FAR": 0.017, "HP_Nmech": 5000.0}
+    if "outputs" in guess:
+        prob.model._outputs.set_val(guess["outputs"])
+    prob.set_val(f'{od}.balance.W', guess["W"])
+    prob.set_val(f'{od}.balance.FAR', guess["FAR"])
+    prob.set_val(f'{od}.balance.HP_Nmech', guess["HP_Nmech"])
     prob.set_val(f'{od}.fc.alt', alt_ft, units='ft')
     prob.set_val(f'{od}.fc.MN', mach)
     prob.set_val(f'{od}.balance.pwr_target', pwr_hp, units='hp')
@@ -105,9 +126,14 @@ def _od_state(prob, od, alt_ft, mach, pwr_hp, base_W):
         FAR = g('balance.FAR')
         mdot = g('inlet.Fl_O:stat:W') * LBM_S_TO_KG_S
         Wf = g('perf.Wfuel_0') * LBM_S_TO_KG_S
-        if not np.isfinite([T3, P3, FAR, mdot]).all() or FAR <= 0 or T3 <= 0:
+        delivered_hp = prob.get_val(f'{od}.LP_shaft.pwr_net', units='hp')[0]
+        if not np.isfinite([T3, P3, FAR, mdot, delivered_hp]).all() or FAR <= 0 or T3 <= 0:
             return None
-        return dict(T3_K=T3, P3_Pa=P3, FAR=FAR, mdot=mdot, Wfuel=Wf)
+        if abs(delivered_hp - pwr_hp) / pwr_hp > POWER_TOL:
+            return None
+        return dict(T3_K=T3, P3_Pa=P3, FAR=FAR, mdot=mdot, Wfuel=Wf,
+                    W=g('balance.W'), HP_Nmech=g('balance.HP_Nmech'),
+                    outputs=prob.model._outputs.asarray().copy())
     except Exception:
         return None
 

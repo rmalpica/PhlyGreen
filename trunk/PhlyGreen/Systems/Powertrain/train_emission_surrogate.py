@@ -5,12 +5,16 @@ PW127 emission map ``data/PW127_Emission_Map.csv`` and serializes it to
 ``data/Emission_Model_PW127.pkl``, which the runtime loader
 :mod:`.emissions_surrogate` (:class:`EmissionSurrogate`) reads.
 
-Provenance of the CSV (offline, heavy/optional deps — see ``WIP/phase3_pw127/``): a pyCycle
-PW127 cycle maps each operating point to the combustor inlet state, a Cantera Chemical Reactor
-Network (CRN) calibrated to ICAO LTO data turns that state into emission indices, the CO/UHC are
-taken directly from the (PW127-recalibrated) CRN and the NOx keeps the CRN's altitude/Mach/power
-*shape* but is rescaled (anchored) to the PW127 ICAO NOx at the sea-level LTO modes. This trainer
-itself needs only pandas + scipy + scikit-learn.
+Provenance of the CSV (offline, heavy/optional deps — see ``emissions_pipeline/`` and its
+README): a pyCycle PW127 cycle (``emissions_pipeline/pw127_partpower.py``) maps each operating
+point to the combustor inlet state, a Cantera Chemical Reactor Network (CRN,
+``emissions_pipeline/crn/``) calibrated to ICAO LTO data turns that state into emission indices,
+the CO/UHC are taken directly from the (PW127-recalibrated) CRN and the NOx keeps the CRN's
+altitude/Mach/power *shape* but is rescaled (anchored) to the PW127 ICAO NOx at the sea-level
+LTO modes (``emissions_pipeline/build_pw127_surrogate.py``, which calls :func:`main`). The
+turbofan artifact is fitted by the same :func:`main`, called from
+``emissions_pipeline/build_turbofan_surrogate.py``. This trainer itself needs only pandas +
+scipy + scikit-learn.
 
 Run it:
     cd trunk/PhlyGreen/Systems/Powertrain && python train_emission_surrogate.py

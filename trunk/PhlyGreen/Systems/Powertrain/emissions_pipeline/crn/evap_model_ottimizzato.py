@@ -103,6 +103,9 @@ N_PZ = 9
 V1_i = V1_total / N_PZ
 
 T_ign = 1800.0  # K
+# Minimum integrated time, in residence times of the stage, before the secondary and
+# dilution zones may be declared steady (see integrate_stage_stepwise).
+N_TAU_MIN_STAGE = 5.0
 
 # ---------------------------------------------------------
 # Utility varie
@@ -131,9 +134,24 @@ def gaussian_weights_phi(phi_mean, sigma, n_pts):
 
 def integrate_stage_stepwise(sim, reactor, t0,
                              tol_T_rel=1e-7, tol_P_rel=1e-7,
-                             n_consec_ok=60, t_cap=0.5):
+                             n_consec_ok=60, t_cap=0.5, t_min=0.0):
+    """Step ``sim`` until ``reactor`` is steady (or the time cap is reached).
+
+    Steady means ``n_consec_ok`` consecutive steps with relative T and P changes below the
+    tolerances. ``t_min`` [s] is the integrated time that must elapse before such steps are
+    counted. Without it, the first CVODE steps of a freshly built reactor (of order 1e-12 s)
+    change T by less than the tolerance, so 60 of them can pass the test before any
+    chemistry has happened: the stage is then returned frozen at its unreacted inlet state.
+    This happened to the secondary zone at 12 of the 198 states of an earlier turbofan map (CO came
+    out at 34-79 g/kg instead of 2-10). The default ``t_min = 0`` keeps the original behaviour.
+
+    Note: ``sim`` starts at its own time 0, while ``t0`` is the end time of the previous
+    stage, so the effective cap of a downstream stage is ``2 t0 + t_cap``. This is kept as
+    it was, because every shipped CRN result was computed with it.
+    """
     t_list, T_list, P_list = [], [], []
     t_final = t0
+    t_start = sim.time
     consec  = 0
     EPS = 1e-15
     T_prev, P_prev = reactor.T, reactor.thermo.P
@@ -145,7 +163,8 @@ def integrate_stage_stepwise(sim, reactor, t0,
         P_list.append(P_now)
         ok_T = abs(T_now - T_prev) <= tol_T_rel * max(1.0, T_now)
         ok_P = abs(P_now - P_prev) <= tol_P_rel * max(1.0, P_now)
-        consec = consec + 1 if (ok_T and ok_P) else 0
+        past_t_min = (t_final - t_start) >= t_min
+        consec = consec + 1 if (ok_T and ok_P and past_t_min) else 0
         T_prev, P_prev = T_now, P_now
     return np.array(t_list), np.array(T_list), np.array(P_list), t_final
 
@@ -512,10 +531,13 @@ def run_crn_evap_mode(mode_key, params):
     _ = ct.PressureController(r2, link_SZ_DZ, primary=m_SZ_pz, K=K_SZ)
 
     sim2 = ct.ReactorNet([r2])
+    # Steady state is not accepted before a few residence times of the stage (see
+    # integrate_stage_stepwise: otherwise the stage can stop frozen at its inlet state).
+    tau_res_SZ = r2.thermo.density * V2 / max(mdot_sz_nom + mdot_air_SZa, 1e-12)
     t2, T2, P2, _ = integrate_stage_stepwise(
         sim2, r2, t0=t1[-1],
         tol_T_rel=1e-7, tol_P_rel=1e-7,
-        n_consec_ok=60, t_cap=t1[-1] + 0.5
+        n_consec_ok=60, t_cap=t1[-1] + 0.5, t_min=N_TAU_MIN_STAGE * tau_res_SZ
     )
 
     # ===================== STADIO DZ =====================
@@ -545,10 +567,11 @@ def run_crn_evap_mode(mode_key, params):
     _ = ct.PressureController(r3, exhaust, primary=m_DZ_core, K=K_DZ)
 
     sim3 = ct.ReactorNet([r3])
+    tau_res_DZ = r3.thermo.density * V3 / max(mdot_sz_nom + mdot_air_DZa, 1e-12)
     t3, T3, P3, _ = integrate_stage_stepwise(
         sim3, r3, t0=t2[-1],
         tol_T_rel=1e-7, tol_P_rel=1e-7,
-        n_consec_ok=60, t_cap=t2[-1] + 0.5
+        n_consec_ok=60, t_cap=t2[-1] + 0.5, t_min=N_TAU_MIN_STAGE * tau_res_DZ
     )
 
     print(f"Run ok. T_end [K]: PZ(medio)={T1[-1]:.1f}, SZ={T2[-1]:.1f}, DZ={T3[-1]:.1f}")

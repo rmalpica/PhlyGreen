@@ -89,7 +89,9 @@ def summarize(a, runtime, tms_warnings):
         "P_cathode": fc.Target_Press, "comp_eta": fc.comp_eta,
         "thermal_profile": [{k: (_f(v) if k != "name" else v) for k, v in p.items()}
                             for p in m.thermal_profile],
-        "results_tms_mass": r.tms_mass,
+        "results_tms_mass": r.tms_mass, "results_hex_mass": r.hex_mass,
+        "results_tank_mass": r.tank_mass, "results_empty_weight": r.empty_weight,
+        "results_fuelcell_rating": r.fuelcell_rating,
     }
     res = w.tms_result
     if res is not None:
@@ -126,6 +128,7 @@ def summarize(a, runtime, tms_warnings):
             rows.append({"name": p["name"], "q_req": q_req, "q_rej": q_rej, "q_cap": q_cap})
         d["tms"]["rating"] = rows
         d["tms"]["mission_check"] = check_summary(res, len(m.thermal_profile))
+        d["tms"]["mission_check"]["drag_over_worst"] = drag_over_worst(a, res)
     return d
 
 
@@ -163,6 +166,50 @@ def check_summary(res, n_profile):
                      "mdot_ram_air": c["mdot_ram_air"], "T_wall_min": c["T_wall_min"],
                      "limits": c["limits"], "risks": c["risks"]} for c in checks[:n_profile]],
     }
+
+
+def drag_over_worst(a, res):
+    """Check point where the momentum-balance duct drag exceeds the constant-Delta-C_D drag
+    the most, with the aircraft drag there in level flight at the design take-off mass
+    (lift coefficient W_TO g / (q S), polar of the aircraft, extra_Cd included)."""
+    points = list(a.mission.thermal_profile) + list(a.mission.thermal_history)
+    if len(points) != len(res.checks) or a.aerodynamics.extra_Cd == 0:
+        return None
+    excess = [c["ram_drag"] - c["ram_drag_accounted"] for c in res.checks]
+    i = int(np.argmax(excess))
+    c, p = res.checks[i], points[i]
+    cond = a.tms._conditions(p)
+    V = p["V_inf"]
+    q = 0.5 * cond["rho_amb"] * V ** 2
+    S = a.weight.WTO * G / a.DesignWTOoS
+    CL = a.weight.WTO * G / (q * S)
+    mach = V / math.sqrt(1.4 * 287.05 * cond["T_amb"])
+    D = float(a.aerodynamics.Cd(CL, mach)) * q * S
+    return {"name": c["name"], "altitude": p["altitude"], "V_inf": V,
+            "ram_drag": c["ram_drag"], "ram_drag_accounted": c["ram_drag_accounted"],
+            "aircraft_drag_level": D}
+
+
+def freezing_design():
+    """Hydrogen test aircraft of tests/regression/test_hydrogen.py with a Class-II TMS and an
+    intake ram recovery of 0.8 (test_tms_design.py::test_ram_drag_feeds_back_as_a_drag_increment):
+    the coldest coolant-side wall against the freezing point."""
+    sys.path.insert(0, os.path.join(TRUNK, "tests"))
+    sys.path.insert(0, os.path.join(TRUNK, "tests", "regression"))
+    from test_hydrogen import _hydrogen_config
+    from PhlyGreen.config import TMSConfig
+    cfg = _hydrogen_config()
+    cfg.tms = TMSConfig(tms_class="II", ram_recovery=0.8)
+    a, t, wn = design(cfg, "test hydrogen aircraft, Class II, ram recovery 0.8")
+    res = a.weight.tms_result
+    checks = res.checks
+    coldest = min(checks, key=lambda c: c["T_wall_min"])
+    frozen = [c for c in checks if c["T_wall_min"] < c["T_freeze"]]
+    return {"WTO": a.weight.WTO, "ram_drag": res.ram_drag, "extra_Cd": a.aerodynamics.extra_Cd,
+            "T_wall_min": coldest["T_wall_min"], "T_wall_min_at": coldest["name"],
+            "T_freeze": coldest["T_freeze"], "n_below_freeze": len(frozen),
+            "below_freeze_at": sorted({c["name"].split(" t=")[0] for c in frozen}),
+            "violations": res.violations(), "risks": res.risks(), "tms_warnings": wn}
 
 
 def check_cost(a):
@@ -395,6 +442,9 @@ def main():
     data["offdesign_h2_II_bol"] = {"violations": od.violations, "risks": od.risks, "WTO": od.WTO}
     od = ex30.fly_off_design(h2_II9, 750.0)
     data["offdesign_h2_II_eta09_bol"] = {"violations": od.violations, "risks": od.risks, "WTO": od.WTO}
+
+    print("Freezing check (regression test aircraft, ram recovery 0.8):")
+    data["freezing_eta08"] = freezing_design()
 
     print("Humidity of the cathode inlet (hydrogen, Class I):")
     data["humidity"] = {}

@@ -50,4 +50,8 @@ def build_aircraft():
     ):
         subsystem.aircraft = aircraft
 
+    # Climate impact integrates the continuous mission solution ('Continue'); the legacy
+    # discretised path ('Discrete') can still be selected by setting this attribute.
+    aircraft.MissionType = 'Continue'
+
     return aircraft

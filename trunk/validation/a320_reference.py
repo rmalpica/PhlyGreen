@@ -60,31 +60,57 @@ REFERENCE = {
 # Design mission (150 pax two-class, 3000 nm) is set in examples/common.py.
 
 
-def calibrate_structure_to_oew(wing_loading_kgm2, target_oew=None, n_iter=8, tol=1e-3):
-    """Fixed-point calibration of the Class-I empty-weight regression to the reference OEW.
+def _calibrated_oew(k, wing_loading_kgm2):
+    """Converged OEW [kg] of the landing-limited design with the regression scaled by ``k``."""
+    cfg = turbofan_config()
+    cfg.avoid_powertrain_double_count = True
+    cfg.structure_calibration = k
+    cfg.design_wing_loading = wing_loading_kgm2 * 9.81
+    ac = pg.build_aircraft()
+    ac.configure(cfg)
+    return ac.results().empty_weight
+
+
+def calibrate_structure_to_oew(wing_loading_kgm2, target_oew=None, k_step=0.02, k_max=1.3,
+                               rtol=1e-4):
+    """Calibration factor of the Class-I empty-weight regression that makes the converged
+    design reach the reference OEW.
 
     Scaling the regression by ``OEW_ref / We(MTOW_ref)`` is not enough: a heavier structure
-    makes a heavier aircraft, which the regression then makes heavier still. The factor has to
-    be iterated against the *converged* design, the same way the ATR72 validation iterates its
-    FLOPS component scalers.
+    makes a heavier aircraft, which the regression then makes heavier still. The converged OEW
+    grows faster than the factor (a 1 % larger factor gives more than 2 % more OEW here), so the
+    update ``k <- k * OEW_ref / OEW(k)`` overshoots and diverges. The converged OEW grows
+    monotonically with ``k``, so the factor is found as the root of ``OEW(k) - OEW_ref``: ``k``
+    is raised from 1 in steps of ``k_step`` until the OEW passes the target, and Brent's method
+    solves the bracket. ``RuntimeError`` if no factor up to ``k_max`` reaches the target; a
+    design that does not close raises from ``configure``.
 
     This calibrates against published data, not against a result -- but a calibrated empty
     weight is no longer an independent prediction of empty weight, and is reported as fitted.
     """
+    from scipy.optimize import brentq
+
     target = target_oew if target_oew is not None else REFERENCE["OEW"][0]
-    k = 1.0
-    for _ in range(n_iter):
-        cfg = turbofan_config()
-        cfg.avoid_powertrain_double_count = True
-        cfg.structure_calibration = k
-        cfg.design_wing_loading = wing_loading_kgm2 * 9.81
-        ac = pg.build_aircraft()
-        ac.configure(cfg)
-        oew = ac.results().empty_weight
-        if abs(oew - target) / target < tol:
+
+    def residual(k):
+        return _calibrated_oew(k, wing_loading_kgm2) - target
+
+    k_low, r_low = 1.0, residual(1.0)
+    if r_low == 0.0:
+        return k_low
+    direction = 1.0 if r_low < 0.0 else -1.0       # raise k if the design is too light
+    k_high = k_low
+    while True:
+        k_high = k_high + direction * k_step
+        if not (2.0 - k_max) <= k_high <= k_max:
+            raise RuntimeError(
+                f"calibrate_structure_to_oew: no factor in [{2.0 - k_max:.2f}, {k_max:.2f}] "
+                f"reaches the reference OEW of {target:.0f} kg.")
+        r_high = residual(k_high)
+        if r_low * r_high <= 0.0:
             break
-        k *= target / oew
-    return k
+        k_low, r_low = k_high, r_high
+    return brentq(residual, min(k_low, k_high), max(k_low, k_high), rtol=rtol)
 
 
 def _design(wing_loading_kgm2=None, structure_calibration=1.0, avoid_double_count=True):
@@ -332,7 +358,7 @@ def main():
     ac_ref = _design(ws_ref)
     compare(ac_ref, f"E) at the A320's OWN wing loading ({ws_ref:.1f} kg/m2) - like-for-like")
     print("  With the geometry fixed to the real aircraft, all four quantities come out low by a\n"
-          "  consistent 5 %: a small systematic offset in the mission/fuel model, not a geometry\n"
+          "  consistent 4-6 %: a small systematic offset in the mission/fuel model, not a geometry\n"
           "  error. That consistency is the useful signal -- errors that all point the same way\n"
           "  and are the same size usually have one cause.")
 

@@ -19,6 +19,13 @@ anchored NOx) that backs the universal turboshaft map; ``Emission_Model_Turbofan
 CFM56-class map built from the native CFM56 CRN calibration, keyed on **thrust** fraction rather
 than shaft-power fraction. Pick one with :func:`default_model_path` or an explicit
 ``model_path``; a combustor calibration is engine-specific and the two are not interchangeable.
+
+**Coordinates.** Both maps take ``(alt_ft, Mach, PC)``. For the PW127 map ``PC`` is the
+gas-turbine shaft power over the rated power lapsed by the ISA pressure ratio,
+``P_shaft / (P_rated * delta(h))`` (``emissions_pipeline/pw127_partpower.py`` runs the deck at
+``G(PC) * delta(h)``); for the turbofan map it is the thrust over the full-throttle thrust at
+the flight condition, ``F / F_max(h, M)``. The caller must form the same quantity
+(``ClimateImpact._surrogate_load_fraction`` does). Inputs outside the training box are clipped.
 """
 
 import os
@@ -51,8 +58,9 @@ class EmissionSurrogate:
     (e.g. ``["alt_ft", "Mach", "PC"]`` for the direct map, or the combustor-state columns).
 
     Args:
-        model_path: path to the ``.pkl``. Defaults to the (not-yet-shipped) PW127 artifact; a
-            clear error is raised if absent so the caller supplies the scaffold path explicitly.
+        model_path: path to the ``.pkl``. Defaults to the shipped PW127 turboprop artifact
+            (``data/Emission_Model_PW127.pkl``); use :func:`default_model_path` to pick the one
+            matching a configuration. A missing file raises ``FileNotFoundError``.
     """
 
     def __init__(self, model_path=None):

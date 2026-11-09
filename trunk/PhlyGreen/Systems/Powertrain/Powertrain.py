@@ -53,12 +53,17 @@ class Powertrain:
         # Class-II nominal (design) powers [W], fixed before the mission (None for Class-I).
         self.gt_design_power = None
         self.em_design_power = None
+        # Class-II gas turbine without an explicit 'GT Design Power': the weight loop sets the
+        # nominal to the sized engineRating (set_gt_design_power), so the engine that flies
+        # is the one that is weighed.
+        self.gt_design_power_follows_rating = False
         # Turbofan: nominal SLS thrust [N] (chosen before the mission, like gt_design_power)
         # and the installed engine thrust-to-weight [N/N] used to turn it into a mass.
         self.turbofan_design_thrust = None
         self.engine_thrust_to_weight = None
         self.turbofan_model_path = None
-        self.n_engines = 1
+        # number of engines (PropellerInput['Number of Engines'], default 2; set by SetInput)
+        self.n_engines = 2
 
 
     """ Properties """
@@ -311,16 +316,10 @@ class Powertrain:
 
         # A turbofan carries its whole chain in one overall-efficiency node read from the
         # engine map, so the constant gas-turbine and propulsive efficiencies are genuinely
-        # not part of its input set -- warning about them would just be noise.
+        # not part of its input set -- warning about them would just be noise. The fuel-cell
+        # configurations have no gas turbine at all.
         _turbofan = self.aircraft.Configuration == 'Turbofan'
-
-        try:
-            self.aircraft.EnergyInput['Eta Gas Turbine']
-        except:
-            if not _turbofan:
-                print('Warning: Eta Gas Turbine value unset. Using Eta Gas Turbine Model.')
-        else:
-            self.EtaGT = self.aircraft.EnergyInput['Eta Gas Turbine']
+        _no_gas_turbine = self.aircraft.Configuration in ('Turbofan', 'Hydrogen', 'FuelCellBattery')
 
         try:
             self.aircraft.EnergyInput['Eta Gas Turbine Model']
@@ -330,20 +329,29 @@ class Powertrain:
             self.EtaGTmodelType = self.aircraft.EnergyInput['Eta Gas Turbine Model']
 
         try:
-            self.aircraft.EnergyInput['Eta Propulsive']
-        except:
-            if not _turbofan:
-                print('Warning: Eta Propulsive value unset. Using Eta Eta Propulsive Model.')
-        else:
-            self.EtaPP = self.aircraft.EnergyInput['Eta Propulsive']
-
-        try:
             self.aircraft.EnergyInput['Eta Propulsive Model'] 
         except:
             if not _turbofan:
                 print('Warning: Eta Propulsive model unset. Using constant model')
         else: 
             self.EtaPPmodelType = self.aircraft.EnergyInput['Eta Propulsive Model'] 
+
+        if 'Eta Gas Turbine' in self.aircraft.EnergyInput:
+            self.EtaGT = self.aircraft.EnergyInput['Eta Gas Turbine']
+        elif self.EtaGTmodelType == 'constant' and not _no_gas_turbine:
+            warnings.warn(
+                "'Eta Gas Turbine' is not set and the gas-turbine model is constant: the "
+                "default efficiency 0.30 is used.", UserWarning)
+
+        if 'Eta Propulsive' in self.aircraft.EnergyInput:
+            self.EtaPP = self.aircraft.EnergyInput['Eta Propulsive']
+        elif self.EtaPPmodelType == 'constant' and not _turbofan:
+            warnings.warn(
+                "'Eta Propulsive' is not set and the propeller model is constant: the "
+                "default efficiency 0.85 is used.", UserWarning)
+
+        # One engine count for the whole model (Class-II maps, propeller, emissions).
+        self.n_engines = self._read_number_of_engines()
 
         if self.EtaPPmodelType == 'Hamilton':
             self.Propeller = Propeller(self.aircraft)
@@ -366,7 +374,8 @@ class Powertrain:
         self.SPowerGenerator = self.aircraft.EnergyInput.get('Specific Power Generator', None)
 
 
-        # Optional fuel-cell system efficiency (used by PowerRatioFuelCellBattery).
+        # Optional constant fuel-cell system efficiency (used by PowerRatioFuelCellBattery only;
+        # the fuel-cell missions use the physics model of FuelCell).
         if 'Eta Fuel Cell' in self.aircraft.EnergyInput:
             self.EtaFC = self.aircraft.EnergyInput['Eta Fuel Cell']
 
@@ -384,8 +393,42 @@ class Powertrain:
                 self.EtaEM1 = self.aircraft.EnergyInput['Eta Electric Motor 1']
                 self.EtaEM2 = self.aircraft.EnergyInput['Eta Electric Motor 2']
 
+        # The fuel-cell configurations drive the propeller through a PMAD and an electric
+        # motor too (FuelCell.SetInput requires the same two keys).
+        if self.aircraft.Configuration in ('Hydrogen', 'FuelCellBattery'):
+
+            self.EtaPM = self.aircraft.EnergyInput['Eta PMAD']
+            self.EtaEM = self.aircraft.EnergyInput['Eta Electric Motor']
+
         self._build_efficiencies()
         return None
+
+    def _read_number_of_engines(self):
+        """Number of engines the installation is split over: ``PropellerInput['Number of
+        Engines']``, default 2.
+
+        This is the one engine count of the model (``powertrain.n_engines``): the Class-II
+        gas-turbine, motor and propeller maps, the Hamilton propeller and the emission model
+        all divide the total power by it. The Hamilton key ``'N_ENGINES'`` is still accepted,
+        with a deprecation warning, when ``'Number of Engines'`` is absent. (The FLOPS
+        ``FLOPSInput['ENGINE']['N_ENGINES']`` is a separate Class-II structures input.)
+        """
+        prop = getattr(self.aircraft, 'PropellerInput', None) or {}
+        if 'Number of Engines' in prop:
+            n_engines = prop['Number of Engines']
+        elif 'N_ENGINES' in prop:
+            warnings.warn(
+                "PropellerInput['N_ENGINES'] is deprecated: use PropellerInput['Number of "
+                "Engines'], the engine count shared by the whole powertrain.",
+                DeprecationWarning)
+            n_engines = prop['N_ENGINES']
+        else:
+            n_engines = 2
+        n_engines = int(n_engines)
+        if n_engines < 1:
+            raise ValueError("PropellerInput['Number of Engines'] must be >= 1, got %r"
+                             % prop.get('Number of Engines'))
+        return n_engines
 
     def _build_efficiencies(self):
         """Assemble one :class:`EfficiencyModel` per powertrain component.
@@ -396,11 +439,10 @@ class Powertrain:
         ``'ResponseSurface'`` for the gas turbine, ``'constant'`` | ``'Hamilton'`` |
         ``'Surrogate'`` for the propeller, ``'constant'`` | ``'Smart'`` for the motor).
         The result is stored in ``self.efficiency`` and read through :meth:`eta`.
+        The fuel cell has no entry here: :meth:`eta` reads ``fc_model`` or ``EtaFC``.
         """
         e = self.aircraft.EnergyInput
-        n_eng = 1
-        if getattr(self.aircraft, 'PropellerInput', None):
-            n_eng = int(self.aircraft.PropellerInput.get('Number of Engines', 1))
+        n_eng = self.n_engines
 
         # The constant Eta* are validating properties that raise when unset; read safely.
         def const(name, default):
@@ -410,7 +452,6 @@ class Powertrain:
                 return default
             return value if value is not None else default
 
-        self.n_engines = n_eng
         # Class-II nominal (design) powers [W]; None for Class-I components. These are fixed
         # before the mission and used by the over/under-size check after sizing.
         self.gt_design_power = e.get('GT Design Power')
@@ -423,16 +464,15 @@ class Powertrain:
         eff['gearbox'] = ConstantEfficiency(const('EtaGB', 1.0))
         eff['pmad'] = ConstantEfficiency(const('EtaPM', 1.0))
 
-        # Gas turbine: Class-I constant or Class-II response surface (needs a nominal power).
+        # Gas turbine: Class-I constant or Class-II response surface. Without an explicit
+        # 'GT Design Power' the Class-II nominal follows the sized engineRating (set by the
+        # weight loop, Weight._mission_and_powertrain); with one, it is a fixed nominal.
+        self.gt_design_power_follows_rating = False
         if self.EtaGTmodelType == 'ResponseSurface':
             from .efficiency import GasTurbineEfficiencyModel
-            if not self.gt_design_power:
-                raise ValueError(
-                    "Class-II gas turbine selected but 'GT Design Power' [W] is not set. "
-                    "Size the engine before the mission (e.g. DesignPW * WTO) and pass it "
-                    "in EnergyInput as 'GT Design Power'.")
+            self.gt_design_power_follows_rating = not self.gt_design_power
             eff['gas_turbine'] = GasTurbineEfficiencyModel(
-                design_power=self.gt_design_power, n_engines=n_eng)
+                design_power=self.gt_design_power or None, n_engines=n_eng)
         elif self.EtaGTmodelType == 'Turbofan':
             # A turbofan is a single overall-efficiency node: eta_o = F*V/(mdot_f*LHV), so the
             # fuel closure Pf = Pp/eta_o is exactly a TSFC closure (TSFC = V/(eta_o*LHV)).
@@ -482,10 +522,17 @@ class Powertrain:
             eff['electric_motor'] = MotorEfficiencyModel(
                 (self.em_design_power / n_eng) / 1000.0, e.get('EM Design Voltage', 800.0),
                 e.get('EM Design RPM', 11000.0), n_engines=n_eng)
+        elif self.aircraft.Configuration == 'Hybrid' and self.aircraft.HybridType == 'Serial':
+            # the serial propulsion motor is 'Eta Electric Motor 2'
+            eff['electric_motor'] = ConstantEfficiency(const('EtaEM2', 1.0))
         else:
             eff['electric_motor'] = ConstantEfficiency(const('EtaEM', 1.0))
 
-        eff['fuel_cell'] = ConstantEfficiency(const('EtaFC', 0.50))
+        # Serial-hybrid generator ('Eta Electric Motor 1'); 1.0 in the other architectures,
+        # which have no generator. Replace powertrain.efficiency['generator'] to make it
+        # operating-point dependent (the motor's 'Smart' model and em_model do not act on it).
+        eff['generator'] = ConstantEfficiency(const('EtaEM1', 1.0))
+
         self.efficiency = eff
 
     def _thermal_power_timeline(self):
@@ -508,6 +555,9 @@ class Powertrain:
         if cfg == 'Traditional':
             p_th = np.array([self.Traditional(alt[i], vel[i], PP[i])[1] * PP[i]
                              for i in range(len(t))])
+        elif cfg == 'Hybrid' and m._is_range_extender():
+            # the range-extender turbine runs at its (lapsed) rated power, whatever the demand
+            p_th = np.array([m._range_extender_gt_power(alt[i]) for i in range(len(t))])
         elif cfg == 'Hybrid':
             phi = np.array([float(prof.SuppliedPowerRatio(x)) for x in t])
             p_th = np.array([self.Hybrid(float(phi[i]), alt[i], vel[i], PP[i])[1] * PP[i]
@@ -515,6 +565,10 @@ class Powertrain:
         else:
             p_th = np.zeros(len(t))
         return alt, vel, p_th
+
+    # Relative mismatch between the Class-II 'GT Design Power' and the sized engineRating
+    # above which report_class_ii_sizing warns that the flown engine is not the weighed one.
+    GT_NOMINAL_RATING_RTOL = 0.05
 
     def report_class_ii_sizing(self, raise_on_undersize=False):
         """Check the Class-II GT/EM nominal power against what the mission demands.
@@ -527,9 +581,22 @@ class Powertrain:
         response surface at each point. For the **electric motor** (no altitude lapse) we
         compare the peak electric power to the nominal.
 
+        The motor nominal (``EM Design Power``) is a mechanical output rating (the d-q model
+        sets its rated torque from it), so it is compared with the peak motor shaft power
+        ``max(Max_PMotor, TO_PMotor)``.
+
+        The engine mass follows the sized ``engineRating``. A Class-II gas turbine is rated
+        with the map's own lapse (:meth:`PowerLapse`), and without an explicit
+        ``GT Design Power`` the weight loop sets the nominal to that rating
+        (``gt_design_power_follows_rating``), so the flown engine is the weighed one and no
+        mission point is power-limited. An explicit nominal is kept as given; a warning is
+        emitted when it differs from the rating by more than ``GT_NOMINAL_RATING_RTOL`` (a
+        nominal above the rating reads the map at a lower load and a larger engine size
+        without weighing that engine).
+
         Returns ``{component: {...}}`` (including ``power_limited`` and ``min_nominal`` — the
-        nominal power needed to avoid power-limiting — for the GT) and warns (or raises) when
-        a component is undersized.
+        nominal power needed to avoid power-limiting — and ``rating`` for the GT) and warns
+        (or raises) when a component is undersized.
         """
         import warnings
         import numpy as np
@@ -549,7 +616,7 @@ class Powertrain:
         gt = getattr(self, "efficiency", {}).get("gas_turbine")
         if self.gt_design_power and isinstance(gt, GasTurbineEfficiencyModel):
             timeline = self._thermal_power_timeline()
-            worst_ratio, peak_demand = 0.0, 0.0
+            worst_ratio, peak_demand, n_limited, n_points = 0.0, 0.0, 0, 0
             if timeline is not None:
                 alt, vel, p_th = timeline
                 design_hp = Units.wTohp(self.gt_design_power) / self.n_engines
@@ -559,27 +626,41 @@ class Powertrain:
                     req_hp = Units.wTohp(p_th[i]) / self.n_engines
                     _, _, pmax_hp, _ = gt.surrogate.predict(design_hp, Units.mToft(alt[i]),
                                                             mach, req_hp)
+                    n_points += 1
                     if pmax_hp > 0:
                         worst_ratio = max(worst_ratio, req_hp / pmax_hp)
+                        if req_hp / pmax_hp > 1.0 + 1e-6:
+                            n_limited += 1
                     peak_demand = max(peak_demand, float(p_th[i]))
             power_limited = worst_ratio > 1.0 + 1e-6
             min_nominal = self.gt_design_power * worst_ratio   # to make available >= demand
             # Status from the altitude-aware load ratio (peak required / peak available).
             status = "UNDERSIZED" if power_limited else ("oversized" if worst_ratio < 0.5 else "ok")
+            rating = self.engineRating
             report["gas turbine"] = {
                 "nominal": self.gt_design_power, "peak_demand": peak_demand,
                 "worst_load_ratio": worst_ratio, "power_limited": power_limited,
-                "min_nominal": min_nominal, "status": status}
+                "min_nominal": min_nominal, "status": status, "rating": rating,
+                "n_power_limited_points": n_limited, "n_points": n_points}
             if power_limited:
                 warn_or_raise(
                     f"gas turbine is undersized (power-limited at altitude): required power "
                     f"exceeds the available power by up to {(worst_ratio-1)*100:.0f}% — the "
                     f"engine cannot sustain flight. Increase 'GT Design Power' to at least "
                     f"{min_nominal/1e3:.0f} kW.")
+            if rating and abs(self.gt_design_power / rating - 1.0) > self.GT_NOMINAL_RATING_RTOL:
+                warnings.warn(
+                    f"gas turbine: the efficiency map is read against 'GT Design Power' = "
+                    f"{self.gt_design_power/1e3:.0f} kW, but the engine mass follows the sized "
+                    f"rating {rating/1e3:.0f} kW ({(self.gt_design_power/rating - 1)*100:+.0f}%). "
+                    f"The flown engine is not the weighed one (a nominal above the rating "
+                    f"gains part-load efficiency without carrying its mass). Set 'GT Design "
+                    f"Power' to the rating and re-run, or justify the difference.",
+                    RuntimeWarning)
 
-        # --- Electric motor: peak electric power vs nominal (no altitude lapse) ---
+        # --- Electric motor: peak motor shaft power vs nominal (no altitude lapse) ---
         if self.em_design_power:
-            actual = getattr(m, "Max_PBat", 0.0) or 0.0
+            actual = max(getattr(m, "Max_PMotor", 0.0) or 0.0, getattr(m, "TO_PMotor", 0.0) or 0.0)
             ratio = actual / self.em_design_power
             status = "UNDERSIZED" if ratio > 1.0 else ("oversized" if ratio < 0.5 else "ok")
             report["electric motor"] = {"nominal": self.em_design_power, "peak_demand": actual,
@@ -630,18 +711,139 @@ class Powertrain:
         """Efficiency of ``component`` at the operating point (altitude, velocity, power).
 
         Components: ``'gas_turbine'``, ``'propeller'``, ``'gearbox'``, ``'electric_motor'``,
-        ``'pmad'``, ``'fuel_cell'``. An externally-set ``em_model``/``fc_model`` overrides
-        the electric-motor/fuel-cell entry (back-compatible Class-II injection).
+        ``'generator'``, ``'pmad'``, ``'fuel_cell'``. An externally-set
+        ``em_model``/``fc_model`` overrides the electric-motor/fuel-cell entry
+        (back-compatible Class-II injection).
+
+        ``pwr`` [W] is the power through the component itself, in the convention of its
+        model (all engines together; the models divide by ``n_engines``):
+
+        ================== =====================================================
+        gas_turbine        shaft output (``GasTurbineEfficiencyModel`` compares it
+                           with ``design_power``, a shaft rating)
+        propeller          shaft input (Hamilton ``ComputePropEfficiency`` and the
+                           RBF surrogate take the shaft power)
+        electric_motor     mechanical output (the d-q model sets the torque from it
+                           and returns ``P_out / (P_out + losses)``)
+        generator          electrical output (serial hybrid)
+        gearbox            input (sum of the inputs where it combines two shafts)
+        pmad               input (sum of the sources it combines)
+        fuel_cell          net electrical output
+        ================== =====================================================
+
+        :meth:`Traditional`, :meth:`Hybrid` and :meth:`PowerRatioFuelCellBattery` evaluate
+        every model at these powers (:meth:`_solve_at_component_powers`).
         """
         op = OperatingPoint(altitude=alt, velocity=vel, power=pwr, rpm=rpm)
+        return self._efficiency_model(component).eta(op)
+
+    def _efficiency_model(self, component):
+        """The :class:`EfficiencyModel` :meth:`eta` evaluates for ``component``.
+
+        ``em_model`` overrides the electric motor and ``fc_model`` the fuel cell. Without
+        ``fc_model`` the fuel cell is the constant ``EtaFC`` ('Eta Fuel Cell'); there is no
+        default, because the fuel-cell missions use the physics model of ``FuelCell`` and a
+        made-up constant would silently disagree with it.
+        """
         if component == 'electric_motor' and self.em_model is not None:
-            return self.em_model.eta(op)
-        if component == 'fuel_cell' and self.fc_model is not None:
-            return self.fc_model.eta(op)
-        return self.efficiency[component].eta(op)
+            return self.em_model
+        if component == 'fuel_cell':
+            if self.fc_model is not None:
+                return self.fc_model
+            if self.EtaFC is None:
+                raise ValueError(
+                    "No fuel-cell efficiency for the powertrain graph: set 'Eta Fuel Cell' "
+                    "in EnergyInput (EnergyConfig.eta_fuel_cell) or assign an EfficiencyModel "
+                    "to powertrain.fc_model (it receives the net electrical output power).")
+            return ConstantEfficiency(self.EtaFC)
+        return self.efficiency[component]
+
+    def gas_turbine_has_map_lapse(self):
+        """True when the gas turbine is the Class-II map (:class:`GasTurbineEfficiencyModel`):
+        its full-throttle power then lapses with the map's own ISA pressure ratio, which
+        :meth:`PowerLapse` returns, so the engine is rated with the lapse it flies with."""
+        from .efficiency import GasTurbineEfficiencyModel
+        eff = getattr(self, 'efficiency', None) or {}
+        return isinstance(eff.get('gas_turbine'), GasTurbineEfficiencyModel)
+
+    def set_gt_design_power(self, design_power):
+        """Set the nominal (design) shaft power [W] of the Class-II gas-turbine map."""
+        self.gt_design_power = design_power
+        self.efficiency['gas_turbine'].design_power = design_power
+
+    def has_constant_efficiency(self, component):
+        """True when ``component`` is evaluated by a :class:`ConstantEfficiency`, i.e. its
+        efficiency does not depend on the operating point."""
+        return isinstance(self._efficiency_model(component), ConstantEfficiency)
+
+    # Fixed-point iteration on the component powers the efficiency models are evaluated at.
+    COMPONENT_POWER_RTOL = 1e-6    # relative change of the component powers (of |Pp|): 1 W per MW
+    COMPONENT_POWER_MAX_ITER = 50
+
+    def _solve_at_component_powers(self, components, build_graph, component_power_ratios,
+                                   alt, vel, pwr):
+        """Solve a powertrain graph with every efficiency model evaluated at the power
+        through its own component.
+
+        ``components`` lists the components of the graph, ``build_graph(eta)`` builds it from
+        a ``{component: efficiency}`` dict, and ``component_power_ratios(x)`` maps its
+        solution ``x`` (powers / ``Pp``) to ``{component: power through the component / Pp}``
+        (convention: :meth:`eta`).
+
+        The component powers depend on the efficiencies, so this is a fixed point. The first
+        pass evaluates every model at the propulsive power ``pwr``; each next pass
+        re-evaluates the models at the component powers of the previous solution, until
+        the solved powers differ from those the models were read at by less than
+        ``COMPONENT_POWER_RTOL * |pwr|``. Constant models ignore the power: when every
+        model is constant the first solution is returned as it is, so constant-efficiency
+        results are unchanged bit for bit.
+
+        The step towards the solved powers is damped. A propeller at low power has an
+        efficiency that rises steeply with its shaft power, so the plain iteration
+        ``P <- Pp / eta(P)`` overshoots and oscillates around the solution. Whenever the step
+        of a component changes sign (an overshoot), the step is halved (``relax``), which
+        makes the iteration contract again.
+        """
+        variable = [c for c in components if not self.has_constant_efficiency(c)]
+        powers = {c: pwr for c in components}
+        tolerance = self.COMPONENT_POWER_RTOL * max(abs(pwr), 1.0)
+        relax = 1.0                      # fraction of the step taken towards the solved powers
+        previous_step = {c: 0.0 for c in components}
+        for _ in range(self.COMPONENT_POWER_MAX_ITER):
+            eta = {c: self.eta(c, alt, vel, powers[c]) for c in components}
+            x = build_graph(eta).solve()
+            if not variable:
+                return x
+            ratios = component_power_ratios(x)
+            solved_powers = {c: ratios[c] * pwr for c in components}
+            change = max(abs(solved_powers[c] - powers[c]) for c in variable)
+            if change <= tolerance:
+                return x
+            step = {c: solved_powers[c] - powers[c] for c in components}
+            if any(step[c] * previous_step[c] < 0.0 for c in variable):
+                relax *= 0.5             # overshoot: damp the step
+            previous_step = step
+            powers = {c: powers[c] + relax * step[c] for c in components}
+        warnings.warn(
+            f"powertrain: the component powers of the Class-II efficiency models did not "
+            f"converge in {self.COMPONENT_POWER_MAX_ITER} iterations (last change "
+            f"{change:.3g} W at Pp = {pwr:.3g} W).", RuntimeWarning)
+        return x
 
     def PowerLapse(self,altitude,DISA):
-        """ Full throttle power lapse, to be used in constraint analysis. Source: Ruijgrok, Elements of airplane performance, Eq.(6.7-11)"""
+        """Full-throttle power lapse with altitude [m], used to rate the engine (constraint
+        diagram through :meth:`SizingDenominator`, mission peak and take-off in
+        :meth:`WeightPowertrain`).
+
+        Class-I: ``(rho/rho_0)**0.75`` (Ruijgrok, Elements of airplane performance,
+        Eq. 6.7-11). With the Class-II gas-turbine map (:meth:`gas_turbine_has_map_lapse`)
+        it is the map's own lapse, the ISA pressure ratio ``delta(h)`` of
+        ``gas_turbine_surrogate._isa_pressure_ratio`` (no Mach or ``DISA`` dependence, as in
+        the deck), so the engine is rated with the full power it has on the map.
+        """
+        if self.gas_turbine_has_map_lapse():
+            from .gas_turbine_surrogate import _isa_pressure_ratio
+            return _isa_pressure_ratio(Units.mToft(altitude))
         n = 0.75
         lapse = (ISA.atmosphere.RHOstd(altitude,DISA)/ISA.atmosphere.RHOstd(0.0,DISA))**n
         return lapse
@@ -708,53 +910,101 @@ class Powertrain:
 
         Delegates to the component-graph engine (:func:`graph.traditional_graph`); see
         :meth:`_traditional_legacy` for the original hand-coded 4x4 system that this
-        reproduces. Output order: ``[Pf/Pp, Pgt/Pp, Pgb/Pp, Pp/Pp]``.
+        reproduces. Output order: ``[Pf/Pp, Pgt/Pp, Pgb/Pp, Pp/Pp]``. ``pwr`` is the
+        propulsive power [W]; each efficiency model is evaluated at the power through its
+        own component (:meth:`_solve_at_component_powers`).
         """
-        g = traditional_graph(self.eta('gas_turbine', alt, vel, pwr),
-                              self.eta('gearbox', alt, vel, pwr),
-                              self.eta('propeller', alt, vel, pwr))
-        return g.solve()
+        def build_graph(eta):
+            return traditional_graph(eta['gas_turbine'], eta['gearbox'], eta['propeller'])
+
+        def component_power_ratios(x):
+            # x = [Pf, Pgt, Pgb, Pp]
+            return {'gas_turbine': x[1],    # turbine shaft output
+                    'gearbox': x[1],        # gearbox input = turbine shaft
+                    'propeller': x[2]}      # propeller shaft input = gearbox output
+
+        return self._solve_at_component_powers(
+            ('gas_turbine', 'gearbox', 'propeller'), build_graph, component_power_ratios,
+            alt, vel, pwr)
 
     def Hybrid(self, phi, alt, vel, pwr):
         """Power ratios for the hybrid-electric chain (parallel or serial).
 
         Delegates to the component-graph engine; see :meth:`_hybrid_legacy` for the
-        original hand-coded systems this reproduces. ``abs`` is applied to avoid ``-0``
+        original hand-coded systems this reproduces. ``phi`` is the battery share of the
+        supplied power, ``Pbat / (Pf + Pbat)``. ``abs`` is applied to avoid ``-0``
         for the battery ratio when ``phi == 0``. Output order:
         parallel ``[Pf, Pgt, Pgb, Ps1, Pe1, Pbat, Pp1]`` / serial
-        ``[Pf, Pgt, Pgb, Ps1, Pe1, Pbat, Pgen, Pp1]`` (all /Pp).
+        ``[Pf, Pgt, Pgb, Ps1, Pe1, Pbat, Pgen, Pp1]`` (all /Pp). In both, ``Pgb`` is the
+        electric-motor shaft output. ``pwr`` is the propulsive power [W]; each efficiency
+        model is evaluated at the power through its own component
+        (:meth:`_solve_at_component_powers`).
         """
         self.phi = phi
         if self.aircraft.HybridType == 'Parallel':
-            g = parallel_hybrid_graph(self.eta('gas_turbine', alt, vel, pwr),
-                                      self.eta('gearbox', alt, vel, pwr), self.eta('pmad', alt, vel, pwr),
-                                      self.eta('electric_motor', alt, vel, pwr),
-                                      self.eta('propeller', alt, vel, pwr), phi)
+            def build_graph(eta):
+                return parallel_hybrid_graph(eta['gas_turbine'], eta['gearbox'], eta['pmad'],
+                                             eta['electric_motor'], eta['propeller'], phi)
+
+            def component_power_ratios(x):
+                # x = [Pf, Pgt, Pgb, Ps1, Pe1, Pbat, Pp1]
+                return {'gas_turbine': x[1],         # turbine shaft output
+                        'gearbox': x[1] + x[2],      # gearbox input = turbine + motor shafts
+                        'pmad': x[5],                # PMAD input = battery terminal power
+                        'electric_motor': x[2],      # motor shaft output
+                        'propeller': x[3]}           # propeller shaft input = gearbox output
+
+            components = ('gas_turbine', 'gearbox', 'pmad', 'electric_motor', 'propeller')
         elif self.aircraft.HybridType == 'Serial':
-            g = serial_hybrid_graph(self.eta('gas_turbine', alt, vel, pwr), self.EtaEM1,
-                                    self.eta('pmad', alt, vel, pwr), self.EtaEM2,
-                                    self.eta('gearbox', alt, vel, pwr),
-                                    self.eta('propeller', alt, vel, pwr), phi)
+            def build_graph(eta):
+                return serial_hybrid_graph(eta['gas_turbine'], eta['generator'], eta['pmad'],
+                                           eta['electric_motor'], eta['gearbox'],
+                                           eta['propeller'], phi)
+
+            def component_power_ratios(x):
+                # x = [Pf, Pgt, Pgb, Ps1, Pe1, Pbat, Pgen, Pp1]
+                return {'gas_turbine': x[1],         # turbine shaft output
+                        'generator': x[3],           # generator electrical output
+                        'pmad': x[3] + x[5],         # bus input = generator + battery
+                        'electric_motor': x[2],      # motor shaft output
+                        'gearbox': x[2],             # gearbox input = motor shaft
+                        'propeller': x[6]}           # propeller shaft input = gearbox output
+
+            components = ('gas_turbine', 'generator', 'pmad', 'electric_motor', 'gearbox',
+                          'propeller')
         else:
             raise Exception("Unknown hybrid type: %s" % self.aircraft.HybridType)
-        return np.abs(g.solve())
+        return np.abs(self._solve_at_component_powers(
+            components, build_graph, component_power_ratios, alt, vel, pwr))
 
     def PowerRatioFuelCellBattery(self, phi, alt, vel, pwr):
         """Power ratios for a fuel-cell + battery (gas-turbine-free) hybrid.
 
         Demonstrates an arbitrary hybridization assembled on the powertrain graph: a fuel
         cell and a battery share an electrical bus feeding the motor/gearbox/propeller.
-        Requires ``EtaFC`` (or a ``fc_model``); ``em_model`` makes the motor efficiency
-        operating-point dependent. Output order:
+        ``phi`` is the battery share of the *propulsive* power, the convention of the
+        ``'FuelCellBattery'`` mission. Requires ``EtaFC`` ('Eta Fuel Cell') or an
+        ``fc_model``, which receives the net electrical output of the fuel cell; the mission
+        itself uses the physics model of ``FuelCell`` and does not call this method.
+        ``em_model`` makes the motor efficiency operating-point dependent. Output order:
         ``[PfH2, Pfc, Pbat, Pe1, Pem, Pgb, Pp1]`` (all /Pp), so ``[0]`` is hydrogen power
         and ``[2]`` is battery power.
         """
-        g = fuelcell_battery_graph(self.eta('fuel_cell', alt, vel, pwr),
-                                   self.eta('pmad', alt, vel, pwr),
-                                   self.eta('electric_motor', alt, vel, pwr),
-                                   self.eta('gearbox', alt, vel, pwr),
-                                   self.eta('propeller', alt, vel, pwr), phi)
-        return np.abs(g.solve())
+        def build_graph(eta):
+            return fuelcell_battery_graph(eta['fuel_cell'], eta['pmad'], eta['electric_motor'],
+                                          eta['gearbox'], eta['propeller'], phi)
+
+        def component_power_ratios(x):
+            # x = [PfH2, Pfc, Pbat, Pe1, Pem, Pgb, Pp1]
+            return {'fuel_cell': x[1],           # fuel-cell net electrical output
+                    'pmad': x[1] + x[2],         # bus input = fuel cell + battery
+                    'electric_motor': x[4],      # motor shaft output
+                    'gearbox': x[4],             # gearbox input = motor shaft
+                    'propeller': x[5]}           # propeller shaft input = gearbox output
+
+        return np.abs(self._solve_at_component_powers(
+            ('fuel_cell', 'pmad', 'electric_motor', 'gearbox', 'propeller'),
+            build_graph, component_power_ratios, alt, vel, pwr))
 
     def _traditional_legacy(self,alt,vel,pwr):
         """
@@ -845,9 +1095,10 @@ class Powertrain:
         Parameters
         ----------
         phi : float
-            Hybrid power-split ratio.  
-            - In parallel mode: fraction of propulsive power supplied electrically.  
-            - In serial mode: fraction of generator/battery power routed to propulsion.
+            Supplied-power ratio ``Pbat / (Pf + Pbat)``: the battery share of the power
+            supplied by the two sources (fuel chemical power plus battery terminal power),
+            in both the parallel and the serial mode (row ``[phi, ..., phi - 1, ...]``).
+            It is not the share of the propulsive power delivered electrically.
         alt : float
             Aircraft altitude [m].
         vel : float
@@ -905,7 +1156,8 @@ class Powertrain:
         
         PowerRatio = np.linalg.solve(A,b)
         
-    #Ordine output   Pf/Pp  Pgt/Pp   Pgb/Pp    Pe1/Pp  Pe2/Pp   Pbat/Pp   Ps2/Pp   Pp1/Pp 
+        # Output order: parallel  Pf, Pgt, Pgb, Ps1, Pe1, Pbat, Pp1         (all /Pp)
+        #               serial    Pf, Pgt, Pgb, Ps1, Pe1, Pbat, Pgen, Pp1   (all /Pp)
         return np.abs(PowerRatio)  #here abs is used to avoid that Pbat/Pp = -0 when phi=0
         
         
@@ -922,69 +1174,90 @@ class Powertrain:
             sp = sp[0] if sp else None
         return float(sp) if sp else 10000.0
 
+    def _map_lapse_engine_rating(self):
+        """Sea-level shaft rating [W] of a Class-II gas turbine: the largest full-power
+        requirement on the map, ``P_shaft / delta(h)``, over every mission point
+        (``mission.Max_PEng_lapsed``) and the take-off / OEI shaft power ``TO_PP`` at the
+        take-off altitude. The map's available power ``rating * delta(h)`` then covers the
+        whole mission (no point is power-limited)."""
+        m = self.aircraft.mission
+        if m._is_range_extender():
+            # the serial range extender's turbine is rated at 'GT Rated Power' (Max_PEng_lapsed);
+            # its take-off power is that rating lapsed, an outcome rather than a requirement
+            return m.Max_PEng_lapsed
+        to_alt = self.aircraft.constraint.TakeOffConstraints['Altitude']
+        return max(m.Max_PEng_lapsed, m.TO_PP / self.PowerLapse(to_alt, 0))
+
     def WeightPowertrain(self,WTO):
         """
-        This function estimates the total weight of the propulsion powertrain based on the aircraft
-        configuration (traditional or hybrid) and the maximum required power level.
+        Estimate the powertrain mass from the rated power (or thrust) of each component.
 
-        This function inherits from the mission class the installed power requirements for the propulsion
-        system and converts them into component weights using specific power
-        coefficients (shaft-power-to-weight ratios). The methodology differs for
-        traditional and hybrid-electric architectures:
+        Each mass is a rating divided by a specific power. The ratings come from the mission
+        peaks and the take-off / OEI point (stored by the mission), so this method runs
+        after ``mission.EvaluateMission``. The methodology per configuration:
 
-        - **Traditional configuration**
-          Only the thermal (gas-turbine) powertrain is present. The peak required
-          shaft power is determined as the maximum between:
-            1. Mission maximum engine power corrected by power lapse, and
-            2. Take-Off (TO) required propulsive power.
-          The thermal powertrain weight is obtained by dividing this peak shaft
-          power by the thermal specific power ratio ``SPowerPT[0]``.
+        - **Traditional**
+          The engine rating is the larger of (1) the mission peak shaft power
+          ``Max_PEng`` referred to sea level by ``PowerLapse(Max_PEng_alt, 0)`` and
+          (2) the take-off / OEI shaft power ``TO_PP``. ``WThermal = rating / SPowerPT[0]``.
 
-        - **Hybrid configuration**
-          Both thermal and electric subsystems are sized independently:
-            * Thermal subsystem: same criterion as in traditional case.
-            * Electric subsystem: peak battery power is the maximum between mission
-              maximum electric power and TO electric power.
-          The total powertrain weight is the sum of thermal and electric subsystem
-          weights, computed using ``SPowerPT[0]`` and ``SPowerPT[1]`` respectively.
+        - **Hybrid**
+          Thermal: as Traditional. Electric drive ``WElectric = WMotor + WPMAD``:
+            * Parallel: the motor and the PMAD are both sized on the peak battery terminal
+              power ``max(Max_PBat, TO_PBat)``, with ``SPowerPT[1]`` and
+              :meth:`pmad_specific_power`.
+            * Serial: the motor on the peak motor shaft power ``max(Max_PMotor, TO_PMotor)``
+              (``SPowerPT[1]``), the generator on the engine rating (``SPowerGenerator``,
+              default ``SPowerPT[1]``; ``WGenerator`` is included in ``WMotor``), and the
+              PMAD on the peak bus power ``max(Max_PBus, TO_PBus)``.
+
+        - **Turbofan**
+          Rated on SLS thrust [N]: the worst of the mission peak thrust and the take-off /
+          OEI thrust (each referred to SLS by :meth:`ThrustLapse`) and the constraint-diagram
+          thrust ``DesignPW * WTO * g`` (``DesignPW`` is T/W here). The mass is
+          ``rating / (g * engine_thrust_to_weight)``.
+
+        The fuel-cell configurations do not use this method: their powertrain mass is
+        ``FuelCell.Weight`` (stack, balance of plant, motor and PMAD).
 
         Parameters
         ----------
         WTO : float
-            Take-off weight of the aircraft [kg].  
-            (Currently unused inside the method but included for interface
-            compatibility.)
+            Take-off weight of the aircraft [kg]. Used by the Turbofan constraint-diagram
+            thrust; unused by the power-rated configurations.
 
         Returns
         -------
         float
-            Total estimated powertrain weight [kg]. Fuel and Battery weights are not included.
+            Total estimated powertrain mass [kg]. Fuel and battery masses are not included.
 
         Attributes Updated
         ------------------
         engineRating : float
-            Rated thermal shaft power required for the mission [W].
+            Rated thermal shaft power [W] (SLS thrust [N] for Turbofan).
         WThermal : float
-            Weight of the thermal propulsion subsystem [kg].
-        WElectric : float, optional
-            Weight of the electric power subsystem (only for hybrid configurations)
-            [kg].
+            Mass of the thermal propulsion subsystem [kg].
+        WElectric, WMotor, WPMAD : float
+            Electric-drive masses [kg] (Hybrid only); ``WGenerator`` for the serial hybrid.
 
         Notes
         -----
-        - ``SPowerPT`` is assumed to contain the specific power (W/kg) for thermal
-          and electric powertrain components. 
-        - ``PowerLapse(alt, vel)`` is used to compute the reduction in available
-          GT power with altitude.
-        - Raises an exception if an unsupported aircraft configuration is provided.
+        - ``SPowerPT`` holds the specific powers [W/kg] of the thermal powertrain and of the
+          electric motor.
+        - ``PowerLapse(altitude, DISA)`` is the full-throttle power lapse with altitude,
+          evaluated here at ISA (``DISA = 0``).
+        - Raises an exception for an unsupported aircraft configuration.
         """
         
         if self.aircraft.Configuration == 'Traditional':
         
-                PeakPwr = np.max(
-                    [self.aircraft.mission.Max_PEng / self.PowerLapse(self.aircraft.mission.Max_PEng_alt,0), 
-                     self.aircraft.mission.TO_PP]
-                     ) #maximum among take-off shaft power and mission shaft-power (adjusted with power-lapse)
+                if self.gas_turbine_has_map_lapse():
+                    PeakPwr = self._map_lapse_engine_rating()
+                else:
+                    PeakPwr = np.max(
+                        [self.aircraft.mission.Max_PEng / self.PowerLapse(self.aircraft.mission.Max_PEng_alt,0), 
+                         self.aircraft.mission.TO_PP]
+                         ) #maximum among take-off shaft power and mission shaft-power (adjusted with power-lapse)
 
                 self.engineRating = PeakPwr #shaft power 
                 self.WThermal = PeakPwr /self.SPowerPT[0]
@@ -993,10 +1266,13 @@ class Powertrain:
         elif self.aircraft.Configuration == 'Hybrid':
    
                 
-                PeakPwrEng = np.max(
-                    [self.aircraft.mission.Max_PEng / self.PowerLapse(self.aircraft.mission.Max_PEng_alt,0), 
-                     self.aircraft.mission.TO_PP]
-                     ) #maximum among take-off shaft power and mission shaft-power (adjusted with power-lapse)
+                if self.gas_turbine_has_map_lapse():
+                    PeakPwrEng = self._map_lapse_engine_rating()
+                else:
+                    PeakPwrEng = np.max(
+                        [self.aircraft.mission.Max_PEng / self.PowerLapse(self.aircraft.mission.Max_PEng_alt,0), 
+                         self.aircraft.mission.TO_PP]
+                         ) #maximum among take-off shaft power and mission shaft-power (adjusted with power-lapse)
                 PeakPwrBat = np.max([self.aircraft.mission.Max_PBat, self.aircraft.mission.TO_PBat])
 
                 self.engineRating = PeakPwrEng #shaft power
