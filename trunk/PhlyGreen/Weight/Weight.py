@@ -230,7 +230,10 @@ class Weight:
         """Airframe structural mass [kg] for the current weight class.
 
         Class I: the regression empty-weight model selected by ``AircraftType``. Class II:
-        the sum of the FLOPS component masses (computed in imperial units, converted to kg).
+        the sum of the FLOPS component masses (computed in imperial units, converted to kg):
+        airframe, systems and equipment, nacelles, propellers (not for a 'Turbofan') and the
+        FLOPS propulsion-system and operating items (fuel system, unusable fuel, engine oil,
+        starter, engine controls, passenger service). The engines are the powertrain mass.
         Identical for every configuration, so the four weight loops share this one method.
         """
         if self.Class == 'I':
@@ -244,7 +247,7 @@ class Weight:
             c.Wing.wingmass + c.Fuselage.fuselagemass + c.Tail.HTailmass
             + c.Tail.VTailmass + c.LandingGear.Landing_gearmass + c.Nacelle.nacellemass
             + c.Paint.paintmass + c.SystemEquipment.system_equipment_mass
-            + c.Propeller.propellermass)
+            + c.Propeller.propellermass + c.OperatingItems.operating_items_mass)
 
 
     def Traditional(self):

@@ -312,42 +312,140 @@ def hybrid_config(battery_class='II', hybrid_type='Parallel'):
     )
 
 
-def atr_flops_input():
-    """FLOPS (Class-II structural) input for an ATR42-like aircraft (imperial units).
+INCH = 0.0254          # [m]
+KG_PER_LITRE_TO_LB_PER_USGAL = 8.345404     # density conversion, kg/l -> lb/US gal
 
-    Set this on the aircraft (`aircraft.FLOPSInput = atr_flops_input()`) and use
-    `weight_class='II'` to size the airframe with the FLOPS component-mass model instead of
-    the Class-I regression.
+
+def atr_flops_input():
+    """FLOPS (Class-II structural) input for the ATR 42-600 (imperial units).
+
+    Set this on the aircraft (``aircraft.FLOPSInput = atr_flops_input()``) and use
+    ``weight_class='II'`` to size the airframe with the FLOPS component-mass model instead of
+    the Class-I regression. The span, wing area, design range, design Mach number and
+    gross weight come from the sizing, not from this dictionary.
+
+    Provenance of each value (sources in ``trunk/validation/flops_class_ii_reference.md``):
+    [FS] ATR 42-600 factsheet (2020); [TC] EASA TCDS EASA.A.084 Issue 14; [TE] EASA TCDS
+    IM.E.041 (PW100) Issue 07; [CS] 14 CFR 25.337(b)/25.303; [LED] Lednicer airfoil guide;
+    [HAW] HAW Hamburg aircraft database; [DEF] FLOPS/Aviary default; [LSA] Aviary
+    large_single_aisle_1 benchmark value (no ATR value found); [A] assumption.
+    All mass scalers are 1.0: the model is not calibrated to the reference aircraft.
     """
     return {
-        'WING': {'N_ENGINES': 2., 'STRUT_BRACING_FACTOR': 0., 'SPAN': Units.mToft(24.5),
-                 'TAPER_RATIO': 0.54, 'THICKNESS_TO_CHORD': 0.15,
-                 'AEROELASTIC_TAILORING_FACTOR': 0., 'SWEEP': 0, 'COMPOSITE_FRACTION': 0.2,
-                 'ULTIMATE_LOAD_FACTOR': 3.75, 'VAR_SWEEP_MASS_PENALTY': 0.,
-                 'LOAD_FRACTION': 1.0, 'SCALER': 1.23},
-        'VERTICAL_TAIL': {'AREA': Units.m2toft2(12.7), 'TAPER_RATIO': 0.33,
+        'WING': {'STRUT_BRACING_FACTOR': 0.,                       # [DEF] cantilever
+                 'TAPER_RATIO': 0.54,                              # [A] no source found
+                 'THICKNESS_TO_CHORD': 0.155,                      # [LED] mean of 18 % root, 13 % tip
+                 'AEROELASTIC_TAILORING_FACTOR': 0.,               # [DEF]
+                 'SWEEP': 0.,                                      # [A] straight wing
+                 'COMPOSITE_FRACTION': 0.,                         # [DEF]
+                 'ULTIMATE_LOAD_FACTOR': 3.86,                     # [CS] 1.5 x 2.57 at 41,005 lb
+                 'VAR_SWEEP_MASS_PENALTY': 0.,                     # [DEF]
+                 'LOAD_FRACTION': 1.0,                             # [DEF]
+                 'SCALER': 1.0},
+        'VERTICAL_TAIL': {'AREA': Units.m2toft2(12.48),            # [HAW]
+                          'TAPER_RATIO': 0.33,                     # [LSA]
                           'N_VERTICAL_TAILS': 1., 'SCALER': 1.0},
-        'HORIZONTAL_TAIL': {'AREA': Units.m2toft2(11.5), 'TAPER_RATIO': 0.54, 'SCALER': 1.2},
-        'FUSELAGE': {'LENGTH': Units.mToft(22.7), 'MAX_HEIGHT': Units.mToft(2.7),
-                     'MAX_WIDTH': Units.mToft(2.7), 'NUM_FUSELAGES': 1.,
-                     'TOTAL_NUM_FUSELAGE_ENGINES': 0., 'MILITARY_CARGO_FLOOR': False,
-                     'SCALER': 1.05},
-        'LANDING_GEAR': {'MAIN_GEAR_LENGTH': 102., 'NOSE_GEAR_LENGTH': 67,
-                         'MAIN_SCALER': 1.1, 'NOSE_SCALER': 1.0},
-        'NACELLE': {'AVG_DIAM': Units.mToft(0.8), 'AVG_LENGTH': Units.mToft(2.1), 'SCALER': 1.0},
-        'SYSTEM_EQUIPMENT': {'PLANFORM_AREA': Units.mToft(22.7) * Units.mToft(2.7),
-                             'N_PAX': 48, 'N_CREW': 3, 'N_FIRST_CLASS': 6,
-                             'N_BUSINESS_CLASS': 0., 'N_TOURIST_CLASS': 42,
-                             'PASSENGER_COMPARTMENT_LENGTH': Units.mToft(22.7) * 0.7,
-                             'SYSTEM_PRESSURE': 3000, 'CONTROL_SURFACE_AREA_RATIO': 0.1,
-                             'ANTIICING_SCALER': 1., 'APU_SCALER': 1.1, 'AVIONICS_SCALER': 1.2,
-                             'AC_SCALER': 1.0, 'ELECTRICAL_SCALER': 1.25,
-                             'FURNISHING_SCALER': 1.1, 'HYDRAULICS_SCALER': 1.0,
-                             'SURFACE_CONTROLS_SCALER': 1.0},
-        'PAINT': {'MASS_PER_AREA': 0.037},
-        'ENGINE': {'N_ENGINES': 2., 'MAX_SLS_THRUST': 26000, 'MAX_SLS_POWER': 2500,
-                   'N_WING_ENGINES': 2, 'N_FUSELAGE_ENGINES': 0},
-        'PROPELLER': {'N_BLADES': 6., 'DIAMETER': 13, 'SCALER': 1.},
+        'HORIZONTAL_TAIL': {'AREA': Units.m2toft2(11.73),          # [HAW]
+                            'TAPER_RATIO': 0.54,                   # [A] no source found
+                            'SCALER': 1.0},
+        'FUSELAGE': {'LENGTH': Units.mToft(22.67),                 # [FS] overall length
+                     'MAX_HEIGHT': Units.mToft(2.63),              # [HAW]
+                     'MAX_WIDTH': Units.mToft(2.87),               # [HAW]
+                     'NUM_FUSELAGES': 1., 'TOTAL_NUM_FUSELAGE_ENGINES': 0.,
+                     'MILITARY_CARGO_FLOOR': False, 'SCALER': 1.0},
+        'LANDING_GEAR': {'MAIN_GEAR_LENGTH': 102.,                 # [LSA] oleo length [in]
+                         'NOSE_GEAR_LENGTH': 67.,                  # [LSA] oleo length [in]
+                         'MAIN_SCALER': 1.0, 'NOSE_SCALER': 1.0},
+        'NACELLE': {'AVG_DIAM': Units.mToft(0.8),                  # [A] PW127M width 0.72 m [TE]
+                    'AVG_LENGTH': Units.mToft(2.13),               # [TE] PW127M length
+                    'SCALER': 1.0},
+        'SYSTEM_EQUIPMENT': {'PLANFORM_AREA': Units.mToft(22.67) * Units.mToft(2.87),
+                             'N_PAX': 48,                          # [FS] single class
+                             'N_CREW': 2,                          # [TC] flight crew
+                             'N_FIRST_CLASS': 0, 'N_BUSINESS_CLASS': 0,
+                             'N_TOURIST_CLASS': 48,                # [FS]
+                             'PASSENGER_COMPARTMENT_LENGTH': Units.mToft(22.67) * 0.7,  # [A]
+                             'SYSTEM_PRESSURE': 3000,              # [LSA] psi
+                             'CONTROL_SURFACE_AREA_RATIO': 0.1,    # [LSA]
+                             'ANTIICING_SCALER': 1.0, 'APU_SCALER': 1.0,
+                             'AVIONICS_SCALER': 1.0, 'AC_SCALER': 1.0,
+                             'ELECTRICAL_SCALER': 1.0, 'FURNISHING_SCALER': 1.0,
+                             'HYDRAULICS_SCALER': 1.0, 'SURFACE_CONTROLS_SCALER': 1.0},
+        'PAINT': {'MASS_PER_AREA': 0.037},                         # [LSA] lb/ft^2
+        'ENGINE': {'N_ENGINES': 2., 'N_WING_ENGINES': 2, 'N_FUSELAGE_ENGINES': 0,   # [TC]
+                   'MAX_SLS_THRUST': 26000. / 2 / 4.4482216152605,  # [A] lbf per engine
+                   'MAX_SLS_POWER': 2400},                         # [FS] shp per engine (max)
+        'PROPELLER': {'N_BLADES': 6., 'DIAMETER': 12.9,            # [FS] ft
+                      'SCALER': 1.0},
+        'FUEL': {'MAX_CAPACITY': Units.kgTolb(4500.),              # [FS] max fuel load
+                 'NUM_TANKS': 7,                                   # [DEF]
+                 'DENSITY': 6.7},                                  # [DEF] Jet A, lb/US gal
+    }
+
+
+def a320_flops_input():
+    """FLOPS (Class-II structural) input for the Airbus A320-214 (CFM56-5B4), imperial units.
+
+    Use with ``turbofan_config()`` and ``weight_class='II'``. The engines are the powertrain
+    mass (``Engine Thrust to Weight``); the nacelle, starter, controls and oil follow the
+    sized SLS thrust. The span, wing area, design range, design Mach number and gross weight
+    come from the sizing.
+
+    Provenance of each value (sources in ``trunk/validation/flops_class_ii_reference.md``):
+    [AC] Airbus A320 ACAP Rev. 46 (Jul 2026); [TC] EASA TCDS EASA.A.064 Issue 12; [AB] Airbus
+    A320ceo product page; [JSR] Jenkinson, Simpson & Rhodes, Civil Jet Aircraft Design, Data A;
+    [LED] Lednicer airfoil guide; [CS] 14 CFR 25.337(b)/25.303; [DEF] FLOPS/Aviary default;
+    [LSA] Aviary large_single_aisle_1 benchmark value. All mass scalers are 1.0.
+    """
+    length, width, height = 37.57, 3.95, 4.14                      # [AC] m
+    return {
+        'WING': {'STRUT_BRACING_FACTOR': 0.,                       # [DEF]
+                 'TAPER_RATIO': 0.240,                             # [JSR]
+                 'THICKNESS_TO_CHORD': 0.13,                       # [LED] mean of 15 % root, 11 % tip
+                 'AEROELASTIC_TAILORING_FACTOR': 0.,               # [DEF]
+                 'SWEEP': 25.0,                                    # [JSR] quarter chord, deg
+                 'COMPOSITE_FRACTION': 0.,                         # [DEF]
+                 'ULTIMATE_LOAD_FACTOR': 3.75,                     # [CS] 1.5 x 2.5
+                 'VAR_SWEEP_MASS_PENALTY': 0.,                     # [DEF]
+                 'LOAD_FRACTION': 1.0,                             # [DEF]
+                 'SCALER': 1.0},
+        'VERTICAL_TAIL': {'AREA': Units.m2toft2(21.50),            # [JSR]
+                          'TAPER_RATIO': 0.303,                    # [JSR]
+                          'N_VERTICAL_TAILS': 1., 'SCALER': 1.0},
+        'HORIZONTAL_TAIL': {'AREA': Units.m2toft2(31.00),          # [JSR]
+                            'TAPER_RATIO': 0.256,                  # [JSR]
+                            'SCALER': 1.0},
+        'FUSELAGE': {'LENGTH': Units.mToft(length),                # [AC] overall length
+                     'MAX_HEIGHT': Units.mToft(height),            # [AC], [JSR]
+                     'MAX_WIDTH': Units.mToft(width),              # [AC]
+                     'NUM_FUSELAGES': 1., 'TOTAL_NUM_FUSELAGE_ENGINES': 0.,
+                     'MILITARY_CARGO_FLOOR': False, 'SCALER': 1.0},
+        'LANDING_GEAR': {'MAIN_GEAR_LENGTH': 2868.70e-3 / INCH,   # [AC] 2-9-0, extended [in]
+                         'NOSE_GEAR_LENGTH': 1957.03e-3 / INCH,   # [AC] 2-9-0, extended [in]
+                         'MAIN_SCALER': 1.0, 'NOSE_SCALER': 1.0},
+        'NACELLE': {'AVG_DIAM': Units.mToft(2.37),                 # [JSR] max width
+                    'AVG_LENGTH': Units.mToft(4.44),               # [JSR]
+                    'SCALER': 1.0},
+        'SYSTEM_EQUIPMENT': {'PLANFORM_AREA': Units.mToft(length) * Units.mToft(width),
+                             'N_PAX': 150,                         # [AC] two-class
+                             'N_CREW': 2,                          # [TC] flight crew
+                             'N_FIRST_CLASS': 12, 'N_BUSINESS_CLASS': 0,
+                             'N_TOURIST_CLASS': 138,               # [AC] 2-4-1
+                             'PASSENGER_COMPARTMENT_LENGTH': Units.mToft(27.51),  # [AB] cabin
+                             'SYSTEM_PRESSURE': 3000,              # [LSA] psi
+                             'CONTROL_SURFACE_AREA_RATIO': 0.1,    # [LSA]
+                             'ANTIICING_SCALER': 1.0, 'APU_SCALER': 1.0,
+                             'AVIONICS_SCALER': 1.0, 'AC_SCALER': 1.0,
+                             'ELECTRICAL_SCALER': 1.0, 'FURNISHING_SCALER': 1.0,
+                             'HYDRAULICS_SCALER': 1.0, 'SURFACE_CONTROLS_SCALER': 1.0},
+        'PAINT': {'MASS_PER_AREA': 0.037},                         # [LSA] lb/ft^2
+        'ENGINE': {'N_ENGINES': 2., 'N_WING_ENGINES': 2, 'N_FUSELAGE_ENGINES': 0,   # [TC]
+                   'THRUST_REVERSERS': True},                      # [AC] 2-12-0, fan reverser
+        'MAX_MACH': 0.82,                                          # [TC] MMO
+        'FUEL': {'MAX_CAPACITY': Units.kgTolb(24209 * 0.785),      # [AC] 2-1-1, usable fuel
+                 'NUM_TANKS': 3,                                   # [AC] two wing + centre
+                 'DENSITY': 0.785 * KG_PER_LITRE_TO_LB_PER_USGAL},  # [AC] lb/US gal
+        'PROPELLER': {'N_BLADES': 0., 'DIAMETER': 0., 'SCALER': 0.},   # no propeller
     }
 
 

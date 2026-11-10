@@ -101,11 +101,9 @@ answer to a different question.)
    therefore cruises at FL330 with the ceiling requirement at FL350, both inside the box. A
    genuine FL390 ceiling constraint would need the deck extended first.
 
-4. **FLOPS Class-II is unavailable for turbofans** (its component set has no engine or pylon mass
-   and always adds a propeller), so `AircraftConfig` rejects `weight_class='II'` for this
-   configuration. The ATR72 validation in `paper/` could calibrate FLOPS component scalers against
-   a published mass breakdown; that route does not exist here. This validation is Class-I only,
-   and no component-level mass breakdown is claimed.
+4. **This validation is Class-I only.** A Class-II (FLOPS) component build-up of the same
+   aircraft, with the certified CFM56-5B4 dry weight and sourced geometry, is in
+   `flops_class_ii_reference.py` (inputs: `flops_class_ii_reference.md`).
 
 5. **Emission indices are referenced to the CFM56-7B27E**, not the -5B4, because that is the
    engine the Cantera CRN was calibrated against and the ICAO values transcribed in-repo. The

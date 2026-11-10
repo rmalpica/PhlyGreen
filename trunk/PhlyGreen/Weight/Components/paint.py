@@ -1,5 +1,6 @@
 import numpy as np
 import PhlyGreen.Utilities.Units as Units
+from .sizing_inputs import wing_area_ft2
 
 class Paint:
 
@@ -12,7 +13,7 @@ class Paint:
         # These relations are built upon the data from the Aviary tutorials
         Surface_HTail = self.input['HORIZONTAL_TAIL']['AREA']
         Surface_VTail = self.input['VERTICAL_TAIL']['AREA']
-        Surface_Wing = Units.m2toft2(self.input['GROSS_WEIGHT']/self.aircraft.DesignWTOoS)
+        Surface_Wing = wing_area_ft2(self.aircraft, self.input)
         fuse_width = self.input['FUSELAGE']['MAX_WIDTH']
         fuse_height = self.input['FUSELAGE']['MAX_HEIGHT']
         fuse_length = self.input['FUSELAGE']['LENGTH']

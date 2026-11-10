@@ -1,12 +1,15 @@
+"""FLOPS transport wing mass (Aviary ``wing_simple.py``, ``wing_common.py``), imperial units."""
+
 import numpy as np
 import PhlyGreen.Utilities.Units as Units
+from .sizing_inputs import wing_area_ft2, wing_span_ft
 
 class Wing:
 
     def __init__(self, aircraft, input):
         self.aircraft = aircraft
         self.input = input
-        self.A1 = 8.80 
+        self.A1 = 8.80
         self.A2 = 6.25
         self.A3 = 0.68
         self.A4 = 0.34
@@ -16,15 +19,15 @@ class Wing:
 
 
     def BendingMaterialFactor(self):
-            
-        fstrt = self.input['WING']['STRUT_BRACING_FACTOR'] # non so che è
-        span = self.input['WING']['SPAN'] # ce l'abbiamo
-        tr = self.input['WING']['TAPER_RATIO'] # ce lo possiamo avere
-        area = Units.m2toft2(self.input['GROSS_WEIGHT']/self.aircraft.DesignWTOoS) # ce l'abbiamo
-        tca = self.input['WING']['THICKNESS_TO_CHORD'] # potremmo avercelo
-        faert = self.input['WING']['AEROELASTIC_TAILORING_FACTOR'] # chi sei?
-        ar = self.aircraft.aerodynamics.AR # ce l'abbiamo
-        sweep = self.input['WING']['SWEEP'] # ce l'abbiamo
+
+        fstrt = self.input['WING']['STRUT_BRACING_FACTOR']
+        span = wing_span_ft(self.aircraft, self.input)          # sqrt(AR * S) [ft]
+        tr = self.input['WING']['TAPER_RATIO']
+        area = wing_area_ft2(self.aircraft, self.input)         # [ft^2]
+        tca = self.input['WING']['THICKNESS_TO_CHORD']
+        faert = self.input['WING']['AEROELASTIC_TAILORING_FACTOR']
+        ar = self.aircraft.aerodynamics.AR
+        sweep = self.input['WING']['SWEEP']                     # quarter-chord [deg]
 
         C4 = 1.0 - 0.5 * faert
         C6 = 0.5 * faert - 0.16 * fstrt
@@ -49,10 +52,10 @@ class Wing:
 
     def calcW2(self):
 
-        fcomp = self.input['WING']['COMPOSITE_FRACTION'] # forse zero??
-        area = Units.m2toft2(self.input['GROSS_WEIGHT']/self.aircraft.DesignWTOoS) # ce l'abbiamo
+        fcomp = self.input['WING']['COMPOSITE_FRACTION']
+        area = wing_area_ft2(self.aircraft, self.input)         # [ft^2]
         sflap = area * self.input['SYSTEM_EQUIPMENT']['CONTROL_SURFACE_AREA_RATIO']
-        dg = Units.kgTolb(self.input['GROSS_WEIGHT']) # da passare in input dentro al loop
+        dg = Units.kgTolb(self.input['GROSS_WEIGHT'])            # [lb]
 
         W2 = self.A3 * (1.0 - 0.17*fcomp) * (sflap**self.A4) * (dg**self.A5)
 
@@ -60,9 +63,8 @@ class Wing:
 
     def calcW3(self):
 
-        fcomp = self.input['WING']['COMPOSITE_FRACTION'] # forse zero??
-        sw = Units.m2toft2(self.input['GROSS_WEIGHT']/self.aircraft.DesignWTOoS) # ce l'abbiamo
-        
+        fcomp = self.input['WING']['COMPOSITE_FRACTION']
+        sw = wing_area_ft2(self.aircraft, self.input)           # [ft^2]
 
         W3 = self.A6 * (1.0 - 0.3*fcomp) * (sw**self.A7)
 
@@ -71,18 +73,18 @@ class Wing:
 
     def calcW1(self):
 
-        num_wing_eng = self.input['ENGINE']['N_ENGINES'] # ce l'abbiamo
-            
-        span = self.input['WING']['SPAN'] # ce l'abbiamo
-        faert = self.input['WING']['AEROELASTIC_TAILORING_FACTOR'] # chi sei?
-        sweep = self.input['WING']['SWEEP'] # ce l'abbiamo
-        ulf = self.input['WING']['ULTIMATE_LOAD_FACTOR'] # bho ????
-        fcomp = self.input['WING']['COMPOSITE_FRACTION'] # forse zero??
-        varswp = self.input['WING']['VAR_SWEEP_MASS_PENALTY'] # ehhhhhhh
+        num_wing_eng = self.input['ENGINE']['N_WING_ENGINES']   # inertia relief of wing engines
+        span = wing_span_ft(self.aircraft, self.input)          # [ft]
+        faert = self.input['WING']['AEROELASTIC_TAILORING_FACTOR']
+        sweep = self.input['WING']['SWEEP']
+        ulf = self.input['WING']['ULTIMATE_LOAD_FACTOR']
+        fcomp = self.input['WING']['COMPOSITE_FRACTION']
+        varswp = self.input['WING']['VAR_SWEEP_MASS_PENALTY']
         ptcl = self.input['WING']['LOAD_FRACTION']
-        dg = Units.kgTolb(self.input['GROSS_WEIGHT']) # da passare in input dentro al loop
+        dg = Units.kgTolb(self.input['GROSS_WEIGHT'])            # [lb]
 
-        cayf = 0.5 
+        # Multiple-fuselage factor: 1.0 for one fuselage, 0.5 for more (Aviary wing_common).
+        cayf = 0.5 if self.input['FUSELAGE']['NUM_FUSELAGES'] > 1 else 1.0
         vfact = 1.0 + varswp * (0.96 / np.cos(np.pi / 180. * sweep) - 1.0)
         caye = 1.0 - 0.03 * num_wing_eng
 

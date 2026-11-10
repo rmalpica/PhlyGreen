@@ -12,4 +12,5 @@ from .landing_gear import LandingGear
 from .system_equipment import SystemEquipment
 from .nacelle import Nacelle
 from .paint import Paint
-from .propeller import Propeller 
+from .propeller import Propeller
+from .operating_items import OperatingItems

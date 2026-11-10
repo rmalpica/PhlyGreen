@@ -63,13 +63,6 @@ class AircraftConfig:
                 f"hybrid_type must be 'Parallel' or 'Serial' for Hybrid, got {self.hybrid_type!r}")
         if self.weight_class not in ("I", "II"):
             raise ConfigError(f"weight_class must be 'I' or 'II', got {self.weight_class!r}")
-        if self.configuration == "Turbofan" and self.weight_class == "II":
-            # FLOPS here has no engine or pylon mass and applies the propeller component
-            # unconditionally (Weight/FLOPS_model.py) -- it cannot represent a turbofan.
-            raise ConfigError(
-                "weight_class 'II' (FLOPS) does not support the Turbofan configuration: the "
-                "component set has no engine or pylon mass and always adds a propeller. "
-                "Use weight_class 'I'.")
 
     def read_input_args(self):
         """Return ``(positional, kwargs)`` matching ``Aircraft.ReadInput``'s signature."""

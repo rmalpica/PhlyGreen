@@ -6,6 +6,7 @@ from .Components import SystemEquipment
 from .Components import Nacelle
 from .Components import Paint
 from .Components import Propeller
+from .Components import OperatingItems
 
 class FLOPS_model:
 
@@ -23,6 +24,7 @@ class FLOPS_model:
         self.Nacelle = Nacelle(self.aircraft, self.InputData)
         self.Paint = Paint(self.aircraft, self.InputData)
         self.Propeller = Propeller(self.aircraft, self.InputData)
+        self.OperatingItems = OperatingItems(self.aircraft, self.InputData)
 
         return None
     
@@ -37,6 +39,11 @@ class FLOPS_model:
         self.SystemEquipment.SystemEquipmentMass()
         self.Nacelle.NacelleMass()
         self.Paint.PaintMass()
-        self.Propeller.PropellerMass()
+        # A turbofan has no propeller; its engine mass is the powertrain mass.
+        if self.aircraft.Configuration == 'Turbofan':
+            self.Propeller.propellermass = 0.0
+        else:
+            self.Propeller.PropellerMass()
+        self.OperatingItems.OperatingItemsMass()
 
         return None

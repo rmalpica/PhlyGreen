@@ -15,7 +15,6 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "examples"))
 
 import PhlyGreen as pg
-from PhlyGreen.config import ConfigError
 from common import turbofan_config
 
 _MAP = os.path.join(os.path.dirname(pg.__file__), "Systems", "Powertrain", "data",
@@ -27,14 +26,6 @@ LHV = 43.0e6
 
 
 # --- configuration plumbing (no engine map needed) --------------------------
-
-def test_flops_is_rejected_for_a_turbofan():
-    """FLOPS has no engine or pylon mass and always adds a propeller -- refuse, don't guess."""
-    cfg = turbofan_config()
-    with pytest.raises(ConfigError, match="does not support the Turbofan"):
-        cfg.weight_class = "II"
-        cfg.__post_init__()
-
 
 def test_turbofan_is_an_accepted_configuration():
     cfg = turbofan_config()
