@@ -184,7 +184,7 @@ it names a variable that is not in the list.
 
 \begin{table}[htbp]
 \centering\small
-\caption{Primitives of \texttt{PowertrainGraph} (\texttt{graph.py}, lines 38--64).}\label{tab:primitives}
+\caption{Primitives of \texttt{PowertrainGraph} (\texttt{graph.py}).}\label{tab:primitives}
 \begin{tabularx}{\textwidth}{@{}llX@{}}
 \toprule
 Method & Equation & Meaning \\
@@ -208,7 +208,7 @@ variables the builder passes to it (Section~\ref{sec:phi}). For $\varphi = 1$ th
 reads $P_a = 0$, so an all-battery operating point is admissible.
 
 \subsection{Assembly and solution}
-\code{PowertrainGraph.solve} (line 68) builds the matrix $A$ and the right-hand side $b$ row
+\code{PowertrainGraph.solve} builds the matrix $A$ and the right-hand side $b$ row
 by row, in the order the equations were added, and calls \code{numpy.linalg.solve}. It
 raises a \code{ValueError} if the number of equations differs from the number of variables.
 If the system is square but singular (for example, a variable that no equation constrains),
@@ -247,6 +247,23 @@ power. The fuel-cell graph of Section~\ref{sec:fcb-graph} follows the same conve
 calls \code{split("Pfc", "Pbat", phi)} on the two electrical outputs, which reach the
 propeller through the same bus, motor, gearbox and propeller. The same value of $\varphi$
 therefore gives different splits in \code{'Hybrid'} and in \code{'FuelCellBattery'}.
+Section~\ref{sec:fc-chains} gives the reasons for the propulsive-power definition.
+
+The two definitions convert into each other. Let $\eta_{fc}$ be the efficiency from the
+hydrogen chemical power to the fuel-cell power delivered to the bus (stack, air system and
+auxiliaries), and $\eta_d = \eta_{pm}\eta_{em}\eta_{gb}\eta_{pp}$ the drive efficiency. The
+fuel cell then draws $P_{f,\mathrm{H_2}} = (1-\varphi)P_p/(\eta_{fc}\eta_d)$ and the battery
+delivers $P_{bat} = \varphi P_p/\eta_d$ at its terminals, so the supplied-power share of the
+same split is
+\begin{equation}
+  \varphi_s = \frac{P_{bat}}{P_{f,\mathrm{H_2}} + P_{bat}}
+            = \frac{\varphi}{\varphi + (1-\varphi)/\eta_{fc}} ,\qquad
+  \varphi = \frac{\varphi_s}{\varphi_s + (1-\varphi_s)\,\eta_{fc}} .
+  \label{eq:phi-convert}
+\end{equation}
+At $\eta_{fc} = 0.5$, a propulsive share $\varphi = 0.15$ is a supplied share
+$\varphi_s = 0.081$. A value of $\varphi$ taken from a \code{'Hybrid'} study must be
+converted with Eq.~\eqref{eq:phi-convert} before it is used in \code{'FuelCellBattery'}.
 
 %% ======================================================================================
 \section{Implemented architectures}\label{sec:architectures}
@@ -262,7 +279,7 @@ efficiency. A $\Sigma$ node is a combiner. A dashed line is a split, and the gre
 box is the sink.
 
 \subsection{Traditional}\label{sec:traditional}
-\code{traditional_graph(eta_gt, eta_gb, eta_pp)} (line 95) is the chain fuel, gas turbine,
+\code{traditional_graph(eta_gt, eta_gb, eta_pp)} is the chain fuel, gas turbine,
 gearbox, propeller (Figure~\ref{fig:g-trad}). Its variables are
 $[P_f, P_{gt}, P_{gb}, P_p]$. Three converters and one sink give
 \begin{equation}
@@ -310,7 +327,7 @@ reference turbofan design).}\label{fig:g-tf}
 \end{figure}
 
 \subsection{Parallel hybrid}\label{sec:parallel}
-\code{parallel_hybrid_graph(eta_gt, eta_gb, eta_pm, eta_em, eta_pp, phi)} (line 105) has
+\code{parallel_hybrid_graph(eta_gt, eta_gb, eta_pm, eta_em, eta_pp, phi)} has
 the variables $[P_f, P_{gt}, P_{gb}, P_{s1}, P_{e1}, P_{bat}, P_{p1}]$
 (Figure~\ref{fig:g-par}). The turbine shaft and the motor shaft enter one gearbox, which is a
 combiner:
@@ -340,7 +357,7 @@ $\varphi = 0$ the graph reduces to the traditional chain.
 
 \subsection{Serial hybrid}\label{sec:serial}
 \code{serial_hybrid_graph(eta_gt, eta_em1, eta_pm, eta_em2, eta_gb, eta_pp, phi)}
-(line 118) has the variables
+has the variables
 $[P_f, P_{gt}, P_{gb}, P_{s1}, P_{e1}, P_{bat}, P_{gen}, P_{p1}]$ (Figure~\ref{fig:g-ser}).
 The turbine drives a generator; the generator output and the battery feed an electrical bus,
 which is a combiner with the PMAD efficiency; a motor, a gearbox and the propeller follow:
@@ -392,7 +409,7 @@ $P_{bat}$ is negative when the turbine surplus recharges the battery. The Batter
 describes this strategy and its sizing.
 
 \subsection{Fuel cell and battery graph}\label{sec:fcb-graph}
-\code{fuelcell_battery_graph(eta_fc, eta_pm, eta_em, eta_gb, eta_pp, phi)} (line 132) has
+\code{fuelcell_battery_graph(eta_fc, eta_pm, eta_em, eta_gb, eta_pp, phi)} has
 the variables $[P_{f,\mathrm{H_2}}, P_{fc}, P_{bat}, P_{e1}, P_{em}, P_{gb}, P_{p1}]$
 (Figure~\ref{fig:g-fcb}). The fuel cell converts the hydrogen power with $\eta_{fc}$; the
 fuel cell and the battery feed a bus, then a motor, a gearbox and the propeller. The split
@@ -406,8 +423,16 @@ entry~2, not entry~5. The solution is
 \end{equation}
 
 \code{Powertrain.PowerRatioFuelCellBattery} solves this graph with the efficiencies of
-\code{Powertrain.eta}. No mission method calls it. The graph serves as a demonstration of a
-new composition and is exercised by the tests. The fuel-cell efficiency is the constant
+\code{Powertrain.eta}. No mission method calls it; Section~\ref{sec:fc-chains} explains why
+the missions use their own chains. The graph is still usable. Equation~\eqref{eq:fcb} is the
+chain of the mission (Eqs.~\eqref{eq:fc-el} and~\eqref{eq:fcb-bat}) when $\eta_{fc}$ is the
+efficiency from hydrogen to the bus and the auxiliary load is folded into it. The graph
+therefore gives the hydrogen and battery powers of a split without the stack model, for a
+quick estimate, a check of the mission chain, or a teaching example with an assumed
+$\eta_{fc}$. It is also the starting point of a new fuel-cell architecture
+(Section~\ref{sec:new}). Replacing the split by \code{split("PfH2", "Pbat", phi)} gives the
+supplied-power definition of the gas-turbine hybrids, Eq.~\eqref{eq:phi}; the rest of the
+graph is unchanged. The fuel-cell efficiency is the constant
 \texttt{Eta Fuel Cell} (\code{EnergyConfig.eta_fuel_cell}) or an injected \code{fc_model};
 it is not the physics model of the fuel-cell manual. It has no default: without either,
 \code{Powertrain.eta('fuel_cell')} raises a \code{ValueError}. \code{Powertrain.SetInput}
@@ -428,6 +453,7 @@ graph (Figure~\ref{fig:fc-chain}). For the fuel-cell share $P_{fc,p}$ of the pro
 power, \code{FuelCell.ComputePRatio} computes the electrical demand
 \begin{equation}
   P_{el} = \frac{P_{fc,p}}{\eta_{gb}\,\eta_{em}\,\eta_{pm}\,\eta_{pp}} + P_{aux,TMS},
+  \label{eq:fc-el}
 \end{equation}
 then solves the stack current for that net power, including the air-system and fixed
 auxiliary loads. The hydrogen chemical power is $\dot m_{\mathrm{H_2}}\,HHV$. The
@@ -451,6 +477,27 @@ In \code{'Hydrogen'}, $P_{fc,p} = P_p$. In \code{'FuelCellBattery'}, $P_{fc,p} =
 (\code{Mission._fc_battery_terminal_power}). The two branches are computed separately and
 share the motor and the PMAD, which are sized on their coincident peak
 (Section~\ref{sec:mass-fc}).
+
+The missions use these chains, not the graph of Section~\ref{sec:fcb-graph}, for three
+reasons.
+\begin{enumerate}
+  \item The stack is not a scalar efficiency. \code{FuelCell.ComputePRatio} solves the stack
+  current for the net electrical power, including the air-system power, the fixed
+  auxiliaries and the TMS pump $P_{aux,TMS}$. These loads add to the demand instead of
+  scaling it, so they are not a converter of the graph, whose powers are all proportional
+  to $P_p$.
+  \item The mission needs the stack state, not only the hydrogen power. Each call stores the
+  operating current and voltage, the heat to the TMS (with the product-water vapour
+  fraction), the power-limited flag and the effect of the state of health. The TMS sizing,
+  the off-design checks and the degradation studies read them.
+  \item With $\varphi$ a share of the propulsive power, the fuel-cell load $(1-\varphi)P_p$
+  is known before the stack is solved, so every mission point is explicit. With the
+  supplied-power definition, Eq.~\eqref{eq:phi}, the hydrogen power depends on the stack
+  efficiency at its own load, and the split at each point would need an iteration through
+  the polarization curve. The propulsive share also maps directly onto the stack rating: on a
+  field where the take-off sizes the fuel cell, the battery that brings the take-off load
+  down to the climb load is $\varphi^* = 1 - P_{climb}/P_{TO}$ (example 23).
+\end{enumerate}
 
 \begin{figure}[htbp]
 \centering
@@ -502,7 +549,7 @@ Method & Vector and consumers \\
 %% ======================================================================================
 
 \subsection{Inputs}
-\code{Powertrain.SetInput} (line 315) reads \code{aircraft.EnergyInput}. The keys it needs
+\code{Powertrain.SetInput} reads \code{aircraft.EnergyInput}. The keys it needs
 depend on the configuration:
 \begin{itemize}
 \item every configuration except \code{'Turbofan'} needs \texttt{Eta Gearbox} and
@@ -527,7 +574,7 @@ The remaining inputs select the Class-II models (Section~\ref{sec:class2}).
 Table~\ref{tab:inputs} lists all of them.
 
 \subsection{Component efficiencies}
-\code{_build_efficiencies} (line 433) stores one \code{EfficiencyModel} per component in the
+\code{_build_efficiencies} stores one \code{EfficiencyModel} per component in the
 dictionary \code{Powertrain.efficiency}, with the keys \code{'gas_turbine'},
 \code{'gearbox'}, \code{'pmad'}, \code{'electric_motor'}, \code{'propeller'} and
 \code{'generator'}. The \code{'electric_motor'} entry is \texttt{Eta Electric Motor 2} in a
@@ -543,7 +590,7 @@ turbine takes \texttt{GT Design Power} as a fixed nominal when it is given. With
 nominal follows the sized \code{engineRating} in the weight loop
 (\code{Weight._mission_and_powertrain}).
 
-\code{Powertrain.eta(component, alt, vel, pwr, rpm)} (line 710) builds an
+\code{Powertrain.eta(component, alt, vel, pwr, rpm)} builds an
 \code{OperatingPoint} and evaluates the model of that component. Two attributes,
 \code{em_model} and \code{fc_model}, override the electric-motor and fuel-cell entries when
 they are set; both default to \code{None}.
@@ -551,12 +598,12 @@ they are set; both default to \code{None}.
 \subsection{Power-ratio methods}\label{sec:methods}
 Three methods assemble a graph at the current operating point and solve it:
 \begin{itemize}
-\item \code{Traditional(alt, vel, pwr)} (line 908) returns the solution of
+\item \code{Traditional(alt, vel, pwr)} returns the solution of
   \code{traditional_graph};
-\item \code{Hybrid(phi, alt, vel, pwr)} (line 930) stores \code{self.phi} and returns
+\item \code{Hybrid(phi, alt, vel, pwr)} stores \code{self.phi} and returns
   \code{numpy.abs} of \code{parallel_hybrid_graph} or \code{serial_hybrid_graph}, according
   to \code{aircraft.HybridType}; it raises for any other value;
-\item \code{PowerRatioFuelCellBattery(phi, alt, vel, pwr)} (line 980) returns \code{numpy.abs}
+\item \code{PowerRatioFuelCellBattery(phi, alt, vel, pwr)} returns \code{numpy.abs}
   of \code{fuelcell_battery_graph}.
 \end{itemize}
 A new graph is built at every call, and at every pass of the fixed point described below. Its
@@ -600,7 +647,7 @@ Component & Power passed to the model \\
 \end{table}
 
 \subsection{Legacy solvers and equivalence}\label{sec:legacy}
-\code{_traditional_legacy} (line 1009) and \code{_hybrid_legacy} (line 1062) keep the
+\code{_traditional_legacy} and \code{_hybrid_legacy} keep the
 hand-written $4\times4$, $7\times7$ and $8\times8$ matrices from which the builders were
 derived. They are kept only as references for the equivalence tests and are not called by
 the model. \code{tests/regression/test_powertrain_equivalence.py} sweeps three altitudes,
@@ -694,14 +741,14 @@ compares it with \texttt{Turbofan Design Thrust}, with the same two thresholds. 
 \section{Powertrain rating and mass}\label{sec:mass}
 %% ======================================================================================
 
-\code{Powertrain.WeightPowertrain(WTO)} (line 1191) returns the powertrain mass
+\code{Powertrain.WeightPowertrain(WTO)} returns the powertrain mass
 \code{Weight.WPT} of the three configurations that use a gas turbine or a turbofan. The
 fuel-cell configurations size their electric drive inside the fuel-cell model
 (Section~\ref{sec:mass-fc}). All component masses are a rated power divided by a constant
 specific power.
 
 \subsection{Power lapse and the sizing denominator}\label{sec:lapse}
-\code{PowerLapse(altitude, DISA)} (line 833) is the full-throttle power lapse. With a
+\code{PowerLapse(altitude, DISA)} is the full-throttle power lapse. With a
 constant gas-turbine efficiency it is
 \begin{equation}
   \lambda(h) = \left(\frac{\rho(h)}{\rho(0)}\right)^{0.75},
@@ -711,7 +758,7 @@ gas-turbine map (\code{gas_turbine_has_map_lapse}) it is the lapse of the map it
 pressure ratio $\delta(h)$ of \code{gas_turbine_surrogate._isa_pressure_ratio}, without Mach or
 \code{DISA} dependence, so the engine is rated with the full power it has on the map. The
 constraint diagram divides each required power-to-weight by
-\code{SizingDenominator(altitude, DISA)} (line 873). For every power-rated configuration this is $\lambda(h)$, or 1 when the altitude
+\code{SizingDenominator(altitude, DISA)}. For every power-rated configuration this is $\lambda(h)$, or 1 when the altitude
 lapse is switched off. For \code{'Turbofan'} it is $g\,V\,\alpha(h, M)$, with the thrust
 lapse \code{ThrustLapse} taken from the fitted map or, without a map, from the form
 $\delta\,(1 - 0.49\sqrt{M})$ that the docstring attributes to Mattingly. The design point of

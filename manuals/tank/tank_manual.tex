@@ -231,21 +231,21 @@ Key & Symbol & Value & Unit & Meaning \\
 \end{table}
 
 The constructor sets $P_{max}$ = \code{max_p_bar}$\times10^5$ and $P_{min} =
-\max(\texttt{min\_p\_bar}, 1.2)\times10^5$\,Pa (\code{Tank.py}, lines 87--94). A database entry
+\max(\texttt{min\_p\_bar}, 1.2)\times10^5$\,Pa (\code{LH2_Tank.__init__}). A database entry
 with a minimum pressure below \SI{1.2}{bar} is raised to \SI{1.2}{bar} with a
 \code{RuntimeWarning}; the comment calls the floor an unsourced engineering assumption.
 
 \subsection{Internal volume}\label{sec:volume}
 The liquid density $\rho_l$ is the CoolProp density of saturated liquid para-hydrogen at
 $P_{min}$. If CoolProp fails at this call the code uses \SI{70}{kg/m^3} and issues a
-\code{RuntimeWarning} (lines 126--131). Table~\ref{tab:props} gives the saturation properties that the model uses.
+\code{RuntimeWarning}. Table~\ref{tab:props} gives the saturation properties that the model uses.
 The internal volume of one tank is
 \begin{equation}
   V = \frac{m_{H_2}/n}{\rho_l}\,(1 + u), \qquad u = 0.04,
   \label{eq:volume}
 \end{equation}
 with the ullage fraction $u$ = \code{ullage_frac} fixed in the code (an unsourced
-engineering assumption, line 135). At $P_{min}$ the full tank
+engineering assumption). At $P_{min}$ the full tank
 therefore holds liquid in 96.15\,\% of its volume.
 
 \begin{table}[htbp]
@@ -265,9 +265,9 @@ $P$ [bar] & $T_{sat}$ [K] & $\rho_l$ [kg/m$^3$] & $\rho_g$ [kg/m$^3$] & $\Delta 
 \end{table}
 
 \subsection{Shape and number of tanks}\label{sec:shape}
-The largest inner radius allowed is $R_{lim} = D_{max}/2 - 0.15$\,m (line 146). The clearance of
+The largest inner radius allowed is $R_{lim} = D_{max}/2 - 0.15$\,m. The clearance of
 \SI{0.15}{m} is fixed in the code and has no source. The sphere of radius $R_{lim}$ has the volume
-$V_{sph} = \tfrac43\pi R_{lim}^3$. The sizing loop (lines 138--221) runs as follows.
+$V_{sph} = \tfrac43\pi R_{lim}^3$. The sizing loop runs as follows.
 \begin{enumerate}
 \item With the current number of tanks $n$, compute $V$ from~\eqref{eq:volume}.
 \item If $V \le V_{sph}$, the tank is a sphere with $r_{in} = (3V/4\pi)^{1/3}$ and
@@ -288,7 +288,7 @@ $A_{in} = 4\pi r_{in}^2 + 2\pi r_{in} L_{cyl}$ (\code{area_inner_tot}).
 \subsection{Inner vessel}\label{sec:inner}
 The inner vessel carries the internal pressure. The code designs it for $P_{d,in} =
 2.2\,P_{max}$; the comment explains the factor as a 10\,\% valve overpressure times a factor of
-2.0 for dynamic flight loads (line 253); the code calls the factor 2.2 an unsourced engineering
+2.0 for dynamic flight loads; the code calls the factor 2.2 an unsourced engineering
 assumption. The comment refers to Eq.~3 of Svensson et
 al.~\cite{svensson}. The thin-wall membrane thicknesses are
 \begin{equation}
@@ -297,14 +297,14 @@ al.~\cite{svensson}. The thin-wall membrane thicknesses are
   t_{in,cyl} = \max\!\left(\frac{P_{d,in}\, r_{in}\, s_{in}}{\sigma_y\, e_w},\ t_{min}\right),
   \label{eq:tinner}
 \end{equation}
-with the minimum gauge $t_{min} = \SI{0.8}{mm}$ (\code{min_gauge}, line 248). The cylinder
+with the minimum gauge $t_{min} = \SI{0.8}{mm}$ (\code{min_gauge}). The cylinder
 thickness is used only for a cylindrical tank. The mass is
 $m_{in} = \rho_{al}\,(4\pi r_{in}^2\, t_{in,sph} + 2\pi r_{in} L_{cyl}\, t_{in,cyl})$.
 
 \subsection{Vacuum jacket}\label{sec:outer}
 The outer wall carries the external atmospheric pressure on the vacuum gap. The code uses a
 design pressure $P_{d,out} = 2 \times \SI{101325}{Pa}$ and the buckling formula that its comment
-attributes to Eqs.~6 and~7 of Svensson et al.\ and to NASA SP-8007 (lines 270--287). The
+attributes to Eqs.~6 and~7 of Svensson et al.\ and to NASA SP-8007. The
 jacket sits outside the inner wall and the vacuum gap, at the radius
 $r_j = r_{in} + \max(t_{in,cyl}, t_{in,sph}) + g$, and this radius enters the formula:
 \begin{equation}
@@ -318,13 +318,12 @@ $m_{out} = \rho_{al}\,[4\pi r_j^2\, t_{out,sph} + 2\pi r_j L_{cyl}\, t_{out,cyl}
 
 \subsection{Insulation, accessories and the empty mass}\label{sec:mass}
 The insulation mass uses the inner area and an MLI areal density of
-\SI{0.0272}{kg/m^2} per layer, which the comment attributes to Svensson et al.\ (line 291):
+\SI{0.0272}{kg/m^2} per layer, which the comment attributes to Svensson et al.\:
 \begin{equation}
   m_{ins} = A_{in}\,(t_{foam}\,\rho_{foam} + 0.0272\,N).
 \end{equation}
 The structure mass is multiplied by an accessory factor that covers supports, valves and
-piping. For a cylinder the code adds a penalty that grows with the aspect ratio (lines
-296--301):
+piping. For a cylinder the code adds a penalty that grows with the aspect ratio:
 \begin{equation}
   f = f_{acc} + \begin{cases} 0 & \text{sphere}\\ 0.15 + 0.20\,L_{cyl}/r_{in} & \text{cylinder}\end{cases},
   \label{eq:accfactor}
@@ -341,7 +340,7 @@ The two penalty constants have no source in the code. The gravimetric index of t
   \label{eq:gi}
 \end{equation}
 (\code{gravimetric_index}), where $m_{H_2}$ is the total stored hydrogen. The outer radius is
-$r_{out} = r_j + t_{out,cyl}$ and $D_{out} = 2 r_{out}$ (lines 228--235). The constructor
+$r_{out} = r_j + t_{out,cyl}$ and $D_{out} = 2 r_{out}$. The constructor
 raises a \code{ValueError} when $D_{out} > D_{max}$, that is, when the clearance of
 \SI{0.15}{m} does not hold the walls and the gap. This does not happen in any case of this
 manual.
@@ -370,8 +369,7 @@ inner wall is the only mass that depends on it.
 %% ======================================================================================
 
 \code{get_heat_leak(T_fluid,T_amb_external)} returns the heat that enters one tank through
-the multi-layer insulation, with the modified Lockheed equation named in the database comments
-(lines 337--347):
+the multi-layer insulation, with the modified Lockheed equation named in the database comments:
 \begin{equation}
   \Qmli = A_{in}\left[
   \underbrace{\frac{C_1 N_t^{C_2}\,(T_h + T_c)(T_h - T_c)}{2\,(N+1)}}_{\text{solid conduction}}
@@ -416,14 +414,13 @@ $\rho^* = \rho_g/(\rho_l - \rho_g)$. It also forms the energy derivative
   \frac{u(P + \delta P, \rho) - u(P, \rho)}{\delta P},\quad \delta P = \SI{100}{Pa},
   \label{eq:phi}
 \end{equation}
-where $u$ is the specific internal energy of the mixture (\code{phi}, lines 383--387). This
+where $u$ is the specific internal energy of the mixture (\code{phi}). This
 $\phi$ is not the supplied power ratio of the hybrid configurations. If any CoolProp call fails,
 the step uses fixed values ($\phi = 0.5$, $T_{sat} = \SI{20}{K}$,
-$\Delta h = \SI{445}{kJ/kg}$, $\rho^* = 0.05$) and issues a \code{RuntimeWarning} (lines
-389--395).
+$\Delta h = \SI{445}{kJ/kg}$, $\rho^* = 0.05$) and issues a \code{RuntimeWarning}.
 
 \subsection{Pressure equation}
-The pressure rate is (lines 404--408)
+The pressure rate is
 \begin{equation}
   \frac{dP}{dt} = \frac{2\,\phi}{V}\left(1.3\,\Qmli - \Delta h\,\rho^*\,\mdot_l\right),
   \qquad
@@ -443,7 +440,7 @@ statement of the code. The pressure stays constant when the draw per tank equals
 A smaller draw raises the pressure; a larger draw lowers it.
 
 \subsection{Regulation: vent and heater}
-The updated pressure $P^{k+1}$ is limited to $[P_{min}, P_{max}]$ (lines 413--429).
+The updated pressure $P^{k+1}$ is limited to $[P_{min}, P_{max}]$.
 \begin{itemize}
 \item \textbf{Heater.} If $P^{k+1} < P_{min}$, the pressure is held at $P_{min}$ and the heater
   supplies the power that closes the gap in one step,

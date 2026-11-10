@@ -144,8 +144,7 @@ that heat is computed and where it is sampled. The details are in the fuel-cell 
 
 \subsection{Stack heat on the coolant basis}
 At every operating point \code{FuelCell.ComputePRatio} solves the stack current for the
-required electrical power and stores the stack heat as \code{fc.Q_thermal}
-(\code{FuelCell.py}, lines 728--731):
+required electrical power and stores the stack heat as \code{fc.Q_thermal}:
 \begin{equation}
   \Qfc = I\,N_{cells}\left[\frac{\Delta H_{HHV} - x_v\,(\Delta H_{HHV} - \Delta H_{LHV})}{2F} - V_{cell}\right],
   \label{eq:qfc}

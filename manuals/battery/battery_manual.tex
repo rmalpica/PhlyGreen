@@ -156,10 +156,10 @@ power. It has no voltage, no current and no temperature.
 
 \subsection{Gas-turbine hybrid}
 
-\code{Battery.SetInput} (line 360) reads three keys of \texttt{CellInput}: \texttt{'SpecificEnergy'} $e_b$ [Wh/kg],
+\code{Battery.SetInput} reads three keys of \texttt{CellInput}: \texttt{'SpecificEnergy'} $e_b$ [Wh/kg],
 \texttt{'SpecificPower'} $p_b$ [W/kg] and \texttt{'Minimum SOC'}. It
 stores $E_{bat}=3600\,e_b$ [J/kg] as \code{Battery.Ebat} and $p_b$ as \code{Battery.pbat}. The
-mission (\code{Mission.HybridConfigurationClassI}, line 1301) integrates three states,
+mission (\code{Mission.HybridConfigurationClassI}) integrates three states,
 \begin{equation}
 \frac{dE_f}{dt} = P_p\,\Pi_0,\qquad
 \frac{dE_{b}}{dt} = P_p\,\Pi_5,\qquad
@@ -172,7 +172,7 @@ the mass fraction, $e_f$ the fuel specific energy, and $\Pi_k$ the power ratios 
 terminal power per unit propulsive power. The integration runs segment by segment with
 \code{scipy.integrate.solve_ivp} (BDF, \code{rtol=1e-5}).
 
-\code{Weight.Hybrid} (line 587) takes the battery mass as the largest of three candidates:
+\code{Weight.Hybrid} takes the battery mass as the largest of three candidates:
 \begin{equation}
 W_{bat} = \max\left(\frac{E_b}{(1-\mathrm{SOC}_{min})\,E_{bat}},\;
 \frac{P_{bat,max}}{p_b},\;\frac{P_{bat,TO}}{p_b}\right).
@@ -188,7 +188,7 @@ candidate is stored in \code{Weight.WBatidx} (0 energy, 1 mission power, 2 take-
 \subsection{Fuel-cell + battery}
 
 The \texttt{'FuelCellBattery'} configuration without a \texttt{CellInput} uses its own Class-I
-battery, defined in \texttt{EnergyInput}. \code{Weight.FuelCellBattery} (line 507) computes
+battery, defined in \texttt{EnergyInput}. \code{Weight.FuelCellBattery} computes
 \begin{equation}
 W_{bat} = \max\left(\frac{E_b/3600}{e_b\,c\,\sigma_u},\; \frac{P_{bat,max}\,r}{p_b}\right),
 \label{eq:fcb-mass}
@@ -201,7 +201,7 @@ explicit input $\sigma_u$ instead of $1-\mathrm{SOC}_{min}$. Second, the propuls
 $\varphi P_p/\eta_{el}$ with $\eta_{el}=\eta_{EM}\eta_{PM}\eta_{GB}\eta_{prop}$
 (\code{Mission._fc_battery_eta_elec}, the same chain as the fuel-cell branch). The battery energy
 $E_b$, the peak power $P_{bat,max}$ and the take-off power $P_{bat,TO}$ are all terminal
-quantities (\code{Mission.FuelCellBatteryConfiguration}, line 861), as in \code{Weight.Hybrid}.
+quantities (\code{Mission.FuelCellBatteryConfiguration}), as in \code{Weight.Hybrid}.
 
 On \code{fuelcell_battery_config(0.15)} the battery draws 1066.3~kWh. The energy candidate is
 5331.3~kg and the power candidate 324.2~kg, so the pack is energy limited, and
@@ -243,7 +243,7 @@ from it, and every cell carries the same current and power.
 
 \subsection{Voltage model}
 
-The cell terminal voltage is implemented in \code{Battery._voltageModel} (line 318):
+The cell terminal voltage is implemented in \code{Battery._voltageModel}:
 \begin{equation}
 V(i_t, i, T) = E_0(T) - (i + i_t)\,K(T)\,\frac{Q(T)}{Q(T)-i_t} + A\,e^{-B\,i_t} - i\,R(T).
 \label{eq:shepherd}
@@ -265,7 +265,7 @@ The open-circuit voltage is $V_{oc}(i_t)=V(i_t,0)$ (\code{Battery.cell_Voc}). Th
 thermal-corrected form referenced in \code{Cell_Models.py} (DOI 10.1109/TIE.2016.2618363),
 and \code{docs/user-guide/battery.md} lists the Shepherd (1965) and Tremblay and Dessaint (2007)
 papers as its origin. The maximum cell voltage is defined as $V_{max}=E_0+A$
-(\code{SetInput}, line 391). It is used only to choose the number of cells in series.
+(\code{SetInput}). It is used only to choose the number of cells in series.
 
 The state of charge is the charge balance against the nominal capacity $Q_0$ (\code{Battery.SOC}):
 \begin{equation}
@@ -278,7 +278,7 @@ uses the temperature-corrected $Q(T)$ of Eq.~\eqref{eq:temperature}.
 \subsection{Temperature dependence}
 
 The four parameters that depend on temperature are properties of the class
-(\code{Battery.E0}, \code{Q}, \code{K}, \code{R}, lines 293--310):
+(\code{Battery.E0}, \code{Q}, \code{K}, \code{R}):
 \begin{equation}
 \begin{aligned}
 E_0(T) &= E_{0,ref} + \frac{\partial E}{\partial T}\,(T-T_{ref}), &
@@ -341,7 +341,7 @@ Maximum C-rate $I_{max}/Q_0$ & [h$^{-1}$] & 4.0 & 2.0 & 5.39\\
 \subsection{Rescaling to a target specific energy and power}
 \label{sec:rescale}
 
-Design studies need cells that do not exist. \code{Battery.SetInput} (lines 406--451)
+Design studies need cells that do not exist. \code{Battery.SetInput}
 therefore rescales the database cell to the requested specific energy $e_b$ and specific power
 $p_b$, keeping its mass $m_c$ and its voltage curve shape. The procedure has two steps.
 
@@ -372,7 +372,7 @@ $V_{pack}$ (\texttt{'Pack Voltage'}):
 \begin{equation}
 S = \left\lfloor V_{pack}/V_{max}\right\rfloor .
 \end{equation}
-\code{Battery.Configure(P)} (line 517) then sets the parallel count $P$ and computes the pack
+\code{Battery.Configure(P)} then sets the parallel count $P$ and computes the pack
 mass $W_{pack}=m_c\,S\,P$, the nominal energy $E_{pack}=V_{nom}Q_0\,S\,P$ (in Wh), the peak
 power $P_{pack,max}=I_{max}V(0,I_{max})\,S\,P$ and the charge $PQ_0$. The pack voltage is
 $S\,V$ and the pack current $P\,i$. For \code{hybrid_config('II')}, $V_{pack}=800$~V and
@@ -382,7 +382,7 @@ $V_{max}=4.2$~V give $S=190$, a nominal pack voltage of 703~V and a full-charge 
 \subsection{From power to current}
 
 The mission demands a pack terminal power $P_{el}$. \code{Battery.Power_2_current}
-(line 548) divides it equally among the $SP$ cells and solves $P_{el}/(SP)=V\,i$ with
+divides it equally among the $SP$ cells and solves $P_{el}/(SP)=V\,i$ with
 Eq.~\eqref{eq:shepherd} at the present $i_t$ and $T$. With
 $K_r = K\,Q/(Q-i_t)$ the cell power is quadratic in $i$:
 \begin{equation}
@@ -468,7 +468,7 @@ current limit that the cell cannot carry.
 \label{sec:thermal}
 
 Each cell is a single thermal node of capacity $C_{th}$ [J/K]. \code{Battery.heatLoss}
-(line 590) returns the temperature derivative and the heat generated per cell:
+returns the temperature derivative and the heat generated per cell:
 \begin{equation}
 \dot q = (V_{oc}-V)\,i - \frac{\partial E}{\partial T}\,i\,T,\qquad
 \frac{dT}{dt} = \frac{\dot q}{C_{th}} + \frac{T_a - T}{R_{th}\,C_{th}},\qquad
@@ -532,7 +532,7 @@ the weight loop uses the resulting \code{pack_weight}.
 
 \subsection{Mission states}
 
-\code{Mission.HybridConfigurationClassII} (line 1539) integrates five states,
+\code{Mission.HybridConfigurationClassII} integrates five states,
 $\mathbf{y}=[E_f,\,E_b,\,\beta,\,i_t^{pack},\,T]$, with $i_t^{pack}$ in A\,s:
 \begin{equation}
 \frac{d\mathbf{y}}{dt} = \left[P_p\Pi_0,\; i\,V_{pack},\; -\frac{P_p\Pi_0}{e_f W_{TO}},\; i,\;
@@ -551,18 +551,18 @@ After each segment the code re-evaluates the right-hand side at every output poi
 \code{Mission.plottingVars} $=[t,\mathrm{SOC},V_{oc}^{pack},V^{pack},i^{pack},T,T_a,h,\dot m]$.
 If a stored point violates a limit, the code prints ``WARNING: evaluate\_P\_number integration
 rtol may be too loose'' and continues; the design is not affected. The fuel-cell variant
-\code{Mission.FuelCellBatteryConfigurationClassII} (line 960) uses the same five states, with
+\code{Mission.FuelCellBatteryConfigurationClassII} uses the same five states, with
 the battery delivering $\varphi P_p/\eta_{el}$ at its terminals. It does not fill
 \code{plottingVars}.
 
 \subsection{Ground legs and the take-off check}
 \label{sec:pack-ground}
 
-Before the climb, \code{Mission._pack_before_climb} (line 670) flies the pack from full charge
+Before the climb, \code{Mission._pack_before_climb} flies the pack from full charge
 at the initial temperature through three steps. First, taxi-out at constant terminal power.
 Second, an instantaneous check that the pack can deliver the worst-case take-off/OEI battery
 power $P_{bat,TO}$ at the state after taxi-out (current and voltage checks). Third, the
-take-off run. \code{Mission._pack_through_ground_legs} (line 634) integrates each leg with the
+take-off run. \code{Mission._pack_through_ground_legs} integrates each leg with the
 in-flight thermal logic at the take-off altitude; taxi is evaluated at zero airspeed and the
 take-off run at the take-off speed. After landing, the same function flies taxi-in from the
 final pack state. A leg without battery power is skipped. Any failure makes the $P$
@@ -572,7 +572,7 @@ infeasible. Section~\ref{sec:ground} gives the power of these legs.
 \label{sec:psearch}
 
 For a given take-off mass $W_{TO}$, the function \code{find_parallel_cells} of
-\code{Battery.py} (line 15) finds the smallest feasible integer $P$. Both Class-II mission
+\code{Battery.py} finds the smallest feasible integer $P$. Both Class-II mission
 methods call it through their nested \code{find_P_nr}. The nested function
 \code{evaluate_mission_given_P(P)} calls \code{Configure(P)}, flies the ground legs and the
 profile, and returns \texttt{(True, None)} or \texttt{(False, code)}; for $P=0$ it returns
@@ -704,17 +704,17 @@ graph, the sizing of the electric drive, and the energy accounting downstream of
 
 \subsection{Hybrid power ratios}
 
-\code{Powertrain.Hybrid(phi, alt, vel, pwr)} (line 917) assembles a linear system of normalized
+\code{Powertrain.Hybrid(phi, alt, vel, pwr)} assembles a linear system of normalized
 powers with the primitives of \code{Systems/Powertrain/graph.py}. A \emph{converter} imposes
 $P_{out}=\eta P_{in}$, a \emph{combiner} $P_{out}=\eta\sum P_{in}$, the \emph{split} imposes
 Eq.~\eqref{eq:phi-hybrid}, and a \emph{sink} sets $P_p=1$. For the parallel architecture
-(\code{parallel_hybrid_graph}, line 105) the unknowns are
+(\code{parallel_hybrid_graph}) the unknowns are
 $[P_f, P_{gt}, P_{gb}, P_{s1}, P_{e1}, P_{bat}, P_{p1}]$ and the equations are
 \begin{equation}
 P_{gt}=\eta_{gt}P_f,\quad P_{s1}=\eta_{gb}(P_{gt}+P_{gb}),\quad P_{e1}=\eta_{pm}P_{bat},\quad
 P_{gb}=\eta_{em}P_{e1},\quad P_{p1}=\eta_{p}P_{s1},
 \end{equation}
-plus the split and $P_{p1}=1$. The serial architecture (\code{serial_hybrid_graph}, line 118)
+plus the split and $P_{p1}=1$. The serial architecture (\code{serial_hybrid_graph})
 places the battery on the electrical bus after the generator:
 $P_{s1}=\eta_{em1}P_{gt}$, $P_{e1}=\eta_{pm}(P_{s1}+P_{bat})$, and the motor, gearbox and
 propeller in series. The solution vector is returned in absolute value. Its entry 5 is
@@ -731,7 +731,7 @@ the first solve is returned. The serial generator is the \texttt{'generator'} en
 \subsection{Electric motor and PMAD}
 \label{sec:motor}
 
-\code{Powertrain.WeightPowertrain} (line 1178) sizes the electric drive of a \texttt{'Hybrid'}.
+\code{Powertrain.WeightPowertrain} sizes the electric drive of a \texttt{'Hybrid'}.
 In the parallel architecture the motor and the PMAD carry only the battery power, so both are
 sized on the peak battery power:
 \begin{equation}
@@ -766,7 +766,7 @@ Power'} when the latter is given.
 \subsection{Serial range extender}
 \label{sec:re}
 
-\code{Mission.SerialRangeExtenderConfiguration} (line 1438) runs the turbine at its rated
+\code{Mission.SerialRangeExtenderConfiguration} runs the turbine at its rated
 shaft power, lapsed with altitude by the ISA pressure ratio
 (\code{_range_extender_gt_power}). At each instant \code{_range_extender_flows} computes the
 battery terminal power
@@ -834,7 +834,7 @@ pack; the charging efficiency of the cell itself is not modelled.
 %======================================================================
 
 Taxi-out, the take-off run and taxi-in are not part of the flown profile.
-\code{Mission._ground_segments} (line 571) computes their energy before the mission is flown,
+\code{Mission._ground_segments} computes their energy before the mission is flown,
 and the battery takes a share of it.
 
 The reference power is the take-off-field propulsive power $P_{TO}$
@@ -842,7 +842,7 @@ The reference power is the take-off-field propulsive power $P_{TO}$
 default 0.7~min) at $f_{TO}P_{TO}$ (\texttt{takeoff\_power\_fraction}, default 1.0). Taxi-out
 and taxi-in last $t_{out}$ and $t_{in}$ (default 13~min each) at $f_{taxi}P_{TO}$
 (\texttt{taxi\_power\_fraction}, default 0.07). The defaults are the ICAO LTO reference values
-cited in the code. \code{Mission._ground_power_split} (line 536) splits each power through the
+cited in the code. \code{Mission._ground_power_split} splits each power through the
 configuration's own powertrain at the take-off condition. The battery takes $\varphi_{TO}$ of
 the take-off power and $\varphi_{taxi}$ of the taxi power, with the meaning of $\varphi$ of
 Section~\ref{sec:phi}. It returns the fuel chemical power $P_f$, the battery terminal power
@@ -895,7 +895,7 @@ load and the cycle life. Mission-driven ageing estimators are not implemented.
 
 \subsection{State of health}
 
-\code{Battery.set_state_of_health(capacity_fraction, resistance_factor)} (line 472) sets the
+\code{Battery.set_state_of_health(capacity_fraction, resistance_factor)} sets the
 capacity fraction $c=C/C_{BOL}\in(0,1]$ and the resistance factor $r=R/R_{BOL}>0$ relative to
 the beginning of life (BOL). The BOL values are stored in \code{Battery._bol} by \code{SetInput},
 so the call is idempotent and \code{set_state_of_health()} restores BOL. The scaling is:
@@ -975,7 +975,7 @@ voltage where $\varphi>0$. Script: \code{fig_class_ii_mission.py}.}
 
 \subsection{Post-design ground charge and cycle life}
 
-\code{Battery.thermal_degradation_analysis} (line 635) runs on a sized Class-II pack and
+\code{Battery.thermal_degradation_analysis} runs on a sized Class-II pack and
 never enters the weight loop. It builds a \code{BatteryAgeingModel}
 (\code{Systems/Battery/degradation.py}, adapted from work by Francesco Campagna according to its
 docstring) and caches the result on \code{Battery.ageing} and in

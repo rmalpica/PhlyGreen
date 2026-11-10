@@ -253,6 +253,7 @@ EnergyInput = {
     # ... other options
 }
 ```
+
 ---
 
 ### 2. Serial Hybrid 
@@ -418,6 +419,40 @@ its φ = 0 limit. The motor and PMAD of a `'FuelCellBattery'` design carry the b
 so their masses are sized on the peak propulsive power through the drive at one instant
 (fuel-cell and battery shares together, over the mission, the take-off / OEI requirement and
 the ground legs: `mission.Max_PDrive`).
+
+!!! warning "φ in `FuelCellBattery` is not the φ of `Hybrid`"
+    The two battery architectures use the same input, the profile's `Supplied Power Ratio`, for
+    two different quantities:
+
+    | Configuration | φ is | Battery power | Primary-source power |
+    |---|---|---|---|
+    | `Hybrid` (parallel, serial) | share of the **supplied** power, \(P_{bat}/(P_f + P_{bat})\) | from the graph | fuel chemical power \(P_f\) |
+    | `FuelCellBattery` | share of the **propulsive** power | \(\varphi P_p\) delivered | fuel cell delivers \((1-\varphi) P_p\) |
+
+    The `FuelCellBattery` definition is used because it controls the quantity that matters
+    for a fuel-cell hybrid. The stack load is \((1-\varphi) P_p\), known before the stack is
+    solved, so each mission point is explicit, and the stack rating follows directly: on a
+    field where the take-off sizes the fuel cell, the battery that brings the take-off load
+    down to the climb load is \(\varphi^* = 1 - P_{climb}/P_{TO}\) (example 23). With the
+    supplied-power definition the hydrogen power depends on the stack efficiency at its own
+    load (polarization curve, air system, auxiliaries), so the split at every point would need
+    an extra iteration, and \(\varphi^*\) would depend on the stack efficiency.
+
+    To compare a `FuelCellBattery` φ with a `Hybrid` one, convert it. With
+    \(\eta_{fc}\) the efficiency from the hydrogen chemical power to the fuel-cell power
+    delivered to the bus (stack, air system and auxiliaries), the supplied-power share of the
+    same split is
+
+    \[
+    \varphi_s = \frac{\varphi}{\varphi + (1-\varphi)/\eta_{fc}} ,\qquad
+    \varphi = \frac{\varphi_s}{\varphi_s + (1-\varphi_s)\,\eta_{fc}} .
+    \]
+
+    At \(\eta_{fc} = 0.5\), a propulsive share of 0.15 is a supplied share of 0.081. The
+    graph `fuelcell_battery_graph` splits the fuel-cell output and the battery
+    (`split("Pfc", "Pbat", phi)`), so it follows the propulsive definition; splitting the
+    hydrogen and the battery instead (`split("PfH2", "Pbat", phi)`) gives the supplied-power
+    definition of `Hybrid`.
 
 ```python
 from PhlyGreen.Systems.Powertrain.graph import fuelcell_battery_graph

@@ -131,7 +131,9 @@ leave. A phase therefore holds a single cruise, with a linear φ from `phi_start
     chemical power (the split equation of the powertrain graph). In `FuelCellBattery` it is the
     battery share of the **propulsive** power: the battery delivers \(\varphi P_p\) and the fuel
     cell \((1-\varphi) P_p\). The same φ value therefore means a much smaller battery share in a
-    gas-turbine hybrid, whose fuel power is about three times its shaft power. At a segment
+    gas-turbine hybrid, whose fuel power is about three times its shaft power. The reasons for
+    the `FuelCellBattery` definition and the conversion between the two are in
+    [Powertrain, Fuel cell + battery](powertrain.md#4-fuel-cell-battery). At a segment
     boundary φ takes the value of the segment that starts there.
 If the climbs and descents alone are longer than the phase range, the cruise would get a
 negative length. In that case building the profile raises a `ValueError` naming the phase. The

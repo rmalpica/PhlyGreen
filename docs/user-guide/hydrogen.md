@@ -350,7 +350,9 @@ See example `22_hydrogen_tank.py` and notebook `03_hydrogen_fuel_cell.ipynb`.
 ## 7. Fuel cell + battery hybrid
 
 `'FuelCellBattery'` splits the propulsive power between the fuel cell and a (Class-I) battery
-via the profile's supplied-power ratio φ (the battery fraction). The fuel cell uses its physics
+via the profile's supplied-power ratio φ, which here is the battery share of the
+**propulsive** power, not of the supplied power as in `Hybrid` (reasons and conversion:
+[Powertrain, Fuel cell + battery](powertrain.md#4-fuel-cell-battery)). The fuel cell uses its physics
 efficiency above; the battery is sized from its energy and power needs. The fuel cell is sized
 (by the same self-consistent loop as the pure-hydrogen path) to the worst of its *own share*
 `(1−φ)` of the mission peak, take-off and OEI — so a larger φ *shrinks the stack*, but never

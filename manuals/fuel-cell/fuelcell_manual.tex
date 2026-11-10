@@ -563,8 +563,7 @@ gives the estimated stack cooling load:
   \end{aligned}
   \label{eq:qcool}
 \end{equation}
-This is the expression implemented in \fn{ComputePRatio}
-(lines 728--731 of \fn{FuelCell.py}).
+This is the expression implemented in \fn{FuelCell.ComputePRatio}.
 
 The phase-dependent term can be interpreted as an effective
 reaction enthalpy,
@@ -792,7 +791,7 @@ TMS sizing and the degradation results of Section~\ref{sec:degradation}.
 \label{sec:design}
 
 This section describes how the stack is sized for a required propulsive power. One kernel,
-\fn{FuelCell._size_stack(P_propulsive_design)} (\fn{FuelCell.py}, lines 467--554), sets the
+\fn{FuelCell._size_stack(P_propulsive_design)} sets the
 cell geometry, the rated power and all the fuel-cell system masses. Two public methods call
 it: \fn{SizeForPropulsivePower} and \fn{SizeFromConstraint} (Section~\ref{sec:closure}).
 
@@ -969,7 +968,7 @@ The Class-I TMS mass falls with $\Vdes$ (\SI{909}{kg} at \SI{0.40}{V}, \SI{745}{
 \label{sec:operating}
 
 This section describes how the code finds the stack state at one flight condition. The method
-is \fn{FuelCell.ComputePRatio(alt, vel, P_req_net)} (\fn{FuelCell.py}, lines 632--740). The
+is \fn{FuelCell.ComputePRatio(alt, vel, P_req_net)}. The
 mission calls it at every right-hand-side evaluation of the ODE integrator, so it is the most
 frequently executed part of the model.
 
