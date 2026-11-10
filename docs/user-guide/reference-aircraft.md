@@ -116,10 +116,10 @@ the powertrain:
 
 | Result | TMS Class I | TMS Class II |
 |---|---|---|
-| MTOW | 21.7 t | 22.4 t |
+| MTOW | 21.6 t | 22.3 t |
 | Fuel-cell rating | 3.9 MW | 4.0 MW |
-| Fuel-cell system | 2.41 t | 2.50 t |
-| TMS | 0.96 t | 1.11 t |
+| Fuel-cell system | 2.40 t | 2.49 t |
+| TMS | 0.94 t | 1.10 t |
 
 ### Comparison with published fuel-cell regional designs
 
@@ -129,16 +129,16 @@ the powertrain:
 | Eissele et al., *Aerospace* 10 (2023) 277, [doi:10.3390/aerospace10030277](https://doi.org/10.3390/aerospace10030277) | 50 pax, fuel cell + battery | 5,300 kg | 800 km (432 nm) + reserves | 19.6 t |
 | Schlittenhardt et al., *Aerospace* 12 (2025) 249, [doi:10.3390/aerospace12030249](https://doi.org/10.3390/aerospace12030249) | 70 pax, distributed propulsion | 6,650 kg | 800 km (432 nm) | 23.64 t |
 | ATI FlyZero, *Zero-carbon emission aircraft concepts*, FZO-AIN-REP-0007 (2022), FZR-1E | 75 pax, 6 propulsors | 7,875 kg | 800 nm | 28.8 t |
-| **PhlyGreen** (this variant) | 48 pax, twin | 4,560 kg | 750 nm + 220 nm diversion | 21.7 / 22.4 t |
+| **PhlyGreen** (this variant) | 48 pax, twin | 4,560 kg | 750 nm + 220 nm diversion | 21.6 / 22.3 t |
 
 ![Hydrogen variant vs literature](../images/reference/h2_vs_literature.png){ width="640px" }
 
 The take-off weight is close to the comparable 50-seat designs. The ratio MTOW/payload is
-≈ 25 % higher (4.8–4.9 against 3.6–3.8), for two reasons. The payload is smaller, and the
+25–30 % higher (4.7–4.9 against 3.7–3.8 for the two 50-seat designs), for two reasons. The payload is smaller, and the
 mission is longer: 750 nm with a 220 nm diversion, against at most 648 nm with a 100 nm
 alternate in the others. Run with Svensson et al.'s mission inputs (648 nm + 100 nm, 5,500 kg,
-gravimetric index 0.555), PhlyGreen gives 22.6 t (TMS Class I) and 23.1 t (Class II), i.e.
-7–10 % above their 21.05 t.
+gravimetric index 0.555), PhlyGreen gives 22.5 t (TMS Class I) and 23.1 t (Class II), i.e.
+7–10 % above their 21.05 t. These numbers come from `trunk/validation/hydrogen_atr42_reference.py`.
 
 ---
 
@@ -170,12 +170,12 @@ The validated variant is the A320-214 with CFM56-5B4, weight variant **WV017**.
 
 ### Results
 
-| Quantity | Reference | A: minimum installed thrust (463 kg/m²) | B: landing-limited (583 kg/m²) |
+| Quantity | Reference | A: minimum installed thrust (468 kg/m²) | B: landing-limited (583 kg/m²) |
 |---|---|---|---|
-| MTOW | 78,000 kg | 80,373 kg (+3.0 %) | 75,954 kg (−2.6 %) |
-| OEW (secondary) | 42,600 kg | 43,407 kg (+1.9 %) | 41,478 kg (−2.6 %) |
-| Wing area (secondary) | 122.6 m² | 173.6 m² (+41.6 %) | 130.4 m² (+6.3 %) |
-| SLS thrust | 240.2 kN | 258.1 kN (+7.4 %) | 242.3 kN (+0.9 %) |
+| MTOW | 78,000 kg | 79,884 kg (+2.4 %) | 75,653 kg (−3.0 %) |
+| OEW (secondary) | 42,600 kg | 43,194 kg (+1.4 %) | 41,345 kg (−2.9 %) |
+| Wing area (secondary) | 122.6 m² | 170.7 m² (+39.3 %) | 129.9 m² (+5.9 %) |
+| SLS thrust | 240.2 kN | 240.1 kN (−0.1 %) | 227.4 kN (−5.3 %) |
 
 ![A320 vs reference](../images/reference/a320_vs_reference.png){ width="560px" }
 
@@ -203,5 +203,6 @@ cd trunk
 python examples/28_reference_atr42.py      # ATR 42-600: inputs, comparison, figures
 python examples/29_reference_a320.py       # A320-200: inputs, both design points, figures
 python validation/a320_reference.py        # full A320 validation (OEW calibration, payload-range)
+python validation/hydrogen_atr42_reference.py   # hydrogen variant and Svensson et al. mission
 cd .. && python docs/scripts/make_figures.py   # regenerate every figure on this page
 ```

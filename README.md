@@ -1,4 +1,7 @@
 # PhlyGreen
+
+[![Documentation Status](https://img.shields.io/badge/docs-online-success)](https://rmalpica.github.io/PhlyGreen/)
+
 A python tool for the preliminary design of novel aircraft concepts for a more sustainable air mobility.
 
 This code is under development at Sapienza University of Roma (Italy).
