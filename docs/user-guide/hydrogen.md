@@ -89,6 +89,7 @@ exhaust:
 \dot m_{\text{air}} \propto N_{\text{cells}}\,I\,\lambda, \qquad
 P_{\text{comp}} = \frac{\dot m_{\text{air}}\,c_{p}\,T_{\text{amb}}\,(\Pi^{0.286}-1)}{\eta_{\text{comp}}},
 \]
+
 \[
 P_{\text{turb}} = \eta_{\text{turb}}\,\dot m_{\text{exh}}\,c_{p,\text{exh}}\,T_{op}\,
 \Big(1 - \Pi_t^{-R/\bar c_{p,\text{exh}}}\Big), \qquad
