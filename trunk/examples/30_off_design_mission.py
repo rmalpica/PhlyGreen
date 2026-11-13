@@ -17,7 +17,9 @@ How the off-design mass is closed. The take-off mass is
     WTO_off = OEW + payload + crew + fuel load + final reserve ,
 
 with the OEW and the final reserve of the design, and the fuel load equal to what the mission
-burns (trip + diversion + ground segments). The H2 sizing margin (``h2_fuel_margin``) is a
+burns (trip + diversion + ground segments). The wing area S is the design one, so the wing
+loading falls with WTO_off (W/S = WTO_off g / S): a lighter aircraft flies at a lower lift
+coefficient on the same wing, not on a smaller wing. The H2 sizing margin (``h2_fuel_margin``) is a
 design allowance on the tank and is not loaded off-design. The fuel depends weakly on
 WTO_off (a few percent of it), so a fixed-point iteration converges to 1 kg in 3-4 missions.
 
@@ -213,8 +215,13 @@ def fly_off_design(sized, range_nm, payload_kg=None, phi=None, state_of_health=N
     a.mission.size_battery_pack = False                     # Class II: fly the frozen pack
     a.mission.InitializeProfile()        # raises ValueError if the range is shorter than climb + descent
 
+    # The wing is frozen, not the wing loading: the mission computes the power as
+    # WTO * PoWTO(W/S, ...), whose drag term scales with WTO * g / (W/S) = S. Rescale W/S with
+    # the take-off mass so that S stays the design wing area.
+    design_ws = sized.DesignWTOoS
     wto, n, violations = w.WTO, 0, []
     for n in range(1, max_iter + 1):
+        a.DesignWTOoS = design_ws * wto / w.WTO
         out = a.mission.EvaluateMission(wto)
         e_fuel = out[0] if isinstance(out, tuple) else out
         if e_fuel == 0:                                     # Class-II pack limit hit

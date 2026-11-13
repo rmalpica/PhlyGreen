@@ -49,3 +49,30 @@ def test_shorter_mission_and_limits(ex30, gt_hybrid):
     assert not over.feasible and any("battery energy" in v for v in over.violations)
     with pytest.raises(ValueError, match="shorter than its climbs and descents"):
         ex30.fly_off_design(gt_hybrid, 150.0)
+
+
+@pytest.mark.slow
+def test_wing_area_and_empty_mass_frozen(ex30, gt_hybrid):
+    """Off-design, the wing area and the empty mass are the design ones (not the wing loading):
+    re-flying the converged take-off mass on the design wing reproduces the fuel load."""
+    import copy
+    w = gt_hybrid.weight
+    r = ex30.fly_off_design(gt_hybrid, 300.0)
+    oew = w.WTO - w.Wf - w.final_reserve - w.WPayload - w.WCrew
+    assert oew + w.WCrew == pytest.approx(gt_hybrid.results().empty_weight, abs=0.1)
+    assert r.WTO == pytest.approx(oew + w.WPayload + w.WCrew + r.fuel_load + w.final_reserve,
+                                  abs=1e-6)
+
+    def fuel_at(wing_loading):
+        a = copy.deepcopy(gt_hybrid)
+        a.MissionInput["Range Mission"] = 300.0
+        a.mission.InitializeProfile()
+        a.DesignWTOoS = wing_loading
+        out = a.mission.EvaluateMission(r.WTO)
+        return (out[0] if isinstance(out, tuple) else out) / a.mission.ef
+
+    S = gt_hybrid.WingSurface
+    assert r.WTO * 9.81 / S < gt_hybrid.DesignWTOoS               # lighter aircraft, same wing
+    assert r.fuel_load == pytest.approx(fuel_at(r.WTO * 9.81 / S), abs=1.0)
+    # the design wing loading (a wing shrunk with WTO) gives a different fuel load
+    assert abs(fuel_at(gt_hybrid.DesignWTOoS) - r.fuel_load) > 2.0
